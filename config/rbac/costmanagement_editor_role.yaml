@@ -1,0 +1,24 @@
+# permissions for end users to edit costmanagements.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: costmanagement-editor-role
+rules:
+- apiGroups:
+  - cost-mgmt.openshift.io
+  resources:
+  - costmanagements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cost-mgmt.openshift.io
+  resources:
+  - costmanagements/status
+  verbs:
+  - get

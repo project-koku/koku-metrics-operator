@@ -1,0 +1,7 @@
+apiVersion: cost-mgmt.openshift.io/v1alpha1
+kind: CostManagement
+metadata:
+  name: costmanagement-sample
+spec:
+  # Add fields here
+  foo: bar

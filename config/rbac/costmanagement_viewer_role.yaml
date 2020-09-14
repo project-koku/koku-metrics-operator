@@ -1,0 +1,20 @@
+# permissions for end users to view costmanagements.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: costmanagement-viewer-role
+rules:
+- apiGroups:
+  - cost-mgmt.openshift.io
+  resources:
+  - costmanagements
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cost-mgmt.openshift.io
+  resources:
+  - costmanagements/status
+  verbs:
+  - get
