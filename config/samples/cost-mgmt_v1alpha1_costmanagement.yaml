@@ -3,5 +3,3 @@ kind: CostManagement
 metadata:
   name: costmanagement-sample
 spec:
-  # Add fields here
-  foo: bar
