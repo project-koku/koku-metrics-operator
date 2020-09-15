@@ -1,0 +1,90 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: costmanagements.cost-mgmt.openshift.io
+spec:
+  group: cost-mgmt.openshift.io
+  names:
+    kind: CostManagement
+    listKind: CostManagementList
+    plural: costmanagements
+    singular: costmanagement
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: CostManagement is the Schema for the costmanagements API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: CostManagementSpec defines the desired state of CostManagement
+          properties:
+            authentication:
+              description: 'Authentication is a field of CostManagement to represent
+                the authentication type to be used basic or token. Valid values are:
+                - "basic" : Enables authetication using user and password from authentication
+                secret - "token" (default): Uses cluster token for authentication'
+              enum:
+              - token
+              - basic
+              type: string
+            authentication_secret_name:
+              description: AuthenticationSecretName is a field of CostManagement to
+                represent the secret with the user and password used for uploads.
+              type: string
+            clusterID:
+              description: ClusterID is a field of CostManagement to represent the
+                cluster UUID.
+              type: string
+            ingress_url:
+              description: IngressUrl is a field of CostManagement to represent the
+                url of the ingress service.
+              type: string
+            upload_wait:
+              description: UploadWait is a field of CostManagement to represent the
+                time to wait before sending an upload.
+              format: int64
+              minimum: 0
+              type: integer
+            validate_cert:
+              description: 'ValidateCert is a field of CostManagement to represent
+                if the Ingress endpoint must be certifacte validated. Valid values
+                are: - "true" : Enables validation of the upload endpoint - "false"
+                (default): Ignores validation of the upload endpoint'
+              enum:
+              - false
+              - true
+              type: string
+          type: object
+        status:
+          description: CostManagementStatus defines the observed state of CostManagement
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

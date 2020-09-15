@@ -49,6 +49,7 @@ uninstall: manifests kustomize
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/openshift-config | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
