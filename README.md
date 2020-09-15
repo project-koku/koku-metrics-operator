@@ -100,7 +100,7 @@ $ export USERNAME=<quay-username>
 $ make docker-build IMG=quay.io/$USERNAME/korekuta-operator-go:v0.0.1
 ```
 
-Push the image to a repository:
+Push the image to a repository and make sure to set the repository to public:
 
 ```sh
 $ make docker-push IMG=quay.io/$USERNAME/korekuta-operator-go:v0.0.1
