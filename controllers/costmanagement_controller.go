@@ -39,7 +39,6 @@ type CostManagementReconciler struct {
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list
-// +kubebuilder:rbac:groups=core,namespace=openshift-config,resources=secrets,verbs=get
 // +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 
 func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {

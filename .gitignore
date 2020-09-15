@@ -22,3 +22,6 @@ bin
 *.swp
 *.swo
 *~
+
+# Ignore this file to avoid checking in image and branch
+config/manager/kustomization.yaml
