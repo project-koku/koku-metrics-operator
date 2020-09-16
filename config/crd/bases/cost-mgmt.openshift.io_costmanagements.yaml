@@ -64,17 +64,41 @@ spec:
               minimum: 0
               type: integer
             validate_cert:
-              description: 'ValidateCert is a field of CostManagement to represent
-                if the Ingress endpoint must be certifacte validated. Valid values
-                are: - "true" : Enables validation of the upload endpoint - "false"
-                (default): Ignores validation of the upload endpoint'
-              enum:
-              - false
-              - true
-              type: string
+              description: ValidateCert is a field of CostManagement to represent
+                if the Ingress endpoint must be certificate validated.
+              type: boolean
           type: object
         status:
           description: CostManagementStatus defines the observed state of CostManagement
+          properties:
+            authentication:
+              description: Authentication is a field of CostManagement to represent
+                the authentication type to be used basic or token.
+              enum:
+              - token
+              - basic
+              type: string
+            authentication_secret_name:
+              description: AuthenticationSecretName is a field of CostManagement to
+                represent the secret with the user and password used for uploads.
+              type: string
+            clusterID:
+              description: ClusterID is a field of CostManagement to represent the
+                cluster UUID.
+              type: string
+            ingress_url:
+              description: IngressUrl is a field of CostManagement to represent the
+                url of the ingress service.
+              type: string
+            upload_wait:
+              description: UploadWait is a field of CostManagement to represent the
+                time to wait before sending an upload.
+              format: int64
+              type: integer
+            validate_cert:
+              description: ValidateCert is a field of CostManagement to represent
+                if the Ingress endpoint must be certificate validated.
+              type: boolean
           type: object
       type: object
   version: v1alpha1

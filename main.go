@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	configv1 "github.com/openshift/api/config/v1"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/controllers"
 	// +kubebuilder:scaffold:imports
@@ -41,9 +42,14 @@ var (
 )
 
 func init() {
+	// Adding the costmgmtv1alpha1 scheme
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(costmgmtv1alpha1.AddToScheme(scheme))
+	// +kubebuilder:scaffold:scheme
+
+	// Adding the configv1 scheme
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(configv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
