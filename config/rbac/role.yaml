@@ -16,6 +16,13 @@ rules:
 - apiGroups:
   - config.openshift.io
   resources:
+  - clusterversions
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - config.openshift.io
+  resources:
   - networks
   - proxies
   verbs:

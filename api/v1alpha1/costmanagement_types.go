@@ -30,15 +30,12 @@ import (
 // Only one of the following certificate validation types may be specified.
 // If none of the following types are specified, the default one
 // is Token.
-// +kubebuilder:validation:Enum=false;true
-type CertValidationType string
-
 const (
 	// CertIgnore allows certificate validation to be bypassed.
-	CertIgnore CertValidationType = "false"
+	CertIgnore bool = false
 
 	// CertCheck allows certificate validation to occur.
-	CertCheck CertValidationType = "true"
+	CertCheck bool = true
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -63,12 +60,9 @@ type CostManagementSpec struct {
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
 
-	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certifacte validated.
-	// Valid values are:
-	// - "true" : Enables validation of the upload endpoint
-	// - "false" (default): Ignores validation of the upload endpoint
+	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
 	// +optional
-	ValidateCert CertValidationType `json:"validate_cert,omitempty"`
+	ValidateCert *bool `json:"validate_cert,omitempty"`
 
 	// IngressUrl is a field of CostManagement to represent the url of the ingress service.
 	// +optional
@@ -96,6 +90,24 @@ type CostManagementSpec struct {
 type CostManagementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// ClusterID is a field of CostManagement to represent the cluster UUID.
+	ClusterID string `json:"clusterID,omitempty"`
+
+	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
+	ValidateCert *bool `json:"validate_cert,omitempty"`
+
+	// IngressUrl is a field of CostManagement to represent the url of the ingress service.
+	IngressUrl string `json:"ingress_url,omitempty"`
+
+	// Authentication is a field of CostManagement to represent the authentication type to be used basic or token.
+	Authentication AuthenticationType `json:"authentication,omitempty"`
+
+	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
+	AuthenticationSecretName string `json:"authentication_secret_name,omitempty"`
+
+	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
+	UploadWait *int64 `json:"upload_wait,omitempty"`
 }
 
 // +kubebuilder:object:root=true
