@@ -25,3 +25,6 @@ bin
 
 # Ignore this file to avoid checking in image and branch
 config/manager/kustomization.yaml
+
+# Ignore files for envtest
+testbin/*
