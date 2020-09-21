@@ -161,7 +161,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Reconiling custom resource", "CostManagement", cost)
+	log.Info("Reconciling custom resource", "CostManagement", cost)
 	costInput := &CostManagementInput{}
 	err = ReflectSpec(r, cost, costInput)
 	if err != nil {
