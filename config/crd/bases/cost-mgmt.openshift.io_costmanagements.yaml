@@ -78,6 +78,10 @@ spec:
               - token
               - basic
               type: string
+            authentication_creds_found:
+              description: AuthenticationCredentialsFound is a field of CostManagement
+                to represent if used for uploads were found.
+              type: boolean
             authentication_secret_name:
               description: AuthenticationSecretName is a field of CostManagement to
                 represent the secret with the user and password used for uploads.

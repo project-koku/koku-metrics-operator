@@ -21,18 +21,33 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/xorcare/pointer"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
+)
+
+var (
+	openShiftConfigNamespace = "openshift-config"
+	pullSecretName           = "pull-secret"
+	pullSecretDataKey        = ".dockerconfigjson"
+	pullSecretAuthKey        = "cloud.openshift.com"
+	authSecretUserKey        = "username"
+	authSecretPasswordKey    = "password"
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -43,6 +58,7 @@ type CostManagementReconciler struct {
 	cvClientBuilder cv.ClusterVersionBuilder
 }
 
+// CostManagementInput provide the data for procesing the reconcile with defaults
 type CostManagementInput struct {
 	ClusterID                string
 	ValidateCert             bool
@@ -50,6 +66,16 @@ type CostManagementInput struct {
 	AuthenticationSecretName string
 	Authentication           costmgmtv1alpha1.AuthenticationType
 	UploadWait               int64
+	BearerTokenString        string
+	BasicAuthUser            string
+	BasicAuthPassword        string
+}
+
+type serializedAuthMap struct {
+	Auths map[string]serializedAuth `json:"auths"`
+}
+type serializedAuth struct {
+	Auth string `json:"auth"`
 }
 
 func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *string, statusItem *string, defaultVal string) string {
@@ -132,12 +158,104 @@ func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManage
 	return nil
 }
 
+func GetPullSecretToken(r *CostManagementReconciler, costInput *CostManagementInput) error {
+	ctx := context.Background()
+	log := r.Log.WithValues("costmanagement", "GetPullSecretToken")
+	secret := &corev1.Secret{}
+	namespace := types.NamespacedName{
+		Namespace: openShiftConfigNamespace,
+		Name:      pullSecretName}
+	err := r.Get(ctx, namespace, secret)
+	if err != nil {
+		switch {
+		case errors.IsNotFound(err):
+			log.Error(err, "Pull-secret does not exist.")
+		case errors.IsForbidden(err):
+			log.Error(err, "Operator does not have permission to check pull-secret.")
+		default:
+			log.Error(err, "Could not check pull-secret.")
+		}
+		return err
+	}
+
+	tokenFound := false
+	encodedPullSecret := secret.Data[pullSecretDataKey]
+	if len(encodedPullSecret) <= 0 {
+		return fmt.Errorf("Cluster authorization secret didn't have data.")
+	}
+	var pullSecret serializedAuthMap
+	if err := json.Unmarshal(encodedPullSecret, &pullSecret); err != nil {
+		log.Error(err, "Unable to unmarshal cluster pull-secret.")
+		return err
+	}
+	if auth, ok := pullSecret.Auths[pullSecretAuthKey]; ok {
+		token := strings.TrimSpace(auth.Auth)
+		if strings.Contains(token, "\n") || strings.Contains(token, "\r") {
+			return fmt.Errorf("Cluster authorization token is not valid: contains newlines.")
+		}
+		if len(token) > 0 {
+			log.Info("Found cloud.openshift.com token.")
+			costInput.BearerTokenString = token
+			tokenFound = true
+		} else {
+			return fmt.Errorf("Cluster authorization token is not found.")
+		}
+	} else {
+		return fmt.Errorf("Cluster authorization token was not found in secret data.")
+	}
+	if !tokenFound {
+		return fmt.Errorf("Cluster authorization token is not found.")
+	}
+	return nil
+}
+
+func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, reqNamespace types.NamespacedName) error {
+	ctx := context.Background()
+	log := r.Log.WithValues("costmanagement", "GetAuthSecret")
+
+	log.Info("Secret namespace", "namespace", reqNamespace.Namespace)
+	secret := &corev1.Secret{}
+	namespace := types.NamespacedName{
+		Namespace: reqNamespace.Namespace,
+		Name:      costInput.AuthenticationSecretName}
+	err := r.Get(ctx, namespace, secret)
+	if err != nil {
+		switch {
+		case errors.IsNotFound(err):
+			log.Error(err, "Secret does not exist.")
+		case errors.IsForbidden(err):
+			log.Error(err, "Operator does not have permission to check secret.")
+		default:
+			log.Error(err, "Could not check secret.")
+		}
+		return err
+	}
+
+	if val, ok := secret.Data[authSecretUserKey]; ok {
+		costInput.BasicAuthUser = string(val)
+	} else {
+		log.Info("Secret not found with expected user data.")
+		err = fmt.Errorf("Secret not found with expected user data.")
+		return err
+	}
+
+	if val, ok := secret.Data[authSecretPasswordKey]; ok {
+		costInput.BasicAuthPassword = string(val)
+	} else {
+		log.Info("Secret not found with expected password data.")
+		err = fmt.Errorf("Secret not found with expected password data.")
+		return err
+	}
+	return nil
+}
+
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
-// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list
-// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list
+// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=list;watch
+// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 
 func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -176,10 +294,62 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			return ctrl.Result{}, err
 		}
 	}
-
 	log.Info("Using the following inputs", "CostManagementInput", costInput)
 
-	return ctrl.Result{}, nil
+	// Obtain credentials token/basic
+	if costInput.Authentication == costmgmtv1alpha1.Token {
+		// Get token from pull secret
+		err = GetPullSecretToken(r, costInput)
+		if err != nil {
+			log.Error(nil, "Failed to obtain cluster authentication token.")
+			cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
+			err = r.Status().Update(ctx, cost)
+			if err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
+		} else {
+			cost.Status.AuthenticationCredentialsFound = pointer.Bool(true)
+			err = r.Status().Update(ctx, cost)
+			if err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
+		}
+	} else if costInput.AuthenticationSecretName != "" {
+		// Get user and password from auth secret in namespace
+		err = GetAuthSecret(r, costInput, req.NamespacedName)
+		if err != nil {
+			log.Error(nil, "Failed to obtain authentication secret credentials.")
+			cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
+			err = r.Status().Update(ctx, cost)
+			if err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
+		} else {
+			cost.Status.AuthenticationCredentialsFound = pointer.Bool(true)
+			err = r.Status().Update(ctx, cost)
+			if err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
+		}
+	} else {
+		// No authentication secret name set when using basic auth
+		cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
+		err = r.Status().Update(ctx, cost)
+		if err != nil {
+			log.Error(err, "Failed to update CostManagement Status")
+		}
+		err = fmt.Errorf("No authentication secret name set when using basic auth.")
+	}
+
+	// Error encountered collecting authentication
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
+
+	// Requeue for processing after 5 minutes
+	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
 }
 
 func (r *CostManagementReconciler) SetupWithManager(mgr ctrl.Manager) error {

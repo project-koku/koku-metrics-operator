@@ -108,6 +108,9 @@ type CostManagementStatus struct {
 
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
+
+	// AuthenticationCredentialsFound is a field of CostManagement to represent if used for uploads were found.
+	AuthenticationCredentialsFound *bool `json:"authentication_creds_found,omitempty"`
 }
 
 // +kubebuilder:object:root=true

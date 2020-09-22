@@ -20,6 +20,7 @@ rules:
   verbs:
   - get
   - list
+  - watch
 - apiGroups:
   - config.openshift.io
   resources:
@@ -35,6 +36,14 @@ rules:
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - list
+  - watch
 - apiGroups:
   - cost-mgmt.openshift.io
   resources:
