@@ -301,7 +301,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		// Get token from pull secret
 		err = GetPullSecretToken(r, costInput)
 		if err != nil {
-			log.Error(err, "Failed to obtain cluster authentication token.")
+			log.Error(nil, "Failed to obtain cluster authentication token.")
 			cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
 			err = r.Status().Update(ctx, cost)
 			if err != nil {
@@ -318,7 +318,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		// Get user and password from auth secret in namespace
 		err = GetAuthSecret(r, costInput, req.NamespacedName)
 		if err != nil {
-			log.Error(err, "Failed to obtain authentication secret credentials.")
+			log.Error(nil, "Failed to obtain authentication secret credentials.")
 			cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
 			err = r.Status().Update(ctx, cost)
 			if err != nil {
@@ -346,7 +346,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Using the following inputs with creds", "CostManagementInput", costInput)
+	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
 
 	// Requeue for processing after 5 minutes
 	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
