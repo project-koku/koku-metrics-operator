@@ -33,6 +33,7 @@ import (
 
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
+	"github.com/project-koku/korekuta-operator-go/collector"
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -178,6 +179,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	log.Info("Using the following inputs", "CostManagementInput", costInput)
+
+	if err := collector.Run(ctx); err != nil {
+		log.Error(err, "prometheus blows")
+	}
 
 	return ctrl.Result{}, nil
 }
