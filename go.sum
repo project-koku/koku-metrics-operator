@@ -508,6 +508,7 @@ k8s.io/kube-aggregator v0.17.1/go.mod h1:H5LcB3fx+P1gpowuZpzDu5B1XfABdO7JBKyB9J9
 k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a/go.mod h1:1TqjTSzOxsLGIKfj0lK8EeCP7K1iUG65v09OM0/WG5E=
 k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c h1:/KUFqjjqAcY4Us6luF5RDNZ16KJtb49HfR3ZHB9qYXM=
 k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c/go.mod h1:GRQhZsXIAJ1xR0C9bd8UpWHZ5plfAS9fzPjJuQ6JL3E=
+k8s.io/kubernetes v1.19.2 h1:sEvBYVM1/H5hqejFR10u8ndreYARV3DiTrqi2AY31ok=
 k8s.io/utils v0.0.0-20191114184206-e782cd3c129f/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89 h1:d4vVOjXm687F1iLSP2q3lyPPuyvTUt3aVoBpi2DqRsU=
 k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
