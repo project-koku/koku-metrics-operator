@@ -20,10 +20,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math/rand"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -249,6 +257,79 @@ func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, 
 	return nil
 }
 
+func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
+	ctx := context.Background()
+	log := r.Log.WithValues("costmanagement", "Upload")
+	log.Info("Inside of the upload function!")
+	req, err := http.NewRequest("POST", costInput.IngressUrl, nil)
+	if err != nil {
+		return err
+	}
+	// Set the headers
+	if req.Header == nil {
+		req.Header = make(http.Header)
+	}
+	buf := new(bytes.Buffer)
+	mw := multipart.NewWriter(buf)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", "payload.tar.gz"))
+	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
+	fw, err := mw.CreatePart(h)
+	req = req.WithContext(ctx)
+	f, err := os.Open("payload.tar.gz")
+	if err != nil {
+		log.Info("error opening file %s", err)
+	}
+	defer f.Close()
+	_, err = io.Copy(fw, f)
+	if err != nil {
+		return err
+	}
+	mw.Close()
+	req, err = http.NewRequest("POST", costInput.IngressUrl, buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	bearerdecode, err := base64.StdEncoding.DecodeString(costInput.BearerTokenString)
+	log.Info(string(bearerdecode))
+	log.Info(string(costInput.BearerTokenString))
+	if costInput.Authentication == "basic" {
+		log.Info("Using basic authentication!")
+		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
+	} else {
+		log.Info("Using token authentication")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/foo-commit cluster/%s", costInput.ClusterID))
+	}
+	for key, val := range req.Header {
+		// Logic using key
+		// And val if you need it
+		log.Info("Here is a header:")
+		fmt.Println(key, val)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error(err, "Could not send request")
+	}
+	//log.Info(fmt.Sprintf("Request body: %q", req.Body))
+	// requestID := resp.Header.Get("x-rh-insights-request-id")
+	log.Info("Made it past the requestID!")
+	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
+	// if resp.StatusCode == http.StatusUnauthorized {
+	// 	log.Info("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID)
+	// 	// return authorizer.Error{Err: fmt.Errorf("your Red Hat account is not enabled for remote support or your token has expired")}
+	// }
+	defer resp.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(err, "There was an error")
+	}
+	bodyString := string(bodyBytes)
+	log.Info("The following is the response body:")
+	log.Info(bodyString)
+
+	return err
+}
+
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
@@ -340,6 +421,16 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		err = fmt.Errorf("No authentication secret name set when using basic auth.")
 	}
+	// trial code Ashley
+	log.Info("Hello Ashley your code is RUNNING!")
+	data, err := ioutil.ReadFile("report.txt")
+	if err != nil {
+		fmt.Println("File reading error", err)
+		return ctrl.Result{}, err
+	}
+	fmt.Println("Contents of file:", string(data))
+	log.Info("The following is the upload URL:", "Ingress URL", costInput.IngressUrl)
+	err = Upload(r, costInput)
 
 	// Error encountered collecting authentication
 	if err != nil {

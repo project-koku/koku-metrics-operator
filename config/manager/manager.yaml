@@ -36,4 +36,12 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+          - mountPath: /var/run/configmaps/trusted-ca-bundle
+            name: trusted-ca-volume
+            readOnly: true
+      volumes:
+        - name: trusted-ca-volume
+          configMap:
+            name: trusted-ca-bundle
       terminationGracePeriodSeconds: 10
