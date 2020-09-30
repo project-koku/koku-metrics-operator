@@ -40,8 +40,11 @@ spec:
           - mountPath: /var/run/configmaps/trusted-ca-bundle
             name: trusted-ca-volume
             readOnly: true
+          - mountPath: /tmp/cost-mgmt-operator-reports
+            name: cost-mgmt-operator-reports
       volumes:
         - name: trusted-ca-volume
           configMap:
             name: trusted-ca-bundle
+        - name: cost-mgmt-operator-reports
       terminationGracePeriodSeconds: 10

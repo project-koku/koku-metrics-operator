@@ -22,7 +22,7 @@ package controllers
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -260,15 +260,17 @@ func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, 
 func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "Upload")
-	log.Info("Inside of the upload function!")
+	// log.Info("Inside of the upload function!")
+	// Create the empty request
 	req, err := http.NewRequest("POST", costInput.IngressUrl, nil)
 	if err != nil {
 		return err
 	}
-	// Set the headers
+	// Create the header
 	if req.Header == nil {
 		req.Header = make(http.Header)
 	}
+	// set the content and conetent type
 	buf := new(bytes.Buffer)
 	mw := multipart.NewWriter(buf)
 	h := make(textproto.MIMEHeader)
@@ -287,17 +289,18 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	}
 	mw.Close()
 	req, err = http.NewRequest("POST", costInput.IngressUrl, buf)
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", mw.FormDataContentType())
-	bearerdecode, err := base64.StdEncoding.DecodeString(costInput.BearerTokenString)
-	log.Info(string(bearerdecode))
-	log.Info(string(costInput.BearerTokenString))
 	if costInput.Authentication == "basic" {
-		log.Info("Using basic authentication!")
+		log.Info("Uploading using basic authentication!")
 		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
 	} else {
-		log.Info("Using token authentication")
+		log.Info("Uploading using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
-		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/foo-commit cluster/%s", costInput.ClusterID))
+		// change the below to the actual git commit
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/9ec0b9f48045ee0f9e4137e54dd01eddea2455c4 cluster/%s", costInput.ClusterID))
 	}
 	for key, val := range req.Header {
 		// Logic using key
@@ -305,6 +308,21 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 		log.Info("Here is a header:")
 		fmt.Println(key, val)
 	}
+	// define the caCert
+	caCert, err := ioutil.ReadFile("ca-bundle.crt")
+	if err != nil {
+		log.Error(err, "An error Occurred")
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	//
+	// client := &http.Client{
+	// 	Transport: &http.Transport{
+	// 		TLSClientConfig: &tls.Config{
+	// 			RootCAs: caCertPool,
+	// 		},
+	// 	},
+	// }
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -423,12 +441,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	// trial code Ashley
 	log.Info("Hello Ashley your code is RUNNING!")
-	data, err := ioutil.ReadFile("report.txt")
-	if err != nil {
-		fmt.Println("File reading error", err)
-		return ctrl.Result{}, err
-	}
-	fmt.Println("Contents of file:", string(data))
+	// data, err := ioutil.ReadFile("report.txt")
+	// if err != nil {
+	// 	fmt.Println("File reading error", err)
+	// 	return ctrl.Result{}, err
+	// }
+	// fmt.Println("Contents of file:", string(data))
 	log.Info("The following is the upload URL:", "Ingress URL", costInput.IngressUrl)
 	err = Upload(r, costInput)
 
