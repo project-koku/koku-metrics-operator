@@ -37,26 +37,45 @@ spec:
           description: CostManagementSpec defines the desired state of CostManagement
           properties:
             authentication:
-              description: 'Authentication is a field of CostManagement to represent
-                the authentication type to be used basic or token. Valid values are:
-                - "basic" : Enables authetication using user and password from authentication
-                secret - "token" (default): Uses cluster token for authentication'
-              enum:
-              - token
-              - basic
-              type: string
-            authentication_secret_name:
-              description: AuthenticationSecretName is a field of CostManagement to
-                represent the secret with the user and password used for uploads.
-              type: string
+              description: Authentication is a field of CostManagement to represent
+                the authentication object.
+              properties:
+                secret_name:
+                  description: AuthenticationSecretName is a field of CostManagement
+                    to represent the secret with the user and password used for uploads.
+                  type: string
+                type:
+                  description: 'AuthType is a field of CostManagement to represent
+                    the authentication type to be used basic or token. Valid values
+                    are: - "basic" : Enables authetication using user and password
+                    from authentication secret - "token" (default): Uses cluster token
+                    for authentication'
+                  enum:
+                  - token
+                  - basic
+                  type: string
+              type: object
             clusterID:
               description: ClusterID is a field of CostManagement to represent the
                 cluster UUID.
               type: string
             ingress_url:
-              description: IngressUrl is a field of CostManagement to represent the
+              description: IngressURL is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
+            source:
+              description: Source is a field of CostManagement to represent the desired
+                source on cloud.redhat.com.
+              properties:
+                create_source:
+                  description: CreateSource is a field of CostManagementSpec to represent
+                    if the source should be created if not found.
+                  type: boolean
+                name:
+                  description: SourceName is a field of CostManagementSpec to represent
+                    the source name on cloud.redhat.com.
+                  type: string
+              type: object
             upload_wait:
               description: UploadWait is a field of CostManagement to represent the
                 time to wait before sending an upload.
@@ -73,27 +92,49 @@ spec:
           properties:
             authentication:
               description: Authentication is a field of CostManagement to represent
-                the authentication type to be used basic or token.
-              enum:
-              - token
-              - basic
-              type: string
-            authentication_creds_found:
-              description: AuthenticationCredentialsFound is a field of CostManagement
-                to represent if used for uploads were found.
-              type: boolean
-            authentication_secret_name:
-              description: AuthenticationSecretName is a field of CostManagement to
-                represent the secret with the user and password used for uploads.
-              type: string
+                the authentication status.
+              properties:
+                credentials_found:
+                  description: AuthenticationCredentialsFound is a field of CostManagement
+                    to represent if used for uploads were found.
+                  type: boolean
+                secret_name:
+                  description: AuthenticationSecretName is a field of CostManagement
+                    to represent the secret with the user and password used for uploads.
+                  type: string
+                type:
+                  description: AuthType is a field of CostManagement to represent
+                    the authentication type to be used basic or token.
+                  enum:
+                  - token
+                  - basic
+                  type: string
+              type: object
             clusterID:
               description: ClusterID is a field of CostManagement to represent the
                 cluster UUID.
               type: string
             ingress_url:
-              description: IngressUrl is a field of CostManagement to represent the
+              description: IngressURL is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
+            source:
+              description: Source is a field of CostManagement to represent the observed
+                state of the source on cloud.redhat.com.
+              properties:
+                error:
+                  description: SourceError is a field of CostManagementStatus to represent
+                    the error encountered creating the source.
+                  type: string
+                name:
+                  description: SourceName is a field of CostManagementStatus to represent
+                    the source name on cloud.redhat.com.
+                  type: string
+                source_defined:
+                  description: SourceDefined is a field of CostManagementStatus to
+                    represent if the source exists as defined on cloud.redhat.com.
+                  type: boolean
+              type: object
             upload_wait:
               description: UploadWait is a field of CostManagement to represent the
                 time to wait before sending an upload.
