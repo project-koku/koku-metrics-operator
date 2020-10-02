@@ -111,6 +111,15 @@ type CostManagementStatus struct {
 
 	// AuthenticationCredentialsFound is a field of CostManagement to represent if used for uploads were found.
 	AuthenticationCredentialsFound *bool `json:"authentication_creds_found,omitempty"`
+
+	// Last Upload Status
+	LastUploadStatus string `json:"last_upload_status,omitempty"`
+
+	// Last Upload Time
+	LastUploadTime string `json:"last_upload_time,omitempty"`
+
+	// Operator git commit Hash
+	OperatorCommit string `json:"operator_commit,omitempty"`
 }
 
 // +kubebuilder:object:root=true

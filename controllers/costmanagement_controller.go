@@ -22,7 +22,6 @@ package controllers
 import (
 	"bytes"
 	"context"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -77,6 +76,9 @@ type CostManagementInput struct {
 	BearerTokenString        string
 	BasicAuthUser            string
 	BasicAuthPassword        string
+	LastUploadStatus         string
+	LastUploadTime           string
+	OperatorCommit           string
 }
 
 type serializedAuthMap struct {
@@ -106,6 +108,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	log := r.Log.WithValues("costmanagement", "ReflectSpec")
 	costInput.IngressUrl = StringReflectSpec(r, cost, &cost.Spec.IngressUrl, &cost.Status.IngressUrl, costmgmtv1alpha1.DefaultIngressUrl)
 	costInput.AuthenticationSecretName = StringReflectSpec(r, cost, &cost.Spec.AuthenticationSecretName, &cost.Status.AuthenticationSecretName, "")
+	// costInput.LastUploadStatus = StringReflectSpec(r, cost, &cost.Status.LastUploadStatus, "")
 
 	if cost.Status.Authentication == "" || !reflect.DeepEqual(cost.Spec.Authentication, cost.Status.Authentication) {
 		// If data is specified in the spec it should be used
@@ -257,14 +260,14 @@ func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, 
 	return nil
 }
 
-func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
+func Upload(r *CostManagementReconciler, costInput *CostManagementInput) (string, string, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "Upload")
 	// log.Info("Inside of the upload function!")
 	// Create the empty request
 	req, err := http.NewRequest("POST", costInput.IngressUrl, nil)
 	if err != nil {
-		return err
+		log.Error(err, "Could not send request")
 	}
 	// Create the header
 	if req.Header == nil {
@@ -285,36 +288,21 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	defer f.Close()
 	_, err = io.Copy(fw, f)
 	if err != nil {
-		return err
+		log.Error(err, "Could not send request")
 	}
 	mw.Close()
 	req, err = http.NewRequest("POST", costInput.IngressUrl, buf)
 	if err != nil {
-		return err
+		log.Error(err, "Could not send request")
 	}
-	req.Header.Set("Content-Type", mw.FormDataContentType())
-	if costInput.Authentication == "basic" {
-		log.Info("Uploading using basic authentication!")
-		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
-	} else {
-		log.Info("Uploading using token authentication")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
-		// change the below to the actual git commit
-		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/9ec0b9f48045ee0f9e4137e54dd01eddea2455c4 cluster/%s", costInput.ClusterID))
-	}
-	for key, val := range req.Header {
-		// Logic using key
-		// And val if you need it
-		log.Info("Here is a header:")
-		fmt.Println(key, val)
-	}
+
 	// define the caCert
-	caCert, err := ioutil.ReadFile("ca-bundle.crt")
-	if err != nil {
-		log.Error(err, "An error Occurred")
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
+	// caCert, err := ioutil.ReadFile("ca-bundle.crt")
+	// if err != nil {
+	// 	log.Error(err, "An error Occurred")
+	// }
+	// caCertPool := x509.NewCertPool()
+	// caCertPool.AppendCertsFromPEM(caCert)
 	//
 	// client := &http.Client{
 	// 	Transport: &http.Transport{
@@ -323,7 +311,25 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	// 		},
 	// 	},
 	// }
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	if costInput.Authentication == "basic" {
+		log.Info("Uploading using basic authentication!")
+		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
+	} else {
+		log.Info("Uploading using token authentication")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
+	}
+	for key, val := range req.Header {
+		log.Info("Here is a header:")
+		fmt.Println(key, val)
+	}
 	client := &http.Client{}
+	// log.Info("Pausing for %s", costInput.UploadWait)
+	// s := fmt.Sprintf("%+8d", costInput.UploadWait)
+	// log.Info("Pausing for " + s)
+	log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
+	time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
@@ -332,6 +338,22 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	// requestID := resp.Header.Get("x-rh-insights-request-id")
 	log.Info("Made it past the requestID!")
 	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
+	// costInput.LastUploadStatus = http.StatusText(resp.StatusCode)
+	//
+	//
+	// cost := &costmgmtv1alpha1.CostManagement{}
+	// cost.Status.LastUploadStatus = fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
+	// costInput.LastUploadStatus = cost.Status.LastUploadStatus
+	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
+	uploadTime := time.Now()
+	// cost.Status.LastUploadTime = dt.String()
+	// costInput.LastUploadTime = cost.Status.LastUploadTime
+	//
+	//
+	// err = r.Status().Update(ctx, cost)
+	// if err != nil {
+	// 	log.Error(err, "Failed to update CostManagement Status")
+	// }
 	// if resp.StatusCode == http.StatusUnauthorized {
 	// 	log.Info("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID)
 	// 	// return authorizer.Error{Err: fmt.Errorf("your Red Hat account is not enabled for remote support or your token has expired")}
@@ -345,7 +367,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	log.Info("The following is the response body:")
 	log.Info(bodyString)
 
-	return err
+	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
 }
 
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
@@ -439,20 +461,35 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		err = fmt.Errorf("No authentication secret name set when using basic auth.")
 	}
-	// trial code Ashley
-	log.Info("Hello Ashley your code is RUNNING!")
-	// data, err := ioutil.ReadFile("report.txt")
-	// if err != nil {
-	// 	fmt.Println("File reading error", err)
-	// 	return ctrl.Result{}, err
-	// }
-	// fmt.Println("Contents of file:", string(data))
-	log.Info("The following is the upload URL:", "Ingress URL", costInput.IngressUrl)
-	err = Upload(r, costInput)
-
+	// Grab the Operator git commit and upload the status and input object with it
+	commit, err := ioutil.ReadFile("commit")
+	if err != nil {
+		fmt.Println("File reading error", err)
+		return ctrl.Result{}, err
+	}
+	cost.Status.OperatorCommit = strings.Replace(string(commit), "\n", "", -1)
+	costInput.OperatorCommit = cost.Status.OperatorCommit
+	err = r.Status().Update(ctx, cost)
+	if err != nil {
+		log.Error(err, "Failed to update CostManagement Status")
+	}
+	// Upload to c.rh.com
+	var uploadStatus string
+	var uploadTime string
+	uploadStatus, uploadTime, err = Upload(r, costInput)
 	// Error encountered collecting authentication
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if uploadStatus != "" {
+		cost.Status.LastUploadStatus = uploadStatus
+		costInput.LastUploadStatus = cost.Status.LastUploadStatus
+		cost.Status.LastUploadTime = uploadTime
+		costInput.LastUploadTime = cost.Status.LastUploadTime
+		err = r.Status().Update(ctx, cost)
+		if err != nil {
+			log.Error(err, "Failed to update CostManagement Status")
+		}
 	}
 
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works

@@ -94,6 +94,15 @@ spec:
               description: IngressUrl is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
+            last_upload_status:
+              description: Last Upload Status
+              type: string
+            last_upload_time:
+              description: Last Upload Time
+              type: string
+            operator_commit:
+              description: Operator git commit Hash
+              type: string
             upload_wait:
               description: UploadWait is a field of CostManagement to represent the
                 time to wait before sending an upload.
