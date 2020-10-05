@@ -28,3 +28,6 @@ config/manager/kustomization.yaml
 
 # Ignore files for envtest
 testbin/*
+
+# Ignore the commit file for running locally
+commit

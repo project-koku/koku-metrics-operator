@@ -36,8 +36,12 @@ test: generate fmt vet manifests
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
+# save the git commit
+commit:
+	git rev-parse HEAD > commit
+
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
+run: generate fmt vet manifests commit
 	go run ./main.go
 
 # Install CRDs into a cluster
