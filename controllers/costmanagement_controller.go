@@ -69,7 +69,7 @@ type CostManagementReconciler struct {
 type CostManagementInput struct {
 	ClusterID                string
 	ValidateCert             bool
-	IngressUrl               string
+	IngressURL               string
 	AuthenticationSecretName string
 	Authentication           costmgmtv1alpha1.AuthenticationType
 	UploadWait               int64
@@ -79,6 +79,8 @@ type CostManagementInput struct {
 	LastUploadStatus         string
 	LastUploadTime           string
 	OperatorCommit           string
+	SourceName               string
+	CreateSource             bool
 }
 
 type serializedAuthMap struct {
@@ -88,6 +90,7 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
+// StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
 func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *string, statusItem *string, defaultVal string) string {
 	// Update statusItem if needed
 	if *statusItem == "" || !reflect.DeepEqual(*specItem, *statusItem) {
@@ -103,22 +106,22 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 	return *statusItem
 }
 
+// ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costInput *CostManagementInput) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "ReflectSpec")
-	costInput.IngressUrl = StringReflectSpec(r, cost, &cost.Spec.IngressUrl, &cost.Status.IngressUrl, costmgmtv1alpha1.DefaultIngressUrl)
-	costInput.AuthenticationSecretName = StringReflectSpec(r, cost, &cost.Spec.AuthenticationSecretName, &cost.Status.AuthenticationSecretName, "")
-	// costInput.LastUploadStatus = StringReflectSpec(r, cost, &cost.Status.LastUploadStatus, "")
+	costInput.IngressURL = StringReflectSpec(r, cost, &cost.Spec.IngressURL, &cost.Status.IngressURL, costmgmtv1alpha1.DefaultIngressURL)
+	costInput.AuthenticationSecretName = StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
 
-	if cost.Status.Authentication == "" || !reflect.DeepEqual(cost.Spec.Authentication, cost.Status.Authentication) {
+	if cost.Status.Authentication.AuthType == "" || !reflect.DeepEqual(cost.Spec.Authentication.AuthType, cost.Status.Authentication.AuthType) {
 		// If data is specified in the spec it should be used
-		if cost.Spec.Authentication != "" {
-			cost.Status.Authentication = cost.Spec.Authentication
+		if cost.Spec.Authentication.AuthType != "" {
+			cost.Status.Authentication.AuthType = cost.Spec.Authentication.AuthType
 		} else {
-			cost.Status.Authentication = costmgmtv1alpha1.DefaultAuthenticationType
+			cost.Status.Authentication.AuthType = costmgmtv1alpha1.DefaultAuthenticationType
 		}
 	}
-	costInput.Authentication = cost.Status.Authentication
+	costInput.Authentication = cost.Status.Authentication.AuthType
 
 	// If data is specified in the spec it should be used
 	cost.Status.ValidateCert = cost.Spec.ValidateCert
@@ -139,6 +142,12 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.UploadWait = r.Int63() % 35
 	}
 
+	costInput.SourceName = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
+	costInput.CreateSource = false
+	if cost.Spec.Source.CreateSource != nil {
+		costInput.CreateSource = *cost.Spec.Source.CreateSource
+	}
+
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
@@ -147,6 +156,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	return nil
 }
 
+// GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
 func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costInput *CostManagementInput) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "GetClusterID")
@@ -169,6 +179,7 @@ func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManage
 	return nil
 }
 
+// GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
 func GetPullSecretToken(r *CostManagementReconciler, costInput *CostManagementInput) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "GetPullSecretToken")
@@ -220,6 +231,7 @@ func GetPullSecretToken(r *CostManagementReconciler, costInput *CostManagementIn
 	return nil
 }
 
+// GetAuthSecret Obtain the username and password from the authentication secret provided in the current namespace
 func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, reqNamespace types.NamespacedName) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "GetAuthSecret")
@@ -379,6 +391,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) (string
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 
+// Reconcile Process the CostManagement custom resource based on changes or requeue
 func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", req.NamespacedName)
@@ -423,13 +436,13 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		err = GetPullSecretToken(r, costInput)
 		if err != nil {
 			log.Error(nil, "Failed to obtain cluster authentication token.")
-			cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
+			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 			err = r.Status().Update(ctx, cost)
 			if err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		} else {
-			cost.Status.AuthenticationCredentialsFound = pointer.Bool(true)
+			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
 			err = r.Status().Update(ctx, cost)
 			if err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
@@ -440,13 +453,13 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		err = GetAuthSecret(r, costInput, req.NamespacedName)
 		if err != nil {
 			log.Error(nil, "Failed to obtain authentication secret credentials.")
-			cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
+			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 			err = r.Status().Update(ctx, cost)
 			if err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		} else {
-			cost.Status.AuthenticationCredentialsFound = pointer.Bool(true)
+			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
 			err = r.Status().Update(ctx, cost)
 			if err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
@@ -454,7 +467,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	} else {
 		// No authentication secret name set when using basic auth
-		cost.Status.AuthenticationCredentialsFound = pointer.Bool(false)
+		cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 		err = r.Status().Update(ctx, cost)
 		if err != nil {
 			log.Error(err, "Failed to update CostManagement Status")
@@ -498,6 +511,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
 }
 
+// SetupWithManager Setup reconciliation with manager object
 func (r *CostManagementReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&costmgmtv1alpha1.CostManagement{}).

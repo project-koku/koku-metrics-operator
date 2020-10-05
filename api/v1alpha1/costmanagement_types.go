@@ -53,6 +53,33 @@ const (
 	Token AuthenticationType = "token"
 )
 
+// AuthenticationSpec defines the desired state of Authentication object in the CostManagementSpec
+type AuthenticationSpec struct {
+
+	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
+	// Valid values are:
+	// - "basic" : Enables authetication using user and password from authentication secret
+	// - "token" (default): Uses cluster token for authentication
+	// +optional
+	AuthType AuthenticationType `json:"type,omitempty"`
+
+	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
+	// +optional
+	AuthenticationSecretName string `json:"secret_name,omitempty"`
+}
+
+// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
+type CloudDotRedHatSourceSpec struct {
+
+	// SourceName is a field of CostManagementSpec to represent the source name on cloud.redhat.com.
+	// +optional
+	SourceName string `json:"name,omitempty"`
+
+	// CreateSource is a field of CostManagementSpec to represent if the source should be created if not found.
+	// +optional
+	CreateSource *bool `json:"create_source,omitempty"`
+}
+
 // CostManagementSpec defines the desired state of CostManagement
 type CostManagementSpec struct {
 
@@ -64,26 +91,52 @@ type CostManagementSpec struct {
 	// +optional
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 
-	// IngressUrl is a field of CostManagement to represent the url of the ingress service.
+	// IngressURL is a field of CostManagement to represent the url of the ingress service.
 	// +optional
-	IngressUrl string `json:"ingress_url,omitempty"`
+	IngressURL string `json:"ingress_url,omitempty"`
 
-	// Authentication is a field of CostManagement to represent the authentication type to be used basic or token.
-	// Valid values are:
-	// - "basic" : Enables authetication using user and password from authentication secret
-	// - "token" (default): Uses cluster token for authentication
+	// Authentication is a field of CostManagement to represent the authentication object.
 	// +optional
-	Authentication AuthenticationType `json:"authentication,omitempty"`
-
-	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
-	// +optional
-	AuthenticationSecretName string `json:"authentication_secret_name,omitempty"`
+	Authentication AuthenticationSpec `json:"authentication,omitempty"`
 
 	// +kubebuilder:validation:Minimum=0
 
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	// +optional
 	UploadWait *int64 `json:"upload_wait,omitempty"`
+
+	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
+	// +optional
+	Source CloudDotRedHatSourceSpec `json:"source,omitempty"`
+}
+
+// AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus
+type AuthenticationStatus struct {
+
+	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
+	AuthType AuthenticationType `json:"type,omitempty"`
+
+	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
+	AuthenticationSecretName string `json:"secret_name,omitempty"`
+
+	// AuthenticationCredentialsFound is a field of CostManagement to represent if used for uploads were found.
+	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
+}
+
+// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus
+type CloudDotRedHatSourceStatus struct {
+
+	// SourceName is a field of CostManagementStatus to represent the source name on cloud.redhat.com.
+	// +optional
+	SourceName string `json:"name,omitempty"`
+
+	// SourceDefined is a field of CostManagementStatus to represent if the source exists as defined on cloud.redhat.com.
+	// +optional
+	SourceDefined *bool `json:"source_defined,omitempty"`
+
+	// SourceError is a field of CostManagementStatus to represent the error encountered creating the source.
+	// +optional
+	SourceError string `json:"error,omitempty"`
 }
 
 // CostManagementStatus defines the observed state of CostManagement
@@ -97,20 +150,14 @@ type CostManagementStatus struct {
 	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 
-	// IngressUrl is a field of CostManagement to represent the url of the ingress service.
-	IngressUrl string `json:"ingress_url,omitempty"`
+	// IngressURL is a field of CostManagement to represent the url of the ingress service.
+	IngressURL string `json:"ingress_url,omitempty"`
 
-	// Authentication is a field of CostManagement to represent the authentication type to be used basic or token.
-	Authentication AuthenticationType `json:"authentication,omitempty"`
-
-	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
-	AuthenticationSecretName string `json:"authentication_secret_name,omitempty"`
+	// Authentication is a field of CostManagement to represent the authentication status.
+	Authentication AuthenticationStatus `json:"authentication,omitempty"`
 
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
-
-	// AuthenticationCredentialsFound is a field of CostManagement to represent if used for uploads were found.
-	AuthenticationCredentialsFound *bool `json:"authentication_creds_found,omitempty"`
 
 	// Last Upload Status
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
@@ -120,6 +167,10 @@ type CostManagementStatus struct {
 
 	// Operator git commit Hash
 	OperatorCommit string `json:"operator_commit,omitempty"`
+
+	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
+	// +optional
+	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 }
 
 // +kubebuilder:object:root=true

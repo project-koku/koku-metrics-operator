@@ -20,12 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package v1alpha1
 
 const (
-	// The default authencation type.
+	// DefaultAuthenticationType The default authencation type.
 	DefaultAuthenticationType AuthenticationType = Token
 
-	// The default ingress url.
-	DefaultIngressUrl string = "https://cloud.redhat.com/api/ingress/v1/upload"
+	// DefaultIngressURL The default ingress url.
+	DefaultIngressURL string = "https://cloud.redhat.com/api/ingress/v1/upload"
 
-	// The default cert validation setting
+	// DefaultValidateCert The default cert validation setting
 	DefaultValidateCert bool = CertIgnore
 )
