@@ -575,7 +575,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	var body *bytes.Buffer
 	var mw *multipart.Writer
 	// grab the body and the multipart file header
-	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports1")
+	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
 	if err != nil {
 		log.Error(err, "Could not read the directory")
 	}

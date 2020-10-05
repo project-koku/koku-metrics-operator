@@ -5,19 +5,9 @@ WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
-COPY .git /tmp/repo/.git
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
-
-# Install git.
-# Git is required for fetching the dependencies.
-RUN apk update && apk add --no-cache git && \
-    git -C /tmp/repo rev-parse HEAD > /tmp/commit && \
-    rm -fr /tmp/repo && \
-    cat /tmp/commit
-
-RUN cp /tmp/commit ${HOME}/commit
 
 # Copy the go source
 COPY main.go main.go
@@ -34,6 +24,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 FROM alpine:3.7
 WORKDIR /
 COPY --from=builder /workspace/manager .
+# Install git.
+# Git is required for fetching the dependencies.
+COPY .git /tmp/repo/.git
+RUN apk update && apk add git && \
+    git -C /tmp/repo rev-parse HEAD > /tmp/commit && \
+    rm -fr /tmp/repo && \
+    apk del git && \
+    cat /tmp/commit
+
+RUN cp /tmp/commit commit
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]
