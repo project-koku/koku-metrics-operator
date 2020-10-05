@@ -281,9 +281,9 @@ func GetBodyAndHeaders(r *CostManagementReconciler, filename string) (*bytes.Buf
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
 	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
 	fw, err := mw.CreatePart(h)
-	f, err := os.Open("payload.tar.gz")
+	f, err := os.Open(filename)
 	if err != nil {
-		log.Info("error opening file %s", err)
+		log.Info("error opening file", err)
 	}
 	defer f.Close()
 	_, err = io.Copy(fw, f)
@@ -583,7 +583,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	for _, file := range files {
 		log.Info("Uploading the following file: ")
 		fmt.Println(file.Name())
-		body, mw = GetBodyAndHeaders(r, file.Name())
+		body, mw = GetBodyAndHeaders(r, "/tmp/cost-mgmt-operator-reports/"+file.Name())
 		uploadStatus, uploadTime, err = SplitUpload(r, costInput, "POST", costInput.IngressURL, body, mw)
 		if err != nil {
 			return ctrl.Result{}, err
