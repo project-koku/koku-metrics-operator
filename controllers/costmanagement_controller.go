@@ -272,12 +272,95 @@ func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, 
 	return nil
 }
 
+func GetBodyAndHeaders(r *CostManagementReconciler, filename string) (*bytes.Buffer, *multipart.Writer) {
+	log := r.Log.WithValues("costmanagement", "GetBodyAndHeaders")
+	// set the content and content type
+	buf := new(bytes.Buffer)
+	mw := multipart.NewWriter(buf)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
+	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
+	fw, err := mw.CreatePart(h)
+	f, err := os.Open("payload.tar.gz")
+	if err != nil {
+		log.Info("error opening file %s", err)
+	}
+	defer f.Close()
+	_, err = io.Copy(fw, f)
+	if err != nil {
+		log.Error(err, "Could not send request")
+	}
+	mw.Close()
+	return buf, mw
+}
+
+func SplitUpload(r *CostManagementReconciler, costInput *CostManagementInput, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, string, error) {
+	ctx := context.Background()
+	log := r.Log.WithValues("costmanagement", "Upload")
+	req, err := http.NewRequest(method, path, body)
+	if err != nil {
+		return "", "", err
+	}
+	// Create the header
+	if req.Header == nil {
+		req.Header = make(http.Header)
+	}
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	if costInput.Authentication == "basic" {
+		log.Info("Uploading using basic authentication!")
+		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
+	} else {
+		log.Info("Uploading using token authentication")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
+	}
+	for key, val := range req.Header {
+		log.Info("Here is a header:")
+		fmt.Println(key, val)
+	}
+	client := &http.Client{}
+	log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
+	time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error(err, "Could not send request")
+	}
+	//log.Info(fmt.Sprintf("Request body: %q", req.Body))
+	// requestID := resp.Header.Get("x-rh-insights-request-id")
+	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
+	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
+	uploadTime := time.Now()
+	// cost.Status.LastUploadTime = dt.String()
+	// costInput.LastUploadTime = cost.Status.LastUploadTime
+	//
+	//
+	// err = r.Status().Update(ctx, cost)
+	// if err != nil {
+	// 	log.Error(err, "Failed to update CostManagement Status")
+	// }
+	// if resp.StatusCode == http.StatusUnauthorized {
+	// 	log.Info("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID)
+	// 	// return authorizer.Error{Err: fmt.Errorf("your Red Hat account is not enabled for remote support or your token has expired")}
+	// }
+	defer resp.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(err, "There was an error")
+	}
+	bodyString := string(bodyBytes)
+	log.Info("The following is the response body:")
+	log.Info(bodyString)
+
+	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
+}
+
 func Upload(r *CostManagementReconciler, costInput *CostManagementInput) (string, string, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "Upload")
 	// log.Info("Inside of the upload function!")
 	// Create the empty request
-	req, err := http.NewRequest("POST", costInput.IngressUrl, nil)
+	req, err := http.NewRequest("POST", costInput.IngressURL, nil)
 	if err != nil {
 		log.Error(err, "Could not send request")
 	}
@@ -285,7 +368,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) (string
 	if req.Header == nil {
 		req.Header = make(http.Header)
 	}
-	// set the content and conetent type
+	// set the content and content type
 	buf := new(bytes.Buffer)
 	mw := multipart.NewWriter(buf)
 	h := make(textproto.MIMEHeader)
@@ -303,7 +386,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput) (string
 		log.Error(err, "Could not send request")
 	}
 	mw.Close()
-	req, err = http.NewRequest("POST", costInput.IngressUrl, buf)
+	req, err = http.NewRequest("POST", costInput.IngressURL, buf)
 	if err != nil {
 		log.Error(err, "Could not send request")
 	}
@@ -489,19 +572,31 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// Upload to c.rh.com
 	var uploadStatus string
 	var uploadTime string
-	uploadStatus, uploadTime, err = Upload(r, costInput)
-	// Error encountered collecting authentication
+	var body *bytes.Buffer
+	var mw *multipart.Writer
+	// grab the body and the multipart file header
+	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports1")
 	if err != nil {
-		return ctrl.Result{}, err
+		log.Error(err, "Could not read the directory")
 	}
-	if uploadStatus != "" {
-		cost.Status.LastUploadStatus = uploadStatus
-		costInput.LastUploadStatus = cost.Status.LastUploadStatus
-		cost.Status.LastUploadTime = uploadTime
-		costInput.LastUploadTime = cost.Status.LastUploadTime
-		err = r.Status().Update(ctx, cost)
+
+	for _, file := range files {
+		log.Info("Uploading the following file: ")
+		fmt.Println(file.Name())
+		body, mw = GetBodyAndHeaders(r, file.Name())
+		uploadStatus, uploadTime, err = SplitUpload(r, costInput, "POST", costInput.IngressURL, body, mw)
 		if err != nil {
-			log.Error(err, "Failed to update CostManagement Status")
+			return ctrl.Result{}, err
+		}
+		if uploadStatus != "" {
+			cost.Status.LastUploadStatus = uploadStatus
+			costInput.LastUploadStatus = cost.Status.LastUploadStatus
+			cost.Status.LastUploadTime = uploadTime
+			costInput.LastUploadTime = cost.Status.LastUploadTime
+			err = r.Status().Update(ctx, cost)
+			if err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
 		}
 	}
 
