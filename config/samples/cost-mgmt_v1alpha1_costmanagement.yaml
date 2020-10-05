@@ -2,5 +2,3 @@ apiVersion: cost-mgmt.openshift.io/v1alpha1
 kind: CostManagement
 metadata:
   name: costmanagement-sample
-spec:
-  ingress_url: 'https://ci.cloud.redhat.com/api/ingress/v1/upload'
