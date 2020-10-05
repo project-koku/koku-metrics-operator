@@ -35,6 +35,7 @@ import (
 var namespace = "openshift-cost"
 var namePrefix = "cost-test-local-"
 var clusterID = "10e206d7-a11a-403e-b835-6cff14e98b23"
+var sourceName = "cluster-test"
 var authSecretName = "cloud-dot-redhat"
 
 var _ = Describe("CostmanagementController", func() {
@@ -73,9 +74,9 @@ var _ = Describe("CostmanagementController", func() {
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(fetched.Status.Authentication).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
-				Expect(*fetched.Status.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.IngressUrl).To(Equal(costmgmtv1alpha1.DefaultIngressUrl))
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			})
 		})
@@ -87,8 +88,10 @@ var _ = Describe("CostmanagementController", func() {
 					Namespace: namespace,
 				},
 				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication:           costmgmtv1alpha1.Basic,
-					AuthenticationSecretName: authSecretName,
+					Authentication: costmgmtv1alpha1.AuthenticationSpec{
+						AuthType:                 costmgmtv1alpha1.Basic,
+						AuthenticationSecretName: authSecretName,
+					},
 				},
 			}
 
@@ -103,10 +106,10 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication).To(Equal(costmgmtv1alpha1.Basic))
-			Expect(fetched.Status.AuthenticationSecretName).To(Equal(authSecretName))
-			Expect(*fetched.Status.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.IngressUrl).To(Equal(costmgmtv1alpha1.DefaultIngressUrl))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
@@ -117,8 +120,10 @@ var _ = Describe("CostmanagementController", func() {
 					Namespace: namespace,
 				},
 				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication:           costmgmtv1alpha1.Basic,
-					AuthenticationSecretName: badAuth,
+					Authentication: costmgmtv1alpha1.AuthenticationSpec{
+						AuthType:                 costmgmtv1alpha1.Basic,
+						AuthenticationSecretName: badAuth,
+					},
 				},
 			}
 
@@ -133,12 +138,42 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication).To(Equal(costmgmtv1alpha1.Basic))
-			Expect(fetched.Status.AuthenticationSecretName).To(Equal(badAuth))
-			Expect(*fetched.Status.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.IngressUrl).To(Equal(costmgmtv1alpha1.DefaultIngressUrl))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
+		It("should reflect source name in status for source info CRD case", func() {
 
+			instance := costmgmtv1alpha1.CostManagement{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      namePrefix + "sourceinfo",
+					Namespace: namespace,
+				},
+				Spec: costmgmtv1alpha1.CostManagementSpec{
+					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+						SourceName: sourceName,
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
+			time.Sleep(time.Second * 10)
+
+			fetched := &costmgmtv1alpha1.CostManagement{}
+
+			// check the CRD was created ok
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
+		})
 	})
 })
