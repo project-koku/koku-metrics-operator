@@ -16,6 +16,10 @@ IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
+# Use git branch for dev team deployment of pushed branches
+GITBRANCH=$(shell git branch --show-current)
+GITBRANCH_IMG="quay.io/project-koku/korekuta-operator-go:${GITBRANCH}"
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -58,6 +62,9 @@ deploy: manifests kustomize
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -
 	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
+
+deploy-branch:
+	IMG=${GITBRANCH_IMG} $(MAKE) deploy
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
