@@ -289,7 +289,7 @@ func GetBodyAndHeaders(r *CostManagementReconciler, filename string) (*bytes.Buf
 	defer f.Close()
 	_, err = io.Copy(fw, f)
 	if err != nil {
-		log.Error(err, "Could not send request")
+		log.Error(err, "The following error occurred")
 	}
 	mw.Close()
 	return buf, mw
@@ -300,6 +300,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	log := r.Log.WithValues("costmanagement", "Upload")
 	req, err := http.NewRequest(method, path, body)
 	if err != nil {
+		log.Error(err, "Could not create request")
 		return "", "", err
 	}
 	// Create the header
@@ -316,34 +317,56 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
 	}
-
+	// Log the headers - probably remove this later
+	log.Info("Request Headers:")
 	for key, val := range req.Header {
-		log.Info("Here is a header:")
 		fmt.Println(key, val)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
+		return "", "", err
 	}
+	defer resp.Body.Close()
 
 	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := time.Now()
 
 	// Add error handling and logging here
-	// requestID := resp.Header.Get("x-rh-insights-request-id")
-	// if resp.StatusCode == http.StatusUnauthorized {
-	// 	log.Info("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID)
-	// 	// return authorizer.Error{Err: fmt.Errorf("your Red Hat account is not enabled for remote support or your token has expired")}
-	// }
-	defer resp.Body.Close()
+	requestID := resp.Header.Get("x-rh-insights-request-id")
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Info(fmt.Sprintf("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID))
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		log.Info(fmt.Sprintf("gateway server %s returned 403, x-rh-insights-request-id=%s", resp.Request.URL, requestID))
+	}
+	if resp.StatusCode == http.StatusBadRequest {
+		body, _ := ioutil.ReadAll(resp.Body)
+		if len(body) > 1024 {
+			body = body[:1024]
+		}
+		log.Info(fmt.Sprintf("gateway server bad request: %s (request=%s): %s", resp.Request.URL, requestID, string(body)))
+	}
+
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		if len(body) > 1024 {
+			body = body[:1024]
+		}
+		log.Info(fmt.Sprintf("gateway server reported unexpected error code: %d (request=%s): %s", resp.StatusCode, requestID, string(body)))
+	}
+
+	if resp.StatusCode == http.StatusAccepted {
+		log.Info(fmt.Sprintf("Successfully uploaded x-rh-insights-request-id=%s", requestID))
+	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error(err, "There was an error")
+		log.Error(err, "The following error occurred")
 	}
 	bodyString := string(bodyBytes)
-	log.Info("The following is the response body:")
+	log.Info("Response body: ")
 	log.Info(bodyString)
 
 	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
