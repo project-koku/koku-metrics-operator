@@ -118,11 +118,14 @@ spec:
               description: IngressURL is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
+            last_successful_upload_time:
+              description: Last successful upload time
+              type: string
             last_upload_status:
-              description: Last Upload Status
+              description: Last upload status
               type: string
             last_upload_time:
-              description: Last Upload Time
+              description: Last upload time
               type: string
             operator_commit:
               description: Operator git commit Hash

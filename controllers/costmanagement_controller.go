@@ -78,6 +78,7 @@ type CostManagementInput struct {
 	BasicAuthPassword        string
 	LastUploadStatus         string
 	LastUploadTime           string
+	LastSuccessfulUploadTime string
 	OperatorCommit           string
 	SourceName               string
 	CreateSource             bool
@@ -312,16 +313,18 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
 	} else {
 		log.Info("Uploading using token authentication")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
-		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
+		// req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+		// req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
 	}
+	// Add the BearerTokenString Regardless
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+	req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
+
 	for key, val := range req.Header {
 		log.Info("Here is a header:")
 		fmt.Println(key, val)
 	}
 	client := &http.Client{}
-	log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
-	time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
@@ -458,28 +461,41 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	var uploadTime string
 	var body *bytes.Buffer
 	var mw *multipart.Writer
-	// grab the body and the multipart file header
+	// Instead of looking for tarfiles here - we need to do what the old
+	// operator did and create the tarfiles based on the CSV files and then get
+	// a list of the tarfiles that are created
 	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
 	if err != nil {
 		log.Error(err, "Could not read the directory")
 	}
-
+	if len(files) > 0 {
+		log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
+		time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
+	}
 	for _, file := range files {
 		log.Info("Uploading the following file: ")
 		fmt.Println(file.Name())
-		body, mw = GetBodyAndHeaders(r, "/tmp/cost-mgmt-operator-reports/"+file.Name())
-		uploadStatus, uploadTime, err = Upload(r, costInput, "POST", costInput.IngressURL, body, mw)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if uploadStatus != "" {
-			cost.Status.LastUploadStatus = uploadStatus
-			costInput.LastUploadStatus = cost.Status.LastUploadStatus
-			cost.Status.LastUploadTime = uploadTime
-			costInput.LastUploadTime = cost.Status.LastUploadTime
-			err = r.Status().Update(ctx, cost)
+		if strings.Contains(file.Name(), "tar.gz") {
+
+			// grab the body and the multipart file header
+			body, mw = GetBodyAndHeaders(r, "/tmp/cost-mgmt-operator-reports/"+file.Name())
+			uploadStatus, uploadTime, err = Upload(r, costInput, "POST", costInput.IngressURL, body, mw)
 			if err != nil {
-				log.Error(err, "Failed to update CostManagement Status")
+				return ctrl.Result{}, err
+			}
+			if uploadStatus != "" {
+				cost.Status.LastUploadStatus = uploadStatus
+				costInput.LastUploadStatus = cost.Status.LastUploadStatus
+				cost.Status.LastUploadTime = uploadTime
+				costInput.LastUploadTime = cost.Status.LastUploadTime
+				if strings.Contains(uploadStatus, "202") {
+					cost.Status.LastSuccessfulUploadTime = uploadTime
+					costInput.LastSuccessfulUploadTime = cost.Status.LastSuccessfulUploadTime
+				}
+				err = r.Status().Update(ctx, cost)
+				if err != nil {
+					log.Error(err, "Failed to update CostManagement Status")
+				}
 			}
 		}
 	}
