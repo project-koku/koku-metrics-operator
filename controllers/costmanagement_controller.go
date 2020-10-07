@@ -358,7 +358,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 		log.Info(fmt.Sprintf("gateway server reported unexpected error code: %d (request=%s): %s", resp.StatusCode, requestID, string(body)))
 	}
 
-	if resp.StatusCode == http.StatusAccepted {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		log.Info(fmt.Sprintf("Successfully uploaded x-rh-insights-request-id=%s", requestID))
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
