@@ -66,6 +66,24 @@ deploy: manifests kustomize
 deploy-branch:
 	IMG=${GITBRANCH_IMG} $(MAKE) deploy
 
+# replaces the username and password with your base64 encoded username and password and looks up the token value for you
+setup-auth:
+	@cp config/samples/authentication_secret.yaml testing/authentication_secret.yaml
+	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),cloud.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
+
+deploy-cr:
+	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+ifeq ($(AUTH), basic)
+	$(MAKE) setup-auth
+	@echo 'spec:\n  authentication:\n    type: basic\n    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	oc apply -f testing/authentication_secret.yaml
+else
+	@echo "Using default token auth"
+endif
+	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
+
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases

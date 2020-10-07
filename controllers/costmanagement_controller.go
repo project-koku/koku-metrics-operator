@@ -313,12 +313,9 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
 	} else {
 		log.Info("Uploading using token authentication")
-		// req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
-		// req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
 	}
-	// Add the BearerTokenString Regardless
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
-	req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
 
 	for key, val := range req.Header {
 		log.Info("Here is a header:")
