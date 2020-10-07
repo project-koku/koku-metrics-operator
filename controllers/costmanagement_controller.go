@@ -20,10 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math/rand"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -69,6 +76,10 @@ type CostManagementInput struct {
 	BearerTokenString        string
 	BasicAuthUser            string
 	BasicAuthPassword        string
+	LastUploadStatus         string
+	LastUploadTime           string
+	LastSuccessfulUploadTime string
+	OperatorCommit           string
 	SourceName               string
 	CreateSource             bool
 }
@@ -262,6 +273,105 @@ func GetAuthSecret(r *CostManagementReconciler, costInput *CostManagementInput, 
 	return nil
 }
 
+func GetBodyAndHeaders(r *CostManagementReconciler, filename string) (*bytes.Buffer, *multipart.Writer) {
+	log := r.Log.WithValues("costmanagement", "GetBodyAndHeaders")
+	// set the content and content type
+	buf := new(bytes.Buffer)
+	mw := multipart.NewWriter(buf)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
+	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
+	fw, err := mw.CreatePart(h)
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Info("error opening file", err)
+	}
+	defer f.Close()
+	_, err = io.Copy(fw, f)
+	if err != nil {
+		log.Error(err, "The following error occurred")
+	}
+	mw.Close()
+	return buf, mw
+}
+
+func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, string, error) {
+	ctx := context.Background()
+	log := r.Log.WithValues("costmanagement", "Upload")
+	req, err := http.NewRequest(method, path, body)
+	if err != nil {
+		log.Error(err, "Could not create request")
+		return "", "", err
+	}
+	// Create the header
+	if req.Header == nil {
+		req.Header = make(http.Header)
+	}
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	if costInput.Authentication == "basic" {
+		log.Info("Uploading using basic authentication!")
+		req.SetBasicAuth(costInput.BasicAuthUser, costInput.BasicAuthPassword)
+	} else {
+		log.Info("Uploading using token authentication")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costInput.BearerTokenString))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costInput.OperatorCommit, costInput.ClusterID))
+	}
+	// Log the headers - probably remove this later
+	log.Info("Request Headers:")
+	for key, val := range req.Header {
+		fmt.Println(key, val)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error(err, "Could not send request")
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
+	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
+	uploadTime := time.Now()
+
+	// Add error handling and logging here
+	requestID := resp.Header.Get("x-rh-insights-request-id")
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Info(fmt.Sprintf("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID))
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		log.Info(fmt.Sprintf("gateway server %s returned 403, x-rh-insights-request-id=%s", resp.Request.URL, requestID))
+	}
+	if resp.StatusCode == http.StatusBadRequest {
+		body, _ := ioutil.ReadAll(resp.Body)
+		if len(body) > 1024 {
+			body = body[:1024]
+		}
+		log.Info(fmt.Sprintf("gateway server bad request: %s (request=%s): %s", resp.Request.URL, requestID, string(body)))
+	}
+
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		if len(body) > 1024 {
+			body = body[:1024]
+		}
+		log.Info(fmt.Sprintf("gateway server reported unexpected error code: %d (request=%s): %s", resp.StatusCode, requestID, string(body)))
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		log.Info(fmt.Sprintf("Successfully uploaded x-rh-insights-request-id=%s", requestID))
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(err, "The following error occurred")
+	}
+	bodyString := string(bodyBytes)
+	log.Info("Response body: ")
+	log.Info(bodyString)
+
+	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
+}
+
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
@@ -354,10 +464,60 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		err = fmt.Errorf("No authentication secret name set when using basic auth.")
 	}
-
-	// Error encountered collecting authentication
+	// Grab the Operator git commit and upload the status and input object with it
+	commit, err := ioutil.ReadFile("commit")
 	if err != nil {
+		fmt.Println("File reading error", err)
 		return ctrl.Result{}, err
+	}
+	cost.Status.OperatorCommit = strings.Replace(string(commit), "\n", "", -1)
+	costInput.OperatorCommit = cost.Status.OperatorCommit
+	err = r.Status().Update(ctx, cost)
+	if err != nil {
+		log.Error(err, "Failed to update CostManagement Status")
+	}
+	// Upload to c.rh.com
+	var uploadStatus string
+	var uploadTime string
+	var body *bytes.Buffer
+	var mw *multipart.Writer
+	// Instead of looking for tarfiles here - we need to do what the old
+	// operator did and create the tarfiles based on the CSV files and then get
+	// a list of the tarfiles that are created
+	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
+	if err != nil {
+		log.Error(err, "Could not read the directory")
+	}
+	if len(files) > 0 {
+		log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
+		time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
+	}
+	for _, file := range files {
+		log.Info("Uploading the following file: ")
+		fmt.Println(file.Name())
+		if strings.Contains(file.Name(), "tar.gz") {
+
+			// grab the body and the multipart file header
+			body, mw = GetBodyAndHeaders(r, "/tmp/cost-mgmt-operator-reports/"+file.Name())
+			uploadStatus, uploadTime, err = Upload(r, costInput, "POST", costInput.IngressURL, body, mw)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if uploadStatus != "" {
+				cost.Status.LastUploadStatus = uploadStatus
+				costInput.LastUploadStatus = cost.Status.LastUploadStatus
+				cost.Status.LastUploadTime = uploadTime
+				costInput.LastUploadTime = cost.Status.LastUploadTime
+				if strings.Contains(uploadStatus, "202") {
+					cost.Status.LastSuccessfulUploadTime = uploadTime
+					costInput.LastSuccessfulUploadTime = cost.Status.LastSuccessfulUploadTime
+				}
+				err = r.Status().Update(ctx, cost)
+				if err != nil {
+					log.Error(err, "Failed to update CostManagement Status")
+				}
+			}
+		}
 	}
 
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works

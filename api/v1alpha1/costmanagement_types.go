@@ -159,6 +159,18 @@ type CostManagementStatus struct {
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
+	// Last upload status
+	LastUploadStatus string `json:"last_upload_status,omitempty"`
+
+	// Last upload time
+	LastUploadTime string `json:"last_upload_time,omitempty"`
+
+	// Last successful upload time
+	LastSuccessfulUploadTime string `json:"last_successful_upload_time,omitempty"`
+
+	// Operator git commit Hash
+	OperatorCommit string `json:"operator_commit,omitempty"`
+
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`

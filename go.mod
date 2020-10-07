@@ -7,7 +7,6 @@ require (
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/openshift/api v0.0.0-20200117162508-e7ccdda6ba67
-	github.com/openshift/client-go v0.0.0-20200116152001-92a2713fa240
 	github.com/xorcare/pointer v1.1.0
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
