@@ -485,7 +485,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// Instead of looking for tarfiles here - we need to do what the old
 	// operator did and create the tarfiles based on the CSV files and then get
 	// a list of the tarfiles that are created
-	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
+	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports/upload")
 	if err != nil {
 		log.Error(err, "Could not read the directory")
 	}
@@ -523,7 +523,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
 
-	promConn, err := collector.GetPromConn(ctx, log)
+	promConn, err := collector.GetPromConn(ctx, r.Client, log)
 	if err != nil {
 		log.Error(err, "prometheus blows")
 	} else {

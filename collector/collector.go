@@ -38,10 +38,15 @@ import (
 	prom "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
+	costMgmtNamespace   = "openshift-cost"
 	dataPath            = "/tmp/cost-mgmt-operator-reports/data/"
 	podFilePrefix       = "cm-openshift-usage-lookback-"
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
@@ -100,13 +105,68 @@ type PrometheusConfig struct {
 	log logr.Logger
 }
 
-func GetPromConn(ctx context.Context, log logr.Logger) (prom.API, error) {
+func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig) error {
+	sa := &corev1.ServiceAccount{}
+	namespace := types.NamespacedName{
+		Namespace: "openshift-cost",
+		Name:      "default"}
+	err := r.Get(ctx, namespace, sa)
+	if err != nil {
+		switch {
+		case errors.IsNotFound(err):
+			return fmt.Errorf("service account not found")
+		case errors.IsForbidden(err):
+			return fmt.Errorf("operator does not have permission to check service account")
+		default:
+			return fmt.Errorf("could not check service account: %v", err)
+		}
+	}
+
+	if len(sa.Secrets) <= 0 {
+		return fmt.Errorf("no secrets in service account")
+	}
+
+	for _, secret := range sa.Secrets {
+		fmt.Printf("secret: %+v\n", secret)
+		s := &corev1.Secret{}
+		err := r.Get(ctx, client.ObjectKey{
+			Namespace: "openshift-cost",
+			Name:      secret.Name,
+		}, s)
+		if err != nil {
+			switch {
+			case errors.IsNotFound(err):
+				return fmt.Errorf("secret not found")
+			case errors.IsForbidden(err):
+				return fmt.Errorf("operator does not have permission to check secret")
+			default:
+				return fmt.Errorf("could not check secret: %v", err)
+			}
+		}
+		encodedSecret, ok := s.Data["token"]
+		fmt.Printf("found token: %s", encodedSecret)
+		if !ok {
+			return fmt.Errorf("no secrets in service account")
+		}
+		if len(encodedSecret) <= 0 {
+			return fmt.Errorf("default secret didn't have data")
+		}
+		cfg.BearerToken = config.Secret(encodedSecret)
+		return nil
+	}
+	return fmt.Errorf("no token found")
+
+}
+
+func GetPromConn(ctx context.Context, r client.Client, log logr.Logger) (prom.API, error) {
 	cfg := &PrometheusConfig{
 		Address: "https://thanos-querier-openshift-monitoring.apps.cluster-9071.9071.sandbox1249.opentlc.com",
-		// TODO: do not hardcode BearerToken, CAFile
-		BearerToken: "eyJhbGciOiJSUzI1NiIsImtpZCI6IkFnTUphQU44Z1k3QzBDSmRndlJpV3h5Wm5jSVkyZlNQMDBDMG5BeGhjZGcifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJvcGVuc2hpZnQtY29zdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkZWZhdWx0LXRva2VuLWZ3NzdoIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImRlZmF1bHQiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI3ODBkMzUyNC01ODZjLTQ0MWUtODUwZC04ZmZmMTEyM2IzODkiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6b3BlbnNoaWZ0LWNvc3Q6ZGVmYXVsdCJ9.PXKnhEQOAJTpA0snPKOegt0sN-3K9ppl6PJxebHGSH19_3Jv_CBdRbHfVizkTtQUGnxJwsEJbGL0GSkPAOJvEO5SZM16N3gBXU7F-ccpUTvy_h41U7fnP1abYsSs8xet6sSNx6BG2oRZg8LinXu8xisPLy3ShlcIflfDjn-y49rhDTHwcdAvQxqgwMyRlVGIRNBhsf_XHfHowt0rfggPnNhPQsPUhPICbKCWry27ALuhbXmaruLkL8HlAQE2ieccjj4HiwaPow6g_1a8_5U5zVkqQY3-w48TLADIJOd1vODwKsZ8RZLbWFjwKP04NS3x8Gb5o4y5P-2Toes4gBHrOA",
-		CAFile:      "/etc/ssl/cert.pem", // this file is wrong
-		log:         log,
+		CAFile:  "/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt",
+		log:     log,
+	}
+	log.Info("getting bearer token for prometheus")
+	if err := getBearerToken(ctx, r, cfg); err != nil {
+		return nil, err
 	}
 	promConn, err := newPrometheusConnFromCFG(*cfg)
 	if err != nil {
@@ -338,11 +398,7 @@ func DoQuery(promconn prom.API) error {
 	return nil
 }
 
-func found(set map[string]bool, val string) bool {
-	return set[val]
-}
-
-func readCsv(f *os.File, set *set) (*set, error) {
+func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
 
 	// Read File into a Variable
 	lines, err := csv.NewReader(f).ReadAll()

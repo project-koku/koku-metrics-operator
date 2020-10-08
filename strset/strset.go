@@ -8,21 +8,24 @@ type Set struct {
 }
 
 // NewSet creates a new *set
-func NewSet() *set {
-	s := &set{}
+func NewSet() *Set {
+	s := &Set{}
 	s.m = make(map[string]struct{})
 	return s
 }
 
-func (s *set) Add(value string) {
+// Add adds a new value to the set
+func (s *Set) Add(value string) {
 	s.m[value] = exists
 }
 
-func (s *set) Remove(value string) {
+// Remove removes a value from the set
+func (s *Set) Remove(value string) {
 	delete(s.m, value)
 }
 
-func (s *set) Contains(value string) bool {
+// Contains checks to see if a value exists in the set
+func (s *Set) Contains(value string) bool {
 	_, c := s.m[value]
 	return c
 }
