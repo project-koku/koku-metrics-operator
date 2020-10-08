@@ -128,6 +128,11 @@ $ make deploy IMG=quay.io/$USERNAME/korekuta-operator-go:v0.0.1
 *NOTE* If you have enabled webhooks in your deployments, you will need to have cert-manager already installed
 in the cluster or `make deploy` will fail when creating the cert-manager resources.
 
+If your current branch has been pushed to the origin repository then you can deploy your current branch with the following command.
+```sh
+$ make deploy-branch
+```
+
 Verify that the korekuta-operator-go is up and running:
 
 ```console
@@ -136,10 +141,16 @@ $ oc get deployment
 
 ## Create a CostManagement CR
 
-Create the CR:
+Create the CR with the default token authentication:
 
 ```sh
-$ oc apply -f config/samples/cost-mgmt_v1alpha1_costmanagement.yaml
+$ make deploy-cr
+```
+
+Create the CR with basic authentication specifying a username and password:
+
+```sh
+$ make deploy-cr USER=$YOUR_USERNAME PASS=$YOUR_PASSWORD AUTH=basic
 ```
 
 Review the logs for the Cost Management operator.

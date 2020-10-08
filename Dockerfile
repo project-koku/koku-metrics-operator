@@ -19,13 +19,18 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
+# Capture commit
+COPY .git /workspace/.git
+RUN git --git-dir=/workspace/.git --work-tree=/workspace/ rev-parse HEAD > /workspace/commit && \
+    cat /workspace/commit
+
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-# FROM gcr.io/distroless/static:nonroot
-FROM alpine:3.7
-RUN apk add curl
+FROM gcr.io/distroless/static:nonroot
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/commit .
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]

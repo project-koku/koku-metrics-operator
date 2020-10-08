@@ -3,7 +3,6 @@ module github.com/project-koku/korekuta-operator-go
 go 1.13
 
 require (
-	github.com/certifi/gocertifi v0.0.0-20200922220541-2c3bb06c6054
 	github.com/go-logr/logr v0.1.0
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
