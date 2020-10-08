@@ -73,6 +73,8 @@ type CostManagementInput struct {
 	AuthenticationSecretName string
 	Authentication           costmgmtv1alpha1.AuthenticationType
 	UploadWait               int64
+	UploadToggle             bool
+	UploadCycle              int64
 	BearerTokenString        string
 	BasicAuthUser            string
 	BasicAuthPassword        string
@@ -113,6 +115,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	log := r.Log.WithValues("costmanagement", "ReflectSpec")
 	costInput.IngressURL = StringReflectSpec(r, cost, &cost.Spec.IngressURL, &cost.Status.IngressURL, costmgmtv1alpha1.DefaultIngressURL)
 	costInput.AuthenticationSecretName = StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
+	// costInput.UploadToggle = StringReflectSpec(r, cost, &cost.Spec.Upload.UploadToggle, &cost.Status.Upload.UploadToggle, costmgmtv1alpha1.DefaultUploadToggle)
 
 	if cost.Status.Authentication.AuthType == "" || !reflect.DeepEqual(cost.Spec.Authentication.AuthType, cost.Status.Authentication.AuthType) {
 		// If data is specified in the spec it should be used
@@ -132,15 +135,31 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.ValidateCert = costmgmtv1alpha1.DefaultValidateCert
 	}
 
-	if !reflect.DeepEqual(cost.Spec.UploadWait, cost.Status.UploadWait) {
-		// If data is specified in the spec it should be used
-		cost.Status.UploadWait = cost.Spec.UploadWait
+	cost.Status.Upload.UploadToggle = cost.Spec.Upload.UploadToggle
+	if cost.Status.Upload.UploadToggle != nil {
+		costInput.UploadToggle = *cost.Status.Upload.UploadToggle
+	} else {
+		costInput.UploadToggle = costmgmtv1alpha1.DefaultUploadToggle
 	}
-	if cost.Status.UploadWait != nil {
-		costInput.UploadWait = *cost.Status.UploadWait
+
+	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
+		// If data is specified in the spec it should be used
+		cost.Status.Upload.UploadWait = cost.Spec.Upload.UploadWait
+	}
+	if cost.Status.Upload.UploadWait != nil {
+		costInput.UploadWait = *cost.Status.Upload.UploadWait
 	} else {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		costInput.UploadWait = r.Int63() % 35
+	}
+
+	if !reflect.DeepEqual(cost.Spec.Upload.UploadCycle, cost.Status.Upload.UploadCycle) {
+		cost.Status.Upload.UploadCycle = cost.Spec.Upload.UploadCycle
+	}
+	if cost.Status.Upload.UploadCycle != nil {
+		costInput.UploadCycle = *cost.Status.Upload.UploadCycle
+	} else {
+		costInput.UploadCycle = 6
 	}
 
 	costInput.SourceName = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
@@ -372,6 +391,26 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
 }
 
+func checkCycle(r *CostManagementReconciler, costInput *CostManagementInput) bool {
+	log := r.Log.WithValues("costmanagement", "checkCycle")
+	if costInput.LastSuccessfulUploadTime != "" {
+		log.Info("Found the last successful upload")
+		successTime, err := time.Parse("2006-01-02 15:04:05", costInput.LastSuccessfulUploadTime)
+		if err != nil {
+			return true
+		}
+		duration := time.Since(successTime)
+		fmt.Println(duration.Hours())
+		if int64(duration.Hours()) >= costInput.UploadCycle {
+			return true
+		} else {
+			return false
+		}
+	} else {
+		return true
+	}
+}
+
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
@@ -476,50 +515,59 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
 	}
-	// Upload to c.rh.com
-	var uploadStatus string
-	var uploadTime string
-	var body *bytes.Buffer
-	var mw *multipart.Writer
-	// Instead of looking for tarfiles here - we need to do what the old
-	// operator did and create the tarfiles based on the CSV files and then get
-	// a list of the tarfiles that are created
-	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
-	if err != nil {
-		log.Error(err, "Could not read the directory")
-	}
-	if len(files) > 0 {
-		log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
-		time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
-	}
-	for _, file := range files {
-		log.Info("Uploading the following file: ")
-		fmt.Println(file.Name())
-		if strings.Contains(file.Name(), "tar.gz") {
+	if costInput.UploadToggle {
+		upload := checkCycle(r, costInput)
+		if upload {
 
-			// grab the body and the multipart file header
-			body, mw = GetBodyAndHeaders(r, "/tmp/cost-mgmt-operator-reports/"+file.Name())
-			uploadStatus, uploadTime, err = Upload(r, costInput, "POST", costInput.IngressURL, body, mw)
+			// Upload to c.rh.com
+			var uploadStatus string
+			var uploadTime string
+			var body *bytes.Buffer
+			var mw *multipart.Writer
+			// Instead of looking for tarfiles here - we need to do what the old
+			// operator did and create the tarfiles based on the CSV files and then get
+			// a list of the tarfiles that are created
+			files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
 			if err != nil {
-				return ctrl.Result{}, err
+				log.Error(err, "Could not read the directory")
 			}
-			if uploadStatus != "" {
-				cost.Status.LastUploadStatus = uploadStatus
-				costInput.LastUploadStatus = cost.Status.LastUploadStatus
-				cost.Status.LastUploadTime = uploadTime
-				costInput.LastUploadTime = cost.Status.LastUploadTime
-				if strings.Contains(uploadStatus, "202") {
-					cost.Status.LastSuccessfulUploadTime = uploadTime
-					costInput.LastSuccessfulUploadTime = cost.Status.LastSuccessfulUploadTime
-				}
-				err = r.Status().Update(ctx, cost)
-				if err != nil {
-					log.Error(err, "Failed to update CostManagement Status")
-				}
+			if len(files) > 0 {
+				log.Info("Pausing for " + fmt.Sprintf("%d", costInput.UploadWait) + " seconds before uploading.")
+				time.Sleep(time.Duration(costInput.UploadWait) * time.Second)
 			}
-		}
-	}
+			for _, file := range files {
+				log.Info("Uploading the following file: ")
+				fmt.Println(file.Name())
+				if strings.Contains(file.Name(), "tar.gz") {
 
+					// grab the body and the multipart file header
+					body, mw = GetBodyAndHeaders(r, "/tmp/cost-mgmt-operator-reports/"+file.Name())
+					uploadStatus, uploadTime, err = Upload(r, costInput, "POST", costInput.IngressURL, body, mw)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+					if uploadStatus != "" {
+						cost.Status.Upload.LastUploadStatus = uploadStatus
+						costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
+						cost.Status.Upload.LastUploadTime = uploadTime
+						costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
+						if strings.Contains(uploadStatus, "202") {
+							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
+							costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+						}
+						err = r.Status().Update(ctx, cost)
+						if err != nil {
+							log.Error(err, "Failed to update CostManagement Status")
+						}
+					}
+				}
+			}
+		} else {
+			log.Info("It is not time to upload to cloud.redhat.com")
+		}
+	} else {
+		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
+	}
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
 
 	// Requeue for processing after 5 minutes
