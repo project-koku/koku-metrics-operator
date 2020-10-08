@@ -3,11 +3,13 @@ module github.com/project-koku/korekuta-operator-go
 go 1.13
 
 require (
+	github.com/certifi/gocertifi v0.0.0-20200922220541-2c3bb06c6054
 	github.com/go-logr/logr v0.1.0
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/openshift/api v0.0.0-20200117162508-e7ccdda6ba67
-	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/common v0.14.0
 	github.com/xorcare/pointer v1.1.0
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2

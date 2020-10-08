@@ -349,8 +349,14 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
 
-	if err := collector.Run(ctx); err != nil {
+	promConn, err := collector.GetPromConn(ctx, log)
+	if err != nil {
 		log.Error(err, "prometheus blows")
+	} else {
+		err = collector.DoQuery(promConn)
+		if err != nil {
+			log.Error(err, "prometheus still blows")
+		}
 	}
 
 	// Requeue for processing after 5 minutes
