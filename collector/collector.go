@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/project-koku/korekuta-operator-go/strset"
 	promapi "github.com/prometheus/client_golang/api"
 	prom "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
@@ -355,7 +356,7 @@ func readCsv(f *os.File, set *set) (*set, error) {
 }
 
 func writeToFile(file *os.File, data map[string]CSVThing, created bool) error {
-	set, err := readCsv(file, NewSet())
+	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
 		return fmt.Errorf("failed to read csv: %v", err)
 	}
