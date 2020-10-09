@@ -36,9 +36,6 @@ const (
 
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
-
-	// QuerySchedule sets the default cycle to be 60 minutes
-	QuerySchedule int64 = 60
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -69,16 +66,6 @@ type AuthenticationSpec struct {
 	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
-}
-
-// QuerySpec defines the desired state of Prometheus object in the CostManagementSpec
-type QuerySpec struct {
-
-	// QueryCycle is a field of CostManagement to represent the time to wait before querying prometheus.
-	// default is 60 minutes
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	QueryCycle *int64 `json:"upload_wait,omitempty"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
