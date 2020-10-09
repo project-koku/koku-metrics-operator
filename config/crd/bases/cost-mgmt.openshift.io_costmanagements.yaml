@@ -76,17 +76,6 @@ spec:
                     the source name on cloud.redhat.com.
                   type: string
               type: object
-            upload:
-              description: Prometheus is a field of CostManagement to represent the
-                prometheus object.
-              properties:
-                upload_wait:
-                  description: QueryCycle is a field of CostManagement to represent
-                    the time to wait before querying prometheus. default is 60 minutes
-                  format: int64
-                  minimum: 0
-                  type: integer
-              type: object
             upload_wait:
               description: UploadWait is a field of CostManagement to represent the
                 time to wait before sending an upload.

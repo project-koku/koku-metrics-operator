@@ -105,10 +105,6 @@ type CostManagementSpec struct {
 	// +optional
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// Prometheus is a field of CostManagement to represent the prometheus object.
-	// +optional
-	Prometheus QuerySpec `json:"upload,omitempty"`
-
 	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceSpec `json:"source,omitempty"`
