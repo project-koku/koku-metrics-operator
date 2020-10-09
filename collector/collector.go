@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/project-koku/korekuta-operator-go/strset"
 	prom "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -75,8 +76,9 @@ var (
 	}
 )
 
-func DoQuery(promconn prom.API) error {
+func DoQuery(promconn prom.API, log logr.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	log = log.WithValues("costmanagement", "DoQuery")
 	t := time.Now()
 	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
 	yearMonth := start.Format("200601") // this corresponds to YYYYMM format
@@ -84,7 +86,7 @@ func DoQuery(promconn prom.API) error {
 
 	var nodeResults = map[string]map[string]interface{}{}
 	for qname, query := range nodeQueries {
-		vector, err := performTheQuery(ctx, promconn, query, start)
+		vector, err := performTheQuery(ctx, promconn, query, start, log)
 		if err != nil {
 			return err
 		}
@@ -109,12 +111,14 @@ func DoQuery(promconn prom.API) error {
 		}
 	}
 	if len(nodeResults) <= 0 {
-		return fmt.Errorf("collector: no data to report")
+		log.Info("collector: no data to report")
+		// there is no data for the hour queried. Return nothing
+		return nil
 	}
 
 	var podResults = map[string]map[string]interface{}{}
 	for qname, query := range podQueries {
-		vector, err := performTheQuery(ctx, promconn, query, start)
+		vector, err := performTheQuery(ctx, promconn, query, start, log)
 		if err != nil {
 			return err
 		}
@@ -139,7 +143,7 @@ func DoQuery(promconn prom.API) error {
 	var labelResults = map[string]map[string]interface{}{}
 	for _, labelQuery := range labelQueries {
 		label, query := labelQuery[0], labelQuery[1]
-		vector, err := performTheQuery(ctx, promconn, query, start)
+		vector, err := performTheQuery(ctx, promconn, query, start, log)
 		if err != nil {
 			return err
 		}
@@ -159,7 +163,7 @@ func DoQuery(promconn prom.API) error {
 
 	var volResults = map[string]map[string]interface{}{}
 	for qname, query := range volQueries {
-		vector, err := performTheQuery(ctx, promconn, query, start)
+		vector, err := performTheQuery(ctx, promconn, query, start, log)
 		if err != nil {
 			return err
 		}
@@ -186,7 +190,6 @@ func DoQuery(promconn prom.API) error {
 		node := val["node"].(string)
 		dict, ok := nodeResults[string(node)]
 		if !ok {
-			fmt.Printf("\n%+v\n", val)
 			return fmt.Errorf("node %s not found", node)
 		}
 		val["node-capacity-cpu-cores"] = dict["node-capacity-cpu-cores"]
@@ -319,7 +322,6 @@ func getOrCreateFile(path, filename string) (*os.File, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	fmt.Printf("%s file `%s` exists\n", time.Now().String(), filePath)
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_RDWR, 0644)
 	return file, false, err
 }

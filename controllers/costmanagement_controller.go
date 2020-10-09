@@ -527,7 +527,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
 
-	promConn, err := collector.GetPromConn(ctx, r.Client, log)
+	promConn, err := collector.GetPromConn(ctx, r.Client, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
 		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
@@ -542,7 +542,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if cost.Status.Prometheus.LastQuerySuccessTime.Hour() != metav1.Now().Hour() {
 			start := metav1.Now()
 			cost.Status.Prometheus.LastQueryStartTime = start
-			err = collector.DoQuery(promConn)
+			err = collector.DoQuery(promConn, r.Log)
 			if err != nil {
 				log.Error(err, "failed to query prometheus")
 			} else {

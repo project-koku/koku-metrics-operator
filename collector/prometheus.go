@@ -69,7 +69,7 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 	}
 
 	if len(sa.Secrets) <= 0 {
-		return fmt.Errorf("no secrets in service account")
+		return fmt.Errorf("getBearerToken: no secrets in service account")
 	}
 
 	for _, secret := range sa.Secrets {
@@ -89,15 +89,15 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 		}
 		encodedSecret, ok := s.Data[secretKey]
 		if !ok {
-			return fmt.Errorf("cannot find token in secret")
+			return fmt.Errorf("getBearerToken: cannot find token in secret")
 		}
 		if len(encodedSecret) <= 0 {
-			return fmt.Errorf("no data in default secret")
+			return fmt.Errorf("getBearerToken: no data in default secret")
 		}
 		cfg.BearerToken = config.Secret(encodedSecret)
 		return nil
 	}
-	return fmt.Errorf("no token found")
+	return fmt.Errorf("getBearerToken: no token found")
 
 }
 
@@ -113,14 +113,15 @@ func getPrometheusConfig(ctx context.Context, r client.Client, log logr.Logger) 
 }
 
 func GetPromConn(ctx context.Context, r client.Client, log logr.Logger) (prom.API, error) {
+	log = log.WithValues("costmanagement", "GetPromConn")
 	cfg, err := getPrometheusConfig(ctx, r, log)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get prometheus configuration: %v", err)
+		return nil, fmt.Errorf("GetPromConn: cannot get prometheus configuration: %v", err)
 	}
 
 	promConn, err := newPrometheusConnFromCfg(*cfg)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to prometheus: %v", err)
+		return nil, fmt.Errorf("GetPromConn: cannot connect to prometheus: %v", err)
 	}
 	costQuerier = *cfg
 
@@ -165,13 +166,14 @@ func newPrometheusConnFromCfg(cfg PrometheusConfig) (prom.API, error) {
 	return promConn, nil
 }
 
-func performTheQuery(ctx context.Context, promconn prom.API, query string, ts time.Time) (model.Vector, error) {
+func performTheQuery(ctx context.Context, promconn prom.API, query string, ts time.Time, log logr.Logger) (model.Vector, error) {
+	log = log.WithValues("costmanagement", "performTheQuery")
 	result, warnings, err := promconn.Query(ctx, query, ts)
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus: %v", err)
 	}
 	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
+		log.Info("query warnings", "Warnings", warnings)
 	}
 	vector, ok := result.(model.Vector)
 	if !ok {
