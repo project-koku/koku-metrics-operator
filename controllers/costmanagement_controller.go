@@ -142,6 +142,17 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.UploadToggle = costmgmtv1alpha1.DefaultUploadToggle
 	}
 
+	if cost.Status.Upload.LastUploadStatus != "" {
+		costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
+	}
+
+	if cost.Status.Upload.LastUploadTime != "" {
+		costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
+	}
+	if cost.Status.Upload.LastSuccessfulUploadTime != "" {
+		costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+	}
+
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
 		cost.Status.Upload.UploadWait = cost.Spec.Upload.UploadWait
@@ -391,22 +402,24 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
 }
 
-func checkCycle(r *CostManagementReconciler, costInput *CostManagementInput) bool {
+
+func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess string) bool {
 	log := r.Log.WithValues("costmanagement", "checkCycle")
-	if costInput.LastSuccessfulUploadTime != "" {
+	if lastSuccess != "" {
 		log.Info("Found the last successful upload")
-		successTime, err := time.Parse("2006-01-02 15:04:05", costInput.LastSuccessfulUploadTime)
+		successTime, err := time.Parse("2006-01-02 15:04:05", lastSuccess)
 		if err != nil {
 			return true
 		}
 		duration := time.Since(successTime)
 		fmt.Println(duration.Hours())
-		if int64(duration.Hours()) >= costInput.UploadCycle {
+		if int64(duration.Hours()) >= cycle {
 			return true
 		} else {
 			return false
 		}
 	} else {
+		log.Info("Did not find the last successful upload time!")
 		return true
 	}
 }
@@ -516,7 +529,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Error(err, "Failed to update CostManagement Status")
 	}
 	if costInput.UploadToggle {
-		upload := checkCycle(r, costInput)
+		upload := checkCycle(r, costInput.UploadCycle, costInput.LastSuccessfulUploadTime)
 		if upload {
 
 			// Upload to c.rh.com
