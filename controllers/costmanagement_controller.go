@@ -39,6 +39,7 @@ import (
 	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -80,6 +81,9 @@ type CostManagementInput struct {
 	LastUploadStatus         string
 	LastUploadTime           string
 	LastSuccessfulUploadTime string
+	PrometheusConnected      bool
+	LastQueryStartTime       metav1.Time
+	LastQuerySuccessTime     metav1.Time
 	OperatorCommit           string
 	SourceName               string
 	CreateSource             bool
@@ -378,7 +382,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 
@@ -525,11 +529,32 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	promConn, err := collector.GetPromConn(ctx, r.Client, log)
 	if err != nil {
-		log.Error(err, "prometheus blows")
+		log.Error(err, "failed to get prometheus connection")
+		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
+		costInput.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
+		if err := r.Status().Update(ctx, cost); err != nil {
+			log.Error(err, "failed to update CostManagement Status")
+		}
 	} else {
-		err = collector.DoQuery(promConn)
-		if err != nil {
-			log.Error(err, "prometheus still blows")
+		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
+		costInput.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
+
+		if cost.Status.Prometheus.LastQuerySuccessTime.Hour() != metav1.Now().Hour() {
+			start := metav1.Now()
+			cost.Status.Prometheus.LastQueryStartTime = start
+			err = collector.DoQuery(promConn)
+			if err != nil {
+				log.Error(err, "failed to query prometheus")
+			} else {
+				log.Info("prometheus queries completed")
+				cost.Status.Prometheus.LastQuerySuccessTime = start
+			}
+		} else {
+			log.Info("prometheus queries already complete for this hour")
+		}
+
+		if err := r.Status().Update(ctx, cost); err != nil {
+			log.Error(err, "failed to update CostManagement Status")
 		}
 	}
 

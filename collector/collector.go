@@ -32,30 +32,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/project-koku/korekuta-operator-go/strset"
-	promapi "github.com/prometheus/client_golang/api"
 	prom "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	costMgmtNamespace   = "openshift-cost"
 	dataPath            = "/tmp/cost-mgmt-operator-reports/data/"
 	podFilePrefix       = "cm-openshift-usage-lookback-"
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
 	namespaceFilePrefix = "cm-openshift-namespace-labels-lookback-"
 
-	defaultPromHost = "https://thanos-querier.openshift-monitoring.svc:9091/"
-	address         = defaultPromHost // the URL string for connecting to Prometheus
-	nodeQueries     = map[string]string{
+	nodeQueries = map[string]string{
 		"node-allocatable-cpu-cores":    "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 		"node-allocatable-memory-bytes": "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 		"node-capacity-cpu-cores":       "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
@@ -84,143 +73,15 @@ var (
 		"pod-labels":                   {"pod", "kube_pod_labels"},
 		// "pod-persistentvolumeclaim-info": {"pod", "kube_pod_spec_volumes_persistentvolumeclaims_info"},  // not used?
 	}
-	// "cm-kube-namespace-labels":               "kube_namespace_labels",
-	// "cm-kube-node-labels":                    "kube_node_labels",
-	// "cm-kube-persistentvolume-labels":        "kube_persistentvolume_labels",
-	// "cm-kube-persistentvolumeclaim-labels":   "kube_persistentvolumeclaim_labels",
-	podLabelQuery = map[string]string{"cm-kube-pod-labels": "kube_pod_labels"}
-	// "cm-kube-pod-persistentvolumeclaim-info": "kube_pod_spec_volumes_persistentvolumeclaims_info",
-
 )
-
-// PrometheusConfig provides the configuration options to set up a Prometheus connections from a URL.
-type PrometheusConfig struct {
-	// Address is the URL to reach Prometheus.
-	Address string
-	// BearerToken is the user auth token
-	BearerToken config.Secret
-	// CAFile is the ca file
-	CAFile string
-
-	log logr.Logger
-}
-
-func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig) error {
-	sa := &corev1.ServiceAccount{}
-	namespace := types.NamespacedName{
-		Namespace: "openshift-cost",
-		Name:      "default"}
-	err := r.Get(ctx, namespace, sa)
-	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			return fmt.Errorf("service account not found")
-		case errors.IsForbidden(err):
-			return fmt.Errorf("operator does not have permission to check service account")
-		default:
-			return fmt.Errorf("could not check service account: %v", err)
-		}
-	}
-
-	if len(sa.Secrets) <= 0 {
-		return fmt.Errorf("no secrets in service account")
-	}
-
-	for _, secret := range sa.Secrets {
-		fmt.Printf("secret: %+v\n", secret)
-		s := &corev1.Secret{}
-		err := r.Get(ctx, client.ObjectKey{
-			Namespace: "openshift-cost",
-			Name:      secret.Name,
-		}, s)
-		if err != nil {
-			switch {
-			case errors.IsNotFound(err):
-				return fmt.Errorf("secret not found")
-			case errors.IsForbidden(err):
-				return fmt.Errorf("operator does not have permission to check secret")
-			default:
-				return fmt.Errorf("could not check secret: %v", err)
-			}
-		}
-		encodedSecret, ok := s.Data["token"]
-		fmt.Printf("found token: %s", encodedSecret)
-		if !ok {
-			return fmt.Errorf("no secrets in service account")
-		}
-		if len(encodedSecret) <= 0 {
-			return fmt.Errorf("default secret didn't have data")
-		}
-		cfg.BearerToken = config.Secret(encodedSecret)
-		return nil
-	}
-	return fmt.Errorf("no token found")
-
-}
-
-func GetPromConn(ctx context.Context, r client.Client, log logr.Logger) (prom.API, error) {
-	cfg := &PrometheusConfig{
-		Address: "https://thanos-querier-openshift-monitoring.apps.cluster-9071.9071.sandbox1249.opentlc.com",
-		CAFile:  "/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt",
-		log:     log,
-	}
-	log.Info("getting bearer token for prometheus")
-	if err := getBearerToken(ctx, r, cfg); err != nil {
-		return nil, err
-	}
-	promConn, err := newPrometheusConnFromCFG(*cfg)
-	if err != nil {
-		return nil, fmt.Errorf("can't connect to prometheus: %v", err)
-	}
-
-	log.Info("testing the ability to query prometheus")
-
-	err = wait.Poll(3*time.Second, 15*time.Second, func() (bool, error) {
-		_, _, err := promConn.Query(context.TODO(), "up", time.Now())
-		if err != nil {
-			return false, fmt.Errorf("failed to succesfully query prometheus: %v", err)
-		}
-		log.Info("prometheus queries are succeeding")
-		return true, err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("prometheus queries are failing: %v", err)
-	}
-
-	return promConn, nil
-}
-
-func newPrometheusConnFromCFG(cfg PrometheusConfig) (prom.API, error) {
-	cfg.log.Info("configuring prometheus client")
-	promconf := config.HTTPClientConfig{
-		BearerToken: cfg.BearerToken,
-		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: true},
-	}
-	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf", false, false)
-	if err != nil {
-		return nil, fmt.Errorf("can't create roundTripper: %v", err)
-	}
-	client, err := promapi.NewClient(promapi.Config{
-		Address:      cfg.Address,
-		RoundTripper: roundTripper,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("can't connect to prometheus: %v", err)
-	}
-	return prom.NewAPI(client), nil
-}
 
 func DoQuery(promconn prom.API) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t := time.Now()
 	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
-	yearMonth := start.Format("200601") // because Go is weird, this corresponds to YYYYMM format
+	yearMonth := start.Format("200601") // this corresponds to YYYYMM format
 	defer cancel()
-	// r := prom.Range{
-	// 	Start: time.Now().Add(-time.Hour),
-	// 	End:   time.Now(),
-	// 	Step:  time.Minute,
-	// }
+
 	var nodeResults = map[string]map[string]interface{}{}
 	for qname, query := range nodeQueries {
 		vector, err := performTheQuery(ctx, promconn, query, start)
@@ -239,7 +100,11 @@ func DoQuery(promconn prom.API) error {
 				nodeResults[node][string(labelName)] = string(val)
 			}
 			nodeResults[node][qname] = floatToString(float64(val.Value))
-			nodeResults[node][qname+"-seconds"] = floatToString(float64(val.Value) * 3600)
+			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
+				index := qname[:len(qname)-1] + "-seconds"
+				nodeResults[node][index] = floatToString(float64(val.Value) * 3600)
+			}
+
 			nodeResults[node]["timestamp"] = val.Timestamp.Time()
 		}
 	}
@@ -263,7 +128,10 @@ func DoQuery(promconn prom.API) error {
 				podResults[pod][string(labelName)] = string(val)
 			}
 			podResults[pod][qname] = floatToString(float64(val.Value))
-			podResults[pod][qname+"-seconds"] = floatToString(float64(val.Value) * 3600)
+			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
+				index := qname[:len(qname)-1] + "-seconds"
+				podResults[pod][index] = floatToString(float64(val.Value) * 3600)
+			}
 			podResults[pod]["timestamp"] = val.Timestamp.Time()
 		}
 	}
@@ -305,7 +173,10 @@ func DoQuery(promconn prom.API) error {
 				volResults[pvc][string(labelName)] = string(val)
 			}
 			volResults[pvc][qname] = floatToString(float64(val.Value))
-			volResults[pvc][qname+"-seconds"] = floatToString(float64(val.Value) * 3600)
+			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
+				index := qname[:len(qname)-1] + "-seconds"
+				volResults[pvc][index] = floatToString(float64(val.Value) * 3600)
+			}
 			volResults[pvc]["timestamp"] = val.Timestamp.Time()
 		}
 	}
@@ -319,9 +190,9 @@ func DoQuery(promconn prom.API) error {
 			return fmt.Errorf("node %s not found", node)
 		}
 		val["node-capacity-cpu-cores"] = dict["node-capacity-cpu-cores"]
-		val["node-capacity-cpu-cores-seconds"] = dict["node-capacity-cpu-cores-seconds"]
+		val["node-capacity-cpu-cores-seconds"] = dict["node-capacity-cpu-core-seconds"]
 		val["node-capacity-memory-bytes"] = dict["node-capacity-memory-bytes"]
-		val["node-capacity-memory-bytes-seconds"] = dict["node-capacity-memory-bytes-seconds"]
+		val["node-capacity-memory-bytes-seconds"] = dict["node-capacity-memory-byte-seconds"]
 		val["resource_id"] = dict["resource_id"]
 		val["pod_labels"] = labelResults[pod]["labels"]
 
@@ -350,7 +221,6 @@ func DoQuery(promconn prom.API) error {
 		val["persistentvolume"] = pv
 		val["persistentvolume_labels"] = labelResults[pv]["labels"]
 		val["persistentvolumeclaim_labels"] = labelResults[pvc]["labels"]
-		fmt.Printf("Result for PVC: %v\n\tValue: %v\n\n", pvc, val)
 	}
 	volRows := make(map[string]CSVThing)
 	for vol, val := range volResults {
@@ -399,8 +269,6 @@ func DoQuery(promconn prom.API) error {
 }
 
 func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
-
-	// Read File into a Variable
 	lines, err := csv.NewReader(f).ReadAll()
 	if err != nil {
 		return set, err
@@ -418,17 +286,18 @@ func writeToFile(file *os.File, data map[string]CSVThing, created bool) error {
 	}
 	if created {
 		for _, row := range data {
-			row.CSVheader(file)
-			break // just get the first item in the map and write the headers
+			if err := row.CSVheader(file); err != nil {
+				return err
+			}
+			break // write the headers using the first element in map
 		}
 	}
 
-	for id, row := range data {
-		fmt.Printf("Result for: %v\n\tValue: %+v\n\n", id, row)
-		if !set.Contains(strings.Join(row.RowString(), ",")) {
-			row.CSVrow(file)
-		} else {
-			fmt.Println("line already exists in file")
+	for _, row := range data {
+		if !set.Contains(row.String()) {
+			if err := row.CSVrow(file); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -460,21 +329,6 @@ func getResourceID(input string) string {
 	return splitString[len(splitString)-1]
 }
 
-func performTheQuery(ctx context.Context, promconn prom.API, query string, ts time.Time) (model.Vector, error) {
-	result, warnings, err := promconn.Query(ctx, query, ts)
-	if err != nil {
-		return nil, fmt.Errorf("error querying prometheus: %v", err)
-	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
-	vector, ok := result.(model.Vector)
-	if !ok {
-		return nil, fmt.Errorf("expected a vector in response to query, got a %v", result.Type())
-	}
-	return vector, nil
-}
-
 func parseLabels(input model.Metric) string {
 	result := []string{}
 	for name, val := range input {
@@ -497,6 +351,3 @@ func floatToString(inputNum float64) string {
 	// to convert a float number to a string
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
-
-// 2020-10-01 00:00:00 -0400 EDT,2020-11-01 00:00:00 -0400 EDT,2020-10-07 15:00:00 -0400 EDT,2020-10-07 15:59:59 -0400 EDT,ip-10-0-147-111.us-east-2.compute.internal,4.000000,14400.000000,16326778880.000000,58776403968000.000000,i-0dd2eab633b37c882,label_failure_domain_beta_kubernetes_io_region:us-east-2|label_kubernetes_io_arch:amd64|label_kubernetes_io_os:linux|label_node_kubernetes_io_instance_type:m5.xlarge|label_node_openshift_io_os_id:rhcos|label_beta_kubernetes_io_arch:amd64|label_beta_kubernetes_io_os:linux|label_topology_kubernetes_io_region:us-east-2|label_beta_kubernetes_io_instance_type:m5.xlarge|label_failure_domain_beta_kubernetes_io_zone:us-east-2a|label_kubernetes_io_hostname:ip-10-0-147-111|label_topology_kubernetes_io_zone:us-east-2a
-// 2020-10-01 00:00:00 -0400 EDT,2020-11-01 00:00:00 -0400 EDT,2020-10-07 15:00:00 -0400 EDT,2020-10-07 15:59:59 -0400 EDT,ip-10-0-147-111.us-east-2.compute.internal,4.000000,14400.000000,16326778880.000000,58776403968000.000000,i-0dd2eab633b37c882,label_kubernetes_io_os:linux|label_beta_kubernetes_io_arch:amd64|label_failure_domain_beta_kubernetes_io_zone:us-east-2a|label_node_kubernetes_io_instance_type:m5.xlarge|label_node_openshift_io_os_id:rhcos|label_topology_kubernetes_io_region:us-east-2|label_beta_kubernetes_io_os:linux|label_failure_domain_beta_kubernetes_io_region:us-east-2|label_kubernetes_io_arch:amd64|label_beta_kubernetes_io_instance_type:m5.xlarge|label_kubernetes_io_hostname:ip-10-0-147-111|label_topology_kubernetes_io_zone:us-east-2a

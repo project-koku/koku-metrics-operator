@@ -25,9 +25,10 @@ func NewDates(t time.Time) *DateTimes {
 }
 
 type CSVThing interface {
-	CSVheader(w io.Writer)
-	CSVrow(w io.Writer)
+	CSVheader(w io.Writer) error
+	CSVrow(w io.Writer) error
 	RowString() []string
+	String() string
 }
 
 type NamespaceRow struct {
@@ -42,22 +43,28 @@ func NewNamespaceRow(t time.Time) NamespaceRow {
 	return row
 }
 
-func (NamespaceRow) CSVheader(w io.Writer) {
+func (NamespaceRow) CSVheader(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write([]string{
+	if err := cw.Write([]string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
 		"interval_end",
 		"namespace",
-		"namespace_labels"})
+		"namespace_labels"}); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
-func (row NamespaceRow) CSVrow(w io.Writer) {
+func (row NamespaceRow) CSVrow(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write(row.RowString())
+	if err := cw.Write(row.RowString()); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
 func (row NamespaceRow) RowString() []string {
@@ -79,9 +86,9 @@ type NodeRow struct {
 	*DateTimes
 	Node                          string
 	NodeCapacityCPUCores          string `json:"node-capacity-cpu-cores"`
-	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-cores-seconds"`
+	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-core-seconds"`
 	NodeCapacityMemoryBytes       string `json:"node-capacity-memory-bytes"`
-	NodeCapacityMemoryByteSeconds string `json:"node-capacity-memory-bytes-seconds"`
+	NodeCapacityMemoryByteSeconds string `json:"node-capacity-memory-byte-seconds"`
 	ResourceID                    string `json:"resource_id"`
 	NodeLabels                    string `json:"node_labels"`
 }
@@ -92,9 +99,9 @@ func NewNodeRow(t time.Time) NodeRow {
 	return row
 }
 
-func (NodeRow) CSVheader(w io.Writer) {
+func (NodeRow) CSVheader(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write([]string{
+	if err := cw.Write([]string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
@@ -105,14 +112,20 @@ func (NodeRow) CSVheader(w io.Writer) {
 		"node_capacity_memory_bytes",
 		"node_capacity_memory_byte_seconds",
 		"resource_id",
-		"node_labels"})
+		"node_labels"}); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
-func (row NodeRow) CSVrow(w io.Writer) {
+func (row NodeRow) CSVrow(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write(row.RowString())
+	if err := cw.Write(row.RowString()); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
 func (row NodeRow) RowString() []string {
@@ -140,16 +153,16 @@ type PodRow struct {
 	Node                          string
 	Namespace                     string
 	Pod                           string
-	PodUsageCPUCoreSeconds        string `json:"pod-usage-cpu-cores-seconds"`
-	PodRequestCPUCoreSeconds      string `json:"pod-request-cpu-cores-seconds"`
-	PodLimitCPUCoreSeconds        string `json:"pod-limit-cpu-cores-seconds"`
-	PodUsageMemoryByteSeconds     string `json:"pod-usage-memory-bytes-seconds"`
-	PodRequestMemoryByteSeconds   string `json:"pod-request-memory-bytes-seconds"`
-	PodLimitMemoryByteSeconds     string `json:"pod-limit-memory-bytes-seconds"`
+	PodUsageCPUCoreSeconds        string `json:"pod-usage-cpu-core-seconds"`
+	PodRequestCPUCoreSeconds      string `json:"pod-request-cpu-core-seconds"`
+	PodLimitCPUCoreSeconds        string `json:"pod-limit-cpu-core-seconds"`
+	PodUsageMemoryByteSeconds     string `json:"pod-usage-memory-byte-seconds"`
+	PodRequestMemoryByteSeconds   string `json:"pod-request-memory-byte-seconds"`
+	PodLimitMemoryByteSeconds     string `json:"pod-limit-memory-byte-seconds"`
 	NodeCapacityCPUCores          string `json:"node-capacity-cpu-cores"`
-	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-cores-seconds"`
+	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-core-seconds"`
 	NodeCapacityMemoryBytes       string `json:"node-capacity-memory-bytes"`
-	NodeCapacityMemoryByteSeconds string `json:"node-capacity-memory-bytes-seconds"`
+	NodeCapacityMemoryByteSeconds string `json:"node-capacity-memory-byte-seconds"`
 	ResourceID                    string `json:"resource_id"`
 	PodLabels                     string `json:"pod_labels"`
 }
@@ -160,9 +173,9 @@ func NewPodRow(t time.Time) PodRow {
 	return row
 }
 
-func (PodRow) CSVheader(w io.Writer) {
+func (PodRow) CSVheader(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write([]string{
+	if err := cw.Write([]string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
@@ -181,14 +194,20 @@ func (PodRow) CSVheader(w io.Writer) {
 		"node_capacity_memory_bytes",
 		"node_capacity_memory_byte_seconds",
 		"resource_id",
-		"pod_labels"})
+		"pod_labels"}); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
-func (row PodRow) CSVrow(w io.Writer) {
+func (row PodRow) CSVrow(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write(row.RowString())
+	if err := cw.Write(row.RowString()); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
 func (row PodRow) RowString() []string {
@@ -227,9 +246,9 @@ type StorageRow struct {
 	PersistentVolume                         string `json:"persistentvolume"`
 	StorageClass                             string `json:"storageclass"`
 	PersistentVolumeClaimCapacityBytes       string `json:"persistentvolumeclaim-capacity-bytes"`
-	PersistentVolumeClaimCapacityByteSeconds string `json:"persistentvolumeclaim-capacity-bytes-seconds"`
-	VolumeRequestStorageByteSeconds          string `json:"persistentvolumeclaim-request-bytes-seconds"`
-	PersistentVolumeClaimUsageByteSeconds    string `json:"persistentvolumeclaim-usage-bytes-seconds"`
+	PersistentVolumeClaimCapacityByteSeconds string `json:"persistentvolumeclaim-capacity-byte-seconds"`
+	VolumeRequestStorageByteSeconds          string `json:"persistentvolumeclaim-request-byte-seconds"`
+	PersistentVolumeClaimUsageByteSeconds    string `json:"persistentvolumeclaim-usage-byte-seconds"`
 	PersistentVolumeLabels                   string `json:"persistentvolume_labels"`
 	PersistentVolumeClaimLabels              string `json:"persistentvolumeclaim_labels"`
 }
@@ -240,9 +259,9 @@ func NewStorageRow(t time.Time) StorageRow {
 	return row
 }
 
-func (StorageRow) CSVheader(w io.Writer) {
+func (StorageRow) CSVheader(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write([]string{
+	if err := cw.Write([]string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
@@ -257,15 +276,20 @@ func (StorageRow) CSVheader(w io.Writer) {
 		"volume_request_storage_byte_seconds",
 		"persistentvolumeclaim_usage_byte_seconds",
 		"persistentvolume_labels",
-		"persistentvolumeclaim_labels",
-	})
+		"persistentvolumeclaim_labels"}); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
-func (row StorageRow) CSVrow(w io.Writer) {
+func (row StorageRow) CSVrow(w io.Writer) error {
 	cw := csv.NewWriter(w)
-	cw.Write(row.RowString())
+	if err := cw.Write(row.RowString()); err != nil {
+		return err
+	}
 	cw.Flush()
+	return nil
 }
 
 func (row StorageRow) RowString() []string {

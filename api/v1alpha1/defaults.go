@@ -28,4 +28,7 @@ const (
 
 	// DefaultValidateCert The default cert validation setting
 	DefaultValidateCert bool = CertIgnore
+
+	// DefaultQueryCycle The default querying schedule
+	DefaultQueryCycle int64 = QuerySchedule
 )

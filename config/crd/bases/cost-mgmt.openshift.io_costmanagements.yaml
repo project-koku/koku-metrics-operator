@@ -76,6 +76,17 @@ spec:
                     the source name on cloud.redhat.com.
                   type: string
               type: object
+            upload:
+              description: Prometheus is a field of CostManagement to represent the
+                prometheus object.
+              properties:
+                upload_wait:
+                  description: QueryCycle is a field of CostManagement to represent
+                    the time to wait before querying prometheus. default is 60 minutes
+                  format: int64
+                  minimum: 0
+                  type: integer
+              type: object
             upload_wait:
               description: UploadWait is a field of CostManagement to represent the
                 time to wait before sending an upload.
@@ -130,6 +141,26 @@ spec:
             operator_commit:
               description: Operator git commit Hash
               type: string
+            prometheus:
+              description: Prometheus represents the status of premetheus queries
+              properties:
+                last_query_start_time:
+                  description: LastQueryStartTime is a field of CostManagementStatus
+                    to represent the last time queries were started
+                  format: date-time
+                  nullable: true
+                  type: string
+                last_query_success_time:
+                  description: LastQuerySuccessTime is a field of CostManagementStatus
+                    to represent the last time queries were successful
+                  format: date-time
+                  nullable: true
+                  type: string
+                prometheus_connected:
+                  description: PrometheusConnected is a field of CostManagementStatus
+                    to represent if cost-management is connected to prometheus
+                  type: boolean
+              type: object
             source:
               description: Source is a field of CostManagement to represent the observed
                 state of the source on cloud.redhat.com.

@@ -36,6 +36,9 @@ const (
 
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
+
+	// QuerySchedule sets the default cycle to be 60 minutes
+	QuerySchedule int64 = 60
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -66,6 +69,16 @@ type AuthenticationSpec struct {
 	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
+}
+
+// QuerySpec defines the desired state of Prometheus object in the CostManagementSpec
+type QuerySpec struct {
+
+	// QueryCycle is a field of CostManagement to represent the time to wait before querying prometheus.
+	// default is 60 minutes
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	QueryCycle *int64 `json:"upload_wait,omitempty"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
@@ -105,6 +118,10 @@ type CostManagementSpec struct {
 	// +optional
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
+	// Prometheus is a field of CostManagement to represent the prometheus object.
+	// +optional
+	Prometheus QuerySpec `json:"upload,omitempty"`
+
 	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceSpec `json:"source,omitempty"`
@@ -139,6 +156,21 @@ type CloudDotRedHatSourceStatus struct {
 	SourceError string `json:"error,omitempty"`
 }
 
+// PrometheusQueryStatus defines the status for querying prometheus
+type PrometheusQueryStatus struct {
+
+	// PrometheusConnected is a field of CostManagementStatus to represent if cost-management is connected to prometheus
+	PrometheusConnected *bool `json:"prometheus_connected,omitempty"`
+
+	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started
+	// +nullable
+	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
+
+	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful
+	// +nullable
+	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
+}
+
 // CostManagementStatus defines the observed state of CostManagement
 type CostManagementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -170,6 +202,9 @@ type CostManagementStatus struct {
 
 	// Operator git commit Hash
 	OperatorCommit string `json:"operator_commit,omitempty"`
+
+	// Prometheus represents the status of premetheus queries
+	Prometheus PrometheusQueryStatus `json:"prometheus,omitempty"`
 
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
 	// +optional
