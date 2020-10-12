@@ -44,7 +44,7 @@ type PrometheusConfig struct {
 	CAFile string
 }
 
-func getCoreObj(ctx context.Context, r client.Client, obj runtime.Object, key types.NamespacedName, name string) error {
+func getRuntimeObj(ctx context.Context, r client.Client, obj runtime.Object, key types.NamespacedName, name string) error {
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		switch {
@@ -65,7 +65,7 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 		Namespace: costMgmtNamespace,
 		Name:      serviceAccountName,
 	}
-	err := getCoreObj(ctx, r, sa, objKey, "service account")
+	err := getRuntimeObj(ctx, r, sa, objKey, "service account")
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 			Namespace: costMgmtNamespace,
 			Name:      secret.Name,
 		}
-		err := getCoreObj(ctx, r, s, objKey, "secret")
+		err := getRuntimeObj(ctx, r, s, objKey, "secret")
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func getPromAddress(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 		Namespace: monitoringNamespace,
 		Name:      thanosRouteName,
 	}
-	err := getCoreObj(ctx, r, route, objKey, "route")
+	err := getRuntimeObj(ctx, r, route, objKey, "route")
 	if err != nil {
 		return err
 	}
