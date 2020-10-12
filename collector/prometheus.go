@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	routev1 "github.com/openshift/api/route/v1"
 	promapi "github.com/prometheus/client_golang/api"
 	prom "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
@@ -23,13 +24,14 @@ var (
 	costQuerier PrometheusConfig
 	promConn    prom.API
 
-	costMgmtNamespace  = "openshift-cost"
-	secretKey          = "token"
-	serviceAccountName = "default"
-	tokenRegex         = "default-token-*"
+	costMgmtNamespace   = "openshift-cost"
+	monitoringNamespace = "openshift-monitoring"
+	secretKey           = "token"
+	serviceAccountName  = "default"
+	thanosRouteName     = "thanos-querier"
+	tokenRegex          = "default-token-*"
 
-	prometheusAddress = "https://thanos-querier-openshift-monitoring.apps.cluster-9071.9071.sandbox1249.opentlc.com"
-	certFile          = "/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt"
+	certFile = "/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt"
 )
 
 // PrometheusConfig provides the configuration options to set up a Prometheus connections from a URL.
@@ -101,12 +103,32 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 
 }
 
+func getPromAddress(ctx context.Context, r client.Client, cfg *PrometheusConfig) error {
+	route := &routev1.Route{}
+	objKey := client.ObjectKey{
+		Namespace: monitoringNamespace,
+		Name:      thanosRouteName,
+	}
+	err := getCoreObj(ctx, r, route, objKey, "route")
+	if err != nil {
+		return err
+	}
+
+	if route.Spec.Host == "" {
+		return fmt.Errorf("getPromAddress: no routes found")
+	}
+	cfg.Address = "https://" + route.Spec.Host
+	return nil
+}
+
 func getPrometheusConfig(ctx context.Context, r client.Client, log logr.Logger) (*PrometheusConfig, error) {
 	cfg := &PrometheusConfig{
-		Address: prometheusAddress,
-		CAFile:  certFile,
+		CAFile: certFile,
 	}
 	if err := getBearerToken(ctx, r, cfg); err != nil {
+		return nil, err
+	}
+	if err := getPromAddress(ctx, r, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil

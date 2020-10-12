@@ -65,6 +65,13 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - get
+  - list
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
