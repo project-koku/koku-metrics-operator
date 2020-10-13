@@ -52,10 +52,10 @@ var (
 		"node-capacity-memory-bytes":    "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 	}
 	volQueries = map[string]string{
-		"persistentvolumeclaim-info":           "kube_persistentvolumeclaim_info",                            // namespace,persistentvolumeclaim,pod,service,storageclass,volumename
-		"persistentvolumeclaim-capacity-bytes": "kubelet_volume_stats_capacity_bytes",                        // namespace,node,persistentvolumeclaim
-		"persistentvolumeclaim-request-bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes", // namespace,persistentvolumeclaim,pod
-		"persistentvolumeclaim-usage-bytes":    "kubelet_volume_stats_used_bytes",                            // namespace,node,persistentvolumeclaim
+		"persistentvolumeclaim-info":           "kube_persistentvolumeclaim_info",
+		"persistentvolumeclaim-capacity-bytes": "kubelet_volume_stats_capacity_bytes",
+		"persistentvolumeclaim-request-bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+		"persistentvolumeclaim-usage-bytes":    "kubelet_volume_stats_used_bytes",
 	}
 	podQueries = map[string]string{
 		"pod-limit-cpu-cores":      "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
@@ -65,14 +65,12 @@ var (
 		"pod-usage-cpu-cores":      "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[5m])) BY (pod, namespace, node)",
 		"pod-usage-memory-bytes":   "sum(container_memory_usage_bytes{container!='POD', container!='',pod!=''}) by (pod, namespace, node)",
 	}
-	// # korekuta queries:
 	labelQueries = map[string][]string{
 		"namespace-labels":             {"namespace", "kube_namespace_labels"},
 		"node-labels":                  {"node", "kube_node_labels"},
-		"persistentvolume-labels":      {"persistentvolume", "kube_persistentvolume_labels"},           // namespace,persistentvolume,pod
-		"persistentvolumeclaim-labels": {"persistentvolumeclaim", "kube_persistentvolumeclaim_labels"}, // namespace,persistentvolumeclaim,pod
+		"persistentvolume-labels":      {"persistentvolume", "kube_persistentvolume_labels"},
+		"persistentvolumeclaim-labels": {"persistentvolumeclaim", "kube_persistentvolumeclaim_labels"},
 		"pod-labels":                   {"pod", "kube_pod_labels"},
-		// "pod-persistentvolumeclaim-info": {"pod", "kube_pod_spec_volumes_persistentvolumeclaims_info"},  // not used?
 	}
 )
 
@@ -147,22 +145,12 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 			return err
 		}
 		nodeResults = iterateMatrix(matrix, "node", nodeResults, qname)
-		// if len(matrix) > 0 {
-		// 	first := matrix[0]
-		// 	fmt.Printf("\nMatrix Results:\n\tMETRICS: %+v\n\tVALUES: \n", first.Metric)
-		// 	for name, v := range first.Values {
-		// 		fmt.Printf("\t\t%v: %v\n", name, v)
-		// 	}
-		// 	fmt.Printf("LENGTH STREAM.VALUES: %v\n", len(first.Values))
-		// }
 	}
-
 	if len(nodeResults) <= 0 {
 		log.Info("collector: no data to report")
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
-
 	for node, val := range nodeResults {
 		resourceID := getResourceID(val["provider_id"].(string))
 		nodeResults[node]["resource_id"] = resourceID
@@ -185,13 +173,14 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		}
 		volResults = iterateMatrix(matrix, "persistentvolumeclaim", volResults, qname)
 	}
-	// for name, res := range podResults {
-	// 	fmt.Printf("\nQuery: %s\n\tResult: %v | %v\n", name, res, res["node"])
-	// }
 
-	var labelResults = mappedResults{}
+	var labelResults = map[string]mappedResults{}
 	for _, labelQuery := range labelQueries {
 		label, query := labelQuery[0], labelQuery[1]
+		if labelResults[label] == nil {
+			labelResults[label] = mappedResults{}
+		}
+		results := labelResults[label]
 		vector, err := performTheQuery(ctx, promconn, query, start, log)
 		if err != nil {
 			return err
@@ -199,14 +188,13 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		for _, val := range vector {
 			label := string(val.Metric[model.LabelName(label)])
 			labels := parseLabels(val.Metric)
-			if labelResults[label] == nil {
-				labelResults[label] = mappedValues{}
+			if results[label] == nil {
+				results[label] = mappedValues{}
 			}
 			for labelName, val := range val.Metric {
-				labelResults[label][string(labelName)] = string(val)
+				results[label][string(labelName)] = string(val)
 			}
-			labelResults[label]["labels"] = labels
-			labelResults[label]["timestamp"] = val.Timestamp.Time()
+			results[label]["labels"] = labels
 		}
 	}
 
@@ -226,7 +214,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 			val["resource_id"] = dict["resource_id"]
 		}
 
-		val["pod_labels"] = labelResults[pod]["labels"]
+		val["pod_labels"] = labelResults["pod"][pod]["labels"]
 
 		usage := NewPodRow(timeRange)
 		if err := getStruct(val, &usage, podRows, pod); err != nil {
@@ -241,8 +229,8 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	for pvc, val := range volResults {
 		pv := val["volumename"].(string)
 		val["persistentvolume"] = pv
-		val["persistentvolume_labels"] = labelResults[pv]["labels"]
-		val["persistentvolumeclaim_labels"] = labelResults[pvc]["labels"]
+		val["persistentvolume_labels"] = labelResults["persistentvolume"][pv]["labels"]
+		val["persistentvolumeclaim_labels"] = labelResults["persistentvolumeclaim"][pvc]["labels"]
 
 		usage := NewStorageRow(timeRange)
 		if err := getStruct(val, &usage, volRows, pvc); err != nil {
@@ -255,7 +243,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 
 	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
-		val["node_labels"] = labelResults[node]["labels"]
+		val["node_labels"] = labelResults["node"][node]["labels"]
 
 		usage := NewNodeRow(timeRange)
 		if err := getStruct(val, &usage, nodeRows, node); err != nil {
@@ -263,6 +251,20 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		}
 	}
 	if err := writeResults(nodeFilePrefix, yearMonth, "node", nodeRows); err != nil {
+		return err
+	}
+
+	namespaceRows := make(mappedCSVStruct)
+	namespaces := labelResults["namespace"]
+	for namespace, val := range namespaces {
+		val["namespace_labels"] = namespaces[namespace]["labels"]
+
+		usage := NewNamespaceRow(timeRange)
+		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
+			return err
+		}
+	}
+	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows); err != nil {
 		return err
 	}
 
