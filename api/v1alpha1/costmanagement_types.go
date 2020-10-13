@@ -152,22 +152,26 @@ type AuthenticationStatus struct {
 type UploadStatus struct {
 
 	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
+	// The default is true
 	UploadToggle *bool `json:"upload,omitempty"`
 
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
 	// UploadCycle is a field of CostManagement to represent the number of hours between each upload schedule
+	// The default is 6 hours
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
 	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
 	// LastUploadTime is a field of CostManagement that shows the time that the last upload was attempted
-	LastUploadTime string `json:"last_upload_time,omitempty"`
+	// +nullable
+	LastUploadTime *metav1.Time `json:"last_upload_time,omitempty"`
 
 	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload
-	LastSuccessfulUploadTime string `json:"last_successful_upload_time,omitempty"`
+	// +nullable
+	LastSuccessfulUploadTime *metav1.Time `json:"last_successful_upload_time,omitempty"`
 }
 
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus

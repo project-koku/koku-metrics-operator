@@ -161,6 +161,8 @@ spec:
                 last_successful_upload_time:
                   description: LastSuccessfulUploadTime is a field of CostManagement
                     that shows the time of the last successful upload
+                  format: date-time
+                  nullable: true
                   type: string
                 last_upload_status:
                   description: LastUploadStatus is a field of CostManagement that
@@ -169,14 +171,18 @@ spec:
                 last_upload_time:
                   description: LastUploadTime is a field of CostManagement that shows
                     the time that the last upload was attempted
+                  format: date-time
+                  nullable: true
                   type: string
                 upload:
                   description: UploadToggle is a field of CostManagement to represent
-                    if the operator should upload to cloud.redhat.com.
+                    if the operator should upload to cloud.redhat.com. The default
+                    is true
                   type: boolean
                 upload_cycle:
                   description: UploadCycle is a field of CostManagement to represent
-                    the number of hours between each upload schedule
+                    the number of hours between each upload schedule The default is
+                    6 hours
                   format: int64
                   type: integer
                 upload_wait:

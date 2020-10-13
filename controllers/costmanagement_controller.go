@@ -35,6 +35,8 @@ import (
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/go-logr/logr"
 	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
@@ -79,8 +81,8 @@ type CostManagementInput struct {
 	BasicAuthUser            string
 	BasicAuthPassword        string
 	LastUploadStatus         string
-	LastUploadTime           string
-	LastSuccessfulUploadTime string
+	LastUploadTime           metav1.Time
+	LastSuccessfulUploadTime metav1.Time
 	OperatorCommit           string
 	SourceName               string
 	CreateSource             bool
@@ -146,11 +148,11 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
 	}
 
-	if cost.Status.Upload.LastUploadTime != "" {
-		costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
+	if cost.Status.Upload.LastUploadTime != nil {
+		costInput.LastUploadTime = *cost.Status.Upload.LastUploadTime
 	}
-	if cost.Status.Upload.LastSuccessfulUploadTime != "" {
-		costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+	if cost.Status.Upload.LastSuccessfulUploadTime != nil {
+		costInput.LastSuccessfulUploadTime = *cost.Status.Upload.LastSuccessfulUploadTime
 	}
 
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
@@ -170,7 +172,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	if cost.Status.Upload.UploadCycle != nil {
 		costInput.UploadCycle = *cost.Status.Upload.UploadCycle
 	} else {
-		costInput.UploadCycle = 6
+		costInput.UploadCycle = costmgmtv1alpha1.DefaultUploadCycle
 	}
 
 	costInput.SourceName = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
@@ -325,13 +327,14 @@ func GetBodyAndHeaders(r *CostManagementReconciler, filename string) (*bytes.Buf
 	return buf, mw
 }
 
-func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, string, error) {
+func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, *metav1.Time, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "Upload")
 	req, err := http.NewRequest(method, path, body)
+	currentTime := metav1.Now()
 	if err != nil {
 		log.Error(err, "Could not create request")
-		return "", "", err
+		return "", &currentTime, err
 	}
 	// Create the header
 	if req.Header == nil {
@@ -356,13 +359,13 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
-		return "", "", err
+		return "", &currentTime, err
 	}
 	defer resp.Body.Close()
 
 	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
-	uploadTime := time.Now()
+	uploadTime := metav1.Now()
 
 	// Add error handling and logging here
 	requestID := resp.Header.Get("x-rh-insights-request-id")
@@ -399,27 +402,29 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	log.Info("Response body: ")
 	log.Info(bodyString)
 
-	return uploadStatus, uploadTime.Format("2006-01-02 15:04:05"), err
+	return uploadStatus, &uploadTime, err
 }
 
-
-func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess string) bool {
+func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess *metav1.Time) bool {
 	log := r.Log.WithValues("costmanagement", "checkCycle")
-	if lastSuccess != "" {
-		log.Info("Found the last successful upload")
+	if !lastSuccess.IsZero() {
+		lastSuccess := lastSuccess.Format("2006-01-02 15:04:05")
+		log.Info("The last successful upload took place at " + lastSuccess)
 		successTime, err := time.Parse("2006-01-02 15:04:05", lastSuccess)
 		if err != nil {
 			return true
 		}
 		duration := time.Since(successTime)
-		fmt.Println(duration.Hours())
+		log.Info(fmt.Sprintf("It has been %f hours since the last successful upload.", duration.Hours()))
 		if int64(duration.Hours()) >= cycle {
+			log.Info("Uploading to cloud.redhat.com!")
 			return true
 		} else {
+			log.Info("It is not time to upload to cloud.redhat.com!")
 			return false
 		}
 	} else {
-		log.Info("Did not find the last successful upload time!")
+		log.Info("There have been no prior successful uploads to cloud.redhat.com.")
 		return true
 	}
 }
@@ -529,12 +534,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Error(err, "Failed to update CostManagement Status")
 	}
 	if costInput.UploadToggle {
-		upload := checkCycle(r, costInput.UploadCycle, costInput.LastSuccessfulUploadTime)
+		upload := checkCycle(r, costInput.UploadCycle, &costInput.LastSuccessfulUploadTime)
 		if upload {
 
 			// Upload to c.rh.com
 			var uploadStatus string
-			var uploadTime string
+			var uploadTime *metav1.Time
 			var body *bytes.Buffer
 			var mw *multipart.Writer
 			// Instead of looking for tarfiles here - we need to do what the old
@@ -563,10 +568,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 						cost.Status.Upload.LastUploadStatus = uploadStatus
 						costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
 						cost.Status.Upload.LastUploadTime = uploadTime
-						costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
+						costInput.LastUploadTime = *cost.Status.Upload.LastUploadTime
 						if strings.Contains(uploadStatus, "202") {
 							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
-							costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+							costInput.LastSuccessfulUploadTime = *cost.Status.Upload.LastSuccessfulUploadTime
 						}
 						err = r.Status().Update(ctx, cost)
 						if err != nil {
@@ -575,8 +580,6 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					}
 				}
 			}
-		} else {
-			log.Info("It is not time to upload to cloud.redhat.com")
 		}
 	} else {
 		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
