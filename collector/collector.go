@@ -76,6 +76,10 @@ var (
 	}
 )
 
+type mappedCSVStruct map[string]CSVStruct
+type mappedResults map[string]mappedValues
+type mappedValues map[string]interface{}
+
 func maxSlice(array []model.SamplePair) float64 {
 	max := array[0].Value
 	for _, v := range array {
@@ -103,11 +107,11 @@ func getValue(query string, array []model.SamplePair) float64 {
 	}
 }
 
-func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results map[string]map[string]interface{}, qname string) map[string]map[string]interface{} {
+func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results mappedResults, qname string) mappedResults {
 	for _, stream := range matrix {
 		obj := string(stream.Metric[labelName])
 		if results[obj] == nil {
-			results[obj] = map[string]interface{}{}
+			results[obj] = mappedValues{}
 		}
 		for labelName, labelValue := range stream.Metric {
 			results[obj][string(labelName)] = string(labelValue)
@@ -136,7 +140,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	yearMonth := start.Format("200601") // this corresponds to YYYYMM format
 	defer cancel()
 
-	var nodeResults = map[string]map[string]interface{}{}
+	var nodeResults = mappedResults{}
 	for qname, query := range nodeQueries {
 		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
 		if err != nil {
@@ -164,7 +168,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		nodeResults[node]["resource_id"] = resourceID
 	}
 
-	var podResults = map[string]map[string]interface{}{}
+	var podResults = mappedResults{}
 	for qname, query := range podQueries {
 		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
 		if err != nil {
@@ -173,7 +177,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		podResults = iterateMatrix(matrix, "pod", podResults, qname)
 	}
 
-	var volResults = map[string]map[string]interface{}{}
+	var volResults = mappedResults{}
 	for qname, query := range volQueries {
 		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
 		if err != nil {
@@ -185,7 +189,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	// 	fmt.Printf("\nQuery: %s\n\tResult: %v | %v\n", name, res, res["node"])
 	// }
 
-	var labelResults = map[string]map[string]interface{}{}
+	var labelResults = mappedResults{}
 	for _, labelQuery := range labelQueries {
 		label, query := labelQuery[0], labelQuery[1]
 		vector, err := performTheQuery(ctx, promconn, query, start, log)
@@ -196,7 +200,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 			label := string(val.Metric[model.LabelName(label)])
 			labels := parseLabels(val.Metric)
 			if labelResults[label] == nil {
-				labelResults[label] = map[string]interface{}{}
+				labelResults[label] = mappedValues{}
 			}
 			for labelName, val := range val.Metric {
 				labelResults[label][string(labelName)] = string(val)
@@ -206,7 +210,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		}
 	}
 
-	podRows := make(map[string]CSVThing)
+	podRows := make(mappedCSVStruct)
 	for pod, val := range podResults {
 		if node, ok := val["node"]; ok {
 			// add the node queries into the pod results
@@ -233,7 +237,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		return err
 	}
 
-	volRows := make(map[string]CSVThing)
+	volRows := make(mappedCSVStruct)
 	for pvc, val := range volResults {
 		pv := val["volumename"].(string)
 		val["persistentvolume"] = pv
@@ -249,7 +253,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		return err
 	}
 
-	nodeRows := make(map[string]CSVThing)
+	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
 		val["node_labels"] = labelResults[node]["labels"]
 
@@ -265,7 +269,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	return nil
 }
 
-func getStruct(val map[string]interface{}, usage CSVThing, rowResults map[string]CSVThing, key string) error {
+func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
 	row, err := json.Marshal(val)
 	if err != nil {
 		return fmt.Errorf("failed to marshal pod row")
@@ -277,7 +281,7 @@ func getStruct(val map[string]interface{}, usage CSVThing, rowResults map[string
 	return nil
 }
 
-func writeResults(prefix, yearMonth, key string, data map[string]CSVThing) error {
+func writeResults(prefix, yearMonth, key string, data mappedCSVStruct) error {
 	csvFile, created, err := getOrCreateFile(dataPath, prefix+yearMonth+".csv")
 	if err != nil {
 		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
@@ -300,7 +304,7 @@ func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
 	return set, nil
 }
 
-func writeToFile(file *os.File, data map[string]CSVThing, created bool) error {
+func writeToFile(file *os.File, data mappedCSVStruct, created bool) error {
 	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
 		return fmt.Errorf("failed to read csv: %v", err)

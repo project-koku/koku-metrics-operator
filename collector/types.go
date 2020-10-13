@@ -26,7 +26,7 @@ func NewDates(ts promv1.Range) *DateTimes {
 	return d
 }
 
-type CSVThing interface {
+type CSVStruct interface {
 	CSVheader(w io.Writer) error
 	CSVrow(w io.Writer) error
 	RowString() []string
