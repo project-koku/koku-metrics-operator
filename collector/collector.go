@@ -124,23 +124,17 @@ func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results mappe
 	return results
 }
 
-func DoQuery(promconn promv1.API, log logr.Logger) error {
+func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	log = log.WithValues("costmanagement", "DoQuery")
-	t := time.Now()
-	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location())
-	end := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
-	timeRange := promv1.Range{
-		Start: start,
-		End:   end,
-		Step:  time.Minute,
-	}
-	yearMonth := start.Format("200601") // this corresponds to YYYYMM format
+	log = log.WithValues("costmanagement", "GenerateReports")
 	defer cancel()
+
+	// yearMonth is used in filenames
+	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
 
 	var nodeResults = mappedResults{}
 	for qname, query := range nodeQueries {
-		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
+		matrix, err := performMatrixQuery(ctx, promconn, query, ts, log)
 		if err != nil {
 			return err
 		}
@@ -158,7 +152,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 
 	var podResults = mappedResults{}
 	for qname, query := range podQueries {
-		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
+		matrix, err := performMatrixQuery(ctx, promconn, query, ts, log)
 		if err != nil {
 			return err
 		}
@@ -167,7 +161,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 
 	var volResults = mappedResults{}
 	for qname, query := range volQueries {
-		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
+		matrix, err := performMatrixQuery(ctx, promconn, query, ts, log)
 		if err != nil {
 			return err
 		}
@@ -181,7 +175,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 			labelResults[label] = mappedResults{}
 		}
 		results := labelResults[label]
-		vector, err := performTheQuery(ctx, promconn, query, start, log)
+		vector, err := performTheQuery(ctx, promconn, query, ts.End, log)
 		if err != nil {
 			return err
 		}
@@ -216,7 +210,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 
 		val["pod_labels"] = labelResults["pod"][pod]["labels"]
 
-		usage := NewPodRow(timeRange)
+		usage := NewPodRow(ts)
 		if err := getStruct(val, &usage, podRows, pod); err != nil {
 			return err
 		}
@@ -232,7 +226,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		val["persistentvolume_labels"] = labelResults["persistentvolume"][pv]["labels"]
 		val["persistentvolumeclaim_labels"] = labelResults["persistentvolumeclaim"][pvc]["labels"]
 
-		usage := NewStorageRow(timeRange)
+		usage := NewStorageRow(ts)
 		if err := getStruct(val, &usage, volRows, pvc); err != nil {
 			return err
 		}
@@ -245,7 +239,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	for node, val := range nodeResults {
 		val["node_labels"] = labelResults["node"][node]["labels"]
 
-		usage := NewNodeRow(timeRange)
+		usage := NewNodeRow(ts)
 		if err := getStruct(val, &usage, nodeRows, node); err != nil {
 			return err
 		}
@@ -259,7 +253,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	for namespace, val := range namespaces {
 		val["namespace_labels"] = namespaces[namespace]["labels"]
 
-		usage := NewNamespaceRow(timeRange)
+		usage := NewNamespaceRow(ts)
 		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
 			return err
 		}

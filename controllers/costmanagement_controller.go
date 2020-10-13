@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -546,19 +547,23 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	} else {
 		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
 		costInput.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
-
-		if costInput.LastQuerySuccessTime.IsZero() || costInput.LastQuerySuccessTime.Hour() != metav1.Now().Hour() {
-			start := metav1.Now()
-			cost.Status.Prometheus.LastQueryStartTime = start
-			err = collector.DoQuery(promConn, r.Log)
+		t := metav1.Now()
+		timeRange := promv1.Range{
+			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
+			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
+			Step:  time.Minute,
+		}
+		if costInput.LastQuerySuccessTime.IsZero() || costInput.LastQuerySuccessTime.Hour() != t.Hour() {
+			cost.Status.Prometheus.LastQueryStartTime = t
+			err = collector.GenerateReports(promConn, timeRange, r.Log)
 			if err != nil {
-				log.Error(err, "failed to query prometheus")
+				log.Error(err, "failed to generate reports")
 			} else {
-				log.Info("prometheus queries completed")
-				cost.Status.Prometheus.LastQuerySuccessTime = start
+				log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
+				cost.Status.Prometheus.LastQuerySuccessTime = t
 			}
 		} else {
-			log.Info("prometheus queries already complete for this hour")
+			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		}
 
 		if err := r.Status().Update(ctx, cost); err != nil {
