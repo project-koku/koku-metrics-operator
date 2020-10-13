@@ -151,17 +151,6 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
 	costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 
-	// if cost.Status.Upload.LastUploadStatus != "" {
-	// 	costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
-	// }
-
-	// if cost.Status.Upload.LastUploadTime != nil {
-	// 	costInput.LastUploadTime = *cost.Status.Upload.LastUploadTime
-	// }
-	// if cost.Status.Upload.LastSuccessfulUploadTime != nil {
-	// 	costInput.LastSuccessfulUploadTime = *cost.Status.Upload.LastSuccessfulUploadTime
-	// }
-
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
 		cost.Status.Upload.UploadWait = cost.Spec.Upload.UploadWait
