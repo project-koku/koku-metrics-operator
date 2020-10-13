@@ -142,6 +142,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		if err != nil {
 			return err
 		}
+		nodeResults = iterateMatrix(matrix, "node", nodeResults, qname)
 		// if len(matrix) > 0 {
 		// 	first := matrix[0]
 		// 	fmt.Printf("\nMatrix Results:\n\tMETRICS: %+v\n\tVALUES: \n", first.Metric)
@@ -150,7 +151,6 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		// 	}
 		// 	fmt.Printf("LENGTH STREAM.VALUES: %v\n", len(first.Values))
 		// }
-		nodeResults = iterateMatrix(matrix, "node", nodeResults, qname)
 	}
 
 	if len(nodeResults) <= 0 {
@@ -209,6 +209,7 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 	podRows := make(map[string]CSVThing)
 	for pod, val := range podResults {
 		if node, ok := val["node"]; ok {
+			// add the node queries into the pod results
 			node := node.(string)
 			dict, ok := nodeResults[string(node)]
 			if !ok {
@@ -227,29 +228,10 @@ func DoQuery(promconn promv1.API, log logr.Logger) error {
 		if err := getStruct(val, &usage, podRows, pod); err != nil {
 			return err
 		}
-
-		// row, err := json.Marshal(val)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to marshal pod row")
-		// }
-		// usage := NewPodRow(timeRange)
-		// if err := json.Unmarshal(row, &usage); err != nil {
-		// 	return fmt.Errorf("failed to unmarshal pod row")
-		// }
-		// podRows[pod] = usage
 	}
 	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
 		return err
 	}
-
-	// podCSVFile, created, err := getOrCreateFile(dataPath, podFilePrefix+yearMonth+".csv")
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get or create pod csv: %v", err)
-	// }
-	// defer podCSVFile.Close()
-	// if err := writeToFile(podCSVFile, podRows, created); err != nil {
-	// 	return fmt.Errorf("failed to write file: %v", err)
-	// }
 
 	volRows := make(map[string]CSVThing)
 	for pvc, val := range volResults {
@@ -388,12 +370,4 @@ func parseLabels(input model.Metric) string {
 func floatToString(inputNum float64) string {
 	// to convert a float number to a string
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
-}
-
-func sum(array []int) int {
-	result := 0
-	for _, v := range array {
-		result += v
-	}
-	return result
 }
