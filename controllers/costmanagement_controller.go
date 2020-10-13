@@ -22,6 +22,8 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -355,7 +357,21 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	for key, val := range req.Header {
 		fmt.Println(key, val)
 	}
-	client := &http.Client{}
+	// create the client specifying the ca cert file for transport
+	caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
+	if err != nil {
+		log.Error(err, "The following error occurred: ")
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
@@ -408,14 +424,16 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess *metav1.Time) bool {
 	log := r.Log.WithValues("costmanagement", "checkCycle")
 	if !lastSuccess.IsZero() {
-		lastSuccess := lastSuccess.Format("2006-01-02 15:04:05")
+		// transforming the metav1.Time object into a string
+		lastSuccess := lastSuccess.Format("2006-01-02 15:04:05 UTC")
 		log.Info("The last successful upload took place at " + lastSuccess)
-		successTime, err := time.Parse("2006-01-02 15:04:05", lastSuccess)
+		// transforming the string into a time.Time object
+		successTime, err := time.Parse("2006-01-02 15:04:05 UTC", lastSuccess)
 		if err != nil {
 			return true
 		}
 		duration := time.Since(successTime)
-		log.Info(fmt.Sprintf("It has been %f hours since the last successful upload.", duration.Hours()))
+		log.Info(fmt.Sprintf("It has been %d hours since the last successful upload.", int64(duration.Hours())))
 		if int64(duration.Hours()) >= cycle {
 			log.Info("Uploading to cloud.redhat.com!")
 			return true
