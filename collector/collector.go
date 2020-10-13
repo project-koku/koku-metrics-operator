@@ -139,6 +139,9 @@ func DoQuery(promconn prom.API, log logr.Logger) error {
 			podResults[pod]["timestamp"] = val.Timestamp.Time()
 		}
 	}
+	for name, res := range podResults {
+		fmt.Printf("\nQuery: %s\n\tResult: %v | %v\n", name, res, res["node"])
+	}
 
 	var labelResults = map[string]map[string]interface{}{}
 	for _, labelQuery := range labelQueries {
@@ -187,16 +190,19 @@ func DoQuery(promconn prom.API, log logr.Logger) error {
 
 	podRows := make(map[string]CSVThing)
 	for pod, val := range podResults {
-		node := val["node"].(string)
-		dict, ok := nodeResults[string(node)]
-		if !ok {
-			return fmt.Errorf("node %s not found", node)
+		if node, ok := val["node"]; ok {
+			node := node.(string)
+			dict, ok := nodeResults[string(node)]
+			if !ok {
+				return fmt.Errorf("node %s not found", node)
+			}
+			val["node-capacity-cpu-cores"] = dict["node-capacity-cpu-cores"]
+			val["node-capacity-cpu-cores-seconds"] = dict["node-capacity-cpu-core-seconds"]
+			val["node-capacity-memory-bytes"] = dict["node-capacity-memory-bytes"]
+			val["node-capacity-memory-bytes-seconds"] = dict["node-capacity-memory-byte-seconds"]
+			val["resource_id"] = dict["resource_id"]
 		}
-		val["node-capacity-cpu-cores"] = dict["node-capacity-cpu-cores"]
-		val["node-capacity-cpu-cores-seconds"] = dict["node-capacity-cpu-core-seconds"]
-		val["node-capacity-memory-bytes"] = dict["node-capacity-memory-bytes"]
-		val["node-capacity-memory-bytes-seconds"] = dict["node-capacity-memory-byte-seconds"]
-		val["resource_id"] = dict["resource_id"]
+
 		val["pod_labels"] = labelResults[pod]["labels"]
 
 		row, err := json.Marshal(val)
