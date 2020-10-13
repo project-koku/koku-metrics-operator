@@ -188,9 +188,9 @@ func newPrometheusConnFromCfg(cfg PrometheusConfig) (prom.API, error) {
 	return promConn, nil
 }
 
-func performTheQuery(ctx context.Context, promconn prom.API, query string, ts time.Time, log logr.Logger) (model.Vector, error) {
-	log = log.WithValues("costmanagement", "performTheQuery")
-	result, warnings, err := promconn.Query(ctx, query, ts)
+func performTheQuery(q collector, query string) (model.Vector, error) {
+	log := q.Log.WithValues("costmanagement", "performTheQuery")
+	result, warnings, err := q.PrometheusConnection.Query(q.Context, query, q.TimeSeries.End)
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus: %v", err)
 	}
@@ -204,9 +204,9 @@ func performTheQuery(ctx context.Context, promconn prom.API, query string, ts ti
 	return vector, nil
 }
 
-func performMatrixQuery(ctx context.Context, promconn prom.API, query string, ts prom.Range, log logr.Logger) (model.Matrix, error) {
-	log = log.WithValues("costmanagement", "performMatrixQuery")
-	result, warnings, err := promconn.QueryRange(ctx, query, ts)
+func performMatrixQuery(q collector, query string) (model.Matrix, error) {
+	log := q.Log.WithValues("costmanagement", "performMatrixQuery")
+	result, warnings, err := q.PrometheusConnection.QueryRange(q.Context, query, q.TimeSeries)
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus: %v", err)
 	}

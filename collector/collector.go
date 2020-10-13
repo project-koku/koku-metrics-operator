@@ -39,25 +39,27 @@ import (
 )
 
 var (
+	logger logr.Logger
+
 	dataPath            = "/tmp/cost-mgmt-operator-reports/data/"
 	podFilePrefix       = "cm-openshift-usage-lookback-"
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
 	namespaceFilePrefix = "cm-openshift-namespace-labels-lookback-"
 
-	nodeQueries = map[string]string{
+	nodeQueries = mappedQuery{
 		"node-allocatable-cpu-cores":    "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 		"node-allocatable-memory-bytes": "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 		"node-capacity-cpu-cores":       "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 		"node-capacity-memory-bytes":    "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 	}
-	volQueries = map[string]string{
+	volQueries = mappedQuery{
 		"persistentvolumeclaim-info":           "kube_persistentvolumeclaim_info",
 		"persistentvolumeclaim-capacity-bytes": "kubelet_volume_stats_capacity_bytes",
 		"persistentvolumeclaim-request-bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes",
 		"persistentvolumeclaim-usage-bytes":    "kubelet_volume_stats_used_bytes",
 	}
-	podQueries = map[string]string{
+	podQueries = mappedQuery{
 		"pod-limit-cpu-cores":      "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
 		"pod-limit-memory-bytes":   "sum(kube_pod_container_resource_limits_memory_bytes) by (pod, namespace, node)",
 		"pod-request-cpu-cores":    "sum(kube_pod_container_resource_requests_cpu_cores) by (pod, namespace, node)",
@@ -75,8 +77,20 @@ var (
 )
 
 type mappedCSVStruct map[string]CSVStruct
+type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
+type collector struct {
+	Context              context.Context
+	PrometheusConnection promv1.API
+	TimeSeries           promv1.Range
+	Log                  logr.Logger
+}
+
+func floatToString(inputNum float64) string {
+	// to convert a float number to a string
+	return strconv.FormatFloat(inputNum, 'f', 6, 64)
+}
 
 func maxSlice(array []model.SamplePair) float64 {
 	max := array[0].Value
@@ -124,24 +138,45 @@ func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results mappe
 	return results
 }
 
+func getQueryResults(q collector, queries mappedQuery, key string) (mappedResults, error) {
+	results := mappedResults{}
+	for qname, query := range queries {
+		matrix, err := performMatrixQuery(q, query)
+		if err != nil {
+			return nil, err
+		}
+		results = iterateMatrix(matrix, model.LabelName(key), results, qname)
+	}
+	return results, nil
+}
+
+// GenerateReports is responsible for querying prometheus and writing to report files
 func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) error {
+	if logger == nil {
+		logger = log
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	log = log.WithValues("costmanagement", "GenerateReports")
 	defer cancel()
 
+	querier := collector{
+		Context:              ctx,
+		PrometheusConnection: promconn,
+		TimeSeries:           ts,
+		Log:                  log,
+	}
+
 	// yearMonth is used in filenames
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
 
-	var nodeResults = mappedResults{}
-	for qname, query := range nodeQueries {
-		matrix, err := performMatrixQuery(ctx, promconn, query, ts, log)
-		if err != nil {
-			return err
-		}
-		nodeResults = iterateMatrix(matrix, "node", nodeResults, qname)
+	log.Info("querying for node metrics")
+	nodeResults, err := getQueryResults(querier, nodeQueries, "node")
+	if err != nil {
+		return err
 	}
+
 	if len(nodeResults) <= 0 {
-		log.Info("collector: no data to report")
+		log.Info("no data to report")
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
@@ -150,24 +185,19 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 		nodeResults[node]["resource_id"] = resourceID
 	}
 
-	var podResults = mappedResults{}
-	for qname, query := range podQueries {
-		matrix, err := performMatrixQuery(ctx, promconn, query, ts, log)
-		if err != nil {
-			return err
-		}
-		podResults = iterateMatrix(matrix, "pod", podResults, qname)
+	log.Info("querying for pod metrics")
+	podResults, err := getQueryResults(querier, podQueries, "pod")
+	if err != nil {
+		return err
 	}
 
-	var volResults = mappedResults{}
-	for qname, query := range volQueries {
-		matrix, err := performMatrixQuery(ctx, promconn, query, ts, log)
-		if err != nil {
-			return err
-		}
-		volResults = iterateMatrix(matrix, "persistentvolumeclaim", volResults, qname)
+	log.Info("querying for storage metrics")
+	volResults, err := getQueryResults(querier, volQueries, "persistentvolumeclaim")
+	if err != nil {
+		return err
 	}
 
+	log.Info("querying for labels")
 	var labelResults = map[string]mappedResults{}
 	for _, labelQuery := range labelQueries {
 		label, query := labelQuery[0], labelQuery[1]
@@ -175,7 +205,7 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 			labelResults[label] = mappedResults{}
 		}
 		results := labelResults[label]
-		vector, err := performTheQuery(ctx, promconn, query, ts.End, log)
+		vector, err := performTheQuery(querier, query)
 		if err != nil {
 			return err
 		}
@@ -265,6 +295,29 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 	return nil
 }
 
+func getResourceID(input string) string {
+	splitString := strings.Split(input, "/")
+	return splitString[len(splitString)-1]
+}
+
+func parseLabels(input model.Metric) string {
+	result := []string{}
+	for name, val := range input {
+		name := string(name)
+		match, _ := regexp.MatchString("label_*", name)
+		if match {
+			result = append(result, name+":"+string(val))
+		}
+	}
+	switch length := len(result); {
+	case length > 0:
+		sort.Strings(result)
+		return strings.Join(result, "|")
+	default:
+		return ""
+	}
+}
+
 func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
 	row, err := json.Marshal(val)
 	if err != nil {
@@ -283,23 +336,34 @@ func writeResults(prefix, yearMonth, key string, data mappedCSVStruct) error {
 		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
 	}
 	defer csvFile.Close()
+	logMsg := fmt.Sprintf("writing %s results to file", key)
+	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", key)
 	if err := writeToFile(csvFile, data, created); err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 	return nil
 }
 
-func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
-	lines, err := csv.NewReader(f).ReadAll()
+func getOrCreateFile(path, filename string) (*os.File, bool, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return nil, false, err
+		}
+	}
+	filePath := filepath.Join(path, filename)
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		file, err := os.Create(filePath)
+		return file, true, err
+	}
 	if err != nil {
-		return set, err
+		return nil, false, err
 	}
-	for _, line := range lines {
-		set.Add(strings.Join(line, ","))
-	}
-	return set, nil
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_RDWR, 0644)
+	return file, false, err
 }
 
+// writeToFile compares the data to what is in the file and only adds new data to the file
 func writeToFile(file *os.File, data mappedCSVStruct, created bool) error {
 	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
@@ -325,49 +389,14 @@ func writeToFile(file *os.File, data mappedCSVStruct, created bool) error {
 	return file.Sync()
 }
 
-func getOrCreateFile(path, filename string) (*os.File, bool, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			return nil, false, err
-		}
-	}
-	filePath := filepath.Join(path, filename)
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		file, err := os.Create(filePath)
-		return file, true, err
-	}
+// readCsv reads the file and puts each row into a set
+func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
+	lines, err := csv.NewReader(f).ReadAll()
 	if err != nil {
-		return nil, false, err
+		return set, err
 	}
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_RDWR, 0644)
-	return file, false, err
-}
-
-func getResourceID(input string) string {
-	splitString := strings.Split(input, "/")
-	return splitString[len(splitString)-1]
-}
-
-func parseLabels(input model.Metric) string {
-	result := []string{}
-	for name, val := range input {
-		name := string(name)
-		match, _ := regexp.MatchString("label_*", name)
-		if match {
-			result = append(result, name+":"+string(val))
-		}
+	for _, line := range lines {
+		set.Add(strings.Join(line, ","))
 	}
-	switch length := len(result); {
-	case length > 0:
-		sort.Strings(result)
-		return strings.Join(result, "|")
-	default:
-		return ""
-	}
-}
-
-func floatToString(inputNum float64) string {
-	// to convert a float number to a string
-	return strconv.FormatFloat(inputNum, 'f', 6, 64)
+	return set, nil
 }

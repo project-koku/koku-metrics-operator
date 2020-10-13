@@ -555,6 +555,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		if costInput.LastQuerySuccessTime.IsZero() || costInput.LastQuerySuccessTime.Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
+			log.Info("generatinging reports for range", "start", timeRange.Start, "end", timeRange.End)
 			err = collector.GenerateReports(promConn, timeRange, r.Log)
 			if err != nil {
 				log.Error(err, "failed to generate reports")
