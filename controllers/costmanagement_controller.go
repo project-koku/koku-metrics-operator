@@ -154,7 +154,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.CreateSource = *cost.Spec.Source.CreateSource
 	}
 
-	costInput.LastQuerySuccessTime = cost.Status.Prometheus.LastQueryStartTime
+	costInput.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
 
 	err := r.Status().Update(ctx, cost)
 	if err != nil {

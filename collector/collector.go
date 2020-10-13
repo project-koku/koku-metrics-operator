@@ -34,7 +34,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/project-koku/korekuta-operator-go/strset"
-	prom "github.com/prometheus/client_golang/api/prometheus/v1"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
 
@@ -62,7 +62,7 @@ var (
 		"pod-limit-memory-bytes":   "sum(kube_pod_container_resource_limits_memory_bytes) by (pod, namespace, node)",
 		"pod-request-cpu-cores":    "sum(kube_pod_container_resource_requests_cpu_cores) by (pod, namespace, node)",
 		"pod-request-memory-bytes": "sum(kube_pod_container_resource_requests_memory_bytes) by (pod, namespace, node)",
-		"pod-usage-cpu-cores":      "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[60m])) BY (pod, namespace, node)",
+		"pod-usage-cpu-cores":      "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[5m])) BY (pod, namespace, node)",
 		"pod-usage-memory-bytes":   "sum(container_memory_usage_bytes{container!='POD', container!='',pod!=''}) by (pod, namespace, node)",
 	}
 	// # korekuta queries:
@@ -76,68 +76,110 @@ var (
 	}
 )
 
-func DoQuery(promconn prom.API, log logr.Logger) error {
+func maxSlice(array []model.SamplePair) float64 {
+	max := array[0].Value
+	for _, v := range array {
+		if v.Value > max {
+			max = v.Value
+		}
+	}
+	return float64(max)
+}
+
+func sumSlice(array []model.SamplePair) float64 {
+	var sum model.SampleValue
+	for _, v := range array {
+		sum += v.Value
+	}
+	return float64(sum)
+}
+
+func getValue(query string, array []model.SamplePair) float64 {
+	switch {
+	case strings.Contains(query, "usage"):
+		return sumSlice(array)
+	default:
+		return maxSlice(array)
+	}
+}
+
+func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results map[string]map[string]interface{}, qname string) map[string]map[string]interface{} {
+	for _, stream := range matrix {
+		obj := string(stream.Metric[labelName])
+		if results[obj] == nil {
+			results[obj] = map[string]interface{}{}
+		}
+		for labelName, labelValue := range stream.Metric {
+			results[obj][string(labelName)] = string(labelValue)
+		}
+		value := getValue(qname, stream.Values)
+		results[obj][qname] = floatToString(value)
+		if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
+			index := qname[:len(qname)-1] + "-seconds"
+			results[obj][index] = floatToString(value * float64(len(stream.Values)))
+		}
+	}
+	return results
+}
+
+func DoQuery(promconn promv1.API, log logr.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	log = log.WithValues("costmanagement", "DoQuery")
 	t := time.Now()
-	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
+	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location())
+	end := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
+	timeRange := promv1.Range{
+		Start: start,
+		End:   end,
+		Step:  time.Minute,
+	}
 	yearMonth := start.Format("200601") // this corresponds to YYYYMM format
 	defer cancel()
 
 	var nodeResults = map[string]map[string]interface{}{}
 	for qname, query := range nodeQueries {
-		vector, err := performTheQuery(ctx, promconn, query, start, log)
+		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
 		if err != nil {
 			return err
 		}
-
-		for _, val := range vector {
-			node := string(val.Metric["node"])
-			if nodeResults[node] == nil {
-				nodeResults[node] = map[string]interface{}{}
-				resourceID := getResourceID(string(val.Metric["provider_id"]))
-				nodeResults[node]["resource_id"] = resourceID
-			}
-			for labelName, val := range val.Metric {
-				nodeResults[node][string(labelName)] = string(val)
-			}
-			nodeResults[node][qname] = floatToString(float64(val.Value))
-			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
-				index := qname[:len(qname)-1] + "-seconds"
-				nodeResults[node][index] = floatToString(float64(val.Value) * 3600)
-			}
-
-			nodeResults[node]["timestamp"] = val.Timestamp.Time()
-		}
+		// if len(matrix) > 0 {
+		// 	first := matrix[0]
+		// 	fmt.Printf("\nMatrix Results:\n\tMETRICS: %+v\n\tVALUES: \n", first.Metric)
+		// 	for name, v := range first.Values {
+		// 		fmt.Printf("\t\t%v: %v\n", name, v)
+		// 	}
+		// 	fmt.Printf("LENGTH STREAM.VALUES: %v\n", len(first.Values))
+		// }
+		nodeResults = iterateMatrix(matrix, "node", nodeResults, qname)
 	}
+
 	if len(nodeResults) <= 0 {
 		log.Info("collector: no data to report")
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
 
+	for node, val := range nodeResults {
+		resourceID := getResourceID(val["provider_id"].(string))
+		nodeResults[node]["resource_id"] = resourceID
+	}
+
 	var podResults = map[string]map[string]interface{}{}
 	for qname, query := range podQueries {
-		vector, err := performTheQuery(ctx, promconn, query, start, log)
+		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
 		if err != nil {
 			return err
 		}
+		podResults = iterateMatrix(matrix, "pod", podResults, qname)
+	}
 
-		for _, val := range vector {
-			pod := string(val.Metric["pod"])
-			if podResults[pod] == nil {
-				podResults[pod] = map[string]interface{}{}
-			}
-			for labelName, val := range val.Metric {
-				podResults[pod][string(labelName)] = string(val)
-			}
-			podResults[pod][qname] = floatToString(float64(val.Value))
-			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
-				index := qname[:len(qname)-1] + "-seconds"
-				podResults[pod][index] = floatToString(float64(val.Value) * 3600)
-			}
-			podResults[pod]["timestamp"] = val.Timestamp.Time()
+	var volResults = map[string]map[string]interface{}{}
+	for qname, query := range volQueries {
+		matrix, err := performMatrixQuery(ctx, promconn, query, timeRange, log)
+		if err != nil {
+			return err
 		}
+		volResults = iterateMatrix(matrix, "persistentvolumeclaim", volResults, qname)
 	}
 	// for name, res := range podResults {
 	// 	fmt.Printf("\nQuery: %s\n\tResult: %v | %v\n", name, res, res["node"])
@@ -164,30 +206,6 @@ func DoQuery(promconn prom.API, log logr.Logger) error {
 		}
 	}
 
-	var volResults = map[string]map[string]interface{}{}
-	for qname, query := range volQueries {
-		vector, err := performTheQuery(ctx, promconn, query, start, log)
-		if err != nil {
-			return err
-		}
-
-		for _, val := range vector {
-			pvc := string(val.Metric["persistentvolumeclaim"])
-			if volResults[pvc] == nil {
-				volResults[pvc] = map[string]interface{}{}
-			}
-			for labelName, val := range val.Metric {
-				volResults[pvc][string(labelName)] = string(val)
-			}
-			volResults[pvc][qname] = floatToString(float64(val.Value))
-			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
-				index := qname[:len(qname)-1] + "-seconds"
-				volResults[pvc][index] = floatToString(float64(val.Value) * 3600)
-			}
-			volResults[pvc]["timestamp"] = val.Timestamp.Time()
-		}
-	}
-
 	podRows := make(map[string]CSVThing)
 	for pod, val := range podResults {
 		if node, ok := val["node"]; ok {
@@ -205,75 +223,87 @@ func DoQuery(promconn prom.API, log logr.Logger) error {
 
 		val["pod_labels"] = labelResults[pod]["labels"]
 
-		row, err := json.Marshal(val)
-		if err != nil {
-			return fmt.Errorf("failed to marshal pod row")
+		usage := NewPodRow(timeRange)
+		if err := getStruct(val, &usage, podRows, pod); err != nil {
+			return err
 		}
-		usage := NewPodRow(start)
-		if err := json.Unmarshal(row, &usage); err != nil {
-			return fmt.Errorf("failed to unmarshal pod row")
-		}
-		podRows[pod] = usage
+
+		// row, err := json.Marshal(val)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to marshal pod row")
+		// }
+		// usage := NewPodRow(timeRange)
+		// if err := json.Unmarshal(row, &usage); err != nil {
+		// 	return fmt.Errorf("failed to unmarshal pod row")
+		// }
+		// podRows[pod] = usage
+	}
+	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
+		return err
 	}
 
-	podCSVFile, created, err := getOrCreateFile(dataPath, podFilePrefix+yearMonth+".csv")
-	if err != nil {
-		return fmt.Errorf("failed to get or create pod csv: %v", err)
-	}
-	defer podCSVFile.Close()
-	if err := writeToFile(podCSVFile, podRows, created); err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
-	}
+	// podCSVFile, created, err := getOrCreateFile(dataPath, podFilePrefix+yearMonth+".csv")
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get or create pod csv: %v", err)
+	// }
+	// defer podCSVFile.Close()
+	// if err := writeToFile(podCSVFile, podRows, created); err != nil {
+	// 	return fmt.Errorf("failed to write file: %v", err)
+	// }
 
+	volRows := make(map[string]CSVThing)
 	for pvc, val := range volResults {
 		pv := val["volumename"].(string)
 		val["persistentvolume"] = pv
 		val["persistentvolume_labels"] = labelResults[pv]["labels"]
 		val["persistentvolumeclaim_labels"] = labelResults[pvc]["labels"]
-	}
-	volRows := make(map[string]CSVThing)
-	for vol, val := range volResults {
-		row, err := json.Marshal(val)
-		if err != nil {
-			return fmt.Errorf("failed to marshal volume row")
+
+		usage := NewStorageRow(timeRange)
+		if err := getStruct(val, &usage, volRows, pvc); err != nil {
+			return err
 		}
-		usage := NewStorageRow(start)
-		if err := json.Unmarshal(row, &usage); err != nil {
-			return fmt.Errorf("failed to unmarshal volume row")
-		}
-		volRows[vol] = usage
 	}
-	volCSVFile, created, err := getOrCreateFile(dataPath, volFilePrefix+yearMonth+".csv")
-	if err != nil {
-		return fmt.Errorf("failed to get or create vol csv: %v", err)
-	}
-	defer volCSVFile.Close()
-	if err := writeToFile(volCSVFile, volRows, created); err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
+	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows); err != nil {
+		return err
 	}
 
 	nodeRows := make(map[string]CSVThing)
 	for node, val := range nodeResults {
 		val["node_labels"] = labelResults[node]["labels"]
-		row, err := json.Marshal(val)
-		if err != nil {
-			return fmt.Errorf("failed to marshal node labels")
+
+		usage := NewNodeRow(timeRange)
+		if err := getStruct(val, &usage, nodeRows, node); err != nil {
+			return err
 		}
-		usage := NewNodeRow(start)
-		if err := json.Unmarshal(row, &usage); err != nil {
-			return fmt.Errorf("failed to unmarshal node row")
-		}
-		nodeRows[node] = usage
 	}
-	nodeCSVFile, created, err := getOrCreateFile(dataPath, nodeFilePrefix+yearMonth+".csv")
-	if err != nil {
-		return fmt.Errorf("failed to get or create node csv: %v", err)
-	}
-	defer nodeCSVFile.Close()
-	if err := writeToFile(nodeCSVFile, nodeRows, created); err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
+	if err := writeResults(nodeFilePrefix, yearMonth, "node", nodeRows); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func getStruct(val map[string]interface{}, usage CSVThing, rowResults map[string]CSVThing, key string) error {
+	row, err := json.Marshal(val)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pod row")
+	}
+	if err := json.Unmarshal(row, &usage); err != nil {
+		return fmt.Errorf("failed to unmarshal pod row")
+	}
+	rowResults[key] = usage
+	return nil
+}
+
+func writeResults(prefix, yearMonth, key string, data map[string]CSVThing) error {
+	csvFile, created, err := getOrCreateFile(dataPath, prefix+yearMonth+".csv")
+	if err != nil {
+		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
+	}
+	defer csvFile.Close()
+	if err := writeToFile(csvFile, data, created); err != nil {
+		return fmt.Errorf("failed to write file: %v", err)
+	}
 	return nil
 }
 
@@ -358,4 +388,12 @@ func parseLabels(input model.Metric) string {
 func floatToString(inputNum float64) string {
 	// to convert a float number to a string
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
+}
+
+func sum(array []int) int {
+	result := 0
+	for _, v := range array {
+		result += v
+	}
+	return result
 }

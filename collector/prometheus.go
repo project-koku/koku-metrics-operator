@@ -203,3 +203,19 @@ func performTheQuery(ctx context.Context, promconn prom.API, query string, ts ti
 	}
 	return vector, nil
 }
+
+func performMatrixQuery(ctx context.Context, promconn prom.API, query string, ts prom.Range, log logr.Logger) (model.Matrix, error) {
+	log = log.WithValues("costmanagement", "performMatrixQuery")
+	result, warnings, err := promconn.QueryRange(ctx, query, ts)
+	if err != nil {
+		return nil, fmt.Errorf("error querying prometheus: %v", err)
+	}
+	if len(warnings) > 0 {
+		log.Info("query warnings", "Warnings", warnings)
+	}
+	matrix, ok := result.(model.Matrix)
+	if !ok {
+		return nil, fmt.Errorf("expected a matrix in response to query, got a %v", result.Type())
+	}
+	return matrix, nil
+}

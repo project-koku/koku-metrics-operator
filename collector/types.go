@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 )
 
 type DateTimes struct {
@@ -14,11 +16,11 @@ type DateTimes struct {
 	IntervalEnd       string
 }
 
-func NewDates(t time.Time) *DateTimes {
+func NewDates(ts promv1.Range) *DateTimes {
 	d := new(DateTimes)
-	d.IntervalEnd = t.String()
-	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, t.Location())
-	d.IntervalStart = start.String()
+	d.IntervalStart = ts.Start.String()
+	d.IntervalEnd = ts.End.String()
+	t := ts.Start
 	d.ReportPeriodStart = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location()).String()
 	d.ReportPeriodEnd = time.Date(t.Year(), t.Month()+1, 1, 0, 0, 0, 0, t.Location()).String()
 	return d
@@ -37,9 +39,9 @@ type NamespaceRow struct {
 	NamespaceLabels string `json:"namespace_labels"`
 }
 
-func NewNamespaceRow(t time.Time) NamespaceRow {
+func NewNamespaceRow(ts promv1.Range) NamespaceRow {
 	row := NamespaceRow{}
-	row.DateTimes = NewDates(t)
+	row.DateTimes = NewDates(ts)
 	return row
 }
 
@@ -93,9 +95,9 @@ type NodeRow struct {
 	NodeLabels                    string `json:"node_labels"`
 }
 
-func NewNodeRow(t time.Time) NodeRow {
+func NewNodeRow(ts promv1.Range) NodeRow {
 	row := NodeRow{}
-	row.DateTimes = NewDates(t)
+	row.DateTimes = NewDates(ts)
 	return row
 }
 
@@ -167,9 +169,9 @@ type PodRow struct {
 	PodLabels                     string `json:"pod_labels"`
 }
 
-func NewPodRow(t time.Time) PodRow {
+func NewPodRow(ts promv1.Range) PodRow {
 	row := PodRow{}
-	row.DateTimes = NewDates(t)
+	row.DateTimes = NewDates(ts)
 	return row
 }
 
@@ -253,9 +255,9 @@ type StorageRow struct {
 	PersistentVolumeClaimLabels              string `json:"persistentvolumeclaim_labels"`
 }
 
-func NewStorageRow(t time.Time) StorageRow {
+func NewStorageRow(ts promv1.Range) StorageRow {
 	row := StorageRow{}
-	row.DateTimes = NewDates(t)
+	row.DateTimes = NewDates(ts)
 	return row
 }
 
