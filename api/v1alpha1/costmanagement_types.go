@@ -86,11 +86,13 @@ type UploadSpec struct {
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
 	// UploadCycle is a field of CostManagement to represent the number of hours between each upload schedule
+	// The default is 360 min (6 hours)
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
 	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
+	// The default is true
 	// +optional
 	UploadToggle *bool `json:"upload_toggle,omitempty"`
 }

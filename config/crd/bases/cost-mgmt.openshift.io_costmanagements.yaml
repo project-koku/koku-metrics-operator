@@ -82,13 +82,15 @@ spec:
               properties:
                 upload_cycle:
                   description: UploadCycle is a field of CostManagement to represent
-                    the number of hours between each upload schedule
+                    the number of hours between each upload schedule The default is
+                    360 min (6 hours)
                   format: int64
                   minimum: 0
                   type: integer
                 upload_toggle:
                   description: UploadToggle is a field of CostManagement to represent
-                    if the operator should upload to cloud.redhat.com.
+                    if the operator should upload to cloud.redhat.com. The default
+                    is true
                   type: boolean
                 upload_wait:
                   description: UploadWait is a field of CostManagement to represent
