@@ -139,9 +139,9 @@ func DoQuery(promconn prom.API, log logr.Logger) error {
 			podResults[pod]["timestamp"] = val.Timestamp.Time()
 		}
 	}
-	for name, res := range podResults {
-		fmt.Printf("\nQuery: %s\n\tResult: %v | %v\n", name, res, res["node"])
-	}
+	// for name, res := range podResults {
+	// 	fmt.Printf("\nQuery: %s\n\tResult: %v | %v\n", name, res, res["node"])
+	// }
 
 	var labelResults = map[string]map[string]interface{}{}
 	for _, labelQuery := range labelQueries {

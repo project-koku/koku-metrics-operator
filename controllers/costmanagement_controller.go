@@ -154,6 +154,8 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.CreateSource = *cost.Spec.Source.CreateSource
 	}
 
+	costInput.LastQuerySuccessTime = cost.Status.Prometheus.LastQueryStartTime
+
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
@@ -470,6 +472,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		err = fmt.Errorf("No authentication secret name set when using basic auth.")
 	}
+	// returns if `Obtain credentials token/basic` errors
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Grab the Operator git commit and upload the status and input object with it
 	commit, err := ioutil.ReadFile("commit")
 	if err != nil {
@@ -540,7 +547,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
 		costInput.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
 
-		if cost.Status.Prometheus.LastQuerySuccessTime.Hour() != metav1.Now().Hour() {
+		if costInput.LastQuerySuccessTime.IsZero() || costInput.LastQuerySuccessTime.Hour() != metav1.Now().Hour() {
 			start := metav1.Now()
 			cost.Status.Prometheus.LastQueryStartTime = start
 			err = collector.DoQuery(promConn, r.Log)
