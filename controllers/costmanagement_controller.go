@@ -146,16 +146,21 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.UploadToggle = costmgmtv1alpha1.DefaultUploadToggle
 	}
 
-	if cost.Status.Upload.LastUploadStatus != "" {
-		costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
-	}
+	// set the upload variables to what is in the struct
+	costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
+	costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
+	costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 
-	if cost.Status.Upload.LastUploadTime != nil {
-		costInput.LastUploadTime = *cost.Status.Upload.LastUploadTime
-	}
-	if cost.Status.Upload.LastSuccessfulUploadTime != nil {
-		costInput.LastSuccessfulUploadTime = *cost.Status.Upload.LastSuccessfulUploadTime
-	}
+	// if cost.Status.Upload.LastUploadStatus != "" {
+	// 	costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
+	// }
+
+	// if cost.Status.Upload.LastUploadTime != nil {
+	// 	costInput.LastUploadTime = *cost.Status.Upload.LastUploadTime
+	// }
+	// if cost.Status.Upload.LastSuccessfulUploadTime != nil {
+	// 	costInput.LastSuccessfulUploadTime = *cost.Status.Upload.LastSuccessfulUploadTime
+	// }
 
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
@@ -329,14 +334,14 @@ func GetBodyAndHeaders(r *CostManagementReconciler, filename string) (*bytes.Buf
 	return buf, mw
 }
 
-func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, *metav1.Time, error) {
+func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, metav1.Time, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "Upload")
 	req, err := http.NewRequest(method, path, body)
 	currentTime := metav1.Now()
 	if err != nil {
 		log.Error(err, "Could not create request")
-		return "", &currentTime, err
+		return "", currentTime, err
 	}
 	// Create the header
 	if req.Header == nil {
@@ -375,7 +380,7 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
-		return "", &currentTime, err
+		return "", currentTime, err
 	}
 	defer resp.Body.Close()
 
@@ -418,10 +423,10 @@ func Upload(r *CostManagementReconciler, costInput *CostManagementInput, method 
 	log.Info("Response body: ")
 	log.Info(bodyString)
 
-	return uploadStatus, &uploadTime, err
+	return uploadStatus, uploadTime, err
 }
 
-func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess *metav1.Time) bool {
+func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Time) bool {
 	log := r.Log.WithValues("costmanagement", "checkCycle")
 	if !lastSuccess.IsZero() {
 		// transforming the metav1.Time object into a string
@@ -433,8 +438,8 @@ func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess *metav1.Ti
 			return true
 		}
 		duration := time.Since(successTime)
-		log.Info(fmt.Sprintf("It has been %d hours since the last successful upload.", int64(duration.Hours())))
-		if int64(duration.Hours()) >= cycle {
+		log.Info(fmt.Sprintf("It has been %d minutes since the last successful upload.", int64(duration.Minutes())))
+		if int64(duration.Minutes()) >= cycle {
 			log.Info("Uploading to cloud.redhat.com!")
 			return true
 		} else {
@@ -552,12 +557,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Error(err, "Failed to update CostManagement Status")
 	}
 	if costInput.UploadToggle {
-		upload := checkCycle(r, costInput.UploadCycle, &costInput.LastSuccessfulUploadTime)
+		upload := checkCycle(r, costInput.UploadCycle, costInput.LastSuccessfulUploadTime)
 		if upload {
 
 			// Upload to c.rh.com
 			var uploadStatus string
-			var uploadTime *metav1.Time
+			var uploadTime metav1.Time
 			var body *bytes.Buffer
 			var mw *multipart.Writer
 			// Instead of looking for tarfiles here - we need to do what the old
@@ -586,10 +591,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 						cost.Status.Upload.LastUploadStatus = uploadStatus
 						costInput.LastUploadStatus = cost.Status.Upload.LastUploadStatus
 						cost.Status.Upload.LastUploadTime = uploadTime
-						costInput.LastUploadTime = *cost.Status.Upload.LastUploadTime
+						costInput.LastUploadTime = cost.Status.Upload.LastUploadTime
 						if strings.Contains(uploadStatus, "202") {
 							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
-							costInput.LastSuccessfulUploadTime = *cost.Status.Upload.LastSuccessfulUploadTime
+							costInput.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 						}
 						err = r.Status().Update(ctx, cost)
 						if err != nil {

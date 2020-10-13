@@ -181,8 +181,8 @@ spec:
                   type: boolean
                 upload_cycle:
                   description: UploadCycle is a field of CostManagement to represent
-                    the number of hours between each upload schedule The default is
-                    6 hours
+                    the number of minutes between each upload schedule The default
+                    is 360 min (6 hours)
                   format: int64
                   type: integer
                 upload_wait:

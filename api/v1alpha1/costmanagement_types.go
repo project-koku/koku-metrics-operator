@@ -43,8 +43,8 @@ const (
 	//UploadOff sets the operator to not upload to cloud.redhat.com
 	UploadOff bool = false
 
-	//UploadCycle sets the default cycle to be 6 hours
-	UploadSchedule int64 = 6
+	//UploadCycle sets the default cycle to be 360 minutes (6 hours)
+	UploadSchedule int64 = 360
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -158,8 +158,8 @@ type UploadStatus struct {
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of CostManagement to represent the number of hours between each upload schedule
-	// The default is 6 hours
+	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule
+	// The default is 360 min (6 hours)
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
 	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload
@@ -167,11 +167,11 @@ type UploadStatus struct {
 
 	// LastUploadTime is a field of CostManagement that shows the time that the last upload was attempted
 	// +nullable
-	LastUploadTime *metav1.Time `json:"last_upload_time,omitempty"`
+	LastUploadTime metav1.Time `json:"last_upload_time,omitempty"`
 
 	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload
 	// +nullable
-	LastSuccessfulUploadTime *metav1.Time `json:"last_successful_upload_time,omitempty"`
+	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
 }
 
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus
