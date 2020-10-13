@@ -419,10 +419,10 @@ func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Tim
 	log := r.Log.WithValues("costmanagement", "checkCycle")
 	if !lastSuccess.IsZero() {
 		// transforming the metav1.Time object into a string
-		lastSuccess := lastSuccess.Format("2006-01-02 15:04:05 UTC")
+		lastSuccess := lastSuccess.UTC().Format("2006-01-02 15:04:05")
 		log.Info("The last successful upload took place at " + lastSuccess)
 		// transforming the string into a time.Time object
-		successTime, err := time.Parse("2006-01-02 15:04:05 UTC", lastSuccess)
+		successTime, err := time.Parse("2006-01-02 15:04:05", lastSuccess)
 		if err != nil {
 			return true
 		}
@@ -452,6 +452,7 @@ func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Tim
 
 // Reconcile Process the CostManagement custom resource based on changes or requeue
 func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	os.Setenv("TZ", "UTC")
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", req.NamespacedName)
 
