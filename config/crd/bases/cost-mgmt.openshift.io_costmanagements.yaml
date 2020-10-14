@@ -76,12 +76,29 @@ spec:
                     the source name on cloud.redhat.com.
                   type: string
               type: object
-            upload_wait:
-              description: UploadWait is a field of CostManagement to represent the
-                time to wait before sending an upload.
-              format: int64
-              minimum: 0
-              type: integer
+            upload:
+              description: Upload is a field of CostManagement to represent the upload
+                object.
+              properties:
+                upload_cycle:
+                  description: UploadCycle is a field of CostManagement to represent
+                    the number of hours between each upload schedule The default is
+                    360 min (6 hours)
+                  format: int64
+                  minimum: 0
+                  type: integer
+                upload_toggle:
+                  description: UploadToggle is a field of CostManagement to represent
+                    if the operator should upload to cloud.redhat.com. The default
+                    is true
+                  type: boolean
+                upload_wait:
+                  description: UploadWait is a field of CostManagement to represent
+                    the time to wait before sending an upload.
+                  format: int64
+                  minimum: 0
+                  type: integer
+              type: object
             validate_cert:
               description: ValidateCert is a field of CostManagement to represent
                 if the Ingress endpoint must be certificate validated.
@@ -118,17 +135,9 @@ spec:
               description: IngressURL is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
-            last_successful_upload_time:
-              description: Last successful upload time
-              type: string
-            last_upload_status:
-              description: Last upload status
-              type: string
-            last_upload_time:
-              description: Last upload time
-              type: string
             operator_commit:
-              description: Operator git commit Hash
+              description: OperatorCommit is a field of CostManagement that shows
+                the commit hash of the operator
               type: string
             source:
               description: Source is a field of CostManagement to represent the observed
@@ -147,11 +156,43 @@ spec:
                     represent if the source exists as defined on cloud.redhat.com.
                   type: boolean
               type: object
-            upload_wait:
-              description: UploadWait is a field of CostManagement to represent the
-                time to wait before sending an upload.
-              format: int64
-              type: integer
+            upload:
+              description: Upload is a field of CostManagement to represent the upload
+                object.
+              properties:
+                last_successful_upload_time:
+                  description: LastSuccessfulUploadTime is a field of CostManagement
+                    that shows the time of the last successful upload
+                  format: date-time
+                  nullable: true
+                  type: string
+                last_upload_status:
+                  description: LastUploadStatus is a field of CostManagement that
+                    shows the http status of the last upload
+                  type: string
+                last_upload_time:
+                  description: LastUploadTime is a field of CostManagement that shows
+                    the time that the last upload was attempted
+                  format: date-time
+                  nullable: true
+                  type: string
+                upload:
+                  description: UploadToggle is a field of CostManagement to represent
+                    if the operator should upload to cloud.redhat.com. The default
+                    is true
+                  type: boolean
+                upload_cycle:
+                  description: UploadCycle is a field of CostManagement to represent
+                    the number of minutes between each upload schedule The default
+                    is 360 min (6 hours)
+                  format: int64
+                  type: integer
+                upload_wait:
+                  description: UploadWait is a field of CostManagement to represent
+                    the time to wait before sending an upload.
+                  format: int64
+                  type: integer
+              type: object
             validate_cert:
               description: ValidateCert is a field of CostManagement to represent
                 if the Ingress endpoint must be certificate validated.

@@ -36,6 +36,15 @@ const (
 
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
+
+	//UploadOn sets the operator to upload to cloud.redhat.com
+	UploadOn bool = true
+
+	//UploadOff sets the operator to not upload to cloud.redhat.com
+	UploadOff bool = false
+
+	//UploadCycle sets the default cycle to be 360 minutes (6 hours)
+	UploadSchedule int64 = 360
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -66,6 +75,26 @@ type AuthenticationSpec struct {
 	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
+}
+
+// UploadSpec defines the desired state of Authentication object in the CostManagementSpec
+type UploadSpec struct {
+
+	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	UploadWait *int64 `json:"upload_wait,omitempty"`
+
+	// UploadCycle is a field of CostManagement to represent the number of hours between each upload schedule
+	// The default is 360 min (6 hours)
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	UploadCycle *int64 `json:"upload_cycle,omitempty"`
+
+	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
+	// The default is true
+	// +optional
+	UploadToggle *bool `json:"upload_toggle,omitempty"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
@@ -99,11 +128,9 @@ type CostManagementSpec struct {
 	// +optional
 	Authentication AuthenticationSpec `json:"authentication,omitempty"`
 
-	// +kubebuilder:validation:Minimum=0
-
-	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
+	// Upload is a field of CostManagement to represent the upload object.
 	// +optional
-	UploadWait *int64 `json:"upload_wait,omitempty"`
+	Upload UploadSpec `json:"upload,omitempty"`
 
 	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
 	// +optional
@@ -121,6 +148,32 @@ type AuthenticationStatus struct {
 
 	// AuthenticationCredentialsFound is a field of CostManagement to represent if used for uploads were found.
 	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
+}
+
+// AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus
+type UploadStatus struct {
+
+	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
+	// The default is true
+	UploadToggle *bool `json:"upload,omitempty"`
+
+	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
+	UploadWait *int64 `json:"upload_wait,omitempty"`
+
+	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule
+	// The default is 360 min (6 hours)
+	UploadCycle *int64 `json:"upload_cycle,omitempty"`
+
+	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload
+	LastUploadStatus string `json:"last_upload_status,omitempty"`
+
+	// LastUploadTime is a field of CostManagement that shows the time that the last upload was attempted
+	// +nullable
+	LastUploadTime metav1.Time `json:"last_upload_time,omitempty"`
+
+	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload
+	// +nullable
+	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
 }
 
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus
@@ -156,19 +209,10 @@ type CostManagementStatus struct {
 	// Authentication is a field of CostManagement to represent the authentication status.
 	Authentication AuthenticationStatus `json:"authentication,omitempty"`
 
-	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
-	UploadWait *int64 `json:"upload_wait,omitempty"`
+	// Upload is a field of CostManagement to represent the upload object.
+	Upload UploadStatus `json:"upload,omitempty"`
 
-	// Last upload status
-	LastUploadStatus string `json:"last_upload_status,omitempty"`
-
-	// Last upload time
-	LastUploadTime string `json:"last_upload_time,omitempty"`
-
-	// Last successful upload time
-	LastSuccessfulUploadTime string `json:"last_successful_upload_time,omitempty"`
-
-	// Operator git commit Hash
+	// OperatorCommit is a field of CostManagement that shows the commit hash of the operator
 	OperatorCommit string `json:"operator_commit,omitempty"`
 
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
