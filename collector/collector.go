@@ -82,7 +82,7 @@ func sumSlice(array []model.SamplePair) float64 {
 	return float64(sum)
 }
 
-func getValue(query MetricSeconds, array []model.SamplePair) float64 {
+func getValue(query *SaveQueryValue, array []model.SamplePair) float64 {
 	switch query.Method {
 	case "sum":
 		return sumSlice(array)
@@ -95,25 +95,31 @@ func getValue(query MetricSeconds, array []model.SamplePair) float64 {
 
 func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedResults {
 	for _, stream := range matrix {
-		obj := string(stream.Metric[q.Key])
+		obj := string(stream.Metric[q.RowKey])
 		if results[obj] == nil {
 			results[obj] = mappedValues{}
 		}
-		if !q.FieldRegex {
-			for _, field := range q.Fields {
-				results[obj][string(field)] = string(stream.Metric[field])
-			}
-		} else {
-			for i, field := range q.FieldsMap {
-				results[obj][string(field)] = parseFields(stream.Metric, string(q.Fields[i]))
+		if q.MetricKey != nil {
+			for i, field := range q.MetricKey.MetricLabel {
+				index := string(field)
+				if len(q.MetricKey.LabelMap) > 0 {
+					index = q.MetricKey.LabelMap[i]
+				}
+				results[obj][index] = string(stream.Metric[field])
 			}
 		}
-		if q.MetricName != "" {
-			qname := q.MetricName
-			value := getValue(q.MetricSecs, stream.Values)
-			results[obj][qname] = floatToString(value)
-			index := qname[:len(qname)-1] + "-seconds"
-			results[obj][index] = floatToString(value * float64(len(stream.Values)*q.MetricSecs.Factor))
+		if q.MetricKeyRegex != nil {
+			for i, field := range q.MetricKeyRegex.LabelMap {
+				results[obj][field] = parseFields(stream.Metric, q.MetricKeyRegex.MetricRegex[i])
+			}
+		}
+		if q.QueryValue != nil {
+			saveStruct := q.QueryValue
+			value := getValue(saveStruct, stream.Values)
+			results[obj][saveStruct.ValName] = floatToString(value)
+			if saveStruct.TransformedName != "" {
+				results[obj][saveStruct.TransformedName] = floatToString(value * float64(len(stream.Values)*saveStruct.Factor))
+			}
 		}
 	}
 	return results

@@ -143,6 +143,7 @@ func getPromAddress(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 func getPrometheusConfig(ctx context.Context, r client.Client, log logr.Logger) (*PrometheusConfig, error) {
 	cfg := &PrometheusConfig{
 		CAFile: certFile,
+		// Address: "https://thanos-querier.openshift-monitoring.svc:9091",
 	}
 	if err := getBearerToken(ctx, r, cfg); err != nil {
 		return nil, err
