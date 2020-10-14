@@ -22,12 +22,22 @@ package collector
 import "github.com/prometheus/common/model"
 
 var (
+	sumSeconds = MetricSeconds{
+		Method: "sum",
+		Factor: 1,
+	}
+	maxSeconds = MetricSeconds{
+		Method: "max",
+		Factor: 60,
+	}
+
 	nodeQueries = Querys{
 		Query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			Fields:      []model.LabelName{"namespace", "node", "provider_id"},
 			MetricName:  "node-allocatable-cpu-cores",
+			MetricSecs:  maxSeconds,
 			Key:         "node",
 		},
 		Query{
@@ -35,6 +45,7 @@ var (
 			QueryString: "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			Fields:      []model.LabelName{"namespace", "node", "provider_id"},
 			MetricName:  "node-allocatable-memory-bytes",
+			MetricSecs:  maxSeconds,
 			Key:         "node",
 		},
 		Query{
@@ -42,6 +53,7 @@ var (
 			QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			Fields:      []model.LabelName{"namespace", "node", "provider_id"},
 			MetricName:  "node-capacity-cpu-cores",
+			MetricSecs:  maxSeconds,
 			Key:         "node",
 		},
 		Query{
@@ -49,6 +61,7 @@ var (
 			QueryString: "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			Fields:      []model.LabelName{"namespace", "node", "provider_id"},
 			MetricName:  "node-capacity-memory-bytes",
+			MetricSecs:  maxSeconds,
 			Key:         "node",
 		},
 		Query{
@@ -71,18 +84,21 @@ var (
 			Name:        "persistentvolumeclaim-capacity-bytes",
 			QueryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
 			MetricName:  "persistentvolumeclaim-capacity-bytes",
+			MetricSecs:  sumSeconds,
 			Key:         "volumename",
 		},
 		Query{
 			Name:        "persistentvolumeclaim-request-bytes",
 			QueryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
 			MetricName:  "persistentvolumeclaim-request-bytes",
+			MetricSecs:  sumSeconds,
 			Key:         "volumename",
 		},
 		Query{
 			Name:        "persistentvolumeclaim-usage-bytes",
 			QueryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
 			MetricName:  "persistentvolumeclaim-usage-bytes",
+			MetricSecs:  sumSeconds,
 			Key:         "volumename",
 		},
 		Query{
@@ -108,6 +124,7 @@ var (
 			QueryString: "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
 			Fields:      []model.LabelName{"pod", "namespace", "node"},
 			MetricName:  "pod-limit-cpu-cores",
+			MetricSecs:  sumSeconds,
 			Key:         "pod",
 		},
 		Query{
@@ -115,6 +132,7 @@ var (
 			QueryString: "sum(kube_pod_container_resource_limits_memory_bytes) by (pod, namespace, node)",
 			Fields:      []model.LabelName{"pod", "namespace", "node"},
 			MetricName:  "pod-limit-cpu-cores",
+			MetricSecs:  sumSeconds,
 			Key:         "pod",
 		},
 		Query{
@@ -122,6 +140,7 @@ var (
 			QueryString: "sum(kube_pod_container_resource_requests_cpu_cores) by (pod, namespace, node)",
 			Fields:      []model.LabelName{"pod", "namespace", "node"},
 			MetricName:  "pod-request-cpu-cores",
+			MetricSecs:  sumSeconds,
 			Key:         "pod",
 		},
 		Query{
@@ -129,6 +148,7 @@ var (
 			QueryString: "sum(kube_pod_container_resource_requests_memory_bytes) by (pod, namespace, node)",
 			Fields:      []model.LabelName{"pod", "namespace", "node"},
 			MetricName:  "pod-request-memory-bytes",
+			MetricSecs:  sumSeconds,
 			Key:         "pod",
 		},
 		Query{
@@ -136,6 +156,7 @@ var (
 			QueryString: "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[5m])) BY (pod, namespace, node)",
 			Fields:      []model.LabelName{"pod", "namespace", "node"},
 			MetricName:  "pod-usage-cpu-cores",
+			MetricSecs:  sumSeconds,
 			Key:         "pod",
 		},
 		Query{
@@ -143,6 +164,7 @@ var (
 			QueryString: "sum(container_memory_usage_bytes{container!='POD', container!='',pod!=''}) by (pod, namespace, node)",
 			Fields:      []model.LabelName{"pod", "namespace", "node"},
 			MetricName:  "pod-usage-memory-bytes",
+			MetricSecs:  sumSeconds,
 			Key:         "pod",
 		},
 		Query{
@@ -173,7 +195,13 @@ type Query struct {
 	FieldsMap   []string
 	FieldRegex  bool
 	MetricName  string
+	MetricSecs  MetricSeconds
 	Key         model.LabelName
 }
 
 type Querys []Query
+
+type MetricSeconds struct {
+	Method string
+	Factor int
+}

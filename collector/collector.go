@@ -82,12 +82,14 @@ func sumSlice(array []model.SamplePair) float64 {
 	return float64(sum)
 }
 
-func getValue(query string, array []model.SamplePair) float64 {
-	switch {
-	case strings.Contains(query, "usage"), strings.Contains(query, "limit"), strings.Contains(query, "request"):
+func getValue(query MetricSeconds, array []model.SamplePair) float64 {
+	switch query.Method {
+	case "sum":
 		return sumSlice(array)
-	default:
+	case "max":
 		return maxSlice(array)
+	default:
+		return 0
 	}
 }
 
@@ -108,16 +110,10 @@ func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedRe
 		}
 		if q.MetricName != "" {
 			qname := q.MetricName
-			value := getValue(qname, stream.Values)
+			value := getValue(q.MetricSecs, stream.Values)
 			results[obj][qname] = floatToString(value)
-			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
-				index := qname[:len(qname)-1] + "-seconds"
-				results[obj][index] = floatToString(value * float64(len(stream.Values)))
-			}
-			if strings.HasPrefix(qname, "node-capacity") {
-				index := qname[:len(qname)-1] + "-seconds"
-				results[obj][index] = floatToString(value * 60 * float64(len(stream.Values)))
-			}
+			index := qname[:len(qname)-1] + "-seconds"
+			results[obj][index] = floatToString(value * float64(len(stream.Values)*q.MetricSecs.Factor))
 		}
 	}
 	return results
