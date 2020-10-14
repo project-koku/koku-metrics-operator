@@ -27,7 +27,10 @@ RUN git --git-dir=/workspace/.git --work-tree=/workspace/ rev-parse HEAD > /work
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/base:debug
+FROM gcr.io/distroless/static:nonroot
+
+# For terminal access, use this image:
+# FROM gcr.io/distroless/base:debug
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
