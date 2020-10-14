@@ -498,7 +498,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// Instead of looking for tarfiles here - we need to do what the old
 	// operator did and create the tarfiles based on the CSV files and then get
 	// a list of the tarfiles that are created
-	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports/upload")
+	files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
 	if err != nil {
 		log.Error(err, "Could not read the directory")
 	}
