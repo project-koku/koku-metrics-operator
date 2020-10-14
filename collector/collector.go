@@ -134,7 +134,7 @@ func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results mappe
 			index := qname[:len(qname)-1] + "-seconds"
 			results[obj][index] = floatToString(value * float64(len(stream.Values)))
 		}
-		if strings.Contains(qname, "capacity") {
+		if strings.HasPrefix(qname, "node-capacity") {
 			index := qname[:len(qname)-1] + "-seconds"
 			results[obj][index] = floatToString(value * 60 * float64(len(stream.Values)))
 		}
