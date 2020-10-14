@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/controllers"
 	// +kubebuilder:scaffold:imports
@@ -74,11 +73,6 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-	// Adding the routev1
-	if err := routev1.AddToScheme(mgr.GetScheme()); err != nil {
-		setupLog.Error(err, "")
 		os.Exit(1)
 	}
 
