@@ -58,6 +58,7 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
+	kubectl apply -f config/samples/trusted_ca_certmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -

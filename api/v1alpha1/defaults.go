@@ -28,4 +28,10 @@ const (
 
 	// DefaultValidateCert The default cert validation setting
 	DefaultValidateCert bool = CertIgnore
+
+	//DefaultUploadToggle The default upload toggle
+	DefaultUploadToggle bool = UploadOn
+
+	//DefaultUploadCycle The default upload cycle
+	DefaultUploadCycle int64 = UploadSchedule
 )

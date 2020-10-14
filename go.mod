@@ -12,7 +12,7 @@ require (
 	github.com/xorcare/pointer v1.1.0
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	k8s.io/api v0.18.2
-	k8s.io/apimachinery v0.18.2
+	k8s.io/apimachinery v0.19.2
 	k8s.io/client-go v0.18.2
 	sigs.k8s.io/controller-runtime v0.6.0
 )
