@@ -15,6 +15,7 @@ COPY api/ api/
 COPY clusterversion/ clusterversion/
 COPY collector/ collector/
 COPY controllers/ controllers/
+COPY crhchttp/ crhchttp/
 COPY strset/ strset/
 
 # Build
