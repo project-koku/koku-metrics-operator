@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	routev1 "github.com/openshift/api/route/v1"
 	promapi "github.com/prometheus/client_golang/api"
 	prom "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
@@ -37,6 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 )
 
 var (
@@ -122,41 +123,20 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 
 }
 
-func getPromAddress(ctx context.Context, r client.Client, cfg *PrometheusConfig) error {
-	route := &routev1.Route{}
-	objKey := client.ObjectKey{
-		Namespace: monitoringNamespace,
-		Name:      thanosRouteName,
-	}
-	err := getRuntimeObj(ctx, r, route, objKey, "route")
-	if err != nil {
-		return err
-	}
-
-	if route.Spec.Host == "" {
-		return fmt.Errorf("getPromAddress: no routes found")
-	}
-	cfg.Address = "https://" + route.Spec.Host
-	return nil
-}
-
-func getPrometheusConfig(ctx context.Context, r client.Client, log logr.Logger) (*PrometheusConfig, error) {
+func getPrometheusConfig(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.CostManagement, log logr.Logger) (*PrometheusConfig, error) {
 	cfg := &PrometheusConfig{
-		CAFile: certFile,
-		// Address: "https://thanos-querier.openshift-monitoring.svc:9091",
+		CAFile:  certFile,
+		Address: cost.Status.Prometheus.SvcAddress,
 	}
 	if err := getBearerToken(ctx, r, cfg); err != nil {
-		return nil, err
-	}
-	if err := getPromAddress(ctx, r, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil
 }
 
-func GetPromConn(ctx context.Context, r client.Client, log logr.Logger) (prom.API, error) {
+func GetPromConn(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.CostManagement, log logr.Logger) (prom.API, error) {
 	log = log.WithValues("costmanagement", "GetPromConn")
-	cfg, err := getPrometheusConfig(ctx, r, log)
+	cfg, err := getPrometheusConfig(ctx, r, cost, log)
 	if err != nil {
 		return nil, fmt.Errorf("GetPromConn: cannot get prometheus configuration: %v", err)
 	}

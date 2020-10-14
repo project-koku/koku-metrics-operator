@@ -63,6 +63,14 @@ spec:
               description: IngressURL is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
+            prometheus_config:
+              description: PrometheusConfig is a field of CostManagement to represent
+                the configuration of Prometheus connection.
+              properties:
+                address:
+                  description: SvcAddress is the internal thanos-querier address
+                  type: string
+              type: object
             source:
               description: Source is a field of CostManagement to represent the desired
                 source on cloud.redhat.com.
@@ -142,6 +150,9 @@ spec:
             prometheus:
               description: Prometheus represents the status of premetheus queries
               properties:
+                address:
+                  description: SvcAddress is the internal thanos-querier address
+                  type: string
                 last_query_start_time:
                   description: LastQueryStartTime is a field of CostManagementStatus
                     to represent the last time queries were started

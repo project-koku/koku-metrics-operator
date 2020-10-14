@@ -10,7 +10,6 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.14.0
 	github.com/xorcare/pointer v1.1.0
-	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.19.2
 	k8s.io/client-go v0.18.2

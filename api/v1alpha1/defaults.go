@@ -26,6 +26,9 @@ const (
 	// DefaultIngressURL The default ingress url.
 	DefaultIngressURL string = "https://cloud.redhat.com/api/ingress/v1/upload"
 
+	// DefaultPrometheusSvcAddress The default address to thanos-querier.
+	DefaultPrometheusSvcAddress string = "https://thanos-querier.openshift-monitoring.svc:9091"
+
 	// DefaultValidateCert The default cert validation setting
 	DefaultValidateCert bool = CertIgnore
 

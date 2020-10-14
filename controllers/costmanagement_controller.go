@@ -86,6 +86,7 @@ type CostManagementInput struct {
 	LastUploadStatus         string
 	LastUploadTime           metav1.Time
 	LastSuccessfulUploadTime metav1.Time
+	PrometheusSvcAddress     string
 	PrometheusConnected      bool
 	LastQueryStartTime       metav1.Time
 	LastQuerySuccessTime     metav1.Time
@@ -181,6 +182,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costInput.CreateSource = *cost.Spec.Source.CreateSource
 	}
 
+	costInput.PrometheusSvcAddress = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
 	costInput.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
 
 	err := r.Status().Update(ctx, cost)
@@ -451,7 +453,6 @@ func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Tim
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
-// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
@@ -611,7 +612,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	log.Info("Using the following inputs with creds", "CostManagementInput", costInput) // TODO remove after upload code works
 
-	promConn, err := collector.GetPromConn(ctx, r.Client, r.Log)
+	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
 		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
