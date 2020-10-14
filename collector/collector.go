@@ -47,32 +47,147 @@ var (
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
 	namespaceFilePrefix = "cm-openshift-namespace-labels-lookback-"
 
-	nodeQueries = mappedQuery{
-		"node-allocatable-cpu-cores":    "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-		"node-allocatable-memory-bytes": "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-		"node-capacity-cpu-cores":       "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-		"node-capacity-memory-bytes":    "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+	nodeQueries = queryTypes{
+		queryType{
+			queryName:   "node-allocatable-cpu-cores",
+			queryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			fields:      []model.LabelName{"namespace", "node", "provider_id"},
+			metricName:  "node-allocatable-cpu-cores",
+			key:         "node",
+		},
+		queryType{
+			queryName:   "node-allocatable-memory-bytes",
+			queryString: "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			fields:      []model.LabelName{"namespace", "node", "provider_id"},
+			metricName:  "node-allocatable-memory-bytes",
+			key:         "node",
+		},
+		queryType{
+			queryName:   "node-capacity-cpu-cores",
+			queryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			fields:      []model.LabelName{"namespace", "node", "provider_id"},
+			metricName:  "node-capacity-cpu-cores",
+			key:         "node",
+		},
+		queryType{
+			queryName:   "node-capacity-memory-bytes",
+			queryString: "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			fields:      []model.LabelName{"namespace", "node", "provider_id"},
+			metricName:  "node-capacity-memory-bytes",
+			key:         "node",
+		},
+		queryType{
+			queryName:   "node-labels",
+			queryString: "kube_node_labels",
+			fields:      []model.LabelName{"label_*"},
+			fieldsMap:   []string{"node_labels"},
+			fieldRegex:  true,
+			key:         "node",
+		},
 	}
-	volQueries = mappedQuery{
-		"persistentvolumeclaim-info":           "kube_persistentvolumeclaim_info",
-		"persistentvolumeclaim-capacity-bytes": "kubelet_volume_stats_capacity_bytes",
-		"persistentvolumeclaim-request-bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes",
-		"persistentvolumeclaim-usage-bytes":    "kubelet_volume_stats_used_bytes",
+	volQueries = queryTypes{
+		queryType{
+			queryName:   "persistentvolume_pod_info",
+			queryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim) group_left(storageclass, volumename) kube_persistentvolumeclaim_info",
+			fields:      []model.LabelName{"namespace", "persistentvolumeclaim", "pod", "storageclass", "volumename"},
+			key:         "volumename",
+		},
+		queryType{
+			queryName:   "persistentvolumeclaim-capacity-bytes",
+			queryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			metricName:  "persistentvolumeclaim-capacity-bytes",
+			key:         "volumename",
+		},
+		queryType{
+			queryName:   "persistentvolumeclaim-request-bytes",
+			queryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			metricName:  "persistentvolumeclaim-request-bytes",
+			key:         "volumename",
+		},
+		queryType{
+			queryName:   "persistentvolumeclaim-usage-bytes",
+			queryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			metricName:  "persistentvolumeclaim-usage-bytes",
+			key:         "volumename",
+		},
+		queryType{
+			queryName:   "persistentvolume-labels",
+			queryString: "kube_persistentvolume_labels",
+			fields:      []model.LabelName{"label_*"},
+			fieldsMap:   []string{"persistentvolume_labels"},
+			fieldRegex:  true,
+			key:         "persistentvolume",
+		},
+		queryType{
+			queryName:   "persistentvolumeclaim-labels",
+			queryString: "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			fields:      []model.LabelName{"label_*"},
+			fieldsMap:   []string{"persistentvolumeclaim_labels"},
+			fieldRegex:  true,
+			key:         "volumename",
+		},
 	}
-	podQueries = mappedQuery{
-		"pod-limit-cpu-cores":      "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
-		"pod-limit-memory-bytes":   "sum(kube_pod_container_resource_limits_memory_bytes) by (pod, namespace, node)",
-		"pod-request-cpu-cores":    "sum(kube_pod_container_resource_requests_cpu_cores) by (pod, namespace, node)",
-		"pod-request-memory-bytes": "sum(kube_pod_container_resource_requests_memory_bytes) by (pod, namespace, node)",
-		"pod-usage-cpu-cores":      "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[5m])) BY (pod, namespace, node)",
-		"pod-usage-memory-bytes":   "sum(container_memory_usage_bytes{container!='POD', container!='',pod!=''}) by (pod, namespace, node)",
+	podQueries = queryTypes{
+		queryType{
+			queryName:   "pod-limit-cpu-cores",
+			queryString: "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
+			fields:      []model.LabelName{"pod", "namespace", "node"},
+			metricName:  "pod-limit-cpu-cores",
+			key:         "pod",
+		},
+		queryType{
+			queryName:   "pod-limit-memory-bytes",
+			queryString: "sum(kube_pod_container_resource_limits_memory_bytes) by (pod, namespace, node)",
+			fields:      []model.LabelName{"pod", "namespace", "node"},
+			metricName:  "pod-limit-cpu-cores",
+			key:         "pod",
+		},
+		queryType{
+			queryName:   "pod-request-cpu-cores",
+			queryString: "sum(kube_pod_container_resource_requests_cpu_cores) by (pod, namespace, node)",
+			fields:      []model.LabelName{"pod", "namespace", "node"},
+			metricName:  "pod-request-cpu-cores",
+			key:         "pod",
+		},
+		queryType{
+			queryName:   "pod-request-memory-bytes",
+			queryString: "sum(kube_pod_container_resource_requests_memory_bytes) by (pod, namespace, node)",
+			fields:      []model.LabelName{"pod", "namespace", "node"},
+			metricName:  "pod-request-memory-bytes",
+			key:         "pod",
+		},
+		queryType{
+			queryName:   "pod-usage-cpu-cores",
+			queryString: "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[5m])) BY (pod, namespace, node)",
+			fields:      []model.LabelName{"pod", "namespace", "node"},
+			metricName:  "pod-usage-cpu-cores",
+			key:         "pod",
+		},
+		queryType{
+			queryName:   "pod-usage-memory-bytes",
+			queryString: "sum(container_memory_usage_bytes{container!='POD', container!='',pod!=''}) by (pod, namespace, node)",
+			fields:      []model.LabelName{"pod", "namespace", "node"},
+			metricName:  "pod-usage-memory-bytes",
+			key:         "pod",
+		},
+		queryType{
+			queryName:   "pod-labels",
+			queryString: "kube_pod_labels",
+			fields:      []model.LabelName{"label_*"},
+			fieldsMap:   []string{"pod_labels"},
+			fieldRegex:  true,
+			key:         "pod",
+		},
 	}
-	labelQueries = map[string][]string{
-		"namespace-labels":             {"namespace", "kube_namespace_labels"},
-		"node-labels":                  {"node", "kube_node_labels"},
-		"persistentvolume-labels":      {"persistentvolume", "kube_persistentvolume_labels"},
-		"persistentvolumeclaim-labels": {"persistentvolumeclaim", "kube_persistentvolumeclaim_labels"},
-		"pod-labels":                   {"pod", "kube_pod_labels"},
+	namespaceQueries = queryTypes{
+		queryType{
+			queryName:   "namespace-labels",
+			queryString: "kube_namespace_labels",
+			fields:      []model.LabelName{"label_*", "namespace"},
+			fieldsMap:   []string{"namespace_labels", "namespace"},
+			fieldRegex:  true,
+			key:         "namespace",
+		},
 	}
 )
 
@@ -86,6 +201,16 @@ type collector struct {
 	TimeSeries           promv1.Range
 	Log                  logr.Logger
 }
+type queryType struct {
+	queryName   string
+	queryString string
+	fields      []model.LabelName
+	fieldsMap   []string
+	fieldRegex  bool
+	metricName  string
+	key         model.LabelName
+}
+type queryTypes []queryType
 
 func floatToString(inputNum float64) string {
 	// to convert a float number to a string
@@ -119,37 +244,49 @@ func getValue(query string, array []model.SamplePair) float64 {
 	}
 }
 
-func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results mappedResults, qname string) mappedResults {
+func iterateMatrix(matrix model.Matrix, q queryType, results mappedResults) mappedResults {
 	for _, stream := range matrix {
-		obj := string(stream.Metric[labelName])
+		obj := string(stream.Metric[q.key])
 		if results[obj] == nil {
 			results[obj] = mappedValues{}
 		}
-		for labelName, labelValue := range stream.Metric {
-			results[obj][string(labelName)] = string(labelValue)
+		for _, field := range q.fields {
+			results[obj][string(field)] = string(stream.Metric[field])
 		}
-		value := getValue(qname, stream.Values)
-		results[obj][qname] = floatToString(value)
-		if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
-			index := qname[:len(qname)-1] + "-seconds"
-			results[obj][index] = floatToString(value * float64(len(stream.Values)))
+		if !q.fieldRegex {
+			for _, field := range q.fields {
+				results[obj][string(field)] = string(stream.Metric[field])
+			}
+		} else {
+			for i, field := range q.fieldsMap {
+				results[obj][string(field)] = parseFields(stream.Metric, string(q.fields[i]))
+			}
 		}
-		if strings.HasPrefix(qname, "node-capacity") {
-			index := qname[:len(qname)-1] + "-seconds"
-			results[obj][index] = floatToString(value * 60 * float64(len(stream.Values)))
+		if q.metricName != "" {
+			qname := q.metricName
+			value := getValue(qname, stream.Values)
+			results[obj][qname] = floatToString(value)
+			if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
+				index := qname[:len(qname)-1] + "-seconds"
+				results[obj][index] = floatToString(value * float64(len(stream.Values)))
+			}
+			if strings.HasPrefix(qname, "node-capacity") {
+				index := qname[:len(qname)-1] + "-seconds"
+				results[obj][index] = floatToString(value * 60 * float64(len(stream.Values)))
+			}
 		}
 	}
 	return results
 }
 
-func getQueryResults(q collector, queries mappedQuery, key string) (mappedResults, error) {
+func getQueryResults(q collector, queries queryTypes) (mappedResults, error) {
 	results := mappedResults{}
-	for qname, query := range queries {
-		matrix, err := performMatrixQuery(q, query)
+	for _, query := range queries {
+		matrix, err := performMatrixQuery(q, query.queryString)
 		if err != nil {
 			return nil, err
 		}
-		results = iterateMatrix(matrix, model.LabelName(key), results, qname)
+		results = iterateMatrix(matrix, query, results)
 	}
 	return results, nil
 }
@@ -174,7 +311,7 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
 
 	log.Info("querying for node metrics")
-	nodeResults, err := getQueryResults(querier, nodeQueries, "node")
+	nodeResults, err := getQueryResults(querier, nodeQueries)
 	if err != nil {
 		return err
 	}
@@ -190,89 +327,25 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 	}
 
 	log.Info("querying for pod metrics")
-	podResults, err := getQueryResults(querier, podQueries, "pod")
+	podResults, err := getQueryResults(querier, podQueries)
 	if err != nil {
 		return err
 	}
 
 	log.Info("querying for storage metrics")
-	volResults, err := getQueryResults(querier, volQueries, "persistentvolumeclaim")
+	volResults, err := getQueryResults(querier, volQueries)
 	if err != nil {
 		return err
 	}
 
-	log.Info("querying for labels")
-	var labelResults = map[string]mappedResults{}
-	for _, labelQuery := range labelQueries {
-		label, query := labelQuery[0], labelQuery[1]
-		if labelResults[label] == nil {
-			labelResults[label] = mappedResults{}
-		}
-		results := labelResults[label]
-		vector, err := performTheQuery(querier, query)
-		if err != nil {
-			return err
-		}
-		for _, val := range vector {
-			label := string(val.Metric[model.LabelName(label)])
-			labels := parseLabels(val.Metric)
-			if results[label] == nil {
-				results[label] = mappedValues{}
-			}
-			for labelName, val := range val.Metric {
-				results[label][string(labelName)] = string(val)
-			}
-			results[label]["labels"] = labels
-		}
-	}
-
-	podRows := make(mappedCSVStruct)
-	for pod, val := range podResults {
-		if node, ok := val["node"]; ok {
-			// add the node queries into the pod results
-			node := node.(string)
-			dict, ok := nodeResults[string(node)]
-			if !ok {
-				return fmt.Errorf("node %s not found", node)
-			}
-			val["node-capacity-cpu-cores"] = dict["node-capacity-cpu-cores"]
-			val["node-capacity-cpu-cores-seconds"] = dict["node-capacity-cpu-core-seconds"]
-			val["node-capacity-memory-bytes"] = dict["node-capacity-memory-bytes"]
-			val["node-capacity-memory-bytes-seconds"] = dict["node-capacity-memory-byte-seconds"]
-			val["resource_id"] = dict["resource_id"]
-		}
-
-		val["pod_labels"] = labelResults["pod"][pod]["labels"]
-
-		usage := NewPodRow(ts)
-		if err := getStruct(val, &usage, podRows, pod); err != nil {
-			return err
-		}
-	}
-	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
-		return err
-	}
-
-	volRows := make(mappedCSVStruct)
-	for pvc, val := range volResults {
-		pv := val["volumename"].(string)
-		val["persistentvolume"] = pv
-		val["persistentvolume_labels"] = labelResults["persistentvolume"][pv]["labels"]
-		val["persistentvolumeclaim_labels"] = labelResults["persistentvolumeclaim"][pvc]["labels"]
-
-		usage := NewStorageRow(ts)
-		if err := getStruct(val, &usage, volRows, pvc); err != nil {
-			return err
-		}
-	}
-	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows); err != nil {
+	log.Info("querying for namespaces")
+	namespaceResults, err := getQueryResults(querier, namespaceQueries)
+	if err != nil {
 		return err
 	}
 
 	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
-		val["node_labels"] = labelResults["node"][node]["labels"]
-
 		usage := NewNodeRow(ts)
 		if err := getStruct(val, &usage, nodeRows, node); err != nil {
 			return err
@@ -282,11 +355,34 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 		return err
 	}
 
-	namespaceRows := make(mappedCSVStruct)
-	namespaces := labelResults["namespace"]
-	for namespace, val := range namespaces {
-		val["namespace_labels"] = namespaces[namespace]["labels"]
+	podRows := make(mappedCSVStruct)
+	for pod, val := range podResults {
+		usage := NewPodRow(ts)
+		if err := getStruct(val, &usage, podRows, pod); err != nil {
+			return err
+		}
+		if node, ok := val["node"]; ok {
+			// Add the Node usage to the pod.
+			usage.NodeRow = nodeRows[node.(string)].(*NodeRow)
+		}
+	}
+	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
+		return err
+	}
 
+	volRows := make(mappedCSVStruct)
+	for pvc, val := range volResults {
+		usage := NewStorageRow(ts)
+		if err := getStruct(val, &usage, volRows, pvc); err != nil {
+			return err
+		}
+	}
+	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows); err != nil {
+		return err
+	}
+
+	namespaceRows := make(mappedCSVStruct)
+	for namespace, val := range namespaceResults {
 		usage := NewNamespaceRow(ts)
 		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
 			return err
@@ -304,11 +400,11 @@ func getResourceID(input string) string {
 	return splitString[len(splitString)-1]
 }
 
-func parseLabels(input model.Metric) string {
+func parseFields(input model.Metric, str string) string {
 	result := []string{}
 	for name, val := range input {
 		name := string(name)
-		match, _ := regexp.MatchString("label_*", name)
+		match, _ := regexp.MatchString(str, name)
 		if match {
 			result = append(result, name+":"+string(val))
 		}

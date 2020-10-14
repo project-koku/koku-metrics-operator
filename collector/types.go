@@ -35,7 +35,7 @@ type CSVStruct interface {
 
 type NamespaceRow struct {
 	*DateTimes
-	Namespace       string
+	Namespace       string `json:"namespace"`
 	NamespaceLabels string `json:"namespace_labels"`
 }
 
@@ -152,21 +152,16 @@ func (row NodeRow) String() string {
 
 type PodRow struct {
 	*DateTimes
-	Node                          string
-	Namespace                     string
-	Pod                           string
-	PodUsageCPUCoreSeconds        string `json:"pod-usage-cpu-core-seconds"`
-	PodRequestCPUCoreSeconds      string `json:"pod-request-cpu-core-seconds"`
-	PodLimitCPUCoreSeconds        string `json:"pod-limit-cpu-core-seconds"`
-	PodUsageMemoryByteSeconds     string `json:"pod-usage-memory-byte-seconds"`
-	PodRequestMemoryByteSeconds   string `json:"pod-request-memory-byte-seconds"`
-	PodLimitMemoryByteSeconds     string `json:"pod-limit-memory-byte-seconds"`
-	NodeCapacityCPUCores          string `json:"node-capacity-cpu-cores"`
-	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-core-seconds"`
-	NodeCapacityMemoryBytes       string `json:"node-capacity-memory-bytes"`
-	NodeCapacityMemoryByteSeconds string `json:"node-capacity-memory-byte-seconds"`
-	ResourceID                    string `json:"resource_id"`
-	PodLabels                     string `json:"pod_labels"`
+	*NodeRow
+	Namespace                   string
+	Pod                         string
+	PodUsageCPUCoreSeconds      string `json:"pod-usage-cpu-core-seconds"`
+	PodRequestCPUCoreSeconds    string `json:"pod-request-cpu-core-seconds"`
+	PodLimitCPUCoreSeconds      string `json:"pod-limit-cpu-core-seconds"`
+	PodUsageMemoryByteSeconds   string `json:"pod-usage-memory-byte-seconds"`
+	PodRequestMemoryByteSeconds string `json:"pod-request-memory-byte-seconds"`
+	PodLimitMemoryByteSeconds   string `json:"pod-limit-memory-byte-seconds"`
+	PodLabels                   string `json:"pod_labels"`
 }
 
 func NewPodRow(ts promv1.Range) PodRow {
@@ -245,7 +240,7 @@ type StorageRow struct {
 	Namespace                                string
 	Pod                                      string
 	PersistentVolumeClaim                    string `json:"persistentvolumeclaim"`
-	PersistentVolume                         string `json:"persistentvolume"`
+	PersistentVolume                         string `json:"volumename"`
 	StorageClass                             string `json:"storageclass"`
 	PersistentVolumeClaimCapacityBytes       string `json:"persistentvolumeclaim-capacity-bytes"`
 	PersistentVolumeClaimCapacityByteSeconds string `json:"persistentvolumeclaim-capacity-byte-seconds"`
