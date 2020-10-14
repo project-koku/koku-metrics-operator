@@ -112,7 +112,7 @@ func sumSlice(array []model.SamplePair) float64 {
 
 func getValue(query string, array []model.SamplePair) float64 {
 	switch {
-	case strings.Contains(query, "usage"):
+	case strings.Contains(query, "usage"), strings.Contains(query, "limit"), strings.Contains(query, "request"):
 		return sumSlice(array)
 	default:
 		return maxSlice(array)
@@ -133,6 +133,10 @@ func iterateMatrix(matrix model.Matrix, labelName model.LabelName, results mappe
 		if strings.HasSuffix(qname, "-cores") || strings.HasSuffix(qname, "-bytes") {
 			index := qname[:len(qname)-1] + "-seconds"
 			results[obj][index] = floatToString(value * float64(len(stream.Values)))
+		}
+		if strings.Contains(qname, "capacity") {
+			index := qname[:len(qname)-1] + "-seconds"
+			results[obj][index] = floatToString(value * 60 * float64(len(stream.Values)))
 		}
 	}
 	return results
