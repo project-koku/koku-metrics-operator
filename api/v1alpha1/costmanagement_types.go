@@ -97,6 +97,13 @@ type UploadSpec struct {
 	UploadToggle *bool `json:"upload_toggle,omitempty"`
 }
 
+// PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec
+type PrometheusSpec struct {
+
+	// SvcAddress is the internal thanos-querier address
+	SvcAddress string `json:"address,omitempty"`
+}
+
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
 type CloudDotRedHatSourceSpec struct {
 
@@ -131,6 +138,10 @@ type CostManagementSpec struct {
 	// Upload is a field of CostManagement to represent the upload object.
 	// +optional
 	Upload UploadSpec `json:"upload,omitempty"`
+
+	// PrometheusConfig is a field of CostManagement to represent the configuration of Prometheus connection.
+	// +optional
+	PrometheusConfig PrometheusSpec `json:"prometheus_config,omitempty"`
 
 	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
 	// +optional
@@ -192,6 +203,24 @@ type CloudDotRedHatSourceStatus struct {
 	SourceError string `json:"error,omitempty"`
 }
 
+// PrometheusStatus defines the status for querying prometheus
+type PrometheusStatus struct {
+
+	// PrometheusConnected is a field of CostManagementStatus to represent if cost-management is connected to prometheus
+	PrometheusConnected *bool `json:"prometheus_connected,omitempty"`
+
+	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started
+	// +nullable
+	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
+
+	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful
+	// +nullable
+	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
+
+	// SvcAddress is the internal thanos-querier address
+	SvcAddress string `json:"address,omitempty"`
+}
+
 // CostManagementStatus defines the observed state of CostManagement
 type CostManagementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -214,6 +243,9 @@ type CostManagementStatus struct {
 
 	// OperatorCommit is a field of CostManagement that shows the commit hash of the operator
 	OperatorCommit string `json:"operator_commit,omitempty"`
+
+	// Prometheus represents the status of premetheus queries
+	Prometheus PrometheusStatus `json:"prometheus,omitempty"`
 
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
 	// +optional

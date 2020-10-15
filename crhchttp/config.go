@@ -41,6 +41,10 @@ type CostManagementConfig struct {
 	LastUploadStatus         string
 	LastUploadTime           metav1.Time
 	LastSuccessfulUploadTime metav1.Time
+	PrometheusSvcAddress     string
+	PrometheusConnected      bool
+	LastQueryStartTime       metav1.Time
+	LastQuerySuccessTime     metav1.Time
 	OperatorCommit           string
 	SourceName               string
 	CreateSource             bool

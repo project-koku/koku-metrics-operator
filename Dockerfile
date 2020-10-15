@@ -12,9 +12,11 @@ RUN go mod download
 # Copy the go source
 COPY main.go main.go
 COPY api/ api/
-COPY controllers/ controllers/
 COPY clusterversion/ clusterversion/
+COPY collector/ collector/
+COPY controllers/ controllers/
 COPY crhchttp/ crhchttp/
+COPY strset/ strset/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
@@ -27,6 +29,9 @@ RUN git --git-dir=/workspace/.git --work-tree=/workspace/ rev-parse HEAD > /work
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
+
+# For terminal access, use this image:
+# FROM gcr.io/distroless/base:debug
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

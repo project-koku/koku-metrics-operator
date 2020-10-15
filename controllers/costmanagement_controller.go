@@ -32,12 +32,12 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/go-logr/logr"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,6 +45,7 @@ import (
 
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
+	"github.com/project-koku/korekuta-operator-go/collector"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
 )
 
@@ -151,6 +152,9 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	if cost.Spec.Source.CreateSource != nil {
 		costConfig.CreateSource = *cost.Spec.Source.CreateSource
 	}
+
+	costConfig.PrometheusSvcAddress = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
+	costConfig.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
 
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
@@ -305,10 +309,10 @@ func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Tim
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
+// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=list;watch
-// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
 // +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile Process the CostManagement custom resource based on changes or requeue
@@ -395,6 +399,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		err = fmt.Errorf("No authentication secret name set when using basic auth.")
 	}
+	// returns if `Obtain credentials token/basic` errors
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Grab the Operator git commit and upload the status and input object with it
 	commit, err := ioutil.ReadFile("commit")
 	if err != nil {
@@ -460,6 +469,42 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	log.Info("Using the following inputs with creds", "CostManagementConfig", costConfig) // TODO remove after upload code works
+
+	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
+	if err != nil {
+		log.Error(err, "failed to get prometheus connection")
+		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
+		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
+		if err := r.Status().Update(ctx, cost); err != nil {
+			log.Error(err, "failed to update CostManagement Status")
+		}
+	} else {
+		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
+		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
+		t := metav1.Now()
+		timeRange := promv1.Range{
+			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
+			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
+			Step:  time.Minute,
+		}
+		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.Hour() != t.Hour() {
+			cost.Status.Prometheus.LastQueryStartTime = t
+			log.Info("generatinging reports for range", "start", timeRange.Start, "end", timeRange.End)
+			err = collector.GenerateReports(promConn, timeRange, r.Log)
+			if err != nil {
+				log.Error(err, "failed to generate reports")
+			} else {
+				log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
+				cost.Status.Prometheus.LastQuerySuccessTime = t
+			}
+		} else {
+			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
+		}
+
+		if err := r.Status().Update(ctx, cost); err != nil {
+			log.Error(err, "failed to update CostManagement Status")
+		}
+	}
 
 	// Requeue for processing after 5 minutes
 	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil

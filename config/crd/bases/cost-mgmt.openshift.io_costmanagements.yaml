@@ -63,6 +63,14 @@ spec:
               description: IngressURL is a field of CostManagement to represent the
                 url of the ingress service.
               type: string
+            prometheus_config:
+              description: PrometheusConfig is a field of CostManagement to represent
+                the configuration of Prometheus connection.
+              properties:
+                address:
+                  description: SvcAddress is the internal thanos-querier address
+                  type: string
+              type: object
             source:
               description: Source is a field of CostManagement to represent the desired
                 source on cloud.redhat.com.
@@ -139,6 +147,29 @@ spec:
               description: OperatorCommit is a field of CostManagement that shows
                 the commit hash of the operator
               type: string
+            prometheus:
+              description: Prometheus represents the status of premetheus queries
+              properties:
+                address:
+                  description: SvcAddress is the internal thanos-querier address
+                  type: string
+                last_query_start_time:
+                  description: LastQueryStartTime is a field of CostManagementStatus
+                    to represent the last time queries were started
+                  format: date-time
+                  nullable: true
+                  type: string
+                last_query_success_time:
+                  description: LastQuerySuccessTime is a field of CostManagementStatus
+                    to represent the last time queries were successful
+                  format: date-time
+                  nullable: true
+                  type: string
+                prometheus_connected:
+                  description: PrometheusConnected is a field of CostManagementStatus
+                    to represent if cost-management is connected to prometheus
+                  type: boolean
+              type: object
             source:
               description: Source is a field of CostManagement to represent the observed
                 state of the source on cloud.redhat.com.
