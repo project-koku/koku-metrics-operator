@@ -209,7 +209,11 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 		}
 		if node, ok := val["node"]; ok {
 			// Add the Node usage to the pod.
-			usage.NodeRow = nodeRows[node.(string)].(*NodeRow)
+			if row, ok := nodeRows[node.(string)]; ok {
+				usage.NodeRow = *row.(*NodeRow)
+			} else {
+				usage.NodeRow = NewNodeRow(ts)
+			}
 		}
 	}
 	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {

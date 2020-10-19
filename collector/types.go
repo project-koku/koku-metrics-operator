@@ -105,7 +105,7 @@ func (row NamespaceRow) String() string {
 
 type NodeRow struct {
 	*DateTimes
-	Node                          string
+	Node                          string `json:"node"`
 	NodeCapacityCPUCores          string `json:"node-capacity-cpu-cores"`
 	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-core-seconds"`
 	NodeCapacityMemoryBytes       string `json:"node-capacity-memory-bytes"`
@@ -171,9 +171,9 @@ func (row NodeRow) String() string {
 
 type PodRow struct {
 	*DateTimes
-	*NodeRow
-	Namespace                   string
-	Pod                         string
+	NodeRow
+	Namespace                   string `json:"namespace"`
+	Pod                         string `json:"pod"`
 	PodUsageCPUCoreSeconds      string `json:"pod-usage-cpu-core-seconds"`
 	PodRequestCPUCoreSeconds    string `json:"pod-request-cpu-core-seconds"`
 	PodLimitCPUCoreSeconds      string `json:"pod-limit-cpu-core-seconds"`
