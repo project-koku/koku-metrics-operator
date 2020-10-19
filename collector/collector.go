@@ -155,7 +155,6 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 
 	// yearMonth is used in filenames
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
-	emptyNodeRow := NewNodeRow(ts)
 
 	log.Info("querying for node metrics")
 	nodeResults, err := getQueryResults(querier, nodeQueries)
@@ -213,7 +212,7 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 			if row, ok := nodeRows[node.(string)]; ok {
 				usage.NodeRow = *row.(*NodeRow)
 			} else {
-				usage.NodeRow = emptyNodeRow
+				usage.NodeRow = NewNodeRow(ts)
 			}
 		}
 	}
