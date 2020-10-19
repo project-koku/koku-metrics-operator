@@ -147,7 +147,7 @@ func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err erro
 			cost.Status.Prometheus.PrometheusConfigured = true
 			cost.Status.Prometheus.ConfigError = ""
 		}
-	case "test_query":
+	case "connection":
 		if err != nil {
 			cost.Status.Prometheus.PrometheusConnected = false
 			cost.Status.Prometheus.ConnectionError = fmt.Sprintf("%v", err)
@@ -180,7 +180,7 @@ func GetPromConn(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.Co
 		}
 		return true, err
 	})
-	statusHelper(cost, "test_query", err)
+	statusHelper(cost, "connection", err)
 	if err != nil {
 		return nil, fmt.Errorf("prometheus test query failed: %v", err)
 	}
