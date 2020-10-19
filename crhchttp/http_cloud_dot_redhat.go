@@ -97,7 +97,21 @@ func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string,
 	if err != nil {
 		return "", currentTime, err
 	}
-	client := &http.Client{}
+	// create the client specifying the ca cert file for transport
+	caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
+	if err != nil {
+		log.Error(err, "The following error occurred: ")
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
