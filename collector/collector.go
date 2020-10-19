@@ -212,7 +212,11 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 		}
 		if node, ok := val["node"]; ok {
 			// Add the Node usage to the pod.
-			usage.NodeRow = nodeRows[node.(string)].(*NodeRow)
+			if row, ok := nodeRows[node.(string)]; ok {
+				usage.NodeRow = *row.(*NodeRow)
+			} else {
+				usage.NodeRow = NewNodeRow(ts)
+			}
 		}
 	}
 	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
