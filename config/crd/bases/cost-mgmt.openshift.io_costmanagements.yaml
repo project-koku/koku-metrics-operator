@@ -69,11 +69,12 @@ spec:
               properties:
                 address:
                   description: SvcAddress is a field of CostManagement to represent
-                    the thanos-querier address
+                    the thanos-querier address.
                   type: string
                 skip_tls_verification:
                   description: SkipTLSVerification is a field of CostManagement to
-                    represent if the thanos-querier endpoint must be certificate validated
+                    represent if the thanos-querier endpoint must be certificate validated.
+                    The default is false.
                   type: boolean
               type: object
             source:
