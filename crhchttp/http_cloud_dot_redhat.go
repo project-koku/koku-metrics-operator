@@ -22,6 +22,8 @@ package crhchttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -89,6 +91,33 @@ func SetupRequest(logger logr.Logger, costConfig *CostManagementConfig, method s
 	return req, nil
 }
 
+func getClient(logger logr.Logger, validateCert bool) http.Client {
+	log := logger.WithValues("costmanagement", "getClient")
+	if validateCert {
+		// create the client specifying the ca cert file for transport
+		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
+		if err != nil {
+			log.Error(err, "The following error occurred: ")
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		client := http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: caCertPool,
+				},
+			},
+		}
+		return client
+	} else {
+		log.Info("Configured to not upload using the certificate!")
+		// Default the client
+		client := http.Client{}
+		return client
+	}
+}
+
 // Upload Send data to cloud.redhat.com
 func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, metav1.Time, error) {
 	log := logger.WithValues("costmanagement", "Upload")
@@ -97,21 +126,8 @@ func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string,
 	if err != nil {
 		return "", currentTime, err
 	}
-	// create the client specifying the ca cert file for transport
-	caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
-	if err != nil {
-		log.Error(err, "The following error occurred: ")
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
-			},
-		},
-	}
+	client := getClient(logger, costConfig.ValidateCert)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
