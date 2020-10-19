@@ -89,22 +89,6 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 	return *statusItem
 }
 
-// BoolReflectSpec Determine if the bool Status item reflects the Spec item if not empty, otherwise take the default value.
-func BoolReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *bool, statusItem *bool, defaultVal bool) *bool {
-	// Update statusItem if needed
-	if statusItem == nil || !reflect.DeepEqual(*specItem, *statusItem) {
-		// If data is specified in the spec it should be used
-		if specItem != nil {
-			*statusItem = *specItem
-		} else if defaultVal {
-			*statusItem = defaultVal
-		} else {
-			statusItem = specItem
-		}
-	}
-	return statusItem
-}
-
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costConfig *crhchttp.CostManagementConfig) error {
 	ctx := context.Background()
