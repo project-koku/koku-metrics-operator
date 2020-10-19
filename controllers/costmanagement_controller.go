@@ -490,9 +490,6 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
-		}
 	} else {
 		t := metav1.Now()
 		timeRange := promv1.Range{
@@ -513,10 +510,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		} else {
 			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		}
-
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
-		}
+	}
+	if err := r.Status().Update(ctx, cost); err != nil {
+		log.Error(err, "failed to update CostManagement Status")
 	}
 
 	// Requeue for processing after 5 minutes
