@@ -89,6 +89,22 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 	return *statusItem
 }
 
+// BoolReflectSpec Determine if the bool Status item reflects the Spec item if not empty, otherwise take the default value.
+func BoolReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *bool, statusItem *bool, defaultVal bool) *bool {
+	// Update statusItem if needed
+	if statusItem == nil || !reflect.DeepEqual(*specItem, *statusItem) {
+		// If data is specified in the spec it should be used
+		if specItem != nil {
+			*statusItem = *specItem
+		} else if defaultVal {
+			*statusItem = defaultVal
+		} else {
+			statusItem = specItem
+		}
+	}
+	return statusItem
+}
+
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costConfig *crhchttp.CostManagementConfig) error {
 	ctx := context.Background()
@@ -155,6 +171,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 
 	costConfig.PrometheusSvcAddress = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
 	costConfig.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
+	cost.Status.Prometheus.SkipTLSVerification = cost.Spec.PrometheusConfig.SkipTLSVerification
 
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
@@ -473,14 +490,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
-		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
-		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
 		if err := r.Status().Update(ctx, cost); err != nil {
 			log.Error(err, "failed to update CostManagement Status")
 		}
 	} else {
-		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
-		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
 		t := metav1.Now()
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
@@ -489,8 +502,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
-			log.Info("generatinging reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = collector.GenerateReports(promConn, timeRange, r.Log)
+			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
+			err = collector.GenerateReports(cost, promConn, timeRange, r.Log)
 			if err != nil {
 				log.Error(err, "failed to generate reports")
 			} else {

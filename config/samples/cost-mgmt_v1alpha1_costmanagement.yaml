@@ -2,3 +2,10 @@ apiVersion: cost-mgmt.openshift.io/v1alpha1
 kind: CostManagement
 metadata:
   name: costmanagement-sample
+spec:
+  upload:
+    upload_toggle: false
+
+  prometheus_config:
+    address: 	"https://thanos-querier-openshift-monitoring.apps.cluster-eb7e.eb7e.sandbox693.opentlc.com"
+    skip_tls_verification: true

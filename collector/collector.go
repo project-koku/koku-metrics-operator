@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -46,6 +47,8 @@ var (
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
 	namespaceFilePrefix = "cm-openshift-namespace-labels-lookback-"
+
+	statusTimeFormat = "2006-01-02 15:04:05"
 )
 
 type mappedCSVStruct map[string]CSVStruct
@@ -138,7 +141,7 @@ func getQueryResults(q collector, queries Querys) (mappedResults, error) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) error {
+func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API, ts promv1.Range, log logr.Logger) error {
 	if logger == nil {
 		logger = log
 	}
@@ -237,6 +240,8 @@ func GenerateReports(promconn promv1.API, ts promv1.Range, log logr.Logger) erro
 	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows); err != nil {
 		return err
 	}
+
+	updateReportStatus(cost, ts)
 
 	return nil
 }
@@ -345,4 +350,9 @@ func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
 		set.Add(strings.Join(line, ","))
 	}
 	return set, nil
+}
+
+func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts promv1.Range) {
+	cost.Status.Reports.ReportMonth = ts.Start.Format("01")
+	cost.Status.Reports.LastHourCollected = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

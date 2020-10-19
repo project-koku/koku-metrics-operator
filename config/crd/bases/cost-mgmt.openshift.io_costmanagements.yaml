@@ -68,8 +68,13 @@ spec:
                 the configuration of Prometheus connection.
               properties:
                 address:
-                  description: SvcAddress is the internal thanos-querier address
+                  description: SvcAddress is a field of CostManagement to represent
+                    the thanos-querier address
                   type: string
+                skip_tls_verification:
+                  description: SkipTLSVerification is a field of CostManagement to
+                    represent if the thanos-querier endpoint must be certificate validated
+                  type: boolean
               type: object
             source:
               description: Source is a field of CostManagement to represent the desired
@@ -150,25 +155,60 @@ spec:
             prometheus:
               description: Prometheus represents the status of premetheus queries
               properties:
-                address:
-                  description: SvcAddress is the internal thanos-querier address
+                configruation_error:
+                  description: ConfigError is a field of CostManagementStatus to represent
+                    errors during prometheus configuration.
                   type: string
                 last_query_start_time:
                   description: LastQueryStartTime is a field of CostManagementStatus
-                    to represent the last time queries were started
+                    to represent the last time queries were started.
                   format: date-time
                   nullable: true
                   type: string
                 last_query_success_time:
                   description: LastQuerySuccessTime is a field of CostManagementStatus
-                    to represent the last time queries were successful
+                    to represent the last time queries were successful.
                   format: date-time
                   nullable: true
                   type: string
+                prometheus_configured:
+                  description: PrometheusConfigured is a field of CostManagementStatus
+                    to represent if cost-management is configured to connect to prometheus.
+                  type: boolean
                 prometheus_connected:
                   description: PrometheusConnected is a field of CostManagementStatus
-                    to represent if cost-management is connected to prometheus
+                    to represent if prometheus can be queried.
                   type: boolean
+                prometheus_connection_error:
+                  description: ConnectionError is a field of CostManagementStatus
+                    to represent errors during prometheus test query.
+                  type: string
+                service_address:
+                  description: SvcAddress is the internal thanos-querier address.
+                  type: string
+                skip_tls_verification:
+                  description: SkipTLSVerification is a field of CostManagementStatus
+                    to represent if the thanos-querier endpoint must be certificate
+                    validated
+                  type: boolean
+              required:
+              - prometheus_configured
+              - prometheus_connected
+              type: object
+            reports:
+              description: Reports represents the status of report generation
+              properties:
+                last_hour_collected:
+                  description: LastRangeCollected represents the time range for which
+                    metrics were last collected.
+                  type: string
+                report_month:
+                  description: ReportMonth is the month for which reports are being
+                    generated.
+                  type: string
+              required:
+              - last_hour_collected
+              - report_month
               type: object
             source:
               description: Source is a field of CostManagement to represent the observed
