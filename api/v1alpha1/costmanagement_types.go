@@ -240,11 +240,17 @@ type PrometheusStatus struct {
 // ReportsStatus defines the status for generating reports
 type ReportsStatus struct {
 
-	// ReportMonth is the month for which reports are being generated.
+	// ReportMonth is a field of CostManagementStatus to represent the month for which reports are being generated.
 	ReportMonth string `json:"report_month,omit_empty"`
 
-	// LastRangeCollected represents the time range for which metrics were last collected.
-	LastHourCollected string `json:"last_hour_collected,omit_empty"`
+	// LastHourQueried is a field of CostManagementStatus to represent the time range for which metrics were last queried.
+	LastHourQueried string `json:"last_hour_queried,omit_empty"`
+
+	// DataCollected is a field of CostManagementStatus to represent whether or not data was collected for the last query.
+	DataCollected bool `json:"data_collected,omit_empty"`
+
+	// DataCollectionError is a field of CostManagementStatus to represent an error message if data was not collected.
+	DataCollectionError string `json:"data_collection_error,omit_empty"`
 }
 
 // CostManagementStatus defines the observed state of CostManagement

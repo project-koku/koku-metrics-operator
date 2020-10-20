@@ -199,16 +199,26 @@ spec:
             reports:
               description: Reports represents the status of report generation
               properties:
-                last_hour_collected:
-                  description: LastRangeCollected represents the time range for which
-                    metrics were last collected.
+                data_collected:
+                  description: DataCollected is a field of CostManagementStatus to
+                    represent whether or not data was collected for the last query.
+                  type: boolean
+                data_collection_error:
+                  description: DataCollectionError is a field of CostManagementStatus
+                    to represent an error message if data was not collected.
+                  type: string
+                last_hour_queried:
+                  description: LastHourQueried is a field of CostManagementStatus
+                    to represent the time range for which metrics were last queried.
                   type: string
                 report_month:
-                  description: ReportMonth is the month for which reports are being
-                    generated.
+                  description: ReportMonth is a field of CostManagementStatus to represent
+                    the month for which reports are being generated.
                   type: string
               required:
-              - last_hour_collected
+              - data_collected
+              - data_collection_error
+              - last_hour_queried
               - report_month
               type: object
             source:

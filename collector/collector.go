@@ -158,6 +158,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 
 	// yearMonth is used in filenames
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
+	updateReportStatus(cost, ts)
 
 	log.Info("querying for node metrics")
 	nodeResults, err := getQueryResults(querier, nodeQueries)
@@ -244,8 +245,6 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows); err != nil {
 		return err
 	}
-
-	updateReportStatus(cost, ts)
 
 	return nil
 }
@@ -358,5 +357,5 @@ func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
 
 func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts promv1.Range) {
 	cost.Status.Reports.ReportMonth = ts.Start.Format("01")
-	cost.Status.Reports.LastHourCollected = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
+	cost.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

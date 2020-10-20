@@ -486,10 +486,14 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
 			err = collector.GenerateReports(cost, promConn, timeRange, r.Log)
 			if err != nil {
+				cost.Status.Reports.DataCollected = false
+				cost.Status.Reports.DataCollectionError = fmt.Sprintf("%v", err)
 				log.Error(err, "failed to generate reports")
 			} else {
 				log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
 				cost.Status.Prometheus.LastQuerySuccessTime = t
+				cost.Status.Reports.DataCollected = true
+				cost.Status.Reports.DataCollectionError = ""
 			}
 		} else {
 			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
