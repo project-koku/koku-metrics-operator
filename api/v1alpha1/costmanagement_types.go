@@ -101,7 +101,7 @@ type UploadSpec struct {
 type PrometheusSpec struct {
 
 	// SvcAddress is a field of CostManagement to represent the thanos-querier address.
-	SvcAddress string `json:"address,omitempty"`
+	SvcAddress string `json:"service_address,omitempty"`
 
 	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.

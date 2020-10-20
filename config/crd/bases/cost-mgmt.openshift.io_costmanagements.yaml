@@ -67,7 +67,7 @@ spec:
               description: PrometheusConfig is a field of CostManagement to represent
                 the configuration of Prometheus connection.
               properties:
-                address:
+                service_address:
                   description: SvcAddress is a field of CostManagement to represent
                     the thanos-querier address.
                   type: string
