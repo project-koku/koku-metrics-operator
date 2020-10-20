@@ -156,7 +156,7 @@ spec:
             prometheus:
               description: Prometheus represents the status of premetheus queries
               properties:
-                configruation_error:
+                configuration_error:
                   description: ConfigError is a field of CostManagementStatus to represent
                     errors during prometheus configuration.
                   type: string
