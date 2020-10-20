@@ -51,7 +51,7 @@ var (
 	thanosRouteName     = "thanos-querier"
 	tokenRegex          = "default-token-*"
 
-	certFile = "/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt"
+	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
 )
 
 // PrometheusConfig provides the configuration options to set up a Prometheus connections from a URL.

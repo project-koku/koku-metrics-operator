@@ -8,5 +8,6 @@
       name: trusted-ca-bundle
       annotations:
         release.openshift.io/create-only: "true"
+        service.beta.openshift.io/inject-cabundle: "true"
       labels:
         config.openshift.io/inject-trusted-cabundle: "true"
