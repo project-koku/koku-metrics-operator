@@ -129,7 +129,7 @@ func getPrometheusConfig(ctx context.Context, r client.Client, cost *costmgmtv1a
 	cfg := &PrometheusConfig{
 		CAFile:  certFile,
 		Address: cost.Status.Prometheus.SvcAddress,
-		SkipTLS: cost.Status.Prometheus.SkipTLSVerification,
+		SkipTLS: *cost.Status.Prometheus.SkipTLSVerification,
 	}
 	if err := getBearerToken(ctx, r, cfg); err != nil {
 		return nil, err

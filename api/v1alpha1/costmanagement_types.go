@@ -105,7 +105,7 @@ type PrometheusSpec struct {
 
 	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.
-	SkipTLSVerification bool `json:"skip_tls_verification,omitempty"`
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
@@ -234,7 +234,7 @@ type PrometheusStatus struct {
 	SvcAddress string `json:"service_address,omitempty"`
 
 	// SkipTLSVerification is a field of CostManagementStatus to represent if the thanos-querier endpoint must be certificate validated
-	SkipTLSVerification bool `json:"skip_tls_verification,omitempty"`
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // ReportsStatus defines the status for generating reports

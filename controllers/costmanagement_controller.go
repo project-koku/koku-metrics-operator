@@ -156,6 +156,9 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costConfig.PrometheusSvcAddress = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
 	costConfig.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
 	cost.Status.Prometheus.SkipTLSVerification = cost.Spec.PrometheusConfig.SkipTLSVerification
+	if cost.Status.Prometheus.SkipTLSVerification == nil {
+		cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(false)
+	}
 
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
