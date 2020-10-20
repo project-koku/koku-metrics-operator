@@ -155,6 +155,10 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 
 	costConfig.PrometheusSvcAddress = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
 	costConfig.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
+	cost.Status.Prometheus.SkipTLSVerification = cost.Spec.PrometheusConfig.SkipTLSVerification
+	if cost.Status.Prometheus.SkipTLSVerification == nil {
+		cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(false)
+	}
 
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
@@ -473,14 +477,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
-		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
-		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
-		}
 	} else {
-		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
-		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
 		t := metav1.Now()
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
@@ -489,9 +486,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
-			log.Info("generatinging reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = collector.GenerateReports(promConn, timeRange, r.Log)
+			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
+			err = collector.GenerateReports(cost, promConn, timeRange, r.Log)
 			if err != nil {
+				cost.Status.Reports.DataCollected = false
+				cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
 				log.Error(err, "failed to generate reports")
 			} else {
 				log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
@@ -500,10 +499,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		} else {
 			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		}
-
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
-		}
+	}
+	if err := r.Status().Update(ctx, cost); err != nil {
+		log.Error(err, "failed to update CostManagement Status")
 	}
 
 	// Requeue for processing after 5 minutes

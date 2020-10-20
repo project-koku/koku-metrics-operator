@@ -100,8 +100,12 @@ type UploadSpec struct {
 // PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec
 type PrometheusSpec struct {
 
-	// SvcAddress is the internal thanos-querier address
-	SvcAddress string `json:"address,omitempty"`
+	// SvcAddress is a field of CostManagement to represent the thanos-querier address.
+	SvcAddress string `json:"service_address,omitempty"`
+
+	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
+	// The default is false.
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
@@ -206,19 +210,47 @@ type CloudDotRedHatSourceStatus struct {
 // PrometheusStatus defines the status for querying prometheus
 type PrometheusStatus struct {
 
-	// PrometheusConnected is a field of CostManagementStatus to represent if cost-management is connected to prometheus
-	PrometheusConnected *bool `json:"prometheus_connected,omitempty"`
+	// PrometheusConfigured is a field of CostManagementStatus to represent if cost-management is configured to connect to prometheus.
+	PrometheusConfigured bool `json:"prometheus_configured"`
 
-	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started
+	// ConfigError is a field of CostManagementStatus to represent errors during prometheus configuration.
+	ConfigError string `json:"configuration_error,omitempty"`
+
+	// PrometheusConnected is a field of CostManagementStatus to represent if prometheus can be queried.
+	PrometheusConnected bool `json:"prometheus_connected"`
+
+	// ConnectionError is a field of CostManagementStatus to represent errors during prometheus test query.
+	ConnectionError string `json:"prometheus_connection_error,omitempty"`
+
+	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started.
 	// +nullable
 	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
 
-	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful
+	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful.
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
 
-	// SvcAddress is the internal thanos-querier address
-	SvcAddress string `json:"address,omitempty"`
+	// SvcAddress is the internal thanos-querier address.
+	SvcAddress string `json:"service_address,omitempty"`
+
+	// SkipTLSVerification is a field of CostManagementStatus to represent if the thanos-querier endpoint must be certificate validated
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
+}
+
+// ReportsStatus defines the status for generating reports
+type ReportsStatus struct {
+
+	// ReportMonth is a field of CostManagementStatus to represent the month for which reports are being generated.
+	ReportMonth string `json:"report_month,omit_empty"`
+
+	// LastHourQueried is a field of CostManagementStatus to represent the time range for which metrics were last queried.
+	LastHourQueried string `json:"last_hour_queried,omit_empty"`
+
+	// DataCollected is a field of CostManagementStatus to represent whether or not data was collected for the last query.
+	DataCollected bool `json:"data_collected,omit_empty"`
+
+	// DataCollectionMessage is a field of CostManagementStatus to represent a message associated with the data_collected status.
+	DataCollectionMessage string `json:"data_collection_message,omit_empty"`
 }
 
 // CostManagementStatus defines the observed state of CostManagement
@@ -246,6 +278,9 @@ type CostManagementStatus struct {
 
 	// Prometheus represents the status of premetheus queries
 	Prometheus PrometheusStatus `json:"prometheus,omitempty"`
+
+	// Reports represents the status of report generation
+	Reports ReportsStatus `json:"reports,omitempty"`
 
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
 	// +optional
