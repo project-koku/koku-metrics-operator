@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"os"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -61,10 +62,10 @@ func GetMultiPartBodyAndHeaders(logger logr.Logger, filename string) (*bytes.Buf
 }
 
 // SetupRequest Adds headers to request object for communication to cloud.redhat.com
-func SetupRequest(logger logr.Logger, costConfig *CostManagementConfig, method string, path string, body *bytes.Buffer, contentType string) (*http.Request, error) {
+func SetupRequest(logger logr.Logger, costConfig *CostManagementConfig, method string, uri string, body *bytes.Buffer, contentType string) (*http.Request, error) {
 	ctx := context.Background()
 	log := logger.WithValues("costmanagement", "SetupRequest")
-	req, err := http.NewRequest(method, path, body)
+	req, err := http.NewRequest(method, uri, body)
 	if err != nil {
 		log.Error(err, "Could not create request")
 		return nil, err
@@ -91,8 +92,9 @@ func SetupRequest(logger logr.Logger, costConfig *CostManagementConfig, method s
 	return req, nil
 }
 
-func getClient(logger logr.Logger, validateCert bool) http.Client {
-	log := logger.WithValues("costmanagement", "getClient")
+// GetClient Return client with certificate handling based on configuration
+func GetClient(logger logr.Logger, validateCert bool) http.Client {
+	log := logger.WithValues("costmanagement", "GetClient")
 	if validateCert {
 		// create the client specifying the ca cert file for transport
 		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
@@ -103,6 +105,7 @@ func getClient(logger logr.Logger, validateCert bool) http.Client {
 		caCertPool.AppendCertsFromPEM(caCert)
 
 		client := http.Client{
+			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					RootCAs: caCertPool,
@@ -113,21 +116,49 @@ func getClient(logger logr.Logger, validateCert bool) http.Client {
 	} else {
 		log.Info("Configured to not upload using the certificate!")
 		// Default the client
-		client := http.Client{}
+		client := http.Client{Timeout: 30 * time.Second}
 		return client
 	}
 }
 
+// ProcessResponse Log response for request and return valid
+func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
+	log := logger.WithValues("costmanagement", "ProcessResponse")
+	// Add error handling and logging here
+	requestID := resp.Header.Get("x-rh-insights-request-id")
+
+	log.Info(fmt.Sprintf("gateway server %s - %s returned %d, x-rh-insights-request-id=%s", resp.Request.Method, resp.Request.URL, resp.StatusCode, requestID))
+	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		if len(body) > 1024 {
+			body = body[:1024]
+		}
+		log.Info(fmt.Sprintf("Error Response Body: %s", string(body)))
+		return nil, fmt.Errorf(string(body))
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		log.Info(fmt.Sprintf("Successfully request x-rh-insights-request-id=%s", requestID))
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Error(err, "The following error occurred")
+			return nil, err
+		}
+		return bodyBytes, nil
+	}
+	return nil, fmt.Errorf("Unexpected Response")
+}
+
 // Upload Send data to cloud.redhat.com
-func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string, path string, body *bytes.Buffer, mw *multipart.Writer) (string, metav1.Time, error) {
+func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string, uri string, body *bytes.Buffer, mw *multipart.Writer) (string, metav1.Time, error) {
 	log := logger.WithValues("costmanagement", "Upload")
-	req, err := SetupRequest(logger, costConfig, method, path, body, mw.FormDataContentType())
+	req, err := SetupRequest(logger, costConfig, method, uri, body, mw.FormDataContentType())
 	currentTime := metav1.Now()
 	if err != nil {
 		return "", currentTime, err
 	}
 
-	client := getClient(logger, costConfig.ValidateCert)
+	client := GetClient(logger, costConfig.ValidateCert)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
@@ -139,34 +170,7 @@ func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string,
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	// Add error handling and logging here
-	requestID := resp.Header.Get("x-rh-insights-request-id")
-	if resp.StatusCode == http.StatusUnauthorized {
-		log.Info(fmt.Sprintf("gateway server %s returned 401, x-rh-insights-request-id=%s", resp.Request.URL, requestID))
-	}
-	if resp.StatusCode == http.StatusForbidden {
-		log.Info(fmt.Sprintf("gateway server %s returned 403, x-rh-insights-request-id=%s", resp.Request.URL, requestID))
-	}
-	if resp.StatusCode == http.StatusBadRequest {
-		body, _ := ioutil.ReadAll(resp.Body)
-		if len(body) > 1024 {
-			body = body[:1024]
-		}
-		log.Info(fmt.Sprintf("gateway server bad request: %s (request=%s): %s", resp.Request.URL, requestID, string(body)))
-	}
-
-	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		if len(body) > 1024 {
-			body = body[:1024]
-		}
-		log.Info(fmt.Sprintf("gateway server reported unexpected error code: %d (request=%s): %s", resp.StatusCode, requestID, string(body)))
-	}
-
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Info(fmt.Sprintf("Successfully uploaded x-rh-insights-request-id=%s", requestID))
-	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := ProcessResponse(logger, resp)
 	if err != nil {
 		log.Error(err, "The following error occurred")
 	}

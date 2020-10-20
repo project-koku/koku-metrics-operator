@@ -76,7 +76,7 @@ var _ = Describe("CostmanagementController", func() {
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
+				Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			})
 		})
@@ -109,7 +109,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
+			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
@@ -141,7 +141,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
+			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should reflect source name in status for source info CRD case", func() {
@@ -171,7 +171,7 @@ var _ = Describe("CostmanagementController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.IngressURL).To(Equal(costmgmtv1alpha1.DefaultIngressURL))
+			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 		})
