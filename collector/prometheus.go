@@ -167,6 +167,7 @@ func GetPromConn(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.Co
 	}
 
 	promConn, err = newPrometheusConnFromCfg(*cfg)
+	statusHelper(cost, "configuration", err)
 	if err != nil {
 		return nil, err
 	}
