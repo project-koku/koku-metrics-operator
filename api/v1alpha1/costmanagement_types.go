@@ -214,7 +214,7 @@ type PrometheusStatus struct {
 	PrometheusConfigured bool `json:"prometheus_configured"`
 
 	// ConfigError is a field of CostManagementStatus to represent errors during prometheus configuration.
-	ConfigError string `json:"configruation_error,omitempty"`
+	ConfigError string `json:"configuration_error,omitempty"`
 
 	// PrometheusConnected is a field of CostManagementStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
