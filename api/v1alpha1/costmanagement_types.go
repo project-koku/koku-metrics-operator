@@ -249,8 +249,8 @@ type ReportsStatus struct {
 	// DataCollected is a field of CostManagementStatus to represent whether or not data was collected for the last query.
 	DataCollected bool `json:"data_collected,omit_empty"`
 
-	// DataCollectionError is a field of CostManagementStatus to represent an error message if data was not collected.
-	DataCollectionError string `json:"data_collection_error,omit_empty"`
+	// DataCollectionMessage is a field of CostManagementStatus to represent a message associated with the data_collected status.
+	DataCollectionMessage string `json:"data_collection_message,omit_empty"`
 }
 
 // CostManagementStatus defines the observed state of CostManagement

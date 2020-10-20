@@ -169,7 +169,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	if len(nodeResults) <= 0 {
 		log.Info("no data to report")
 		cost.Status.Reports.DataCollected = false
-		cost.Status.Reports.DataCollectionError = "No data to report for the hour queried."
+		cost.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
@@ -247,6 +247,9 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows); err != nil {
 		return err
 	}
+
+	cost.Status.Reports.DataCollected = true
+	cost.Status.Reports.DataCollectionMessage = ""
 
 	return nil
 }

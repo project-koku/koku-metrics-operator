@@ -203,9 +203,9 @@ spec:
                   description: DataCollected is a field of CostManagementStatus to
                     represent whether or not data was collected for the last query.
                   type: boolean
-                data_collection_error:
-                  description: DataCollectionError is a field of CostManagementStatus
-                    to represent an error message if data was not collected.
+                data_collection_message:
+                  description: DataCollectionMessage is a field of CostManagementStatus
+                    to represent a message associated with the data_collected status.
                   type: string
                 last_hour_queried:
                   description: LastHourQueried is a field of CostManagementStatus
@@ -217,7 +217,7 @@ spec:
                   type: string
               required:
               - data_collected
-              - data_collection_error
+              - data_collection_message
               - last_hour_queried
               - report_month
               type: object
