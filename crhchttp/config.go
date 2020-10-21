@@ -29,12 +29,13 @@ import (
 type CostManagementConfig struct {
 	ClusterID                string
 	ValidateCert             bool
-	IngressURL               string
+	APIURL                   string
 	AuthenticationSecretName string
 	Authentication           costmgmtv1alpha1.AuthenticationType
 	UploadWait               int64
 	UploadToggle             bool
 	UploadCycle              int64
+	IngressAPIPath           string
 	BearerTokenString        string
 	BasicAuthUser            string
 	BasicAuthPassword        string
@@ -51,4 +52,7 @@ type CostManagementConfig struct {
 	OperatorCommit           string
 	SourceName               string
 	CreateSource             bool
+	SourceCheckCycle         int64
+	LastSourceCheckTime      metav1.Time
+	SourcesAPIPath           string
 }
