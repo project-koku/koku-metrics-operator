@@ -13,11 +13,12 @@
 
 ## Running the operator locally
 
-1. Log into your OCP cluster from a terminal and create an `openshift-cost` namespace:
+1. Log into your OCP cluster from a terminal, create an `openshift-cost` namespace, and switch to the new namespace:
 
     ```
     $ oc login --token=<token> --server=<server>
     $ oc create namespace openshift-cost
+    $ oc project openshift-cost
     ```
 
 2. Build the manager binary:
