@@ -76,25 +76,42 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
-	@echo 'spec:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '  prometheus_config:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    skip_tls_verification: true' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
-deploy-cr:
-	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	$(MAKE) add-prom-route
-ifeq ($(AUTH), basic)
-	$(MAKE) setup-auth
+add-auth:
 	@echo '  authentication:'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    type: basic'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+
+add-spec:
+	@echo 'spec:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+
+deploy-cr:
+	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+ifeq ($(AUTH), basic)
+	$(MAKE) setup-auth
+	$(MAKE) add-spec
+	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
 endif
 	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
+deploy-local-cr:
+	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	$(MAKE) add-spec
+	$(MAKE) add-prom-route
+ifeq ($(AUTH), basic)
+	$(MAKE) setup-auth
+	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else
+	@echo "Using default token auth"
+endif
+	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen

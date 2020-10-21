@@ -48,12 +48,12 @@
 5. Deploy a CR. For now, use basic authentication. The following creates the appropriate spec. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
 
     ```
-    $ make deploy-cr AUTH=basic USER=<username> PASS=<password>
+    $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
     ```
     This command uses the CR defined in `config/samples/cost-mgmt_v1alpha1_costmanagement.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/cost-mgmt_v1alpha1_costmanagement.yaml`. The command then deploys this CR to the cluster.
 
     After this CR has been created in the cluster, reconciliation will begin.
 
-    Running `make deploy-cr` as-is will create the prometheus route and use token authentication.
+    Running `make deploy-local-cr` as-is will create the prometheus route and use token authentication.
 
 6. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.
