@@ -77,10 +77,10 @@ func SetupRequest(logger logr.Logger, costConfig *CostManagementConfig, method s
 	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", contentType)
 	if costConfig.Authentication == "basic" {
-		log.Info("Uploading using basic authentication!")
+		log.Info("Request using basic authentication!")
 		req.SetBasicAuth(costConfig.BasicAuthUser, costConfig.BasicAuthPassword)
 	} else {
-		log.Info("Uploading using token authentication")
+		log.Info("Request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costConfig.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costConfig.OperatorCommit, costConfig.ClusterID))
 	}
@@ -114,7 +114,7 @@ func GetClient(logger logr.Logger, validateCert bool) http.Client {
 		}
 		return client
 	} else {
-		log.Info("Configured to not upload using the certificate!")
+		log.Info("Configured to not using the certificate for this request!")
 		// Default the client
 		client := http.Client{Timeout: 30 * time.Second}
 		return client
