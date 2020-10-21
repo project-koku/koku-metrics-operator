@@ -167,7 +167,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	} else {
 		costConfig.SourceCheckCycle = costmgmtv1alpha1.DefaultSourceCheckCycle
 	}
-	if sourceNameChanged || sourceCycleChange {
+	if !sourceNameChanged || !sourceCycleChange {
 		costConfig.LastSourceCheckTime = cost.Status.Source.LastSourceCheckTime
 	}
 
