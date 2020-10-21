@@ -141,7 +141,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 		log.Info(fmt.Sprintf("Successfully request x-rh-insights-request-id=%s", requestID))
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Error(err, "The following error occurred")
+			log.Error(err, "Error occurred reading the response body.")
 			return nil, err
 		}
 		return bodyBytes, nil
