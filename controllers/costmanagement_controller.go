@@ -307,7 +307,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 	if !lastExecution.IsZero() {
 		// transforming the metav1.Time object into a string
 		lastExecution := lastExecution.UTC().Format("2006-01-02 15:04:05")
-		log.Info("The last successful upload took place at " + lastExecution)
+		log.Info(fmt.Sprintf("The last successful %s took place at %s.", action, lastExecution))
 		// transforming the string into a time.Time object
 		executionTime, err := time.Parse("2006-01-02 15:04:05", lastExecution)
 		if err != nil {
