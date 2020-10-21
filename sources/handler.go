@@ -133,7 +133,7 @@ func CheckSource(logger logr.Logger, costConfig *crhchttp.CostManagementConfig) 
 	}
 	duration := time.Since(checkTime)
 	if int64(duration.Minutes()) >= cycle {
-		log.Info("Checking source oncloud.redhat.com!")
+		log.Info("Checking source on cloud.redhat.com!")
 		return true
 	}
 
