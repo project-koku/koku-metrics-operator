@@ -27,6 +27,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+EXTERNAL_PROM_ROUTE=https://$(shell oc get routes thanos-querier -n openshift-monitoring -o "jsonpath={.spec.host}")
+
 all: manager
 
 # Run tests
@@ -73,11 +75,20 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),cloud.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
+add-prom-route:
+	@echo 'spec:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '  prometheus_config:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '    skip_tls_verification: true' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+
 deploy-cr:
 	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	$(MAKE) add-prom-route
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
-	@echo 'spec:\n  authentication:\n    type: basic\n    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '  authentication:'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '    type: basic'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"

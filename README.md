@@ -14,7 +14,7 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 
 ## Development
 
-More specific local development can be found [here](docs/local-development.md).
+More specific documentation for local development can be found [here](docs/local-development.md).
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
