@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -103,42 +102,6 @@ type ApplicationTypeDataItem struct {
 type ApplicationTypeResponse struct {
 	Meta GenericMeta
 	Data []ApplicationTypeDataItem
-}
-
-// CheckSource Determine if the source should be checked for existence or creation
-func CheckSource(logger logr.Logger, costConfig *crhchttp.CostManagementConfig) bool {
-	log := logger.WithValues("costmanagement", "CheckSource")
-	name := costConfig.SourceName
-	lastCheck := costConfig.LastSourceCheckTime
-	cycle := costConfig.SourceCheckCycle
-
-	// No source defined
-	if name == "" {
-		return false
-	}
-
-	// source name provided but a check has never been performed
-	if lastCheck.IsZero() {
-		log.Info("There have been no prior checks for the source on cloud.redhat.com or configuration has changed.")
-		return true
-	}
-
-	// transforming the metav1.Time object into a string
-	lastCheckStr := lastCheck.UTC().Format("2006-01-02 15:04:05")
-	log.Info("The last source check took place at " + lastCheckStr)
-	// transforming the string into a time.Time object
-	checkTime, err := time.Parse("2006-01-02 15:04:05", lastCheckStr)
-	if err != nil {
-		return true
-	}
-	duration := time.Since(checkTime)
-	if int64(duration.Minutes()) >= cycle {
-		log.Info("Checking source on cloud.redhat.com!")
-		return true
-	}
-
-	log.Info("It is not time to check the source on cloud.redhat.com!")
-	return false
 }
 
 // GetSourceTypeID Request the source type ID for OpenShift

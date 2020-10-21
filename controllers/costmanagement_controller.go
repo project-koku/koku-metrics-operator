@@ -302,28 +302,28 @@ func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagem
 	return nil
 }
 
-func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Time) bool {
-	log := r.Log.WithValues("costmanagement", "checkCycle")
-	if !lastSuccess.IsZero() {
+func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
+	log := logger.WithValues("costmanagement", "checkCycle")
+	if !lastExecution.IsZero() {
 		// transforming the metav1.Time object into a string
-		lastSuccess := lastSuccess.UTC().Format("2006-01-02 15:04:05")
-		log.Info("The last successful upload took place at " + lastSuccess)
+		lastExecution := lastExecution.UTC().Format("2006-01-02 15:04:05")
+		log.Info("The last successful upload took place at " + lastExecution)
 		// transforming the string into a time.Time object
-		successTime, err := time.Parse("2006-01-02 15:04:05", lastSuccess)
+		executionTime, err := time.Parse("2006-01-02 15:04:05", lastExecution)
 		if err != nil {
 			return true
 		}
-		duration := time.Since(successTime)
-		log.Info(fmt.Sprintf("It has been %d minutes since the last successful upload.", int64(duration.Minutes())))
+		duration := time.Since(executionTime)
+		log.Info(fmt.Sprintf("It has been %d minutes since the last successful %s.", int64(duration.Minutes()), action))
 		if int64(duration.Minutes()) >= cycle {
-			log.Info("Uploading to cloud.redhat.com!")
+			log.Info(fmt.Sprintf("Executing %s to cloud.redhat.com.", action))
 			return true
 		} else {
-			log.Info("It is not time to upload to cloud.redhat.com!")
+			log.Info(fmt.Sprintf("Not time to execute the %s.", action))
 			return false
 		}
 	} else {
-		log.Info("There have been no prior successful uploads to cloud.redhat.com.")
+		log.Info(fmt.Sprintf("There have been no prior successful %ss to cloud.redhat.com.", action))
 		return true
 	}
 }
@@ -440,7 +440,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Check if source is defined and should be confirmed/created
-	if sources.CheckSource(r.Log, costConfig) {
+	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
 		defined, errMsg, lastCheck, err := sources.SourceGetOrCreate(r.Log, costConfig)
 		cost.Status.Source.SourceDefined = &defined
 		cost.Status.Source.SourceError = errMsg
@@ -452,7 +452,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	if costConfig.UploadToggle {
-		upload := checkCycle(r, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime)
+		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 		if upload {
 
 			// Upload to c.rh.com
