@@ -54,4 +54,6 @@
 
     After this CR has been created in the cluster, reconciliation will begin.
 
+    Running `make deploy-cr` as-is will create the prometheus route and use token authentication.
+
 6. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.
