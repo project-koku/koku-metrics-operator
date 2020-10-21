@@ -97,7 +97,7 @@ var (
 			QueryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
 			QueryValue: &SaveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
-				Method:          "sum",
+				Method:          "max",
 				Factor:          sumFactor,
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
@@ -108,7 +108,7 @@ var (
 			QueryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
 			QueryValue: &SaveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
-				Method:          "sum",
+				Method:          "max",
 				Factor:          sumFactor,
 				TransformedName: "persistentvolumeclaim-request-byte-seconds",
 			},
