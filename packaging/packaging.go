@@ -187,6 +187,8 @@ func WriteTarball(tarFileName, manifestFileName, manifestUUID string, archiveFil
 				}
 			}
 		}
+		addFileToTarWriter("manifest.json", manifestFileName, tw)
+
 		return tarFileName
 
 	}
