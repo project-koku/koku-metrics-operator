@@ -71,7 +71,7 @@ func BuildLocalCSVFileList(stagingDirectory string) []string {
 	}
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
-			csvList = append(csvList, stagingDirectory+file.Name())
+			csvList = append(csvList, stagingDirectory+"/"+file.Name())
 		}
 	}
 	return csvList
@@ -178,8 +178,10 @@ func WriteTarball(tarFileName, manifestFileName, manifestUUID string, archiveFil
 			fmt.Println(fileName)
 			if strings.Contains(fileName, ".csv") {
 				uploadName := manifestUUID + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+				fmt.Println(uploadName)
 				err := addFileToTarWriter(uploadName, fileName, tw)
 				if err != nil {
+					fmt.Println(err)
 					return ""
 					// return errors.New(fmt.Sprintf("Could not add file '%s', to tarball, got error '%s'", filePath, err.Error()))
 				}
@@ -282,8 +284,10 @@ func Split(filePath string, cost *costmgmtv1alpha1.CostManagement) {
 	} else {
 		tarFileName := filePath + "/../cost-mgmt.tar.gz"
 		fileList := BuildLocalCSVFileList(filePath)
+		fmt.Println("HEYYYYYYOOOOOO I'M HEREEEEEE ")
 		if len(fileList) > 0 {
 			manifestFileName, manifestUUID := RenderManifest(fileList, cost, filePath)
+			fmt.Println("AFTER MANIFEST YEH!")
 			outputTar := WriteTarball(tarFileName, manifestFileName, manifestUUID, fileList, len(fileList))
 			if outputTar != "" {
 				out_files = append(out_files, outputTar)
