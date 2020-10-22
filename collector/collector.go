@@ -203,7 +203,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(nodeFilePrefix, yearMonth, "node", nodeRows, NewNodeRow(ts)); err != nil {
+	if err := writeResults(nodeRows, NewNodeRow(ts), nodeFilePrefix, yearMonth, "node"); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			}
 		}
 	}
-	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows, NewPodRow(ts)); err != nil {
+	if err := writeResults(podRows, NewPodRow(ts), podFilePrefix, yearMonth, "pod"); err != nil {
 		return err
 	}
 
@@ -233,7 +233,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows, NewStorageRow(ts)); err != nil {
+	if err := writeResults(volRows, NewStorageRow(ts), volFilePrefix, yearMonth, "volume"); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows, NewNamespaceRow(ts)); err != nil {
+	if err := writeResults(namespaceRows, NewNamespaceRow(ts), namespaceFilePrefix, yearMonth, "namespace"); err != nil {
 		return err
 	}
 
@@ -289,7 +289,7 @@ func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, ke
 	return nil
 }
 
-func writeResults(prefix, yearMonth, key string, data mappedCSVStruct, headers CSVStruct) error {
+func writeResults(data mappedCSVStruct, headers CSVStruct, prefix, yearMonth, key string) error {
 	csvFile, created, err := getOrCreateFile(dataPath, prefix+yearMonth+".csv")
 	if err != nil {
 		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
