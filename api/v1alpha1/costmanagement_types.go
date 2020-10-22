@@ -45,6 +45,9 @@ const (
 
 	//UploadCycle sets the default cycle to be 360 minutes (6 hours)
 	UploadSchedule int64 = 360
+
+	//SourceCheckSchedule sets the default cycle to be 1440 minutes (24 hours)
+	SourceCheckSchedule int64 = 1440
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -80,12 +83,17 @@ type AuthenticationSpec struct {
 // UploadSpec defines the desired state of Authentication object in the CostManagementSpec
 type UploadSpec struct {
 
+	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
+	// The default is /api/ingress/v1/upload/
+	// +optional
+	IngressAPIPath string `json:"ingress_path,omitempty"`
+
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of CostManagement to represent the number of hours between each upload schedule
+	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule
 	// The default is 360 min (6 hours)
 	// +optional
 	// +kubebuilder:validation:Minimum=0
@@ -100,12 +108,21 @@ type UploadSpec struct {
 // PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec
 type PrometheusSpec struct {
 
-	// SvcAddress is the internal thanos-querier address
-	SvcAddress string `json:"address,omitempty"`
+	// SvcAddress is a field of CostManagement to represent the thanos-querier address.
+	SvcAddress string `json:"service_address,omitempty"`
+
+	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
+	// The default is false.
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
 type CloudDotRedHatSourceSpec struct {
+
+	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
+	// The default is /api/ingress/v1.0/sources/
+	// +optional
+	SourcesAPIPath string `json:"sources_path,omitempty"`
 
 	// SourceName is a field of CostManagementSpec to represent the source name on cloud.redhat.com.
 	// +optional
@@ -114,6 +131,12 @@ type CloudDotRedHatSourceSpec struct {
 	// CreateSource is a field of CostManagementSpec to represent if the source should be created if not found.
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
+
+	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
+	// The default is 1440 min (24 hours)
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
 
 // CostManagementSpec defines the desired state of CostManagement
@@ -127,9 +150,9 @@ type CostManagementSpec struct {
 	// +optional
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 
-	// IngressURL is a field of CostManagement to represent the url of the ingress service.
+	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
 	// +optional
-	IngressURL string `json:"ingress_url,omitempty"`
+	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of CostManagement to represent the authentication object.
 	// +optional
@@ -161,8 +184,12 @@ type AuthenticationStatus struct {
 	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
 }
 
-// AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus
+// UploadStatus defines the desired state of Upload object in the CostManagementStatus
 type UploadStatus struct {
+
+	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
+	// +optional
+	IngressAPIPath string `json:"ingress_path,omitempty"`
 
 	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
 	// The default is true
@@ -190,6 +217,10 @@ type UploadStatus struct {
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus
 type CloudDotRedHatSourceStatus struct {
 
+	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
+	// +optional
+	SourcesAPIPath string `json:"sources_path,omitempty"`
+
 	// SourceName is a field of CostManagementStatus to represent the source name on cloud.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
@@ -201,24 +232,60 @@ type CloudDotRedHatSourceStatus struct {
 	// SourceError is a field of CostManagementStatus to represent the error encountered creating the source.
 	// +optional
 	SourceError string `json:"error,omitempty"`
+
+	// LastSourceCheckTime is a field of CostManagement that shows the time that the last check was attempted
+	// +nullable
+	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
+
+	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
+	// The default is 1440 min (24 hours)
+	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
 
 // PrometheusStatus defines the status for querying prometheus
 type PrometheusStatus struct {
 
-	// PrometheusConnected is a field of CostManagementStatus to represent if cost-management is connected to prometheus
-	PrometheusConnected *bool `json:"prometheus_connected,omitempty"`
+	// PrometheusConfigured is a field of CostManagementStatus to represent if cost-management is configured to connect to prometheus.
+	PrometheusConfigured bool `json:"prometheus_configured"`
 
-	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started
+	// ConfigError is a field of CostManagementStatus to represent errors during prometheus configuration.
+	ConfigError string `json:"configuration_error,omitempty"`
+
+	// PrometheusConnected is a field of CostManagementStatus to represent if prometheus can be queried.
+	PrometheusConnected bool `json:"prometheus_connected"`
+
+	// ConnectionError is a field of CostManagementStatus to represent errors during prometheus test query.
+	ConnectionError string `json:"prometheus_connection_error,omitempty"`
+
+	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started.
 	// +nullable
 	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
 
-	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful
+	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful.
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
 
-	// SvcAddress is the internal thanos-querier address
-	SvcAddress string `json:"address,omitempty"`
+	// SvcAddress is the internal thanos-querier address.
+	SvcAddress string `json:"service_address,omitempty"`
+
+	// SkipTLSVerification is a field of CostManagementStatus to represent if the thanos-querier endpoint must be certificate validated
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
+}
+
+// ReportsStatus defines the status for generating reports
+type ReportsStatus struct {
+
+	// ReportMonth is a field of CostManagementStatus to represent the month for which reports are being generated.
+	ReportMonth string `json:"report_month,omit_empty"`
+
+	// LastHourQueried is a field of CostManagementStatus to represent the time range for which metrics were last queried.
+	LastHourQueried string `json:"last_hour_queried,omit_empty"`
+
+	// DataCollected is a field of CostManagementStatus to represent whether or not data was collected for the last query.
+	DataCollected bool `json:"data_collected,omit_empty"`
+
+	// DataCollectionMessage is a field of CostManagementStatus to represent a message associated with the data_collected status.
+	DataCollectionMessage string `json:"data_collection_message,omit_empty"`
 }
 
 // CostManagementStatus defines the observed state of CostManagement
@@ -232,8 +299,9 @@ type CostManagementStatus struct {
 	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 
-	// IngressURL is a field of CostManagement to represent the url of the ingress service.
-	IngressURL string `json:"ingress_url,omitempty"`
+	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
+	// +optional
+	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of CostManagement to represent the authentication status.
 	Authentication AuthenticationStatus `json:"authentication,omitempty"`
@@ -246,6 +314,9 @@ type CostManagementStatus struct {
 
 	// Prometheus represents the status of premetheus queries
 	Prometheus PrometheusStatus `json:"prometheus,omitempty"`
+
+	// Reports represents the status of report generation
+	Reports ReportsStatus `json:"reports,omitempty"`
 
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
 	// +optional

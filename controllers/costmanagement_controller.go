@@ -48,6 +48,7 @@ import (
 	"github.com/project-koku/korekuta-operator-go/collector"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
 	"github.com/project-koku/korekuta-operator-go/packaging"
+	"github.com/project-koku/korekuta-operator-go/sources"
 )
 
 var (
@@ -75,10 +76,12 @@ type serializedAuth struct {
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
-func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *string, statusItem *string, defaultVal string) string {
+func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *string, statusItem *string, defaultVal string) (string, bool) {
 	// Update statusItem if needed
+	changed := false
 	if *statusItem == "" || !reflect.DeepEqual(*specItem, *statusItem) {
 		// If data is specified in the spec it should be used
+		changed = true
 		if *specItem != "" {
 			*statusItem = *specItem
 		} else if defaultVal != "" {
@@ -87,16 +90,15 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 			*statusItem = *specItem
 		}
 	}
-	return *statusItem
+	return *statusItem, changed
 }
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costConfig *crhchttp.CostManagementConfig) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "ReflectSpec")
-	costConfig.IngressURL = StringReflectSpec(r, cost, &cost.Spec.IngressURL, &cost.Status.IngressURL, costmgmtv1alpha1.DefaultIngressURL)
-	costConfig.AuthenticationSecretName = StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
-	// costConfig.UploadToggle = StringReflectSpec(r, cost, &cost.Spec.Upload.UploadToggle, &cost.Status.Upload.UploadToggle, costmgmtv1alpha1.DefaultUploadToggle)
+	costConfig.APIURL, _ = StringReflectSpec(r, cost, &cost.Spec.APIURL, &cost.Status.APIURL, costmgmtv1alpha1.DefaultAPIURL)
+	costConfig.AuthenticationSecretName, _ = StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
 
 	if cost.Status.Authentication.AuthType == "" || !reflect.DeepEqual(cost.Spec.Authentication.AuthType, cost.Status.Authentication.AuthType) {
 		// If data is specified in the spec it should be used
@@ -116,6 +118,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costConfig.ValidateCert = costmgmtv1alpha1.DefaultValidateCert
 	}
 
+	costConfig.IngressAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Upload.IngressAPIPath, &cost.Status.Upload.IngressAPIPath, costmgmtv1alpha1.DefaultIngressPath)
 	cost.Status.Upload.UploadToggle = cost.Spec.Upload.UploadToggle
 	if cost.Status.Upload.UploadToggle != nil {
 		costConfig.UploadToggle = *cost.Status.Upload.UploadToggle
@@ -148,14 +151,33 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costConfig.UploadCycle = costmgmtv1alpha1.DefaultUploadCycle
 	}
 
-	costConfig.SourceName = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
+	var sourceNameChanged bool
+	costConfig.SourcesAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
+	costConfig.SourceName, sourceNameChanged = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
 	costConfig.CreateSource = false
 	if cost.Spec.Source.CreateSource != nil {
 		costConfig.CreateSource = *cost.Spec.Source.CreateSource
 	}
+	sourceCycleChange := false
+	if !reflect.DeepEqual(cost.Spec.Source.CheckCycle, cost.Status.Source.CheckCycle) {
+		cost.Status.Source.CheckCycle = cost.Spec.Source.CheckCycle
+		sourceCycleChange = true
+	}
+	if cost.Status.Source.CheckCycle != nil {
+		costConfig.SourceCheckCycle = *cost.Status.Source.CheckCycle
+	} else {
+		costConfig.SourceCheckCycle = costmgmtv1alpha1.DefaultSourceCheckCycle
+	}
+	if !sourceNameChanged && !sourceCycleChange {
+		costConfig.LastSourceCheckTime = cost.Status.Source.LastSourceCheckTime
+	}
 
-	costConfig.PrometheusSvcAddress = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
+	costConfig.PrometheusSvcAddress, _ = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
 	costConfig.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
+	cost.Status.Prometheus.SkipTLSVerification = cost.Spec.PrometheusConfig.SkipTLSVerification
+	if cost.Status.Prometheus.SkipTLSVerification == nil {
+		cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(false)
+	}
 
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
@@ -281,28 +303,28 @@ func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagem
 	return nil
 }
 
-func checkCycle(r *CostManagementReconciler, cycle int64, lastSuccess metav1.Time) bool {
-	log := r.Log.WithValues("costmanagement", "checkCycle")
-	if !lastSuccess.IsZero() {
+func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
+	log := logger.WithValues("costmanagement", "checkCycle")
+	if !lastExecution.IsZero() {
 		// transforming the metav1.Time object into a string
-		lastSuccess := lastSuccess.UTC().Format("2006-01-02 15:04:05")
-		log.Info("The last successful upload took place at " + lastSuccess)
+		lastExecution := lastExecution.UTC().Format("2006-01-02 15:04:05")
+		log.Info(fmt.Sprintf("The last successful %s took place at %s.", action, lastExecution))
 		// transforming the string into a time.Time object
-		successTime, err := time.Parse("2006-01-02 15:04:05", lastSuccess)
+		executionTime, err := time.Parse("2006-01-02 15:04:05", lastExecution)
 		if err != nil {
 			return true
 		}
-		duration := time.Since(successTime)
-		log.Info(fmt.Sprintf("It has been %d minutes since the last successful upload.", int64(duration.Minutes())))
+		duration := time.Since(executionTime)
+		log.Info(fmt.Sprintf("It has been %d minutes since the last successful %s.", int64(duration.Minutes()), action))
 		if int64(duration.Minutes()) >= cycle {
-			log.Info("Uploading to cloud.redhat.com!")
+			log.Info(fmt.Sprintf("Executing %s to cloud.redhat.com.", action))
 			return true
 		} else {
-			log.Info("It is not time to upload to cloud.redhat.com!")
+			log.Info(fmt.Sprintf("Not time to execute the %s.", action))
 			return false
 		}
 	} else {
-		log.Info("There have been no prior successful uploads to cloud.redhat.com.")
+		log.Info(fmt.Sprintf("There have been no prior successful %ss to cloud.redhat.com.", action))
 		return true
 	}
 }
@@ -417,8 +439,21 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
 	}
+
+	// Check if source is defined and should be confirmed/created
+	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
+		defined, errMsg, lastCheck, err := sources.SourceGetOrCreate(r.Log, costConfig)
+		cost.Status.Source.SourceDefined = &defined
+		cost.Status.Source.SourceError = errMsg
+		cost.Status.Source.LastSourceCheckTime = lastCheck
+		err = r.Status().Update(ctx, cost)
+		if err != nil {
+			log.Error(err, "Failed to update CostManagement Status")
+		}
+	}
+
 	if costConfig.UploadToggle {
-		upload := checkCycle(r, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime)
+		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 		if upload {
 			// Split the payload
 			fileList := packaging.BuildLocalCSVFileList("/tmp/cost-mgmt-operator-reports/data")
@@ -449,7 +484,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 					// grab the body and the multipart file header
 					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, "/tmp/cost-mgmt-operator-reports/"+file.Name())
-					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", costConfig.IngressURL, body, mw)
+					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
+					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 					if err != nil {
 						return ctrl.Result{}, err
 					}
@@ -474,19 +510,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
 
-	log.Info("Using the following inputs with creds", "CostManagementConfig", costConfig) // TODO remove after upload code works
-
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
-		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(false)
-		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
-		}
 	} else {
-		cost.Status.Prometheus.PrometheusConnected = pointer.Bool(true)
-		costConfig.PrometheusConnected = *cost.Status.Prometheus.PrometheusConnected
 		t := metav1.Now()
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
@@ -495,9 +522,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
-			log.Info("generatinging reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = collector.GenerateReports(promConn, timeRange, r.Log)
+			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
+			err = collector.GenerateReports(cost, promConn, timeRange, r.Log)
 			if err != nil {
+				cost.Status.Reports.DataCollected = false
+				cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
 				log.Error(err, "failed to generate reports")
 			} else {
 				log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
@@ -506,10 +535,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		} else {
 			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		}
-
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
-		}
+	}
+	if err := r.Status().Update(ctx, cost); err != nil {
+		log.Error(err, "failed to update CostManagement Status")
 	}
 
 	// Requeue for processing after 5 minutes
