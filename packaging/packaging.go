@@ -258,3 +258,39 @@ func SplitFiles(filePath string, maxSize int64) {
 		}
 	}
 }
+
+func Split(filePath string, cost *costmgmtv1alpha1.CostManagement) {
+	var out_files []string
+	needSplit := NeedSplit(filePath)
+	var max int64 = 100
+	if needSplit {
+		SplitFiles(filePath, max)
+		tarpath := filePath + "/../"
+		tarfiletmpl := "cost-mgmt"
+		fileList := BuildLocalCSVFileList(filePath)
+		manifestFileName, manifestUUID := RenderManifest(fileList, cost, filePath)
+		// fileCount := 0
+		for idx, filename := range fileList {
+			if strings.Contains(filename, ".csv") {
+				tarfilename := tarpath + tarfiletmpl + strconv.Itoa(idx) + ".tar.gz"
+				outputTar := WriteTarball(tarfilename, manifestFileName, manifestUUID, fileList, len(fileList))
+				if outputTar != "" {
+					out_files = append(out_files, outputTar)
+				}
+			}
+		}
+	} else {
+		tarFileName := filePath + "/../cost-mgmt.tar.gz"
+		fileList := BuildLocalCSVFileList(filePath)
+		if len(fileList) > 0 {
+			manifestFileName, manifestUUID := RenderManifest(fileList, cost, filePath)
+			outputTar := WriteTarball(tarFileName, manifestFileName, manifestUUID, fileList, len(fileList))
+			if outputTar != "" {
+				out_files = append(out_files, outputTar)
+			}
+		}
+	}
+	for _, fileName := range out_files {
+		fmt.Println(fileName)
+	}
+}

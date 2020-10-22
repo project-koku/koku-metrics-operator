@@ -458,6 +458,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			// Split the payload
 			fileList := packaging.BuildLocalCSVFileList("/tmp/cost-mgmt-operator-reports/data")
 			manifestName, manifestUUID := packaging.RenderManifest(fileList, cost, "/tmp/cost-mgmt-operator-reports")
+			packaging.Split("/tmp/cost-mgmt-operator-reports/data", cost)
 			fmt.Println(manifestName)
 			fmt.Println(manifestUUID)
 			fmt.Println(fileList)
@@ -478,10 +479,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
 			}
 			for _, file := range files {
-				log.Info("Uploading the following file: ")
-				fmt.Println(file.Name())
 				if strings.Contains(file.Name(), "tar.gz") {
-
+					log.Info("Uploading the following file: ")
+					fmt.Println(file.Name())
 					// grab the body and the multipart file header
 					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, "/tmp/cost-mgmt-operator-reports/"+file.Name())
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
