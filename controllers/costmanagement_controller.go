@@ -47,6 +47,7 @@ import (
 	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
 	"github.com/project-koku/korekuta-operator-go/collector"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
+	"github.com/project-koku/korekuta-operator-go/packaging"
 )
 
 var (
@@ -419,7 +420,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if costConfig.UploadToggle {
 		upload := checkCycle(r, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime)
 		if upload {
-
+			// Split the payload
+			fileList := packaging.BuildLocalCSVFileList("/tmp/cost-mgmt-operator-reports/data")
+			manifestName, manifestUUID := packaging.RenderManifest(fileList, cost, "/tmp/cost-mgmt-operator-reports")
+			fmt.Println(manifestName)
+			fmt.Println(manifestUUID)
+			fmt.Println(fileList)
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
