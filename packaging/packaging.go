@@ -305,7 +305,7 @@ func Split(filePath string, cost *costmgmtv1alpha1.CostManagement) {
 		for idx, filename := range fileList {
 			if strings.Contains(filename, ".csv") {
 				var singleFile []string
-				singleFile[0] = filename
+				singleFile = append(singleFile, filename)
 				tarfilename := tarpath + tarfiletmpl + strconv.Itoa(idx) + ".tar.gz"
 				outputTar := WriteTarball(tarfilename, manifestFileName, manifestUUID, singleFile, len(fileList))
 				if outputTar != "" {
