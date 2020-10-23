@@ -1,4 +1,4 @@
-The following shows a complete CR and gives a brief description of each spec field. Every field is optional.
+The following shows a complete CR and gives a brief description of each spec field. Every `spec` field is optional.
 
 ```
 apiVersion: cost-mgmt.openshift.io/v1alpha1
