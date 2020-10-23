@@ -83,17 +83,27 @@ func NeedSplit(filepath string) bool {
 	var MEGABYTE int64 = 1024 * 1024
 	maxBytes := DEFAULT_MAX_SIZE * MEGABYTE
 	fileList, err := ioutil.ReadDir(filepath)
+	fmt.Println("this is the filepath: ")
+	fmt.Println(filepath)
+	fmt.Println(fileList)
 	if err != nil {
 		fmt.Println("could not read dir")
 		// log.Error(err, "Could not read the directory")
 	}
 	for _, file := range fileList {
-		info, err := os.Stat(filepath + file.Name())
+		info, err := os.Stat(filepath + "/" + file.Name())
 		if err != nil {
 			return false
 		}
 		fileSize := info.Size()
-		totalSize := totalSize + fileSize
+		fmt.Println("This is the filesize for the filename ")
+		fmt.Println(file.Name())
+		fmt.Println(fileSize)
+		totalSize += fileSize
+		fmt.Println("This is the total size")
+		fmt.Println(totalSize)
+		fmt.Println("This is the maxBytes")
+		fmt.Println(maxBytes)
 		if fileSize >= maxBytes || totalSize >= maxBytes {
 			return true
 		}
@@ -123,6 +133,8 @@ func RenderManifest(archiveFiles []string, cost *costmgmtv1alpha1.CostManagement
 	file, _ := json.MarshalIndent(fileManifest, "", " ")
 	_ = ioutil.WriteFile(manifestFileName, file, 0644)
 	// return the manifest file/uuid
+	fmt.Println("Generated the following manifest file: ")
+	fmt.Println(manifestFileName)
 	return manifestFileName, manifestUUID
 }
 
@@ -196,11 +208,12 @@ func WriteTarball(tarFileName, manifestFileName, manifestUUID string, archiveFil
 }
 
 func WritePart(fileName string, csvReader *csv.Reader, num int, size int) (string, bool) {
+	fmt.Println("inside of write part")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
 	VARIANCE := 0.03
 	splitFileName := fileNamePart + strconv.Itoa(num) + ".csv"
-	splitFile, err := os.Create(fileName)
+	splitFile, err := os.Create(splitFileName)
 	if err != nil {
 		fmt.Println("An error occurred:", err)
 	}
@@ -208,16 +221,24 @@ func WritePart(fileName string, csvReader *csv.Reader, num int, size int) (strin
 	writer := csv.NewWriter(splitFile)
 	// err = writer.WriteRow(csvHeader)
 	for {
-		row, _ := csvReader.Read()
+		row, err := csvReader.Read()
+		if err == io.EOF {
+			return splitFileName, true
+		}
+		fmt.Println("inside of for loop. this is the row: ")
+		fmt.Println(row)
 		writer.Write(row)
 		rowLen := len(strings.Join(row, ","))
 		rowSize := rowLen + int(float64(rowLen)*VARIANCE)
-		sizeEstimate = sizeEstimate + rowSize
+		sizeEstimate += rowSize
+		fmt.Println("size estimate: ")
+		fmt.Println(sizeEstimate)
+		fmt.Println("size to be smaller than: ")
+		fmt.Println(size)
 		if sizeEstimate >= size {
 			return splitFileName, false
 		}
 	}
-	// return splitFileName, true
 }
 
 func SplitFiles(filePath string, maxSize int64) {
@@ -230,12 +251,16 @@ func SplitFiles(filePath string, maxSize int64) {
 		// log.Error(err, "Could not read the directory")
 	}
 	for _, file := range fileList {
-		absPath := filePath + file.Name()
+		absPath := filePath + "/" + file.Name()
 		info, err := os.Stat(absPath)
+		fmt.Println("Inside of SplitFiles on ")
+		fmt.Println(file.Name())
 		if err != nil {
 			fmt.Println("error: ", err)
 		}
 		fileSize := info.Size()
+		fmt.Println(fileSize)
+		fmt.Println(size)
 		if fileSize >= size {
 			var splitFiles []string
 			// var csvHeader string
@@ -250,9 +275,10 @@ func SplitFiles(filePath string, maxSize int64) {
 			// part := 1
 			var part int64 = 1
 			for {
+				fmt.Println("inside of the for loop")
 				newFile, eof := WritePart(absPath, csvReader, int(part), int(size))
 				splitFiles = append(splitFiles, newFile)
-				part = part + 1
+				part += 1
 				if eof || part >= MAX_SPLITS {
 					break
 				}
@@ -266,6 +292,8 @@ func SplitFiles(filePath string, maxSize int64) {
 func Split(filePath string, cost *costmgmtv1alpha1.CostManagement) {
 	var out_files []string
 	needSplit := NeedSplit(filePath)
+	fmt.Println("THIS IS WHETHER OR NOT THIS NEEDS SPLIT: ")
+	fmt.Println(needSplit)
 	var max int64 = 100
 	if needSplit {
 		SplitFiles(filePath, max)
@@ -276,8 +304,10 @@ func Split(filePath string, cost *costmgmtv1alpha1.CostManagement) {
 		// fileCount := 0
 		for idx, filename := range fileList {
 			if strings.Contains(filename, ".csv") {
+				var singleFile []string
+				singleFile[0] = filename
 				tarfilename := tarpath + tarfiletmpl + strconv.Itoa(idx) + ".tar.gz"
-				outputTar := WriteTarball(tarfilename, manifestFileName, manifestUUID, fileList, len(fileList))
+				outputTar := WriteTarball(tarfilename, manifestFileName, manifestUUID, singleFile, len(fileList))
 				if outputTar != "" {
 					out_files = append(out_files, outputTar)
 				}
@@ -286,7 +316,6 @@ func Split(filePath string, cost *costmgmtv1alpha1.CostManagement) {
 	} else {
 		tarFileName := filePath + "/../cost-mgmt.tar.gz"
 		fileList := BuildLocalCSVFileList(filePath)
-		fmt.Println("HEYYYYYYOOOOOO I'M HEREEEEEE ")
 		if len(fileList) > 0 {
 			manifestFileName, manifestUUID := RenderManifest(fileList, cost, filePath)
 			fmt.Println("AFTER MANIFEST YEH!")
