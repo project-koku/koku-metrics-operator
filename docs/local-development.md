@@ -45,7 +45,7 @@
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
-5. Deploy a CR. For now, use basic authentication. The following creates the appropriate spec. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
+5. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
 
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
