@@ -456,12 +456,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 		if upload {
 			// Split the payload
-			fileList := packaging.BuildLocalCSVFileList("/tmp/cost-mgmt-operator-reports/data")
-			manifestName, manifestUUID := packaging.RenderManifest(fileList, cost, "/tmp/cost-mgmt-operator-reports")
-			packaging.Split("/tmp/cost-mgmt-operator-reports/data", cost)
-			fmt.Println(manifestName)
-			fmt.Println(manifestUUID)
-			fmt.Println(fileList)
+			packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost)
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
