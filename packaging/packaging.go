@@ -265,7 +265,6 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 		tarFileTmpl := "cost-mgmt"
 		fileList := BuildLocalCSVFileList(filePath)
 		manifestFileName, manifestUUID := RenderManifest(logger, fileList, cost, filePath)
-		// fileCount := 0
 		for idx, fileName := range fileList {
 			if strings.Contains(fileName, ".csv") {
 				var singleFile []string
