@@ -238,7 +238,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			}
 		}
 	}
-	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows, NewNodeRow(ts)); err != nil {
+	podReport := Report{
+		filename: podFilePrefix + yearMonth + ".csv",
+		dataPath: queryDataPath,
+		datatype: "pod",
+		data:     podRows,
+		headers:  NewPodRow(ts),
+	}
+	if err := writeReport(podReport); err != nil {
 		return err
 	}
 
@@ -249,7 +256,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows, NewNodeRow(ts)); err != nil {
+	volReport := Report{
+		filename: volFilePrefix + yearMonth + ".csv",
+		dataPath: queryDataPath,
+		datatype: "volume",
+		data:     volRows,
+		headers:  NewStorageRow(ts),
+	}
+	if err := writeReport(volReport); err != nil {
 		return err
 	}
 
@@ -260,7 +274,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows, NewNodeRow(ts)); err != nil {
+	namepsaceReport := Report{
+		filename: namespaceFilePrefix + yearMonth + ".csv",
+		dataPath: queryDataPath,
+		datatype: "namespace",
+		data:     namespaceRows,
+		headers:  NewNamespaceRow(ts),
+	}
+	if err := writeReport(namepsaceReport); err != nil {
 		return err
 	}
 
@@ -302,20 +323,6 @@ func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, ke
 		return fmt.Errorf("failed to unmarshal pod row")
 	}
 	rowResults[key] = usage
-	return nil
-}
-
-func writeResults(prefix, yearMonth, key string, data mappedCSVStruct, headers CSVStruct) error {
-	csvFile, created, err := getOrCreateFile(dataPath, prefix+yearMonth+".csv")
-	if err != nil {
-		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
-	}
-	defer csvFile.Close()
-	logMsg := fmt.Sprintf("writing %s results to file", key)
-	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", key)
-	if err := writeToFile(csvFile, data, headers, created); err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
-	}
 	return nil
 }
 

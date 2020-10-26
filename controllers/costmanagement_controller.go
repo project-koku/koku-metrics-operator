@@ -60,8 +60,6 @@ var (
 	authSecretPasswordKey    = "password"
 
 	queryDataDir = "data/"
-	uploadDir    = "upload/"
-	packagingDir = "packaging/"
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -342,7 +340,7 @@ func setupDirectory(fileDir string) error {
 		}
 	}
 
-	dirs := []string{queryDataDir, uploadDir, packagingDir}
+	dirs := []string{queryDataDir}
 	for _, dir := range dirs {
 		d := path.Join(fileDir, dir)
 		if _, err := os.Stat(d); os.IsNotExist(err) {
