@@ -188,7 +188,7 @@ func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUI
 	return ""
 }
 
-func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, num int) (string, bool) {
+func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHeader []string, num int) (string, bool) {
 	log := logger.WithValues("costmanagement", "WritePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
@@ -200,7 +200,8 @@ func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, num i
 	}
 	// Create the csv writer
 	writer := csv.NewWriter(splitFile)
-	// err = writer.WriteRow(csvHeader)
+	// Preserve the header
+	writer.Write(csvHeader)
 	for {
 		row, err := csvReader.Read()
 		if err == io.EOF {
@@ -237,10 +238,10 @@ func SplitFiles(logger logr.Logger, filePath string) {
 				fmt.Println("An error occurred ::", err)
 			}
 			csvReader := csv.NewReader(csvFile)
-			// csvHeader := next(csvReader)
+			csvHeader, err := csvReader.Read()
 			var part int64 = 1
 			for {
-				newFile, eof := WritePart(logger, absPath, csvReader, int(part))
+				newFile, eof := WritePart(logger, absPath, csvReader, csvHeader, int(part))
 				splitFiles = append(splitFiles, newFile)
 				part += 1
 				if eof || part >= maxSplits {
