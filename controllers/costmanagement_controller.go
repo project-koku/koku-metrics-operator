@@ -59,7 +59,7 @@ var (
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
 
-	queryDataDir = "data/"
+	queryDataDir = "data"
 )
 
 // CostManagementReconciler reconciles a CostManagement object

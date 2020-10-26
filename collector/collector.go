@@ -43,7 +43,7 @@ import (
 var (
 	logger logr.Logger
 
-	dataPath            = "data/"
+	queryDataDir        = "data"
 	podFilePrefix       = "cm-openshift-usage-lookback-"
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
@@ -166,7 +166,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 
 	// yearMonth is used in filenames
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
-	queryDataPath := path.Join(cost.Status.FileDirectory, dataPath)
+	queryDataPath := path.Join(cost.Status.FileDirectory, queryDataDir)
 	updateReportStatus(cost, ts)
 
 	log.Info("querying for node metrics")
