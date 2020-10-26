@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -165,6 +166,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 
 	// yearMonth is used in filenames
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
+	queryDataPath := path.Join(cost.Status.FileDirectory, dataPath)
 	updateReportStatus(cost, ts)
 
 	log.Info("querying for node metrics")
@@ -212,7 +214,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	}
 	nodeReport := Report{
 		filename: nodeFilePrefix + yearMonth + ".csv",
-		dataPath: cost.Status.FileDirectory,
+		dataPath: queryDataPath,
 		datatype: "node",
 		data:     nodeRows,
 		headers:  NewNodeRow(ts),
