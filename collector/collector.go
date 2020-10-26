@@ -317,10 +317,10 @@ func parseFields(input model.Metric, str string) string {
 func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
 	row, err := json.Marshal(val)
 	if err != nil {
-		return fmt.Errorf("failed to marshal pod row")
+		return fmt.Errorf("getStruct: failed to marshal row: %v", err)
 	}
 	if err := json.Unmarshal(row, &usage); err != nil {
-		return fmt.Errorf("failed to unmarshal pod row")
+		return fmt.Errorf("getStruct: failed to unmarshal row: %v", err)
 	}
 	rowResults[key] = usage
 	return nil
@@ -335,7 +335,7 @@ func writeReport(report Report) error {
 	logMsg := fmt.Sprintf("writing %s results to file", report.datatype)
 	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", report.datatype)
 	if err := writeToFile(csvFile, report.data, report.headers, created); err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
+		return fmt.Errorf("writeReport: %v", err)
 	}
 	return nil
 }
@@ -363,7 +363,7 @@ func getOrCreateFile(path, filename string) (*os.File, bool, error) {
 func writeToFile(file *os.File, data mappedCSVStruct, headers CSVStruct, created bool) error {
 	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
-		return fmt.Errorf("failed to read csv: %v", err)
+		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
 	}
 	if created {
 		if err := headers.CSVheader(file); err != nil {
