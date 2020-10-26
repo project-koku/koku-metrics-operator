@@ -476,15 +476,19 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
+	if _, err := os.Stat(cost.Status.FileDirectory + queryDataDir); os.IsNotExist(err) { // this directory should always exist
+		cost.Status.FileDirectoryConfigured = pointer.Bool(false)
+	}
+
 	if cost.Status.FileDirectoryConfigured == nil || !*cost.Status.FileDirectoryConfigured {
 		if err := setupDirectory(cost.Status.FileDirectory); err != nil {
 			cost.Status.FileDirectoryConfigured = pointer.Bool(false)
-			log.Error(err, "Failed to setup file directories.")
+			log.Error(err, "Failed to set-up file directories.")
 			if err := r.Status().Update(ctx, cost); err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		}
-		log.Info("Successfully setup file directories.")
+		log.Info("Successfully set-up file directories.")
 		cost.Status.FileDirectoryConfigured = pointer.Bool(true)
 	}
 
