@@ -42,7 +42,7 @@ import (
 var (
 	logger logr.Logger
 
-	dataPath            = "/tmp/cost-mgmt-operator-reports/data/"
+	dataPath            = "data/"
 	podFilePrefix       = "cm-openshift-usage-lookback-"
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
@@ -60,6 +60,13 @@ type collector struct {
 	PrometheusConnection promv1.API
 	TimeSeries           promv1.Range
 	Log                  logr.Logger
+}
+type Report struct {
+	filename string
+	dataPath string
+	datatype string
+	data     mappedCSVStruct
+	headers  CSVStruct
 }
 
 func floatToString(inputNum float64) string {
@@ -203,7 +210,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(nodeFilePrefix, yearMonth, "node", nodeRows); err != nil {
+	nodeReport := Report{
+		filename: nodeFilePrefix + yearMonth + ".csv",
+		dataPath: cost.Status.FileDirectory,
+		datatype: "node",
+		data:     nodeRows,
+		headers:  NewNodeRow(ts),
+	}
+	if err := writeReport(nodeReport); err != nil {
 		return err
 	}
 
@@ -222,7 +236,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			}
 		}
 	}
-	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
+	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows, NewNodeRow(ts)); err != nil {
 		return err
 	}
 
@@ -233,7 +247,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows); err != nil {
+	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows, NewNodeRow(ts)); err != nil {
 		return err
 	}
 
@@ -244,7 +258,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows); err != nil {
+	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows, NewNodeRow(ts)); err != nil {
 		return err
 	}
 
@@ -289,7 +303,7 @@ func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, ke
 	return nil
 }
 
-func writeResults(prefix, yearMonth, key string, data mappedCSVStruct) error {
+func writeResults(prefix, yearMonth, key string, data mappedCSVStruct, headers CSVStruct) error {
 	csvFile, created, err := getOrCreateFile(dataPath, prefix+yearMonth+".csv")
 	if err != nil {
 		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
@@ -297,7 +311,21 @@ func writeResults(prefix, yearMonth, key string, data mappedCSVStruct) error {
 	defer csvFile.Close()
 	logMsg := fmt.Sprintf("writing %s results to file", key)
 	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", key)
-	if err := writeToFile(csvFile, data, created); err != nil {
+	if err := writeToFile(csvFile, data, headers, created); err != nil {
+		return fmt.Errorf("failed to write file: %v", err)
+	}
+	return nil
+}
+
+func writeReport(report Report) error {
+	csvFile, created, err := getOrCreateFile(report.dataPath, report.filename)
+	if err != nil {
+		return fmt.Errorf("failed to get or create %s csv: %v", report.datatype, err)
+	}
+	defer csvFile.Close()
+	logMsg := fmt.Sprintf("writing %s results to file", report.datatype)
+	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", report.datatype)
+	if err := writeToFile(csvFile, report.data, report.headers, created); err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 	return nil
@@ -323,17 +351,14 @@ func getOrCreateFile(path, filename string) (*os.File, bool, error) {
 }
 
 // writeToFile compares the data to what is in the file and only adds new data to the file
-func writeToFile(file *os.File, data mappedCSVStruct, created bool) error {
+func writeToFile(file *os.File, data mappedCSVStruct, headers CSVStruct, created bool) error {
 	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
 		return fmt.Errorf("failed to read csv: %v", err)
 	}
 	if created {
-		for _, row := range data {
-			if err := row.CSVheader(file); err != nil {
-				return err
-			}
-			break // write the headers using the first element in map
+		if err := headers.CSVheader(file); err != nil {
+			return fmt.Errorf("writeToFile: %v", err)
 		}
 	}
 
