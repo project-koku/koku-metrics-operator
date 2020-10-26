@@ -205,6 +205,11 @@ func (in *CostManagementStatus) DeepCopyInto(out *CostManagementStatus) {
 		**out = **in
 	}
 	in.Authentication.DeepCopyInto(&out.Authentication)
+	if in.FileDirectoryConfigured != nil {
+		in, out := &in.FileDirectoryConfigured, &out.FileDirectoryConfigured
+		*out = new(bool)
+		**out = **in
+	}
 	in.Upload.DeepCopyInto(&out.Upload)
 	in.Prometheus.DeepCopyInto(&out.Prometheus)
 	out.Reports = in.Reports

@@ -32,6 +32,7 @@ type CostManagementConfig struct {
 	APIURL                   string
 	AuthenticationSecretName string
 	Authentication           costmgmtv1alpha1.AuthenticationType
+	FileDirectory            string
 	UploadWait               int64
 	UploadToggle             bool
 	UploadCycle              int64

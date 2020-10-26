@@ -32,6 +32,9 @@ const (
 	// DefaultSourcesPath The default ingress path.
 	DefaultSourcesPath string = "/api/sources/v1.0/"
 
+	// DefaultFileDirectory The default file diretory.
+	DefaultFileDirectory string = "/tmp/cost-mgmt-operator-reports/"
+
 	// DefaultPrometheusSvcAddress The default address to thanos-querier.
 	DefaultPrometheusSvcAddress string = "https://thanos-querier.openshift-monitoring.svc:9091"
 

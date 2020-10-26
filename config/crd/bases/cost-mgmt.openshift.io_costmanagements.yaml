@@ -63,6 +63,10 @@ spec:
               description: ClusterID is a field of CostManagement to represent the
                 cluster UUID.
               type: string
+            file_directory:
+              description: FileDirectory is a field of CostManagement to represent
+                the location of stored files.
+              type: string
             prometheus_config:
               description: PrometheusConfig is a field of CostManagement to represent
                 the configuration of Prometheus connection.
@@ -164,6 +168,14 @@ spec:
               description: ClusterID is a field of CostManagement to represent the
                 cluster UUID.
               type: string
+            file_directory:
+              description: FileDirectory is a field of CostManagement to represent
+                the location of stored files.
+              type: string
+            file_directory_configured:
+              description: FileDirectoryConfigured is a field of CostManagement to
+                represent if the location of stored files has been configured.
+              type: boolean
             operator_commit:
               description: OperatorCommit is a field of CostManagement that shows
                 the commit hash of the operator
