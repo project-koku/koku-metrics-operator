@@ -63,11 +63,11 @@ type collector struct {
 	Log                  logr.Logger
 }
 type Report struct {
-	filename string
-	dataPath string
-	datatype string
-	data     mappedCSVStruct
-	headers  CSVStruct
+	filename    string
+	filePath    string
+	queryType   string
+	queryData   mappedCSVStruct
+	fileHeaders CSVStruct
 }
 
 func floatToString(inputNum float64) string {
@@ -213,11 +213,11 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 		}
 	}
 	nodeReport := Report{
-		filename: nodeFilePrefix + yearMonth + ".csv",
-		dataPath: queryDataPath,
-		datatype: "node",
-		data:     nodeRows,
-		headers:  NewNodeRow(ts),
+		filename:    nodeFilePrefix + yearMonth + ".csv",
+		filePath:    queryDataPath,
+		queryType:   "node",
+		queryData:   nodeRows,
+		fileHeaders: NewNodeRow(ts),
 	}
 	if err := writeReport(nodeReport); err != nil {
 		return err
@@ -239,11 +239,11 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 		}
 	}
 	podReport := Report{
-		filename: podFilePrefix + yearMonth + ".csv",
-		dataPath: queryDataPath,
-		datatype: "pod",
-		data:     podRows,
-		headers:  NewPodRow(ts),
+		filename:    podFilePrefix + yearMonth + ".csv",
+		filePath:    queryDataPath,
+		queryType:   "pod",
+		queryData:   podRows,
+		fileHeaders: NewPodRow(ts),
 	}
 	if err := writeReport(podReport); err != nil {
 		return err
@@ -257,11 +257,11 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 		}
 	}
 	volReport := Report{
-		filename: volFilePrefix + yearMonth + ".csv",
-		dataPath: queryDataPath,
-		datatype: "volume",
-		data:     volRows,
-		headers:  NewStorageRow(ts),
+		filename:    volFilePrefix + yearMonth + ".csv",
+		filePath:    queryDataPath,
+		queryType:   "volume",
+		queryData:   volRows,
+		fileHeaders: NewStorageRow(ts),
 	}
 	if err := writeReport(volReport); err != nil {
 		return err
@@ -275,11 +275,11 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 		}
 	}
 	namepsaceReport := Report{
-		filename: namespaceFilePrefix + yearMonth + ".csv",
-		dataPath: queryDataPath,
-		datatype: "namespace",
-		data:     namespaceRows,
-		headers:  NewNamespaceRow(ts),
+		filename:    namespaceFilePrefix + yearMonth + ".csv",
+		filePath:    queryDataPath,
+		queryType:   "namespace",
+		queryData:   namespaceRows,
+		fileHeaders: NewNamespaceRow(ts),
 	}
 	if err := writeReport(namepsaceReport); err != nil {
 		return err
@@ -327,14 +327,14 @@ func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, ke
 }
 
 func writeReport(report Report) error {
-	csvFile, created, err := getOrCreateFile(report.dataPath, report.filename)
+	csvFile, created, err := getOrCreateFile(report.filePath, report.filename)
 	if err != nil {
-		return fmt.Errorf("failed to get or create %s csv: %v", report.datatype, err)
+		return fmt.Errorf("failed to get or create %s csv: %v", report.queryType, err)
 	}
 	defer csvFile.Close()
-	logMsg := fmt.Sprintf("writing %s results to file", report.datatype)
-	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", report.datatype)
-	if err := writeToFile(csvFile, report.data, report.headers, created); err != nil {
+	logMsg := fmt.Sprintf("writing %s results to file", report.queryType)
+	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", report.queryType)
+	if err := writeToFile(csvFile, report.queryData, report.fileHeaders, created); err != nil {
 		return fmt.Errorf("writeReport: %v", err)
 	}
 	return nil
