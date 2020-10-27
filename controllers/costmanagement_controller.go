@@ -131,6 +131,15 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
 	costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 
+	// set the default max file size for packaging
+	cost.Status.Packaging.MaxSize = cost.Spec.Packaging.MaxSize
+	if cost.Status.Packaging.MaxSize != nil {
+		costConfig.MaxSize = *cost.Status.Packaging.MaxSize
+	} else {
+		costConfig.MaxSize = costmgmtv1alpha1.DefaultMaxSize
+		// cost.Status.Packaging.MaxSize = costmgmtv1alpha1.DefaultMaxSize
+	}
+
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
 		cost.Status.Upload.UploadWait = cost.Spec.Upload.UploadWait
@@ -452,13 +461,19 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
+	// Package and split the payload if necessary
+	if err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost); err != nil {
+		log.Error(err, "Failed to package files.") // Need to better understand consequences here.
+		// update the CR packaging error status
+		cost.Status.Packaging.PackagingError = err.Error()
+		err = r.Status().Update(ctx, cost)
+		if err != nil {
+			log.Error(err, "Failed to update CostManagement Status")
+		}
+	}
 	if costConfig.UploadToggle {
 		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 		if upload {
-			// Split the payload
-			if err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost); err != nil {
-				log.Error(err, "Failed to package files.") // Need to better understand consequences here.
-			}
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time

@@ -48,6 +48,9 @@ const (
 
 	//SourceCheckSchedule sets the default cycle to be 1440 minutes (24 hours)
 	SourceCheckSchedule int64 = 1440
+
+	//PackagingMaxSize sets the default max file size to be 100 MB
+	PackagingMaxSize int64 = 100
 )
 
 // AuthenticationType describes how the upload will be handled.
@@ -78,6 +81,15 @@ type AuthenticationSpec struct {
 	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
+}
+
+// PackagingSpec defines the desired state of the Packaging object in the CostManagementSpec
+type PackagingSpec struct {
+
+	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress
+	// The default is 100
+	// +optional
+	MaxSize *int64 `json:"max_size,omitempty"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the CostManagementSpec
@@ -158,6 +170,10 @@ type CostManagementSpec struct {
 	// +optional
 	Authentication AuthenticationSpec `json:"authentication,omitempty"`
 
+	//Packaging is a field of CostManagement to represent the packaging object
+	// +optional
+	Packaging PackagingSpec `json:"packaging,omitempty"`
+
 	// Upload is a field of CostManagement to represent the upload object.
 	// +optional
 	Upload UploadSpec `json:"upload,omitempty"`
@@ -184,7 +200,20 @@ type AuthenticationStatus struct {
 	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
 }
 
-// UploadStatus defines the desired state of Upload object in the CostManagementStatus
+//PackagingStatus defines the observed state of the Packing object in the CostManagementStatus
+type PackagingStatus struct {
+
+	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress
+	// The default is 100
+	// +optional
+	MaxSize *int64 `json:"max_size,omitempty"`
+
+	// PackagingError is a field of CostManagementStatus to represent the error encountered packaging the reports.
+	// +optional
+	PackagingError string `json:"error,omitempty"`
+}
+
+// UploadStatus defines the observed state of Upload object in the CostManagementStatus
 type UploadStatus struct {
 
 	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
@@ -305,6 +334,9 @@ type CostManagementStatus struct {
 
 	// Authentication is a field of CostManagement to represent the authentication status.
 	Authentication AuthenticationStatus `json:"authentication,omitempty"`
+
+	// Packaging is a field of CostManagement to represent the packaging status
+	Packaging PackagingStatus `json:"packaging,omitempty"`
 
 	// Upload is a field of CostManagement to represent the upload object.
 	Upload UploadStatus `json:"upload,omitempty"`

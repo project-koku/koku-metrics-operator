@@ -57,43 +57,45 @@ type Manifest struct {
 	Files     []string `json:"files"`
 }
 
-func BuildLocalCSVFileList(stagingDirectory string) []string {
+func BuildLocalCSVFileList(stagingDirectory string) ([]string, error) {
 	var csvList []string
 	fileList, err := ioutil.ReadDir(stagingDirectory)
 	if err != nil {
 		fmt.Println("could not read dir")
-		// log.Error(err, "Could not read the directory")
+		return csvList, err
 	}
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
 			csvList = append(csvList, stagingDirectory+"/"+file.Name())
 		}
 	}
-	return csvList
+	return csvList, nil
 }
 
-func NeedSplit(filepath string) bool {
+func NeedSplit(filepath string) (bool, error) {
 	var totalSize int64 = 0
 	maxBytes := defaultMaxSize * megaByte
 	fileList, err := ioutil.ReadDir(filepath)
 	if err != nil {
 		fmt.Println("could not read dir")
+		return false, err
 	}
 	for _, file := range fileList {
 		info, err := os.Stat(filepath + "/" + file.Name())
 		if err != nil {
-			return false
+			fmt.Println("could not determine file size")
+			return false, err
 		}
 		fileSize := info.Size()
 		totalSize += fileSize
 		if fileSize >= maxBytes || totalSize >= maxBytes {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath string) (string, string) {
+func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath string) (string, string, error) {
 	log := logger.WithValues("costmanagement", "RenderManifest")
 	// setup the manifest
 	manifestUUID, _ := uuidv4.Generate()
@@ -112,11 +114,19 @@ func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1a
 	}
 	manifestFileName := filepath + "/manifest.json"
 	// write the manifest file
-	file, _ := json.MarshalIndent(fileManifest, "", " ")
-	_ = ioutil.WriteFile(manifestFileName, file, 0644)
+	file, err := json.MarshalIndent(fileManifest, "", " ")
+	if err != nil {
+		fmt.Println("couldnot marshal manifest file")
+		return manifestFileName, manifestUUID, err
+	}
+	err = ioutil.WriteFile(manifestFileName, file, 0644)
+	if err != nil {
+		fmt.Println("could not create manifest file")
+		return manifestFileName, manifestUUID, err
+	}
 	// return the manifest file/uuid
 	log.Info("Generated manifest file", "manifest", manifestFileName)
-	return manifestFileName, manifestUUID
+	return manifestFileName, manifestUUID, nil
 }
 
 func addFileToTarWriter(logger logr.Logger, uploadName, filePath string, tarWriter *tar.Writer) error {
@@ -153,18 +163,20 @@ func addFileToTarWriter(logger logr.Logger, uploadName, filePath string, tarWrit
 	return nil
 }
 
-func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUID string, archiveFiles []string, fileNum ...int) string {
+func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUID string, archiveFiles []string, fileNum ...int) (string, error) {
 	index := 0
 	if len(fileNum) > 0 {
 		index = fileNum[0]
 	}
 	if len(archiveFiles) <= 0 {
-		return ""
+		fmt.Println("no files to add to tar file")
+		return "", nil
 	}
 	// create the tarfile
 	tarFile, err := os.Create(tarFileName)
 	if err != nil {
-		fmt.Println("Error!")
+		fmt.Println("error creating tar file")
+		return "", err
 	}
 	defer tarFile.Close()
 
@@ -185,14 +197,17 @@ func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUI
 			fmt.Println(uploadName)
 			err := addFileToTarWriter(logger, uploadName, fileName, tw)
 			if err != nil {
-				fmt.Println(err)
-				return ""
+				fmt.Println("error creating the tar file")
+				return "", err
 			}
 		}
 	}
-	addFileToTarWriter(logger, "manifest.json", manifestFileName, tw)
-
-	return tarFileName
+	err = addFileToTarWriter(logger, "manifest.json", manifestFileName, tw)
+	if err != nil {
+		fmt.Println("error creating the tar file")
+		return "", err
+	}
+	return tarFileName, nil
 
 }
 
@@ -212,9 +227,12 @@ func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHe
 	writer.Write(csvHeader)
 	for {
 		row, err := csvReader.Read()
-		if err == io.EOF {
-			writer.Flush()
-			return splitFileName, true, nil
+		if err != nil {
+			if err == io.EOF {
+				writer.Flush()
+				return splitFileName, true, nil
+			}
+			return "", false, err
 		}
 		writer.Write(row)
 		rowLen := len(strings.Join(row, ","))
@@ -272,7 +290,10 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 	log := logger.WithValues("costmanagement", "Split")
 	var outFiles []string
 	log.Info("Checking to see if the report files need to be split")
-	needSplit := NeedSplit(filePath)
+	needSplit, err := NeedSplit(filePath)
+	if err != nil {
+		return fmt.Errorf("Split %v", err)
+	}
 	if needSplit {
 		log.Info("Report files exceed the max size. Splitting files")
 		if err := SplitFiles(logger, filePath); err != nil {
@@ -280,14 +301,23 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 		}
 		tarPath := filePath + "/../"
 		tarFileTmpl := "cost-mgmt"
-		fileList := BuildLocalCSVFileList(filePath)
-		manifestFileName, manifestUUID := RenderManifest(logger, fileList, cost, filePath)
+		fileList, err := BuildLocalCSVFileList(filePath)
+		if err != nil {
+			return fmt.Errorf("Split %v", err)
+		}
+		manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, filePath)
+		if err != nil {
+			return fmt.Errorf("Split %v", err)
+		}
 		for idx, fileName := range fileList {
 			if strings.Contains(fileName, ".csv") {
 				fileList = []string{fileName}
 				tarFileName := tarPath + tarFileTmpl + strconv.Itoa(idx) + ".tar.gz"
 				log.Info("Generating tar.gz", "tarFile", tarFileName)
-				outputTar := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList, idx)
+				outputTar, err := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList, idx)
+				if err != nil {
+					return fmt.Errorf("Split %v", err)
+				}
 				if outputTar != "" {
 					outFiles = append(outFiles, outputTar)
 				}
@@ -296,10 +326,19 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 	} else {
 		tarFileName := filePath + "/../cost-mgmt.tar.gz"
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFileName)
-		fileList := BuildLocalCSVFileList(filePath)
+		fileList, err := BuildLocalCSVFileList(filePath)
+		if err != nil {
+			return fmt.Errorf("Split %v", err)
+		}
 		if len(fileList) > 0 {
-			manifestFileName, manifestUUID := RenderManifest(logger, fileList, cost, filePath)
-			outputTar := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList)
+			manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, filePath)
+			if err != nil {
+				return fmt.Errorf("Split %v", err)
+			}
+			outputTar, err := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList)
+			if err != nil {
+				return fmt.Errorf("Split %v", err)
+			}
 			if outputTar != "" {
 				outFiles = append(outFiles, outputTar)
 			}
