@@ -464,21 +464,21 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// Define a no reports Error type
 	var ErrNoReports = errorTypes.New("reports not found")
-
-	// Package and split the payload if necessary
-	uploadDir, err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/", cost, costConfig.MaxSize, ErrNoReports)
-	if err != nil && err != ErrNoReports {
-		log.Error(err, "Failed to package files.") // Need to better understand consequences here.
-		// update the CR packaging error status
-		cost.Status.Packaging.PackagingError = err.Error()
-		err = r.Status().Update(ctx, cost)
-		if err != nil {
-			log.Error(err, "Failed to update CostManagement Status")
+	upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
+	// if its time to upload/package
+	if upload {
+		// Package and split the payload if necessary
+		uploadDir, err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/", cost, costConfig.MaxSize, ErrNoReports)
+		if err != nil && err != ErrNoReports {
+			log.Error(err, "Failed to package files.") // Need to better understand consequences here.
+			// update the CR packaging error status
+			cost.Status.Packaging.PackagingError = err.Error()
+			err = r.Status().Update(ctx, cost)
+			if err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
 		}
-	}
-	if costConfig.UploadToggle && err != ErrNoReports {
-		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
-		if upload {
+		if costConfig.UploadToggle && err != ErrNoReports {
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
@@ -529,11 +529,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					}
 				}
 			}
+		} else {
+			log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 		}
-	} else {
-		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
-
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
