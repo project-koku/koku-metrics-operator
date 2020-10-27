@@ -268,14 +268,16 @@ func SplitFiles(logger logr.Logger, filePath string) error {
 	return nil
 }
 
-func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement) {
+func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement) error {
 	log := logger.WithValues("costmanagement", "Split")
 	var outFiles []string
 	log.Info("Checking to see if the report files need to be split")
 	needSplit := NeedSplit(filePath)
 	if needSplit {
 		log.Info("Report files exceed the max size. Splitting files")
-		SplitFiles(logger, filePath)
+		if err := SplitFiles(logger, filePath); err != nil {
+			return fmt.Errorf("Split: %v", err)
+		}
 		tarPath := filePath + "/../"
 		tarFileTmpl := "cost-mgmt"
 		fileList := BuildLocalCSVFileList(filePath)
@@ -304,4 +306,5 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 		}
 	}
 	log.Info("Created the following files for upload: ", "files", outFiles)
+	return nil
 }

@@ -456,7 +456,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 		if upload {
 			// Split the payload
-			packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost)
+			if err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost); err != nil {
+				log.Error(err, "Failed to package files.") // Need to better understand consequences here.
+			}
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
