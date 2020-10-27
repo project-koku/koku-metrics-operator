@@ -85,11 +85,6 @@ var (
 			RowKey: "node",
 		},
 	}
-
-	// namespace="openshift-cost",persistentvolumeclaim="pv0001-claim",         pod="mypod",volume="pvol"
-	// namespace="openshift-cost",persistentvolumeclaim="a-second-pv0001-claim",pod="kube-state-metrics-b88767d9b-dljtf",service="kube-state-metrics",storageclass="gp2",volumename="pv0001"
-	// namespace="openshift-cost",persistentvolumeclaim="pv0001-claim",         pod="kube-state-metrics-b88767d9b-dljtf",service="kube-state-metrics",storageclass="gp2",volumename="pvc-7d4752c8-3738-4e9c-8ffc-17619ec3ab40"
-
 	volQueries = Querys{
 		Query{
 			Name:        "persistentvolume_pod_info",
