@@ -85,11 +85,16 @@ var (
 			RowKey: "node",
 		},
 	}
+
+	// namespace="openshift-cost",persistentvolumeclaim="pv0001-claim",         pod="mypod",volume="pvol"
+	// namespace="openshift-cost",persistentvolumeclaim="a-second-pv0001-claim",pod="kube-state-metrics-b88767d9b-dljtf",service="kube-state-metrics",storageclass="gp2",volumename="pv0001"
+	// namespace="openshift-cost",persistentvolumeclaim="pv0001-claim",         pod="kube-state-metrics-b88767d9b-dljtf",service="kube-state-metrics",storageclass="gp2",volumename="pvc-7d4752c8-3738-4e9c-8ffc-17619ec3ab40"
+
 	volQueries = Querys{
 		Query{
 			Name:        "persistentvolume_pod_info",
-			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim) group_left(storageclass, volumename) kube_persistentvolumeclaim_info",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "persistentvolumeclaim", "pod", "storageclass", "volumename"}},
+			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "pod"}},
 			RowKey:      "volumename",
 		},
 		Query{
@@ -127,7 +132,8 @@ var (
 		},
 		Query{
 			Name:        "persistentvolume-labels",
-			QueryString: "kube_persistentvolume_labels",
+			QueryString: "kube_persistentvolume_labels * on(persistentvolume) group_left(storageclass) kube_persistentvolume_info",
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"storageclass", "persistentvolume"}},
 			MetricKeyRegex: &RegexFields{
 				MetricRegex: []string{"label_*"},
 				LabelMap:    []string{"persistentvolume_labels"}},
@@ -136,6 +142,7 @@ var (
 		Query{
 			Name:        "persistentvolumeclaim-labels",
 			QueryString: "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"persistentvolumeclaim"}},
 			MetricKeyRegex: &RegexFields{
 				MetricRegex: []string{"label_*"},
 				LabelMap:    []string{"persistentvolumeclaim_labels"}},
