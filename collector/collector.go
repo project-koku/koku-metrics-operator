@@ -203,7 +203,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(nodeRows, NewNodeRow(ts), nodeFilePrefix, yearMonth, "node"); err != nil {
+	if err := writeResults(nodeFilePrefix, yearMonth, "node", nodeRows); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			}
 		}
 	}
-	if err := writeResults(podRows, NewPodRow(ts), podFilePrefix, yearMonth, "pod"); err != nil {
+	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
 		return err
 	}
 
@@ -233,7 +233,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(volRows, NewStorageRow(ts), volFilePrefix, yearMonth, "volume"); err != nil {
+	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(namespaceRows, NewNamespaceRow(ts), namespaceFilePrefix, yearMonth, "namespace"); err != nil {
+	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
 		return err
 	}
 
@@ -289,7 +289,7 @@ func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, ke
 	return nil
 }
 
-func writeResults(data mappedCSVStruct, headers CSVStruct, prefix, yearMonth, key string) error {
+func writeResults(prefix, yearMonth, key string, data mappedCSVStruct) error {
 	csvFile, created, err := getOrCreateFile(dataPath, prefix+yearMonth+".csv")
 	if err != nil {
 		return fmt.Errorf("failed to get or create %s csv: %v", key, err)
@@ -297,7 +297,7 @@ func writeResults(data mappedCSVStruct, headers CSVStruct, prefix, yearMonth, ke
 	defer csvFile.Close()
 	logMsg := fmt.Sprintf("writing %s results to file", key)
 	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", key)
-	if err := writeToFile(csvFile, data, headers, created); err != nil {
+	if err := writeToFile(csvFile, data, created); err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 	return nil
@@ -323,14 +323,17 @@ func getOrCreateFile(path, filename string) (*os.File, bool, error) {
 }
 
 // writeToFile compares the data to what is in the file and only adds new data to the file
-func writeToFile(file *os.File, data mappedCSVStruct, headers CSVStruct, created bool) error {
+func writeToFile(file *os.File, data mappedCSVStruct, created bool) error {
 	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
 		return fmt.Errorf("failed to read csv: %v", err)
 	}
 	if created {
-		if err := headers.CSVheader(file); err != nil {
-			return err
+		for _, row := range data {
+			if err := row.CSVheader(file); err != nil {
+				return err
+			}
+			break // write the headers using the first element in map
 		}
 	}
 
