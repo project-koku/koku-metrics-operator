@@ -33,7 +33,6 @@ import (
 	"strings"
 	"time"
 
-	errorTypes "errors"
 	"github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/xorcare/pointer"
@@ -462,23 +461,23 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	// Define a no reports Error type
-	var ErrNoReports = errorTypes.New("reports not found")
 	upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 	// if its time to upload/package
 	if upload {
 		// Package and split the payload if necessary
-		uploadDir, err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/", cost, costConfig.MaxSize, ErrNoReports)
-		if err != nil && err != ErrNoReports {
+		uploadDir, err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/", cost, costConfig.MaxSize)
+		if err == packaging.ErrNoReports {
+			log.Info("No files found!")
+		} else if err != nil {
 			log.Error(err, "Failed to package files.") // Need to better understand consequences here.
 			// update the CR packaging error status
 			cost.Status.Packaging.PackagingError = err.Error()
-			err = r.Status().Update(ctx, cost)
-			if err != nil {
+			if err := r.Status().Update(ctx, cost); err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		}
-		if costConfig.UploadToggle && err != ErrNoReports {
+
+		if costConfig.UploadToggle && err == nil {
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
@@ -490,41 +489,39 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			files, err := ioutil.ReadDir(uploadDir)
 			if err != nil {
 				log.Error(err, "Could not read the directory")
-			} else {
-				if len(files) > 0 {
-					log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
-					time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
-				}
-				for _, file := range files {
-					if strings.Contains(file.Name(), "tar.gz") {
-						log.Info("Uploading the following file: ")
-						fmt.Println(file.Name())
-						// grab the body and the multipart file header
-						body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(uploadDir, file.Name()))
-						ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
-						uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
-						if err != nil {
-							return ctrl.Result{}, err
+				return ctrl.Result{}, err
+			}
+			if len(files) > 0 {
+				log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
+				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
+			}
+			for _, file := range files {
+				if strings.Contains(file.Name(), "tar.gz") {
+					log.Info("Uploading the following file: ")
+					fmt.Println(file.Name())
+					// grab the body and the multipart file header
+					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(uploadDir, file.Name()))
+					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
+					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+					if uploadStatus != "" {
+						cost.Status.Upload.LastUploadStatus = uploadStatus
+						costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
+						cost.Status.Upload.LastUploadTime = uploadTime
+						costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
+						if strings.Contains(uploadStatus, "202") {
+							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
+							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+							// remove the tar.gz after a successful upload
+							log.Info("Removing tar file since upload was successful!")
+							if err := os.Remove(path.Join(uploadDir, file.Name())); err != nil {
+								log.Error(err, "Error removing tar file")
+							}
 						}
-						if uploadStatus != "" {
-							cost.Status.Upload.LastUploadStatus = uploadStatus
-							costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
-							cost.Status.Upload.LastUploadTime = uploadTime
-							costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
-							if strings.Contains(uploadStatus, "202") {
-								cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
-								costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
-								// remove the tar.gz after a successful upload
-								log.Info("Removing tar file since upload was successful!")
-								err := os.Remove(path.Join(uploadDir, file.Name()))
-								if err != nil {
-									log.Error(err, "Error removing tar file")
-								}
-							}
-							err = r.Status().Update(ctx, cost)
-							if err != nil {
-								log.Error(err, "Failed to update CostManagement Status")
-							}
+						if err := r.Status().Update(ctx, cost); err != nil {
+							log.Error(err, "Failed to update CostManagement Status")
 						}
 					}
 				}
