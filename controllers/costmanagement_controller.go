@@ -465,7 +465,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// if its time to upload/package
 	if upload {
 		// Package and split the payload if necessary
-		uploadDir, err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/", cost, costConfig.MaxSize)
+		dir := "/tmp/cost-mgmt-operator-reports/"
+		uploadDir, err := packaging.Split(r.Log, dir, cost, costConfig.MaxSize)
 		if err == packaging.ErrNoReports {
 			log.Info("No files found!")
 		} else if err != nil {
@@ -477,7 +478,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 		}
 
-		if costConfig.UploadToggle && err == nil {
+		if costConfig.UploadToggle && uploadDir != "" {
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
@@ -526,7 +527,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					}
 				}
 			}
-		} else {
+		} else if !costConfig.UploadToggle {
 			log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 		}
 	}
