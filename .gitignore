@@ -34,3 +34,6 @@ commit
 
 # Ignore the testing directory for developing
 testing/*
+
+# # Mac OSX
+.DS_Store
