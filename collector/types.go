@@ -259,7 +259,7 @@ type StorageRow struct {
 	Namespace                                string
 	Pod                                      string
 	PersistentVolumeClaim                    string `json:"persistentvolumeclaim"`
-	PersistentVolume                         string `json:"volumename"`
+	PersistentVolume                         string `json:"persistentvolume"`
 	StorageClass                             string `json:"storageclass"`
 	PersistentVolumeClaimCapacityBytes       string `json:"persistentvolumeclaim-capacity-bytes"`
 	PersistentVolumeClaimCapacityByteSeconds string `json:"persistentvolumeclaim-capacity-byte-seconds"`
