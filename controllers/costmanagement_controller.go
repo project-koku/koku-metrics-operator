@@ -137,7 +137,6 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costConfig.MaxSize = *cost.Status.Packaging.MaxSize
 	} else {
 		costConfig.MaxSize = costmgmtv1alpha1.DefaultMaxSize
-		// cost.Status.Packaging.MaxSize = costmgmtv1alpha1.DefaultMaxSize
 	}
 
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
@@ -462,7 +461,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Package and split the payload if necessary
-	if err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost); err != nil {
+	if err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost, costConfig.MaxSize); err != nil {
 		log.Error(err, "Failed to package files.") // Need to better understand consequences here.
 		// update the CR packaging error status
 		cost.Status.Packaging.PackagingError = err.Error()

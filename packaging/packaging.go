@@ -33,9 +33,7 @@ import (
 )
 
 // Define the global variables
-var defaultMaxSize int64 = 100
 var megaByte int64 = 1024 * 1024
-var maxBytes int64 = defaultMaxSize * megaByte
 
 // the csv module doesn't expose the bytes-offset of the
 // underlying file object.
@@ -72,9 +70,8 @@ func BuildLocalCSVFileList(stagingDirectory string) ([]string, error) {
 	return csvList, nil
 }
 
-func NeedSplit(filepath string) (bool, error) {
+func NeedSplit(filepath string, maxBytes int64) (bool, error) {
 	var totalSize int64 = 0
-	maxBytes := defaultMaxSize * megaByte
 	fileList, err := ioutil.ReadDir(filepath)
 	if err != nil {
 		fmt.Println("could not read dir")
@@ -211,7 +208,7 @@ func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUI
 
 }
 
-func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (string, bool, error) {
+func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (string, bool, error) {
 	log := logger.WithValues("costmanagement", "WritePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
@@ -245,7 +242,7 @@ func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHe
 	}
 }
 
-func SplitFiles(logger logr.Logger, filePath string) error {
+func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 	fileList, err := ioutil.ReadDir(filePath)
 	if err != nil {
 		fmt.Println("could not read dir")
@@ -269,7 +266,7 @@ func SplitFiles(logger logr.Logger, filePath string) error {
 			csvHeader, err := csvReader.Read()
 			var part int64 = 1
 			for {
-				newFile, eof, err := WritePart(logger, absPath, csvReader, csvHeader, part)
+				newFile, eof, err := WritePart(logger, absPath, csvReader, csvHeader, part, maxBytes)
 				if err != nil {
 					return fmt.Errorf("SplitFiles: %v", err)
 				}
@@ -286,17 +283,18 @@ func SplitFiles(logger logr.Logger, filePath string) error {
 	return nil
 }
 
-func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement) error {
+func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement, maxSize int64) error {
 	log := logger.WithValues("costmanagement", "Split")
+	var maxBytes int64 = maxSize * megaByte
 	var outFiles []string
 	log.Info("Checking to see if the report files need to be split")
-	needSplit, err := NeedSplit(filePath)
+	needSplit, err := NeedSplit(filePath, maxBytes)
 	if err != nil {
 		return fmt.Errorf("Split %v", err)
 	}
 	if needSplit {
 		log.Info("Report files exceed the max size. Splitting files")
-		if err := SplitFiles(logger, filePath); err != nil {
+		if err := SplitFiles(logger, filePath, maxBytes); err != nil {
 			return fmt.Errorf("Split: %v", err)
 		}
 		tarPath := filePath + "/../"
