@@ -246,7 +246,7 @@ func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHe
 func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 	fileList, err := ioutil.ReadDir(filePath)
 	if err != nil {
-		fmt.Println("could not read dir")
+		return fmt.Errorf("SplitFiles: error reading directory: %v", err)
 	}
 	for _, file := range fileList {
 		absPath := filePath + "/" + file.Name()
