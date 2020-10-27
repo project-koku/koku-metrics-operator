@@ -461,7 +461,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Package and split the payload if necessary
-	uploadDir, err := packaging.Split(r.Log, "/tmpt/cost-mgmt-operator/reports", cost, costConfig.MaxSize)
+	uploadDir, filesFound, err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/", cost, costConfig.MaxSize)
 	if err != nil {
 		log.Error(err, "Failed to package files.") // Need to better understand consequences here.
 		// update the CR packaging error status
@@ -471,7 +471,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			log.Error(err, "Failed to update CostManagement Status")
 		}
 	}
-	if costConfig.UploadToggle {
+	if costConfig.UploadToggle && filesFound {
 		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 		if upload {
 			// Upload to c.rh.com
@@ -495,7 +495,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 						log.Info("Uploading the following file: ")
 						fmt.Println(file.Name())
 						// grab the body and the multipart file header
-						body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, "/tmp/cost-mgmt-operator-reports/"+file.Name())
+						body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, uploadDir+"/"+file.Name())
 						ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 						uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 						if err != nil {
@@ -509,6 +509,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							if strings.Contains(uploadStatus, "202") {
 								cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
 								costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+								// remove the tar.gz after a successful upload
+								log.Info("Removing tar file since upload was successful!")
+								err := os.Remove(uploadDir + "/" + file.Name())
+								if err != nil {
+									log.Error(err, "Error removing tar file")
+								}
 							}
 							err = r.Status().Update(ctx, cost)
 							if err != nil {
