@@ -274,14 +274,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	namepsaceReport := Report{
+	namespaceReport := Report{
 		filename:    namespaceFilePrefix + yearMonth + ".csv",
 		filePath:    queryDataPath,
 		queryType:   "namespace",
 		queryData:   namespaceRows,
 		fileHeaders: NewNamespaceRow(ts),
 	}
-	if err := writeReport(namepsaceReport); err != nil {
+	if err := writeReport(namespaceReport); err != nil {
 		return err
 	}
 
