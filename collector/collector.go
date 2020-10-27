@@ -233,7 +233,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
+	if err := writeResults(volFilePrefix, yearMonth, "volume", volRows); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 			return err
 		}
 	}
-	if err := writeResults(podFilePrefix, yearMonth, "pod", podRows); err != nil {
+	if err := writeResults(namespaceFilePrefix, yearMonth, "namespace", namespaceRows); err != nil {
 		return err
 	}
 
