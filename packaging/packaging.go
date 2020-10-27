@@ -283,38 +283,85 @@ func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 	return nil
 }
 
-func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement, maxSize int64) error {
+func MoveFiles(logger logr.Logger, reportsDirectory, stagingDirectory string) error {
+	log := logger.WithValues("costmanagement", "Split")
+	// remove all files from directory
+	log.Info("Clearing out staging directory!")
+	err := os.RemoveAll(stagingDirectory)
+	if err != nil {
+		return err
+	}
+	// recreate Directory
+	if _, err := os.Stat(stagingDirectory); os.IsNotExist(err) {
+		if err := os.MkdirAll(stagingDirectory, os.ModePerm); err != nil {
+			return err
+		}
+	}
+	// move all files
+	log.Info("Moving report files to staging directory")
+	fileList, err := ioutil.ReadDir(reportsDirectory)
+	if err != nil {
+		fmt.Println("could not read dir")
+		return err
+	}
+	for _, file := range fileList {
+		if strings.Contains(file.Name(), ".csv") {
+			err := os.Rename(reportsDirectory+"/"+file.Name(), stagingDirectory+"/"+file.Name())
+			if err != nil {
+				fmt.Println("error moving files")
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement, maxSize int64) (string, error) {
 	log := logger.WithValues("costmanagement", "Split")
 	var maxBytes int64 = maxSize * megaByte
 	var outFiles []string
-	log.Info("Checking to see if the report files need to be split")
-	needSplit, err := NeedSplit(filePath, maxBytes)
+	var reportsDirectory string = filePath + "data"
+	var stagingDirectory string = filePath + "staging"
+	var uploadDirectory string = filePath + "upload"
+	// move CSV reports from data directory to staging directory
+	err := MoveFiles(logger, reportsDirectory, stagingDirectory)
 	if err != nil {
-		return fmt.Errorf("Split %v", err)
+		return uploadDirectory, fmt.Errorf("Split %v", err)
+	}
+	// create the upload directory if it does not exist
+	if _, err := os.Stat(uploadDirectory); os.IsNotExist(err) {
+		if err := os.MkdirAll(uploadDirectory, os.ModePerm); err != nil {
+			return uploadDirectory, fmt.Errorf("Split %v", err)
+		}
+	}
+	// check if the files need to be split
+	log.Info("Checking to see if the report files need to be split")
+	needSplit, err := NeedSplit(stagingDirectory, maxBytes)
+	if err != nil {
+		return uploadDirectory, fmt.Errorf("Split %v", err)
 	}
 	if needSplit {
 		log.Info("Report files exceed the max size. Splitting files")
-		if err := SplitFiles(logger, filePath, maxBytes); err != nil {
-			return fmt.Errorf("Split: %v", err)
+		if err := SplitFiles(logger, stagingDirectory, maxBytes); err != nil {
+			return uploadDirectory, fmt.Errorf("Split: %v", err)
 		}
-		tarPath := filePath + "/../"
-		tarFileTmpl := "cost-mgmt"
-		fileList, err := BuildLocalCSVFileList(filePath)
+		tarFileTmpl := "/cost-mgmt"
+		fileList, err := BuildLocalCSVFileList(stagingDirectory)
 		if err != nil {
-			return fmt.Errorf("Split %v", err)
+			return uploadDirectory, fmt.Errorf("Split %v", err)
 		}
-		manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, filePath)
+		manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, stagingDirectory)
 		if err != nil {
-			return fmt.Errorf("Split %v", err)
+			return uploadDirectory, fmt.Errorf("Split %v", err)
 		}
 		for idx, fileName := range fileList {
 			if strings.Contains(fileName, ".csv") {
 				fileList = []string{fileName}
-				tarFileName := tarPath + tarFileTmpl + strconv.Itoa(idx) + ".tar.gz"
+				tarFileName := uploadDirectory + tarFileTmpl + strconv.Itoa(idx) + ".tar.gz"
 				log.Info("Generating tar.gz", "tarFile", tarFileName)
 				outputTar, err := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList, idx)
 				if err != nil {
-					return fmt.Errorf("Split %v", err)
+					return uploadDirectory, fmt.Errorf("Split %v", err)
 				}
 				if outputTar != "" {
 					outFiles = append(outFiles, outputTar)
@@ -322,20 +369,20 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 			}
 		}
 	} else {
-		tarFileName := filePath + "/../cost-mgmt.tar.gz"
+		tarFileName := uploadDirectory + "/cost-mgmt.tar.gz"
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFileName)
-		fileList, err := BuildLocalCSVFileList(filePath)
+		fileList, err := BuildLocalCSVFileList(stagingDirectory)
 		if err != nil {
-			return fmt.Errorf("Split %v", err)
+			return uploadDirectory, fmt.Errorf("Split %v", err)
 		}
 		if len(fileList) > 0 {
-			manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, filePath)
+			manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, stagingDirectory)
 			if err != nil {
-				return fmt.Errorf("Split %v", err)
+				return uploadDirectory, fmt.Errorf("Split %v", err)
 			}
 			outputTar, err := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList)
 			if err != nil {
-				return fmt.Errorf("Split %v", err)
+				return uploadDirectory, fmt.Errorf("Split %v", err)
 			}
 			if outputTar != "" {
 				outFiles = append(outFiles, outputTar)
@@ -343,5 +390,5 @@ func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManag
 		}
 	}
 	log.Info("Created the following files for upload: ", "files", outFiles)
-	return nil
+	return uploadDirectory, nil
 }

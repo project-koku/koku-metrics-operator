@@ -72,6 +72,8 @@ spec:
                     max file size in megabytes we can upload via Ingress The default
                     is 100
                   format: int64
+                  maximum: 100
+                  minimum: 1
                   type: integer
               type: object
             prometheus_config:

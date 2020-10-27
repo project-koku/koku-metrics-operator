@@ -461,7 +461,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Package and split the payload if necessary
-	if err := packaging.Split(r.Log, "/tmp/cost-mgmt-operator-reports/data", cost, costConfig.MaxSize); err != nil {
+	uploadDir, err := packaging.Split(r.Log, "/tmpt/cost-mgmt-operator/reports", cost, costConfig.MaxSize)
+	if err != nil {
 		log.Error(err, "Failed to package files.") // Need to better understand consequences here.
 		// update the CR packaging error status
 		cost.Status.Packaging.PackagingError = err.Error()
@@ -481,37 +482,38 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			// Instead of looking for tarfiles here - we need to do what the old
 			// operator did and create the tarfiles based on the CSV files and then get
 			// a list of the tarfiles that are created
-			files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
+			files, err := ioutil.ReadDir(uploadDir)
 			if err != nil {
 				log.Error(err, "Could not read the directory")
-			}
-			if len(files) > 0 {
-				log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
-				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
-			}
-			for _, file := range files {
-				if strings.Contains(file.Name(), "tar.gz") {
-					log.Info("Uploading the following file: ")
-					fmt.Println(file.Name())
-					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, "/tmp/cost-mgmt-operator-reports/"+file.Name())
-					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
-					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
-					if err != nil {
-						return ctrl.Result{}, err
-					}
-					if uploadStatus != "" {
-						cost.Status.Upload.LastUploadStatus = uploadStatus
-						costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
-						cost.Status.Upload.LastUploadTime = uploadTime
-						costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
-						if strings.Contains(uploadStatus, "202") {
-							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
-							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
-						}
-						err = r.Status().Update(ctx, cost)
+			} else {
+				if len(files) > 0 {
+					log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
+					time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
+				}
+				for _, file := range files {
+					if strings.Contains(file.Name(), "tar.gz") {
+						log.Info("Uploading the following file: ")
+						fmt.Println(file.Name())
+						// grab the body and the multipart file header
+						body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, "/tmp/cost-mgmt-operator-reports/"+file.Name())
+						ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
+						uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 						if err != nil {
-							log.Error(err, "Failed to update CostManagement Status")
+							return ctrl.Result{}, err
+						}
+						if uploadStatus != "" {
+							cost.Status.Upload.LastUploadStatus = uploadStatus
+							costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
+							cost.Status.Upload.LastUploadTime = uploadTime
+							costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
+							if strings.Contains(uploadStatus, "202") {
+								cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
+								costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+							}
+							err = r.Status().Update(ctx, cost)
+							if err != nil {
+								log.Error(err, "Failed to update CostManagement Status")
+							}
 						}
 					}
 				}

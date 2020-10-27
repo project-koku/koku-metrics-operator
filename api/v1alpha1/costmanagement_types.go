@@ -89,6 +89,8 @@ type PackagingSpec struct {
 	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress
 	// The default is 100
 	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
 	MaxSize *int64 `json:"max_size,omitempty"`
 }
 
