@@ -37,16 +37,16 @@ const (
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
 
-	//UploadOn sets the operator to upload to cloud.redhat.com
+	//UploadOn sets the operator to upload to cloud.redhat.com.
 	UploadOn bool = true
 
-	//UploadOff sets the operator to not upload to cloud.redhat.com
+	//UploadOff sets the operator to not upload to cloud.redhat.com.
 	UploadOff bool = false
 
-	//UploadCycle sets the default cycle to be 360 minutes (6 hours)
+	//UploadCycle sets the default cycle to be 360 minutes (6 hours).
 	UploadSchedule int64 = 360
 
-	//SourceCheckSchedule sets the default cycle to be 1440 minutes (24 hours)
+	//SourceCheckSchedule sets the default cycle to be 1440 minutes (24 hours).
 	SourceCheckSchedule int64 = 1440
 
 	//PackagingMaxSize sets the default max file size to be 100 MB
@@ -68,13 +68,13 @@ const (
 	Token AuthenticationType = "token"
 )
 
-// AuthenticationSpec defines the desired state of Authentication object in the CostManagementSpec
+// AuthenticationSpec defines the desired state of Authentication object in the CostManagementSpec.
 type AuthenticationSpec struct {
 
 	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
 	// Valid values are:
-	// - "basic" : Enables authetication using user and password from authentication secret
-	// - "token" (default): Uses cluster token for authentication
+	// - "basic" : Enables authetication using user and password from authentication secret.
+	// - "token" (default): Uses cluster token for authentication.
 	// +optional
 	AuthType AuthenticationType `json:"type,omitempty"`
 
@@ -83,22 +83,22 @@ type AuthenticationSpec struct {
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
 }
 
-// PackagingSpec defines the desired state of the Packaging object in the CostManagementSpec
+// PackagingSpec defines the desired state of the Packaging object in the CostManagementSpec.
 type PackagingSpec struct {
 
-	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress
-	// The default is 100
+	// MaxSize is a field of CostManagement to represent the max file size in megabytes that will be compressed for upload to Ingress.
+	// The default is 100.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	MaxSize *int64 `json:"max_size,omitempty"`
 }
 
-// UploadSpec defines the desired state of Authentication object in the CostManagementSpec
+// UploadSpec defines the desired state of Authentication object in the CostManagementSpec.
 type UploadSpec struct {
 
 	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
-	// The default is /api/ingress/v1/upload/
+	// The default is `/api/ingress/v1/upload/`.
 	// +optional
 	IngressAPIPath string `json:"ingress_path,omitempty"`
 
@@ -107,34 +107,36 @@ type UploadSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule
-	// The default is 360 min (6 hours)
+	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule.
+	// The default is 360 min (6 hours).
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
 	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
-	// The default is true
+	// The default is true.
 	// +optional
 	UploadToggle *bool `json:"upload_toggle,omitempty"`
 }
 
-// PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec
+// PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec.
 type PrometheusSpec struct {
 
 	// SvcAddress is a field of CostManagement to represent the thanos-querier address.
+	// +optional
 	SvcAddress string `json:"service_address,omitempty"`
 
 	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.
+	// +optional
 	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
-// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec
+// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec.
 type CloudDotRedHatSourceSpec struct {
 
 	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
-	// The default is /api/ingress/v1.0/sources/
+	// The default is `/api/sources/v1.0/`.
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
@@ -147,13 +149,13 @@ type CloudDotRedHatSourceSpec struct {
 	CreateSource *bool `json:"create_source,omitempty"`
 
 	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
-	// The default is 1440 min (24 hours)
+	// The default is 1440 min (24 hours).
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
 
-// CostManagementSpec defines the desired state of CostManagement
+// CostManagementSpec defines the desired state of CostManagement.
 type CostManagementSpec struct {
 
 	// ClusterID is a field of CostManagement to represent the cluster UUID.
@@ -165,6 +167,7 @@ type CostManagementSpec struct {
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 
 	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
+	// The default is `https://cloud.redhat.com`.
 	// +optional
 	APIURL string `json:"api_url,omitempty"`
 
@@ -189,7 +192,7 @@ type CostManagementSpec struct {
 	Source CloudDotRedHatSourceSpec `json:"source,omitempty"`
 }
 
-// AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus
+// AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus.
 type AuthenticationStatus struct {
 
 	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
@@ -202,11 +205,11 @@ type AuthenticationStatus struct {
 	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
 }
 
-//PackagingStatus defines the observed state of the Packing object in the CostManagementStatus
+// PackagingStatus defines the observed state of the Packing object in the CostManagementStatus.
 type PackagingStatus struct {
 
-	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress
-	// The default is 100
+	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress.
+	// The default is 100.
 	// +optional
 	MaxSize *int64 `json:"max_size,omitempty"`
 
@@ -215,7 +218,7 @@ type PackagingStatus struct {
 	PackagingError string `json:"error,omitempty"`
 }
 
-// UploadStatus defines the observed state of Upload object in the CostManagementStatus
+// UploadStatus defines the observed state of Upload object in the CostManagementStatus.
 type UploadStatus struct {
 
 	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
@@ -229,23 +232,23 @@ type UploadStatus struct {
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule
-	// The default is 360 min (6 hours)
+	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule.
+	// The default is 360 min (6 hours).
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
-	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload
+	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
-	// LastUploadTime is a field of CostManagement that shows the time that the last upload was attempted
+	// LastUploadTime is a field of CostManagement that shows the time that the last upload was attempted.
 	// +nullable
 	LastUploadTime metav1.Time `json:"last_upload_time,omitempty"`
 
-	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload
+	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
 }
 
-// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus
+// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus.
 type CloudDotRedHatSourceStatus struct {
 
 	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
@@ -264,16 +267,16 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
-	// LastSourceCheckTime is a field of CostManagement that shows the time that the last check was attempted
+	// LastSourceCheckTime is a field of CostManagement that shows the time that the last check was attempted.
 	// +nullable
 	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
-	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
-	// The default is 1440 min (24 hours)
+	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule.
+	// The default is 1440 min (24 hours).
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
 
-// PrometheusStatus defines the status for querying prometheus
+// PrometheusStatus defines the status for querying prometheus.
 type PrometheusStatus struct {
 
 	// PrometheusConfigured is a field of CostManagementStatus to represent if cost-management is configured to connect to prometheus.
@@ -299,11 +302,11 @@ type PrometheusStatus struct {
 	// SvcAddress is the internal thanos-querier address.
 	SvcAddress string `json:"service_address,omitempty"`
 
-	// SkipTLSVerification is a field of CostManagementStatus to represent if the thanos-querier endpoint must be certificate validated
+	// SkipTLSVerification is a field of CostManagementStatus to represent if the thanos-querier endpoint must be certificate validated.
 	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
-// ReportsStatus defines the status for generating reports
+// ReportsStatus defines the status for generating reports.
 type ReportsStatus struct {
 
 	// ReportMonth is a field of CostManagementStatus to represent the month for which reports are being generated.
@@ -319,7 +322,7 @@ type ReportsStatus struct {
 	DataCollectionMessage string `json:"data_collection_message,omit_empty"`
 }
 
-// CostManagementStatus defines the observed state of CostManagement
+// CostManagementStatus defines the observed state of CostManagement.
 type CostManagementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -343,13 +346,13 @@ type CostManagementStatus struct {
 	// Upload is a field of CostManagement to represent the upload object.
 	Upload UploadStatus `json:"upload,omitempty"`
 
-	// OperatorCommit is a field of CostManagement that shows the commit hash of the operator
+	// OperatorCommit is a field of CostManagement that shows the commit hash of the operator.
 	OperatorCommit string `json:"operator_commit,omitempty"`
 
-	// Prometheus represents the status of premetheus queries
+	// Prometheus represents the status of premetheus queries.
 	Prometheus PrometheusStatus `json:"prometheus,omitempty"`
 
-	// Reports represents the status of report generation
+	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
 	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
