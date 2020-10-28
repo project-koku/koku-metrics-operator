@@ -56,4 +56,5 @@ type CostManagementConfig struct {
 	SourceCheckCycle         int64
 	LastSourceCheckTime      metav1.Time
 	SourcesAPIPath           string
+	MaxSize                  int64
 }

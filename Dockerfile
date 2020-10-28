@@ -17,6 +17,7 @@ COPY collector/ collector/
 COPY controllers/ controllers/
 COPY crhchttp/ crhchttp/
 COPY strset/ strset/
+COPY packaging/ packaging/
 COPY sources/ sources/
 
 # Build
