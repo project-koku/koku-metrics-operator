@@ -46,4 +46,7 @@ const (
 
 	//DefaultSourceCheckCycle The default source check cycle
 	DefaultSourceCheckCycle int64 = SourceCheckSchedule
+
+	//DefaultMaxSize The default max size for report files
+	DefaultMaxSize int64 = PackagingMaxSize
 )
