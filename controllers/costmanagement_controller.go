@@ -476,8 +476,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// if its time to upload/package
 	if upload {
 		// Package and split the payload if necessary
-		dir := "/tmp/cost-mgmt-operator-reports/"
-		if err := packaging.Split(r.Log, dirCfg, cost, costConfig.MaxSize); err == packaging.ErrNoReports {
+		uploadFiles, err := packaging.Split(r.Log, dirCfg, cost, costConfig.MaxSize)
+		if err == packaging.ErrNoReports {
 			log.Info("No files found!")
 		} else if err != nil {
 			log.Error(err, "Failed to package files.") // Need to better understand consequences here.
@@ -488,30 +488,23 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 		}
 
-		if costConfig.UploadToggle && uploadDir != "" {
+		if costConfig.UploadToggle && uploadFiles != nil {
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
 			var body *bytes.Buffer
 			var mw *multipart.Writer
-			// Instead of looking for tarfiles here - we need to do what the old
-			// operator did and create the tarfiles based on the CSV files and then get
-			// a list of the tarfiles that are created
-			files, err := ioutil.ReadDir(uploadDir)
-			if err != nil {
-				log.Error(err, "Could not read the directory")
-				return ctrl.Result{}, err
-			}
-			if len(files) > 0 {
+
+			if len(uploadFiles) > 0 {
 				log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
 				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
 			}
-			for _, file := range files {
+			for _, file := range uploadFiles {
 				if strings.Contains(file.Name(), "tar.gz") {
 					log.Info("Uploading the following file: ")
 					fmt.Println(file.Name())
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(uploadDir, file.Name()))
+					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(dirCfg.Upload.Path, file.Name()))
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 					if err != nil {
@@ -527,7 +520,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(path.Join(uploadDir, file.Name())); err != nil {
+							if err := os.Remove(path.Join(dirCfg.Upload.Path, file.Name())); err != nil {
 								log.Error(err, "Error removing tar file")
 							}
 						}
@@ -539,6 +532,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 		} else if !costConfig.UploadToggle {
 			log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
+		} else if uploadFiles == nil {
+			log.Info("No files to upload.")
 		}
 	}
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
@@ -554,7 +549,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
 			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = collector.GenerateReports(cost, promConn, timeRange, r.Log)
+			err = collector.GenerateReports(cost, dirCfg, promConn, timeRange, r.Log)
 			if err != nil {
 				cost.Status.Reports.DataCollected = false
 				cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)

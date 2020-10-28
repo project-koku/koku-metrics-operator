@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/go-logr/logr"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	"github.com/project-koku/korekuta-operator-go/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -43,7 +43,6 @@ import (
 var (
 	logger logr.Logger
 
-	queryDataDir        = "data"
 	podFilePrefix       = "cm-openshift-usage-lookback-"
 	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
 	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
@@ -149,7 +148,7 @@ func getQueryResults(q collector, queries Querys) (mappedResults, error) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API, ts promv1.Range, log logr.Logger) error {
+func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, promconn promv1.API, ts promv1.Range, log logr.Logger) error {
 	if logger == nil {
 		logger = log
 	}
@@ -166,7 +165,6 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 
 	// yearMonth is used in filenames
 	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
-	queryDataPath := path.Join(cost.Status.FileDirectory, queryDataDir)
 	updateReportStatus(cost, ts)
 
 	log.Info("querying for node metrics")
@@ -214,7 +212,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	}
 	nodeReport := Report{
 		filename:    nodeFilePrefix + yearMonth + ".csv",
-		filePath:    queryDataPath,
+		filePath:    dirCfg.Reports.Path,
 		queryType:   "node",
 		queryData:   nodeRows,
 		fileHeaders: NewNodeRow(ts),
@@ -240,7 +238,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	}
 	podReport := Report{
 		filename:    podFilePrefix + yearMonth + ".csv",
-		filePath:    queryDataPath,
+		filePath:    dirCfg.Reports.Path,
 		queryType:   "pod",
 		queryData:   podRows,
 		fileHeaders: NewPodRow(ts),
@@ -258,7 +256,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	}
 	volReport := Report{
 		filename:    volFilePrefix + yearMonth + ".csv",
-		filePath:    queryDataPath,
+		filePath:    dirCfg.Reports.Path,
 		queryType:   "volume",
 		queryData:   volRows,
 		fileHeaders: NewStorageRow(ts),
@@ -276,7 +274,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, promconn promv1.API,
 	}
 	namespaceReport := Report{
 		filename:    namespaceFilePrefix + yearMonth + ".csv",
-		filePath:    queryDataPath,
+		filePath:    dirCfg.Reports.Path,
 		queryType:   "namespace",
 		queryData:   namespaceRows,
 		fileHeaders: NewNamespaceRow(ts),
