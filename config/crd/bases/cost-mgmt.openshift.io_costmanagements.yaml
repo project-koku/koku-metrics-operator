@@ -73,8 +73,8 @@ spec:
               properties:
                 max_size:
                   description: MaxSize is a field of CostManagement to represent the
-                    max file size in megabytes we can upload via Ingress The default
-                    is 100
+                    max file size in megabytes that will be compressed for upload
+                    to Ingress. The default is 100.
                   format: int64
                   maximum: 100
                   minimum: 1
@@ -199,8 +199,8 @@ spec:
                   type: string
                 max_size:
                   description: MaxSize is a field of CostManagement to represent the
-                    max file size in megabytes we can upload via Ingress The default
-                    is 100
+                    max file size in megabytes we can upload via Ingress. The default
+                    is 100.
                   format: int64
                   type: integer
               type: object

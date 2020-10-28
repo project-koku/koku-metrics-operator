@@ -62,12 +62,8 @@ type Manifest struct {
 var ErrNoReports = errors.New("reports not found")
 
 // BuildLocalCSVFileList gets the list of files in the staging directory
-func BuildLocalCSVFileList(stagingDirectory string) ([]string, error) {
+func BuildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) ([]string, error) {
 	var csvList []string
-	fileList, err := ioutil.ReadDir(stagingDirectory)
-	if err != nil {
-		return csvList, fmt.Errorf("BuildLocalCSVFileList: failed to read directory: %v", err)
-	}
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
 			csvList = append(csvList, path.Join(stagingDirectory, file.Name()))
@@ -77,24 +73,20 @@ func BuildLocalCSVFileList(stagingDirectory string) ([]string, error) {
 }
 
 // NeedSplit determines if any of the files to be packaged need to be split.
-func NeedSplit(filepath string, maxBytes int64) (bool, error) {
+func NeedSplit(filepath string, maxBytes int64) ([]os.FileInfo, bool, error) {
 	var totalSize int64 = 0
 	fileList, err := ioutil.ReadDir(filepath)
 	if err != nil {
-		return false, fmt.Errorf("NeedSplit: failed to read directory: %v", err)
+		return nil, false, fmt.Errorf("NeedSplit: failed to read directory: %v", err)
 	}
 	for _, file := range fileList {
-		info, err := os.Stat(path.Join(filepath, file.Name()))
-		if err != nil {
-			return false, fmt.Errorf("NeedSplit: could not determine file size: %v", err)
-		}
-		fileSize := info.Size()
+		fileSize := file.Size()
 		totalSize += fileSize
 		if fileSize >= maxBytes || totalSize >= maxBytes {
-			return true, nil
+			return fileList, true, nil
 		}
 	}
-	return false, nil
+	return fileList, false, nil
 }
 
 // RenderManifest writes the manifest
@@ -245,25 +237,16 @@ func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHe
 }
 
 // SplitFiles breaks larger files into smaller ones
-func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
-	fileList, err := ioutil.ReadDir(filePath)
-	if err != nil {
-		return fmt.Errorf("SplitFiles: error reading directory: %v", err)
-	}
+func SplitFiles(logger logr.Logger, filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, error) {
+	var splitFiles []os.FileInfo
 	for _, file := range fileList {
-		absPath := filePath + "/" + file.Name()
-		info, err := os.Stat(absPath)
-		if err != nil {
-			return fmt.Errorf("SplitFiles: error getting fileInfo: %v", err)
-		}
-		fileSize := info.Size()
+		absPath := path.Join(filePath, file.Name())
+		fileSize := file.Size()
 		if fileSize >= maxBytes {
-			var splitFiles []string
-			// var csvHeader string
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
-				return fmt.Errorf("SplitFiles: error reading file: %v", err)
+				return nil, fmt.Errorf("SplitFiles: error reading file: %v", err)
 			}
 			csvReader := csv.NewReader(csvFile)
 			csvHeader, err := csvReader.Read()
@@ -271,9 +254,13 @@ func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 			for {
 				newFile, eof, err := WritePart(logger, absPath, csvReader, csvHeader, part, maxBytes)
 				if err != nil {
-					return fmt.Errorf("SplitFiles: %v", err)
+					return nil, fmt.Errorf("SplitFiles: %v", err)
 				}
-				splitFiles = append(splitFiles, newFile)
+				info, err := os.Stat(newFile)
+				if err != nil {
+					return nil, fmt.Errorf("SplitFiles: %v", err)
+				}
+				splitFiles = append(splitFiles, info)
 				part++
 				if eof || part >= maxSplits {
 					break
@@ -281,9 +268,11 @@ func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 			}
 			os.Remove(absPath)
 			fmt.Println(splitFiles)
+		} else {
+			splitFiles = append(splitFiles, file)
 		}
 	}
-	return nil
+	return splitFiles, nil
 }
 
 // MoveFiles moves files from reportsDirectory to stagingDirectory
@@ -337,16 +326,17 @@ func Split(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost *costmgmt
 
 	// check if the files need to be split
 	log.Info("Checking to see if the report files need to be split")
-	needSplit, err := NeedSplit(dirCfg.Staging.Path, maxBytes)
+	filesToPackage, needSplit, err := NeedSplit(dirCfg.Staging.Path, maxBytes)
 	if err != nil {
 		return nil, fmt.Errorf("Split: %v", err)
 	}
 	if needSplit {
 		log.Info("Report files exceed the max size. Splitting files")
-		if err := SplitFiles(logger, dirCfg.Staging.Path, maxBytes); err != nil {
+		filesToPackage, err := SplitFiles(logger, dirCfg.Staging.Path, filesToPackage, maxBytes)
+		if err != nil {
 			return nil, fmt.Errorf("Split: %v", err)
 		}
-		fileList, err := BuildLocalCSVFileList(dirCfg.Staging.Path)
+		fileList, err := BuildLocalCSVFileList(filesToPackage, dirCfg.Staging.Path)
 		if err != nil {
 			return nil, fmt.Errorf("Split: %v", err)
 		}
@@ -370,7 +360,7 @@ func Split(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost *costmgmt
 	} else {
 		tarFileName := path.Join(dirCfg.Upload.Path, "cost-mgmt.tar.gz")
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFileName)
-		fileList, err := BuildLocalCSVFileList(dirCfg.Staging.Path)
+		fileList, err := BuildLocalCSVFileList(filesToPackage, dirCfg.Staging.Path)
 		if err != nil {
 			return nil, fmt.Errorf("Split: %v", err)
 		}
@@ -389,7 +379,7 @@ func Split(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost *costmgmt
 
 	outFiles, err = ioutil.ReadDir(dirCfg.Upload.Path)
 	if err != nil {
-		return nil, fmt.Errorf("Could not read the %s: %v", dirCfg.Upload.Path, err)
+		return nil, fmt.Errorf("Could not read upload directory: %v", err)
 	}
 
 	return outFiles, nil
