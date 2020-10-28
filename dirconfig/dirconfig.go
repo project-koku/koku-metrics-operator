@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -70,6 +71,18 @@ func (dir *Directory) Create() error {
 	return nil
 }
 
+func ExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
+	for _, dir := range dirs {
+		if !dir.Exists() {
+			log.Info(fmt.Sprintf("Recreating %s", dir.Path))
+			if err := dir.Create(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func getOrCreatePath(directory string) (*Directory, error) {
 	dir := Directory{Path: directory}
 	if dir.Exists() {
@@ -102,7 +115,5 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig(fileDir string) error {
 		}
 	}
 
-	mapstructure.Decode(dirMap, &dirCfg)
-
-	return nil
+	return mapstructure.Decode(dirMap, &dirCfg)
 }

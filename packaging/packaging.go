@@ -287,23 +287,23 @@ func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 }
 
 // MoveFiles moves files from reportsDirectory to stagingDirectory
-func MoveFiles(logger logr.Logger, reportsDirectory, stagingDirectory string) error {
+func MoveFiles(logger logr.Logger, reportsDir, stagingDir dirconfig.Directory) error {
 	log := logger.WithValues("costmanagement", "Split")
 	// remove all files from directory
 	log.Info("Clearing out staging directory!")
-	if err := os.RemoveAll(stagingDirectory); err != nil {
-		return err
+	if err := os.RemoveAll(stagingDir.Path); err != nil {
+		return fmt.Errorf("MoveFiles: could not clear stagings: %v", err)
 	}
-	// recreate Directory
-	if _, err := os.Stat(stagingDirectory); os.IsNotExist(err) {
-		if err := os.MkdirAll(stagingDirectory, os.ModePerm); err != nil {
-			return fmt.Errorf("MoveFiles: could not make %s: %v", stagingDirectory, err)
-		}
+
+	// check if reports/staging exist and recreate if necessary
+	if err := dirconfig.ExistsOrRecreate(log, reportsDir, stagingDir); err != nil {
+		return fmt.Errorf("MoveFiles: could not check directories")
 	}
+
 	// move all files
-	fileList, err := ioutil.ReadDir(reportsDirectory)
+	fileList, err := ioutil.ReadDir(reportsDir.Path)
 	if err != nil {
-		return fmt.Errorf("MoveFiles: could not read %s: %v", reportsDirectory, err)
+		return fmt.Errorf("MoveFiles: could not read reports directory: %v", err)
 	}
 	if len(fileList) <= 0 {
 		return ErrNoReports
@@ -312,13 +312,12 @@ func MoveFiles(logger logr.Logger, reportsDirectory, stagingDirectory string) er
 	log.Info("Moving report files to staging directory")
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
-			if err := os.Rename(path.Join(reportsDirectory, file.Name()), path.Join(stagingDirectory, file.Name())); err != nil {
+			if err := os.Rename(path.Join(reportsDir.Path, file.Name()), path.Join(stagingDir.Path, file.Name())); err != nil {
 				return fmt.Errorf("MoveFiles: failed to move files: %v", err)
 			}
 		}
 	}
 	return nil
-
 }
 
 // Split is responsible for packing the files for upload
@@ -328,14 +327,12 @@ func Split(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost *costmgmt
 	var outFiles []os.FileInfo
 
 	// move CSV reports from data directory to staging directory
-	if err := MoveFiles(logger, dirCfg.Reports.Path, dirCfg.Staging.Path); err != nil {
+	if err := MoveFiles(logger, dirCfg.Reports, dirCfg.Staging); err != nil {
 		return nil, err
 	}
 	// create the upload directory if it does not exist
-	if !dirCfg.Upload.Exists() {
-		if err := dirCfg.Upload.Create(); err != nil {
-			return nil, fmt.Errorf("Split: %v", err)
-		}
+	if err := dirconfig.ExistsOrRecreate(log, dirCfg.Upload); err != nil {
+		return nil, fmt.Errorf("Split: could not check upload directory")
 	}
 
 	// check if the files need to be split

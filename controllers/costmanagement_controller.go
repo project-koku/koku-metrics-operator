@@ -61,7 +61,7 @@ var (
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
 
-	dirCfg *dirconfig.DirectoryConfig
+	dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -466,7 +466,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	if dirCfg == nil || dirCfg.Parent.String() != cost.Status.FileDirectory {
+	log.Info("Getting Directory Configuration.")
+	if dirCfg == nil || !dirCfg.Parent.Exists() || dirCfg.Parent.Path != cost.Status.FileDirectory {
 		if err := dirCfg.GetDirectoryConfig(cost.Status.FileDirectory); err != nil {
 			log.Error(err, "Failed to get directory configuration.")
 		}
