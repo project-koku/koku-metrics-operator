@@ -28,6 +28,7 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"os"
+	"path"
 	"reflect"
 	"strings"
 	"time"
@@ -47,6 +48,7 @@ import (
 	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
 	"github.com/project-koku/korekuta-operator-go/collector"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
+	"github.com/project-koku/korekuta-operator-go/packaging"
 	"github.com/project-koku/korekuta-operator-go/sources"
 )
 
@@ -129,6 +131,14 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
 	costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
 	costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+
+	// set the default max file size for packaging
+	cost.Status.Packaging.MaxSize = cost.Spec.Packaging.MaxSize
+	if cost.Status.Packaging.MaxSize != nil {
+		costConfig.MaxSize = *cost.Status.Packaging.MaxSize
+	} else {
+		costConfig.MaxSize = costmgmtv1alpha1.DefaultMaxSize
+	}
 
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
@@ -451,10 +461,24 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	if costConfig.UploadToggle {
-		upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
-		if upload {
+	upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
+	// if its time to upload/package
+	if upload {
+		// Package and split the payload if necessary
+		dir := "/tmp/cost-mgmt-operator-reports/"
+		uploadDir, err := packaging.Split(r.Log, dir, cost, costConfig.MaxSize)
+		if err == packaging.ErrNoReports {
+			log.Info("No files found!")
+		} else if err != nil {
+			log.Error(err, "Failed to package files.") // Need to better understand consequences here.
+			// update the CR packaging error status
+			cost.Status.Packaging.PackagingError = err.Error()
+			if err := r.Status().Update(ctx, cost); err != nil {
+				log.Error(err, "Failed to update CostManagement Status")
+			}
+		}
 
+		if costConfig.UploadToggle && uploadDir != "" {
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
@@ -463,21 +487,21 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			// Instead of looking for tarfiles here - we need to do what the old
 			// operator did and create the tarfiles based on the CSV files and then get
 			// a list of the tarfiles that are created
-			files, err := ioutil.ReadDir("/tmp/cost-mgmt-operator-reports")
+			files, err := ioutil.ReadDir(uploadDir)
 			if err != nil {
 				log.Error(err, "Could not read the directory")
+				return ctrl.Result{}, err
 			}
 			if len(files) > 0 {
 				log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
 				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
 			}
 			for _, file := range files {
-				log.Info("Uploading the following file: ")
-				fmt.Println(file.Name())
 				if strings.Contains(file.Name(), "tar.gz") {
-
+					log.Info("Uploading the following file: ")
+					fmt.Println(file.Name())
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, "/tmp/cost-mgmt-operator-reports/"+file.Name())
+					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(uploadDir, file.Name()))
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 					if err != nil {
@@ -491,19 +515,22 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 						if strings.Contains(uploadStatus, "202") {
 							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
+							// remove the tar.gz after a successful upload
+							log.Info("Removing tar file since upload was successful!")
+							if err := os.Remove(path.Join(uploadDir, file.Name())); err != nil {
+								log.Error(err, "Error removing tar file")
+							}
 						}
-						err = r.Status().Update(ctx, cost)
-						if err != nil {
+						if err := r.Status().Update(ctx, cost); err != nil {
 							log.Error(err, "Failed to update CostManagement Status")
 						}
 					}
 				}
 			}
+		} else if !costConfig.UploadToggle {
+			log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 		}
-	} else {
-		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
-
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")

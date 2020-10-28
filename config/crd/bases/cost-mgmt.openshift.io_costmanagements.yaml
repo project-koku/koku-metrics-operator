@@ -63,6 +63,19 @@ spec:
               description: ClusterID is a field of CostManagement to represent the
                 cluster UUID.
               type: string
+            packaging:
+              description: Packaging is a field of CostManagement to represent the
+                packaging object
+              properties:
+                max_size:
+                  description: MaxSize is a field of CostManagement to represent the
+                    max file size in megabytes we can upload via Ingress The default
+                    is 100
+                  format: int64
+                  maximum: 100
+                  minimum: 1
+                  type: integer
+              type: object
             prometheus_config:
               description: PrometheusConfig is a field of CostManagement to represent
                 the configuration of Prometheus connection.
@@ -168,6 +181,21 @@ spec:
               description: OperatorCommit is a field of CostManagement that shows
                 the commit hash of the operator.
               type: string
+            packaging:
+              description: Packaging is a field of CostManagement to represent the
+                packaging status
+              properties:
+                error:
+                  description: PackagingError is a field of CostManagementStatus to
+                    represent the error encountered packaging the reports.
+                  type: string
+                max_size:
+                  description: MaxSize is a field of CostManagement to represent the
+                    max file size in megabytes we can upload via Ingress The default
+                    is 100
+                  format: int64
+                  type: integer
+              type: object
             prometheus:
               description: Prometheus represents the status of premetheus queries.
               properties:
