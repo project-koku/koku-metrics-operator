@@ -34,11 +34,11 @@ spec:
         metadata:
           type: object
         spec:
-          description: CostManagementSpec defines the desired state of CostManagement
+          description: CostManagementSpec defines the desired state of CostManagement.
           properties:
             api_url:
               description: APIURL is a field of CostManagement to represent the url
-                of the API endpoint for service interaction.
+                of the API endpoint for service interaction. The default is `https://cloud.redhat.com`.
               type: string
             authentication:
               description: Authentication is a field of CostManagement to represent
@@ -52,8 +52,8 @@ spec:
                   description: 'AuthType is a field of CostManagement to represent
                     the authentication type to be used basic or token. Valid values
                     are: - "basic" : Enables authetication using user and password
-                    from authentication secret - "token" (default): Uses cluster token
-                    for authentication'
+                    from authentication secret. - "token" (default): Uses cluster
+                    token for authentication.'
                   enum:
                   - token
                   - basic
@@ -101,7 +101,7 @@ spec:
                 check_cycle:
                   description: CheckCycle is a field of CostManagement to represent
                     the number of minutes between each source check schedule The default
-                    is 1440 min (24 hours)
+                    is 1440 min (24 hours).
                   format: int64
                   minimum: 0
                   type: integer
@@ -115,7 +115,7 @@ spec:
                   type: string
                 sources_path:
                   description: SourcesAPIPath is a field of CostManagement to represent
-                    the path of the Sources API service. The default is /api/ingress/v1.0/sources/
+                    the path of the Sources API service. The default is `/api/sources/v1.0/`.
                   type: string
               type: object
             upload:
@@ -124,19 +124,19 @@ spec:
               properties:
                 ingress_path:
                   description: IngressAPIPath is a field of CostManagement to represent
-                    the path of the Ingress API service. The default is /api/ingress/v1/upload/
+                    the path of the Ingress API service. The default is `/api/ingress/v1/upload/`.
                   type: string
                 upload_cycle:
                   description: UploadCycle is a field of CostManagement to represent
-                    the number of minutes between each upload schedule The default
-                    is 360 min (6 hours)
+                    the number of minutes between each upload schedule. The default
+                    is 360 min (6 hours).
                   format: int64
                   minimum: 0
                   type: integer
                 upload_toggle:
                   description: UploadToggle is a field of CostManagement to represent
                     if the operator should upload to cloud.redhat.com. The default
-                    is true
+                    is true.
                   type: boolean
                 upload_wait:
                   description: UploadWait is a field of CostManagement to represent
@@ -151,7 +151,7 @@ spec:
               type: boolean
           type: object
         status:
-          description: CostManagementStatus defines the observed state of CostManagement
+          description: CostManagementStatus defines the observed state of CostManagement.
           properties:
             api_url:
               description: APIURL is a field of CostManagement to represent the url
@@ -187,7 +187,7 @@ spec:
               type: string
             operator_commit:
               description: OperatorCommit is a field of CostManagement that shows
-                the commit hash of the operator
+                the commit hash of the operator.
               type: string
             packaging:
               description: Packaging is a field of CostManagement to represent the
@@ -205,7 +205,7 @@ spec:
                   type: integer
               type: object
             prometheus:
-              description: Prometheus represents the status of premetheus queries
+              description: Prometheus represents the status of premetheus queries.
               properties:
                 configuration_error:
                   description: ConfigError is a field of CostManagementStatus to represent
@@ -241,14 +241,14 @@ spec:
                 skip_tls_verification:
                   description: SkipTLSVerification is a field of CostManagementStatus
                     to represent if the thanos-querier endpoint must be certificate
-                    validated
+                    validated.
                   type: boolean
               required:
               - prometheus_configured
               - prometheus_connected
               type: object
             reports:
-              description: Reports represents the status of report generation
+              description: Reports represents the status of report generation.
               properties:
                 data_collected:
                   description: DataCollected is a field of CostManagementStatus to
@@ -278,8 +278,8 @@ spec:
               properties:
                 check_cycle:
                   description: CheckCycle is a field of CostManagement to represent
-                    the number of minutes between each source check schedule The default
-                    is 1440 min (24 hours)
+                    the number of minutes between each source check schedule. The
+                    default is 1440 min (24 hours).
                   format: int64
                   type: integer
                 error:
@@ -288,7 +288,7 @@ spec:
                   type: string
                 last_check_time:
                   description: LastSourceCheckTime is a field of CostManagement that
-                    shows the time that the last check was attempted
+                    shows the time that the last check was attempted.
                   format: date-time
                   nullable: true
                   type: string
@@ -315,17 +315,17 @@ spec:
                   type: string
                 last_successful_upload_time:
                   description: LastSuccessfulUploadTime is a field of CostManagement
-                    that shows the time of the last successful upload
+                    that shows the time of the last successful upload.
                   format: date-time
                   nullable: true
                   type: string
                 last_upload_status:
                   description: LastUploadStatus is a field of CostManagement that
-                    shows the http status of the last upload
+                    shows the http status of the last upload.
                   type: string
                 last_upload_time:
                   description: LastUploadTime is a field of CostManagement that shows
-                    the time that the last upload was attempted
+                    the time that the last upload was attempted.
                   format: date-time
                   nullable: true
                   type: string
@@ -336,8 +336,8 @@ spec:
                   type: boolean
                 upload_cycle:
                   description: UploadCycle is a field of CostManagement to represent
-                    the number of minutes between each upload schedule The default
-                    is 360 min (6 hours)
+                    the number of minutes between each upload schedule. The default
+                    is 360 min (6 hours).
                   format: int64
                   type: integer
                 upload_wait:
