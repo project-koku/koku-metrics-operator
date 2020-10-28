@@ -478,10 +478,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if upload {
 		// Package and split the payload if necessary
 		uploadFiles, err := packaging.Split(r.Log, dirCfg, cost, costConfig.MaxSize)
-		if err == packaging.ErrNoReports {
-			log.Info("No files found!")
-		} else if err != nil {
-			log.Error(err, "Failed to package files.") // Need to better understand consequences here.
+		if err != nil {
+			log.Error(err, "Failed to package files.")
 			// update the CR packaging error status
 			cost.Status.Packaging.PackagingError = err.Error()
 			if err := r.Status().Update(ctx, cost); err != nil {

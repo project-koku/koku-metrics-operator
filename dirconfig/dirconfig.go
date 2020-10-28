@@ -71,7 +71,7 @@ func (dir *Directory) Create() error {
 	return nil
 }
 
-func ExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
+func CheckExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
 	for _, dir := range dirs {
 		if !dir.Exists() {
 			log.Info(fmt.Sprintf("Recreating %s", dir.Path))
