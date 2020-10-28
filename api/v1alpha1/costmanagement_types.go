@@ -344,9 +344,6 @@ type CostManagementStatus struct {
 	// FileDirectory is a field of CostManagement to represent the location of stored files.
 	FileDirectory string `json:"file_directory,omitempty"`
 
-	// FileDirectoryConfigured is a field of CostManagement to represent if the location of stored files has been configured.
-	FileDirectoryConfigured *bool `json:"file_directory_configured,omitempty"`
-
 	// Packaging is a field of CostManagement to represent the packaging status
 	Packaging PackagingStatus `json:"packaging,omitempty"`
 

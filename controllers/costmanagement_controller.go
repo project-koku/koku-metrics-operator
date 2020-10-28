@@ -48,6 +48,7 @@ import (
 	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
 	"github.com/project-koku/korekuta-operator-go/collector"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
+	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	"github.com/project-koku/korekuta-operator-go/packaging"
 	"github.com/project-koku/korekuta-operator-go/sources"
 )
@@ -60,7 +61,7 @@ var (
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
 
-	queryDataDir = "data"
+	dirCfg *dirconfig.DirectoryConfig
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -342,26 +343,6 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 	}
 }
 
-func setupDirectory(fileDir string) error {
-	if _, err := os.Stat(fileDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(fileDir, os.ModePerm); err != nil {
-			return fmt.Errorf("setupDirectory: %s: %v", fileDir, err)
-		}
-	}
-
-	dirs := []string{queryDataDir}
-	for _, dir := range dirs {
-		d := path.Join(fileDir, dir)
-		if _, err := os.Stat(d); os.IsNotExist(err) {
-			if err := os.MkdirAll(d, os.ModePerm); err != nil {
-				return fmt.Errorf("setupDirectory: %s: %v", d, err)
-			}
-		}
-	}
-
-	return nil
-}
-
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
@@ -485,14 +466,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	if _, err := os.Stat(cost.Status.FileDirectory + queryDataDir); os.IsNotExist(err) { // this directory should always exist
-		cost.Status.FileDirectoryConfigured = pointer.Bool(false)
-	}
-
-	if cost.Status.FileDirectoryConfigured == nil || !*cost.Status.FileDirectoryConfigured {
-		if err := setupDirectory(cost.Status.FileDirectory); err != nil {
-			cost.Status.FileDirectoryConfigured = pointer.Bool(false)
-			log.Error(err, "Failed to set-up file directories.")
+	if dirCfg == nil || dirCfg.Parent.String() != cost.Status.FileDirectory {
+		if err := dirCfg.GetDirectoryConfig(cost.Status.FileDirectory); err != nil {
+			log.Error(err, "Failed to get directory configuration.")
 		}
 	}
 
@@ -501,8 +477,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if upload {
 		// Package and split the payload if necessary
 		dir := "/tmp/cost-mgmt-operator-reports/"
-		uploadDir, err := packaging.Split(r.Log, dir, cost, costConfig.MaxSize)
-		if err == packaging.ErrNoReports {
+		if err := packaging.Split(r.Log, dirCfg, cost, costConfig.MaxSize); err == packaging.ErrNoReports {
 			log.Info("No files found!")
 		} else if err != nil {
 			log.Error(err, "Failed to package files.") // Need to better understand consequences here.
