@@ -175,10 +175,6 @@ type CostManagementSpec struct {
 	// +optional
 	Authentication AuthenticationSpec `json:"authentication,omitempty"`
 
-	// FileDirectory is a field of CostManagement to represent the location of stored files.
-	// +optional
-	FileDirectory string `json:"file_directory,omitempty"`
-
 	//Packaging is a field of CostManagement to represent the packaging object
 	// +optional
 	Packaging PackagingSpec `json:"packaging,omitempty"`
@@ -343,9 +339,6 @@ type CostManagementStatus struct {
 
 	// Authentication is a field of CostManagement to represent the authentication status.
 	Authentication AuthenticationStatus `json:"authentication,omitempty"`
-
-	// FileDirectory is a field of CostManagement to represent the location of stored files.
-	FileDirectory string `json:"file_directory,omitempty"`
 
 	// Packaging is a field of CostManagement to represent the packaging status
 	Packaging PackagingStatus `json:"packaging,omitempty"`

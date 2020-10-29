@@ -29,6 +29,7 @@ import (
 )
 
 var (
+	parentDir    = "/tmp/cost-mgmt-operator-reports/"
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
@@ -94,10 +95,10 @@ func getOrCreatePath(directory string) (*Directory, error) {
 	return &dir, nil
 }
 
-func (dirCfg *DirectoryConfig) GetDirectoryConfig(fileDir string) error {
+func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	var err error
 	dirMap := map[string]*Directory{}
-	dirMap["parent"], err = getOrCreatePath(fileDir)
+	dirMap["parent"], err = getOrCreatePath(parentDir)
 	if err != nil {
 		return fmt.Errorf("getDirectoryConfig: %v", err)
 	}
@@ -108,7 +109,7 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig(fileDir string) error {
 		"upload":  uploadDir,
 	}
 	for name, folder := range folders {
-		d := path.Join(fileDir, folder)
+		d := path.Join(parentDir, folder)
 		dirMap[name], err = getOrCreatePath(d)
 		if err != nil {
 			return fmt.Errorf("getDirectoryConfig: %v", err)

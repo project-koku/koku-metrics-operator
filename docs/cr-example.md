@@ -8,7 +8,6 @@ metadata:
 spec:
   api_url: string # default=https://cloud.redhat.com, the url of the API endpoint for service interaction
   clusterID: string # The cluster ID -> the reconciler finds this value if not supplied
-  file_directory: string # default=/tmp/cost-mgmt-operator-reports/, parent directory for file storage
   validate_cert: bool # default=false, represent if the Ingress endpoint must be certificate validated
   authentication:
     type: choice (basic, token) # default=token

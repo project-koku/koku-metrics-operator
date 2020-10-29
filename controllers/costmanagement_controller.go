@@ -122,8 +122,6 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		costConfig.ValidateCert = costmgmtv1alpha1.DefaultValidateCert
 	}
 
-	costConfig.FileDirectory, _ = StringReflectSpec(r, cost, &cost.Spec.FileDirectory, &cost.Status.FileDirectory, costmgmtv1alpha1.DefaultFileDirectory)
-
 	costConfig.IngressAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Upload.IngressAPIPath, &cost.Status.Upload.IngressAPIPath, costmgmtv1alpha1.DefaultIngressPath)
 	cost.Status.Upload.UploadToggle = cost.Spec.Upload.UploadToggle
 	if cost.Status.Upload.UploadToggle != nil {
@@ -460,8 +458,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	log.Info("Getting Directory Configuration.")
-	if dirCfg == nil || !dirCfg.Parent.Exists() || dirCfg.Parent.Path != cost.Status.FileDirectory {
-		if err := dirCfg.GetDirectoryConfig(cost.Status.FileDirectory); err != nil {
+	if dirCfg == nil || !dirCfg.Parent.Exists() {
+		if err := dirCfg.GetDirectoryConfig(); err != nil {
 			log.Error(err, "Failed to get directory configuration.")
 		}
 	}
