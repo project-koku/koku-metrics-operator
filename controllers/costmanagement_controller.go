@@ -473,9 +473,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	upload := checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload")
 	// if its time to upload/package
-	if upload {
+	if costConfig.UploadToggle && checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload") {
 		// Package and split the payload if necessary
 		uploadFiles, err := packaging.Split(r.Log, dirCfg, cost, costConfig.MaxSize)
 		if err != nil {
@@ -487,7 +486,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 		}
 
-		if costConfig.UploadToggle && uploadFiles != nil {
+		if uploadFiles != nil {
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
@@ -529,12 +528,13 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					}
 				}
 			}
-		} else if !costConfig.UploadToggle {
-			log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 		} else if uploadFiles == nil {
 			log.Info("No files to upload.")
 		}
+	} else if !costConfig.UploadToggle {
+		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
+
 	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
