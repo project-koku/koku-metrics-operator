@@ -54,8 +54,8 @@ type CSVStruct interface {
 
 type NamespaceRow struct {
 	*DateTimes
-	Namespace       string `json:"namespace"`
-	NamespaceLabels string `json:"namespace_labels"`
+	Namespace       string `mapstructure:"namespace"`
+	NamespaceLabels string `mapstructure:"namespace_labels"`
 }
 
 func NewNamespaceRow(ts promv1.Range) NamespaceRow {
@@ -105,13 +105,13 @@ func (row NamespaceRow) String() string {
 
 type NodeRow struct {
 	*DateTimes
-	Node                          string `json:"node"`
-	NodeCapacityCPUCores          string `json:"node-capacity-cpu-cores"`
-	ModeCapacityCPUCoreSeconds    string `json:"node-capacity-cpu-core-seconds"`
-	NodeCapacityMemoryBytes       string `json:"node-capacity-memory-bytes"`
-	NodeCapacityMemoryByteSeconds string `json:"node-capacity-memory-byte-seconds"`
-	ResourceID                    string `json:"resource_id"`
-	NodeLabels                    string `json:"node_labels"`
+	Node                          string `mapstructure:"node"`
+	NodeCapacityCPUCores          string `mapstructure:"node-capacity-cpu-cores"`
+	ModeCapacityCPUCoreSeconds    string `mapstructure:"node-capacity-cpu-core-seconds"`
+	NodeCapacityMemoryBytes       string `mapstructure:"node-capacity-memory-bytes"`
+	NodeCapacityMemoryByteSeconds string `mapstructure:"node-capacity-memory-byte-seconds"`
+	ResourceID                    string `mapstructure:"resource_id"`
+	NodeLabels                    string `mapstructure:"node_labels"`
 }
 
 func NewNodeRow(ts promv1.Range) NodeRow {
@@ -172,15 +172,15 @@ func (row NodeRow) String() string {
 type PodRow struct {
 	*DateTimes
 	NodeRow
-	Namespace                   string `json:"namespace"`
-	Pod                         string `json:"pod"`
-	PodUsageCPUCoreSeconds      string `json:"pod-usage-cpu-core-seconds"`
-	PodRequestCPUCoreSeconds    string `json:"pod-request-cpu-core-seconds"`
-	PodLimitCPUCoreSeconds      string `json:"pod-limit-cpu-core-seconds"`
-	PodUsageMemoryByteSeconds   string `json:"pod-usage-memory-byte-seconds"`
-	PodRequestMemoryByteSeconds string `json:"pod-request-memory-byte-seconds"`
-	PodLimitMemoryByteSeconds   string `json:"pod-limit-memory-byte-seconds"`
-	PodLabels                   string `json:"pod_labels"`
+	Namespace                   string `mapstructure:"namespace"`
+	Pod                         string `mapstructure:"pod"`
+	PodUsageCPUCoreSeconds      string `mapstructure:"pod-usage-cpu-core-seconds"`
+	PodRequestCPUCoreSeconds    string `mapstructure:"pod-request-cpu-core-seconds"`
+	PodLimitCPUCoreSeconds      string `mapstructure:"pod-limit-cpu-core-seconds"`
+	PodUsageMemoryByteSeconds   string `mapstructure:"pod-usage-memory-byte-seconds"`
+	PodRequestMemoryByteSeconds string `mapstructure:"pod-request-memory-byte-seconds"`
+	PodLimitMemoryByteSeconds   string `mapstructure:"pod-limit-memory-byte-seconds"`
+	PodLabels                   string `mapstructure:"pod_labels"`
 }
 
 func NewPodRow(ts promv1.Range) PodRow {
@@ -258,15 +258,15 @@ type StorageRow struct {
 	*DateTimes
 	Namespace                                string
 	Pod                                      string
-	PersistentVolumeClaim                    string `json:"persistentvolumeclaim"`
-	PersistentVolume                         string `json:"persistentvolume"`
-	StorageClass                             string `json:"storageclass"`
-	PersistentVolumeClaimCapacityBytes       string `json:"persistentvolumeclaim-capacity-bytes"`
-	PersistentVolumeClaimCapacityByteSeconds string `json:"persistentvolumeclaim-capacity-byte-seconds"`
-	VolumeRequestStorageByteSeconds          string `json:"persistentvolumeclaim-request-byte-seconds"`
-	PersistentVolumeClaimUsageByteSeconds    string `json:"persistentvolumeclaim-usage-byte-seconds"`
-	PersistentVolumeLabels                   string `json:"persistentvolume_labels"`
-	PersistentVolumeClaimLabels              string `json:"persistentvolumeclaim_labels"`
+	PersistentVolumeClaim                    string `mapstructure:"persistentvolumeclaim"`
+	PersistentVolume                         string `mapstructure:"persistentvolume"`
+	StorageClass                             string `mapstructure:"storageclass"`
+	PersistentVolumeClaimCapacityBytes       string `mapstructure:"persistentvolumeclaim-capacity-bytes"`
+	PersistentVolumeClaimCapacityByteSeconds string `mapstructure:"persistentvolumeclaim-capacity-byte-seconds"`
+	VolumeRequestStorageByteSeconds          string `mapstructure:"persistentvolumeclaim-request-byte-seconds"`
+	PersistentVolumeClaimUsageByteSeconds    string `mapstructure:"persistentvolumeclaim-usage-byte-seconds"`
+	PersistentVolumeLabels                   string `mapstructure:"persistentvolume_labels"`
+	PersistentVolumeClaimLabels              string `mapstructure:"persistentvolumeclaim_labels"`
 }
 
 func NewStorageRow(ts promv1.Range) StorageRow {

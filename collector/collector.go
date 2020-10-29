@@ -22,7 +22,6 @@ package collector
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,6 +32,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/mitchellh/mapstructure"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	"github.com/project-koku/korekuta-operator-go/strset"
@@ -313,12 +313,8 @@ func parseFields(input model.Metric, str string) string {
 }
 
 func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
-	row, err := json.Marshal(val)
-	if err != nil {
-		return fmt.Errorf("getStruct: failed to marshal row: %v", err)
-	}
-	if err := json.Unmarshal(row, &usage); err != nil {
-		return fmt.Errorf("getStruct: failed to unmarshal row: %v", err)
+	if err := mapstructure.Decode(val, &usage); err != nil {
+		return fmt.Errorf("getStruct: failed to convert map to struct: %v", err)
 	}
 	rowResults[key] = usage
 	return nil
