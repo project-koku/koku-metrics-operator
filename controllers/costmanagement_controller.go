@@ -528,8 +528,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
 	} else {
-		utcTime := metav1.Now().UTC()
-		t := metav1.Time{Time: utcTime}
+		t := metav1.Now()
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
 			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
