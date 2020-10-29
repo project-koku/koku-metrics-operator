@@ -42,11 +42,10 @@ import (
 var (
 	logger logr.Logger
 
-	dataPath            = "/tmp/cost-mgmt-operator-reports/data/"
-	podFilePrefix       = "cm-openshift-usage-lookback-"
-	volFilePrefix       = "cm-openshift-persistentvolumeclaim-lookback-"
-	nodeFilePrefix      = "cm-openshift-node-labels-lookback-"
-	namespaceFilePrefix = "cm-openshift-namespace-labels-lookback-"
+	podFilePrefix       = "cm-openshift-pod-usage-"
+	volFilePrefix       = "cm-openshift-storage-usage-"
+	nodeFilePrefix      = "cm-openshift-node-usage-"
+	namespaceFilePrefix = "cm-openshift-namespace-usage-"
 
 	statusTimeFormat = "2006-01-02 15:04:05"
 )

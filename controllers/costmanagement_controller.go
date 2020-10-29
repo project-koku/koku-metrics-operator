@@ -314,28 +314,21 @@ func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagem
 
 func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
 	log := logger.WithValues("costmanagement", "checkCycle")
-	if !lastExecution.IsZero() {
-		// transforming the metav1.Time object into a string
-		lastExecution := lastExecution.UTC().Format("2006-01-02 15:04:05")
-		log.Info(fmt.Sprintf("The last successful %s took place at %s.", action, lastExecution))
-		// transforming the string into a time.Time object
-		executionTime, err := time.Parse("2006-01-02 15:04:05", lastExecution)
-		if err != nil {
-			return true
-		}
-		duration := time.Since(executionTime)
-		log.Info(fmt.Sprintf("It has been %d minutes since the last successful %s.", int64(duration.Minutes()), action))
-		if int64(duration.Minutes()) >= cycle {
-			log.Info(fmt.Sprintf("Executing %s to cloud.redhat.com.", action))
-			return true
-		} else {
-			log.Info(fmt.Sprintf("Not time to execute the %s.", action))
-			return false
-		}
-	} else {
+	if lastExecution.IsZero() {
 		log.Info(fmt.Sprintf("There have been no prior successful %ss to cloud.redhat.com.", action))
 		return true
 	}
+
+	duration := time.Since(lastExecution.Time.UTC())
+	minutes := int64(duration.Minutes())
+	log.Info(fmt.Sprintf("It has been %d minutes since the last successful %s.", minutes, action))
+	if minutes >= cycle {
+		log.Info(fmt.Sprintf("Executing %s to cloud.redhat.com.", action))
+		return true
+	}
+	log.Info(fmt.Sprintf("Not time to execute the %s.", action))
+	return false
+
 }
 
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
@@ -535,7 +528,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
 	} else {
-		t := metav1.Now()
+		utcTime := metav1.Now().UTC()
+		t := metav1.Time{Time: utcTime}
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
 			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
