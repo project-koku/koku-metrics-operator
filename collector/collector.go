@@ -42,6 +42,8 @@ import (
 var (
 	logger logr.Logger
 
+	dataPath = "/tmp/cost-mgmt-operator-reports/data/"
+
 	podFilePrefix       = "cm-openshift-pod-usage-"
 	volFilePrefix       = "cm-openshift-storage-usage-"
 	nodeFilePrefix      = "cm-openshift-node-usage-"
