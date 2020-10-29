@@ -528,7 +528,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
 	} else {
-		t := metav1.Now()
+		timeUTC := metav1.Now().UTC()
+		t := metav1.Time{Time: timeUTC}
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
 			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
@@ -553,6 +554,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err := r.Status().Update(ctx, cost); err != nil {
 		log.Error(err, "failed to update CostManagement Status")
 	}
+	time.Sleep(5 * time.Second) // Give the update some time to complete.
 
 	// Requeue for processing after 5 minutes
 	return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
