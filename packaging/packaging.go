@@ -36,7 +36,7 @@ import (
 )
 
 // Define the global variables
-var megaByte int64 = 1024 * 1024
+const megaByte int64 = 1024 * 1024
 
 // the csv module doesn't expose the bytes-offset of the
 // underlying file object.
@@ -44,7 +44,7 @@ var megaByte int64 = 1024 * 1024
 // naïve string concatenation of the CSV fields to cover the overhead of quoting
 // and delimiters. This gets close enough for now.
 // VARIANCE := 0.03
-var variance float64 = 0.03
+const variance float64 = 0.03
 
 // if we're creating more than 1k files, something is probably wrong.
 var maxSplits int64 = 1000
@@ -66,24 +66,24 @@ func BuildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []st
 	var csvList []string
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
-			csvList = append(csvList, path.Join(stagingDirectory, file.Name()))
+			csvFilePath := path.Join(stagingDirectory, file.Name())
+			csvList = append(csvList, csvFilePath)
 		}
 	}
 	return csvList
 }
 
 // NeedSplit determines if any of the files to be packaged need to be split.
-func NeedSplit(fileList []os.FileInfo, maxBytes int64) (bool, error) {
+func NeedSplit(fileList []os.FileInfo, maxBytes int64) bool {
 	var totalSize int64 = 0
-
 	for _, file := range fileList {
 		fileSize := file.Size()
 		totalSize += fileSize
 		if fileSize >= maxBytes || totalSize >= maxBytes {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 // RenderManifest writes the manifest
@@ -264,7 +264,7 @@ func SplitFiles(logger logr.Logger, filePath string, fileList []os.FileInfo, max
 
 // MoveFiles moves files from reportsDirectory to stagingDirectory
 func MoveFiles(logger logr.Logger, reportsDir, stagingDir dirconfig.Directory, cost *costmgmtv1alpha1.CostManagement, uid string) ([]os.FileInfo, error) {
-	log := logger.WithValues("costmanagement", "Split")
+	log := logger.WithValues("costmanagement", "MoveFiles")
 	var movedFiles []os.FileInfo
 	// remove all files from directory
 
@@ -310,7 +310,7 @@ func MoveFiles(logger logr.Logger, reportsDir, stagingDir dirconfig.Directory, c
 
 // PackageReports is responsible for packing report files for upload
 func PackageReports(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost *costmgmtv1alpha1.CostManagement, maxSize int64) ([]os.FileInfo, error) {
-	log := logger.WithValues("costmanagement", "Split")
+	log := logger.WithValues("costmanagement", "PackageReports")
 	maxBytes := maxSize * megaByte
 	tarUUID := uuid.New().String()
 
@@ -329,12 +329,8 @@ func PackageReports(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost 
 
 	// check if the files need to be split
 	log.Info("Checking to see if the report files need to be split")
-	needSplit, err := NeedSplit(filesToPackage, maxBytes)
-	if err != nil {
-		return nil, fmt.Errorf("PackageReports: %v", err)
-	}
 
-	if needSplit {
+	if NeedSplit(filesToPackage, maxBytes) {
 		log.Info("Report files exceed the max size. Splitting files")
 		filesToPackage, err := SplitFiles(logger, dirCfg.Staging.Path, filesToPackage, maxBytes)
 		if err != nil {
