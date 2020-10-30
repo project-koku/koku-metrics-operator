@@ -128,11 +128,11 @@ func (NodeRow) CSVheader(w io.Writer) error {
 		"interval_start",
 		"interval_end",
 		"node",
-		"node_capacity_cpu_cores",
-		"node_capacity_cpu_core_seconds",
-		"node_capacity_memory_bytes",
-		"node_capacity_memory_byte_seconds",
-		"resource_id",
+		// "node_capacity_cpu_cores",  // if Node and Pod reports are ever separated, these lines can be uncommented
+		// "node_capacity_cpu_core_seconds",
+		// "node_capacity_memory_bytes",
+		// "node_capacity_memory_byte_seconds",
+		// "resource_id",
 		"node_labels"}); err != nil {
 		return err
 	}
@@ -156,11 +156,11 @@ func (row NodeRow) RowString() []string {
 		row.IntervalStart,
 		row.IntervalEnd,
 		row.Node,
-		row.NodeCapacityCPUCores,
-		row.ModeCapacityCPUCoreSeconds,
-		row.NodeCapacityMemoryBytes,
-		row.NodeCapacityMemoryByteSeconds,
-		row.ResourceID,
+		// row.NodeCapacityCPUCores,
+		// row.ModeCapacityCPUCoreSeconds,
+		// row.NodeCapacityMemoryBytes,
+		// row.NodeCapacityMemoryByteSeconds,
+		// row.ResourceID,
 		row.NodeLabels,
 	}
 }

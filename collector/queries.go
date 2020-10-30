@@ -137,7 +137,7 @@ var (
 		Query{
 			Name:        "persistentvolumeclaim-labels",
 			QueryString: "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"persistentvolumeclaim"}},
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "persistentvolumeclaim"}},
 			MetricKeyRegex: &RegexFields{
 				MetricRegex: []string{"label_*"},
 				LabelMap:    []string{"persistentvolumeclaim_labels"}},
