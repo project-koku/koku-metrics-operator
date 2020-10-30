@@ -475,8 +475,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			if err := r.Status().Update(ctx, cost); err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
 			}
+		} else {
+			log.Info("File packaging was successful.")
+			cost.Status.Packaging.PackagingError = ""
 		}
-		cost.Status.Packaging.PackagingError = ""
 
 		if uploadFiles != nil {
 			// Upload to c.rh.com
