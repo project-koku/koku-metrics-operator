@@ -457,7 +457,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	log.Info("Getting Directory Configuration.")
+	log.Info("Getting directory configuration.")
 	if dirCfg == nil || !dirCfg.Parent.Exists() {
 		if err := dirCfg.GetDirectoryConfig(); err != nil {
 			log.Error(err, "Failed to get directory configuration.")
