@@ -528,13 +528,14 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "failed to get prometheus connection")
 	} else {
-		t := metav1.Now()
+		timeUTC := metav1.Now().UTC()
+		t := metav1.Time{Time: timeUTC}
 		timeRange := promv1.Range{
 			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
 			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
 			Step:  time.Minute,
 		}
-		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.Hour() != t.Hour() {
+		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.UTC().Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
 			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
 			err = collector.GenerateReports(cost, promConn, timeRange, r.Log)
