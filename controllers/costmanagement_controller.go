@@ -476,6 +476,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		}
+		cost.Status.Packaging.PackagingError = ""
 
 		if uploadFiles != nil {
 			// Upload to c.rh.com
@@ -519,7 +520,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					}
 				}
 			}
-		} else if uploadFiles == nil {
+		} else {
 			log.Info("No files to upload.")
 		}
 	} else if !costConfig.UploadToggle {

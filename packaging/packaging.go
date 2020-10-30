@@ -158,8 +158,7 @@ func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUI
 	// create the tarfile
 	tarFile, err := os.Create(tarFileName)
 	if err != nil {
-		fmt.Println("error creating tar file")
-		return err
+		return fmt.Errorf("WriteTarball: error creating tar file: %v", err)
 	}
 	defer tarFile.Close()
 
@@ -185,8 +184,8 @@ func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUI
 	if err := addFileToTarWriter(logger, "manifest.json", manifestFileName, tw); err != nil {
 		return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
 	}
-	return nil
 
+	return tarFile.Sync()
 }
 
 // WritePart writes a portion of a split file into a new file
@@ -266,20 +265,6 @@ func SplitFiles(logger logr.Logger, filePath string, fileList []os.FileInfo, max
 func MoveFiles(logger logr.Logger, reportsDir, stagingDir dirconfig.Directory, cost *costmgmtv1alpha1.CostManagement, uid string) ([]os.FileInfo, error) {
 	log := logger.WithValues("costmanagement", "MoveFiles")
 	var movedFiles []os.FileInfo
-	// remove all files from directory
-
-	if cost.Status.Packaging.PackagingError == "" {
-		// Only clear the staging directory if previous packaging was successful
-		log.Info("Clearing out staging directory!")
-		if err := os.RemoveAll(stagingDir.Path); err != nil {
-			return nil, fmt.Errorf("MoveFiles: could not clear stagings: %v", err)
-		}
-	}
-
-	// check if reports/staging exist and recreate if necessary
-	if err := dirconfig.CheckExistsOrRecreate(log, reportsDir, stagingDir); err != nil {
-		return nil, fmt.Errorf("MoveFiles: could not check directories")
-	}
 
 	// move all files
 	fileList, err := ioutil.ReadDir(reportsDir.Path)
@@ -288,6 +273,15 @@ func MoveFiles(logger logr.Logger, reportsDir, stagingDir dirconfig.Directory, c
 	}
 	if len(fileList) <= 0 {
 		return nil, ErrNoReports
+	}
+
+	// remove all files from staging directory
+	if cost.Status.Packaging.PackagingError == "" {
+		// Only clear the staging directory if previous packaging was successful
+		log.Info("Clearing out staging directory!")
+		if err := stagingDir.RemoveContents(); err != nil {
+			return nil, fmt.Errorf("MoveFiles: could not clear staging: %v", err)
+		}
 	}
 
 	log.Info("Moving report files to staging directory")
@@ -314,8 +308,8 @@ func PackageReports(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost 
 	maxBytes := maxSize * megaByte
 	tarUUID := uuid.New().String()
 
-	// create the upload directory if it does not exist
-	if err := dirconfig.CheckExistsOrRecreate(log, dirCfg.Upload); err != nil {
+	// create reports/staging/upload directories if they do not exist
+	if err := dirconfig.CheckExistsOrRecreate(log, dirCfg.Reports, dirCfg.Staging, dirCfg.Upload); err != nil {
 		return nil, fmt.Errorf("PackageReports: could not check directory: %v", err)
 	}
 

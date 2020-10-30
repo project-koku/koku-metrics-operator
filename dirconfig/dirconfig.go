@@ -21,6 +21,7 @@ package dirconfig
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -51,6 +52,19 @@ type Directory struct {
 
 func (dir *Directory) String() string {
 	return string(dir.Path)
+}
+
+func (dir *Directory) RemoveContents() error {
+	fileList, err := ioutil.ReadDir(dir.Path)
+	if err != nil {
+		return fmt.Errorf("RemoveContents: could not read directory: %v", err)
+	}
+	for _, file := range fileList {
+		if err := os.RemoveAll(path.Join(dir.Path, file.Name())); err != nil {
+			return fmt.Errorf("RemoveContents: could not remove file: %v", err)
+		}
+	}
+	return nil
 }
 
 func (dir *Directory) Exists() bool {
