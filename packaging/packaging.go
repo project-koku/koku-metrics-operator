@@ -28,14 +28,15 @@ import (
 	"strconv"
 	"strings"
 
-	uuidv4 "github.com/delaemon/go-uuidv4"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Define the global variables
-var megaByte int64 = 1024 * 1024
+const megaByte int64 = 1024 * 1024
 
 // the csv module doesn't expose the bytes-offset of the
 // underlying file object.
@@ -43,7 +44,7 @@ var megaByte int64 = 1024 * 1024
 // naïve string concatenation of the CSV fields to cover the overhead of quoting
 // and delimiters. This gets close enough for now.
 // VARIANCE := 0.03
-var variance float64 = 0.03
+const variance float64 = 0.03
 
 // if we're creating more than 1k files, something is probably wrong.
 var maxSplits int64 = 1000
@@ -61,54 +62,42 @@ type Manifest struct {
 var ErrNoReports = errors.New("reports not found")
 
 // BuildLocalCSVFileList gets the list of files in the staging directory
-func BuildLocalCSVFileList(stagingDirectory string) ([]string, error) {
+func BuildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string {
 	var csvList []string
-	fileList, err := ioutil.ReadDir(stagingDirectory)
-	if err != nil {
-		return csvList, fmt.Errorf("BuildLocalCSVFileList: failed to read directory: %v", err)
-	}
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
-			csvList = append(csvList, path.Join(stagingDirectory, file.Name()))
+			csvFilePath := path.Join(stagingDirectory, file.Name())
+			csvList = append(csvList, csvFilePath)
 		}
 	}
-	return csvList, nil
+	return csvList
 }
 
 // NeedSplit determines if any of the files to be packaged need to be split.
-func NeedSplit(filepath string, maxBytes int64) (bool, error) {
+func NeedSplit(fileList []os.FileInfo, maxBytes int64) bool {
 	var totalSize int64 = 0
-	fileList, err := ioutil.ReadDir(filepath)
-	if err != nil {
-		return false, fmt.Errorf("NeedSplit: failed to read directory: %v", err)
-	}
 	for _, file := range fileList {
-		info, err := os.Stat(path.Join(filepath, file.Name()))
-		if err != nil {
-			return false, fmt.Errorf("NeedSplit: could not determine file size: %v", err)
-		}
-		fileSize := info.Size()
+		fileSize := file.Size()
 		totalSize += fileSize
 		if fileSize >= maxBytes || totalSize >= maxBytes {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 // RenderManifest writes the manifest
-func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath string) (string, string, error) {
+func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath, uid string) (string, error) {
 	log := logger.WithValues("costmanagement", "RenderManifest")
 	// setup the manifest
-	manifestUUID, _ := uuidv4.Generate()
 	manifestDate := metav1.Now()
 	var manifestFiles []string
 	for idx := range archiveFiles {
-		uploadName := manifestUUID + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+		uploadName := uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 		manifestFiles = append(manifestFiles, uploadName)
 	}
 	fileManifest := Manifest{
-		UUID:      manifestUUID,
+		UUID:      uid,
 		ClusterID: cost.Status.ClusterID,
 		Version:   cost.Status.OperatorCommit,
 		Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
@@ -118,14 +107,14 @@ func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1a
 	// write the manifest file
 	file, err := json.MarshalIndent(fileManifest, "", " ")
 	if err != nil {
-		return "", "", fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
+		return "", fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
 	}
 	if err := ioutil.WriteFile(manifestFileName, file, 0644); err != nil {
-		return "", "", fmt.Errorf("RenderManifest: failed to write manifest: %v", err)
+		return "", fmt.Errorf("RenderManifest: failed to write manifest: %v", err)
 	}
 	// return the manifest file/uuid
 	log.Info("Generated manifest file", "manifest", manifestFileName)
-	return manifestFileName, manifestUUID, nil
+	return manifestFileName, nil
 }
 
 func addFileToTarWriter(logger logr.Logger, uploadName, filePath string, tarWriter *tar.Writer) error {
@@ -161,26 +150,20 @@ func addFileToTarWriter(logger logr.Logger, uploadName, filePath string, tarWrit
 }
 
 // WriteTarball packages the files into tar balls
-func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUID string, archiveFiles []string, fileNum ...int) (string, error) {
+func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUID string, archiveFiles []string, fileNum ...int) error {
 	index := 0
 	if len(fileNum) > 0 {
 		index = fileNum[0]
 	}
-	if len(archiveFiles) <= 0 {
-		fmt.Println("no files to add to tar file")
-		return "", ErrNoReports
-	}
 	// create the tarfile
 	tarFile, err := os.Create(tarFileName)
 	if err != nil {
-		fmt.Println("error creating tar file")
-		return "", err
+		return fmt.Errorf("WriteTarball: error creating tar file: %v", err)
 	}
 	defer tarFile.Close()
 
 	gzipWriter := gzip.NewWriter(tarFile)
 	defer gzipWriter.Close()
-
 	tw := tar.NewWriter(gzipWriter)
 	defer tw.Close()
 
@@ -193,20 +176,16 @@ func WriteTarball(logger logr.Logger, tarFileName, manifestFileName, manifestUUI
 		if strings.Contains(fileName, ".csv") {
 			uploadName := manifestUUID + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 			fmt.Println(uploadName)
-			err := addFileToTarWriter(logger, uploadName, fileName, tw)
-			if err != nil {
-				fmt.Println("error creating the tar file")
-				return "", err
+			if err := addFileToTarWriter(logger, uploadName, fileName, tw); err != nil {
+				return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
 			}
 		}
 	}
-	err = addFileToTarWriter(logger, "manifest.json", manifestFileName, tw)
-	if err != nil {
-		fmt.Println("error creating the tar file")
-		return "", err
+	if err := addFileToTarWriter(logger, "manifest.json", manifestFileName, tw); err != nil {
+		return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
 	}
-	return tarFileName, nil
 
+	return tarFile.Sync()
 }
 
 // WritePart writes a portion of a split file into a new file
@@ -244,25 +223,16 @@ func WritePart(logger logr.Logger, fileName string, csvReader *csv.Reader, csvHe
 }
 
 // SplitFiles breaks larger files into smaller ones
-func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
-	fileList, err := ioutil.ReadDir(filePath)
-	if err != nil {
-		return fmt.Errorf("SplitFiles: error reading directory: %v", err)
-	}
+func SplitFiles(logger logr.Logger, filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, error) {
+	var splitFiles []os.FileInfo
 	for _, file := range fileList {
-		absPath := filePath + "/" + file.Name()
-		info, err := os.Stat(absPath)
-		if err != nil {
-			return fmt.Errorf("SplitFiles: error getting fileInfo: %v", err)
-		}
-		fileSize := info.Size()
+		absPath := path.Join(filePath, file.Name())
+		fileSize := file.Size()
 		if fileSize >= maxBytes {
-			var splitFiles []string
-			// var csvHeader string
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
-				return fmt.Errorf("SplitFiles: error reading file: %v", err)
+				return nil, fmt.Errorf("SplitFiles: error reading file: %v", err)
 			}
 			csvReader := csv.NewReader(csvFile)
 			csvHeader, err := csvReader.Read()
@@ -270,9 +240,13 @@ func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 			for {
 				newFile, eof, err := WritePart(logger, absPath, csvReader, csvHeader, part, maxBytes)
 				if err != nil {
-					return fmt.Errorf("SplitFiles: %v", err)
+					return nil, fmt.Errorf("SplitFiles: %v", err)
 				}
-				splitFiles = append(splitFiles, newFile)
+				info, err := os.Stat(newFile)
+				if err != nil {
+					return nil, fmt.Errorf("SplitFiles: %v", err)
+				}
+				splitFiles = append(splitFiles, info)
 				part++
 				if eof || part >= maxSplits {
 					break
@@ -280,121 +254,121 @@ func SplitFiles(logger logr.Logger, filePath string, maxBytes int64) error {
 			}
 			os.Remove(absPath)
 			fmt.Println(splitFiles)
+		} else {
+			splitFiles = append(splitFiles, file)
 		}
 	}
-	return nil
+	return splitFiles, nil
 }
 
 // MoveFiles moves files from reportsDirectory to stagingDirectory
-func MoveFiles(logger logr.Logger, reportsDirectory, stagingDirectory string) error {
-	log := logger.WithValues("costmanagement", "Split")
-	// remove all files from directory
-	log.Info("Clearing out staging directory!")
-	if err := os.RemoveAll(stagingDirectory); err != nil {
-		return err
-	}
-	// recreate Directory
-	if _, err := os.Stat(stagingDirectory); os.IsNotExist(err) {
-		if err := os.MkdirAll(stagingDirectory, os.ModePerm); err != nil {
-			return fmt.Errorf("MoveFiles: could not make %s: %v", stagingDirectory, err)
-		}
-	}
+func MoveFiles(logger logr.Logger, reportsDir, stagingDir dirconfig.Directory, cost *costmgmtv1alpha1.CostManagement, uid string) ([]os.FileInfo, error) {
+	log := logger.WithValues("costmanagement", "MoveFiles")
+	var movedFiles []os.FileInfo
+
 	// move all files
-	fileList, err := ioutil.ReadDir(reportsDirectory)
+	fileList, err := ioutil.ReadDir(reportsDir.Path)
 	if err != nil {
-		return fmt.Errorf("MoveFiles: could not read %s: %v", reportsDirectory, err)
+		return nil, fmt.Errorf("MoveFiles: could not read reports directory: %v", err)
 	}
 	if len(fileList) <= 0 {
-		return ErrNoReports
+		return nil, ErrNoReports
+	}
+
+	// remove all files from staging directory
+	if cost.Status.Packaging.PackagingError == "" {
+		// Only clear the staging directory if previous packaging was successful
+		log.Info("Clearing out staging directory!")
+		if err := stagingDir.RemoveContents(); err != nil {
+			return nil, fmt.Errorf("MoveFiles: could not clear staging: %v", err)
+		}
 	}
 
 	log.Info("Moving report files to staging directory")
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
-			if err := os.Rename(path.Join(reportsDirectory, file.Name()), path.Join(stagingDirectory, file.Name())); err != nil {
-				return fmt.Errorf("MoveFiles: failed to move files: %v", err)
+			from := path.Join(reportsDir.Path, file.Name())
+			to := path.Join(stagingDir.Path, uid+"-"+file.Name())
+			if err := os.Rename(from, to); err != nil {
+				return nil, fmt.Errorf("MoveFiles: failed to move files: %v", err)
 			}
+			newFile, err := os.Stat(to)
+			if err != nil {
+				return nil, fmt.Errorf("MoveFiles: failed to get new file stats: %v", err)
+			}
+			movedFiles = append(movedFiles, newFile)
 		}
 	}
-	return nil
-
+	return movedFiles, nil
 }
 
-// Split is responsible for packing the files for upload
-func Split(logger logr.Logger, filePath string, cost *costmgmtv1alpha1.CostManagement, maxSize int64) (string, error) {
-	log := logger.WithValues("costmanagement", "Split")
+// PackageReports is responsible for packing report files for upload
+func PackageReports(logger logr.Logger, dirCfg *dirconfig.DirectoryConfig, cost *costmgmtv1alpha1.CostManagement, maxSize int64) ([]os.FileInfo, error) {
+	log := logger.WithValues("costmanagement", "PackageReports")
 	maxBytes := maxSize * megaByte
-	var outFiles []string
-	reportsDirectory := path.Join(filePath, "data")
-	stagingDirectory := path.Join(filePath, "staging")
-	uploadDirectory := path.Join(filePath, "upload")
+	tarUUID := uuid.New().String()
+
+	// create reports/staging/upload directories if they do not exist
+	if err := dirconfig.CheckExistsOrRecreate(log, dirCfg.Reports, dirCfg.Staging, dirCfg.Upload); err != nil {
+		return nil, fmt.Errorf("PackageReports: could not check directory: %v", err)
+	}
+
 	// move CSV reports from data directory to staging directory
-	if err := MoveFiles(logger, reportsDirectory, stagingDirectory); err != nil {
-		if err != ErrNoReports {
-			uploadDirectory = ""
-		}
-		return uploadDirectory, err
+	filesToPackage, err := MoveFiles(logger, dirCfg.Reports, dirCfg.Staging, cost, tarUUID)
+	if err == ErrNoReports || filesToPackage == nil {
+		return ReadUploadDir(dirCfg)
+	} else if err != nil {
+		return nil, fmt.Errorf("PackageReports: %v", err)
 	}
-	// create the upload directory if it does not exist
-	if _, err := os.Stat(uploadDirectory); os.IsNotExist(err) {
-		if err := os.MkdirAll(uploadDirectory, os.ModePerm); err != nil {
-			return "", fmt.Errorf("Split: %v", err)
-		}
-	}
+
 	// check if the files need to be split
 	log.Info("Checking to see if the report files need to be split")
-	needSplit, err := NeedSplit(stagingDirectory, maxBytes)
-	if err != nil {
-		return "", fmt.Errorf("Split: %v", err)
-	}
-	if needSplit {
+
+	if NeedSplit(filesToPackage, maxBytes) {
 		log.Info("Report files exceed the max size. Splitting files")
-		if err := SplitFiles(logger, stagingDirectory, maxBytes); err != nil {
-			return "", fmt.Errorf("Split: %v", err)
-		}
-		fileList, err := BuildLocalCSVFileList(stagingDirectory)
+		filesToPackage, err := SplitFiles(logger, dirCfg.Staging.Path, filesToPackage, maxBytes)
 		if err != nil {
-			return "", fmt.Errorf("Split: %v", err)
+			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
-		manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, stagingDirectory)
+		fileList := BuildLocalCSVFileList(filesToPackage, dirCfg.Staging.Path)
+		manifestFileName, err := RenderManifest(logger, fileList, cost, dirCfg.Staging.Path, tarUUID)
 		if err != nil {
-			return "", fmt.Errorf("Split: %v", err)
+			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
 		for idx, fileName := range fileList {
-			if strings.Contains(fileName, ".csv") {
+			if strings.HasSuffix(fileName, ".csv") {
 				fileList = []string{fileName}
-				tarFileName := path.Join(uploadDirectory, "cost-mgmt"+strconv.Itoa(idx)+".tar.gz")
-				log.Info("Generating tar.gz", "tarFile", tarFileName)
-				outputTar, err := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList, idx)
-				if err == ErrNoReports {
-					return uploadDirectory, fmt.Errorf("Split: %v", err)
-				} else if err != nil {
-					return "", fmt.Errorf("Split: %v", err)
+				tarFileName := "cost-mgmt-" + tarUUID + "-" + strconv.Itoa(idx) + ".tar.gz"
+				tarFilePath := path.Join(dirCfg.Upload.Path, tarFileName)
+				log.Info("Generating tar.gz", "tarFile", tarFilePath)
+				if err := WriteTarball(logger, tarFilePath, manifestFileName, tarUUID, fileList, idx); err != nil {
+					return nil, fmt.Errorf("PackageReports: %v", err)
 				}
-				outFiles = append(outFiles, outputTar)
 			}
 		}
 	} else {
-		tarFileName := path.Join(uploadDirectory, "cost-mgmt.tar.gz")
-		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFileName)
-		fileList, err := BuildLocalCSVFileList(stagingDirectory)
+		tarFileName := "cost-mgmt-" + tarUUID + ".tar.gz"
+		tarFilePath := path.Join(dirCfg.Upload.Path, tarFileName)
+		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
+		fileList := BuildLocalCSVFileList(filesToPackage, dirCfg.Staging.Path)
+		manifestFileName, err := RenderManifest(logger, fileList, cost, dirCfg.Staging.Path, tarUUID)
 		if err != nil {
-			return "", fmt.Errorf("Split: %v", err)
+			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
-		if len(fileList) > 0 {
-			manifestFileName, manifestUUID, err := RenderManifest(logger, fileList, cost, stagingDirectory)
-			if err != nil {
-				return "", fmt.Errorf("Split: %v", err)
-			}
-			outputTar, err := WriteTarball(logger, tarFileName, manifestFileName, manifestUUID, fileList)
-			if err == ErrNoReports {
-				return uploadDirectory, fmt.Errorf("Split: %v", err)
-			} else if err != nil {
-				return "", fmt.Errorf("Split: %v", err)
-			}
-			outFiles = append(outFiles, outputTar)
+		if err := WriteTarball(logger, tarFilePath, manifestFileName, tarUUID, fileList); err != nil {
+			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
 	}
-	log.Info("Created the following files for upload: ", "files", outFiles)
-	return uploadDirectory, nil
+
+	return ReadUploadDir(dirCfg)
+}
+
+// ReadUploadDir returns the fileinfo for each file in the upload dir
+func ReadUploadDir(dirCfg *dirconfig.DirectoryConfig) ([]os.FileInfo, error) {
+	outFiles, err := ioutil.ReadDir(dirCfg.Upload.Path)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read upload directory: %v", err)
+	}
+
+	return outFiles, nil
 }

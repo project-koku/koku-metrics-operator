@@ -16,9 +16,10 @@ COPY clusterversion/ clusterversion/
 COPY collector/ collector/
 COPY controllers/ controllers/
 COPY crhchttp/ crhchttp/
-COPY strset/ strset/
+COPY dirconfig/ dirconfig/
 COPY packaging/ packaging/
 COPY sources/ sources/
+COPY strset/ strset/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go

@@ -208,7 +208,7 @@ type AuthenticationStatus struct {
 // PackagingStatus defines the observed state of the Packing object in the CostManagementStatus.
 type PackagingStatus struct {
 
-	// MaxSize is a field of CostManagement to represent the max file size in megabytes we can upload via Ingress.
+	// MaxSize is a field of CostManagement to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	// The default is 100.
 	// +optional
 	MaxSize *int64 `json:"max_size,omitempty"`
