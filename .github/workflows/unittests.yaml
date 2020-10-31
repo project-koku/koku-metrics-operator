@@ -22,9 +22,18 @@ jobs:
         with:
           stable: 'true'
           go-version: '1.13' # The Go version to download (if necessary) and use.
-      - run: go version
+
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            /usr/local/kubebuilder/bin
+          key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
+
 
       - name: Install kubebuilder
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run : |
           os=$(go env GOOS)
           arch=$(go env GOARCH)
@@ -33,16 +42,6 @@ jobs:
 
           sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
           export PATH=$PATH:/usr/local/kubebuilder/bin
-
-
-      # - name: Cache dependencies
-      #   id: cache-dependencies
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: |
-      #       ~/.cache/pipenv
-      #       ~/.local/share/virtualenvs
-      #     key: ${{ hashFiles('**/go.sum') }}-${{ github.ref }}
 
       - name: Run tests
         # if: steps.cache-dependencies.outputs.cache-hit != 'true'
