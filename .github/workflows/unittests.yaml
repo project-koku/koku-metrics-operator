@@ -17,11 +17,16 @@ jobs:
       - name: Display build environment
         run: printenv
 
-      - uses: actions/setup-go@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
           stable: 'true'
           go-version: '1.13' # The Go version to download (if necessary) and use.
       - run: go version
+
+      - name: Install kubebuilder
+        run : |
+          curl -L https://git.io//getLatestKubebuilder | KUBEBUILDER_VERSION=2.3.1 sh -
 
       # - name: Cache dependencies
       #   id: cache-dependencies
@@ -30,7 +35,7 @@ jobs:
       #     path: |
       #       ~/.cache/pipenv
       #       ~/.local/share/virtualenvs
-      #     key: os-${{ runner.os }}-env-${{ matrix.python-version }}-${{ hashFiles('**/Pipfile.lock') }}-${{ github.ref }}
+      #     key: ${{ hashFiles('**/go.sum') }}-${{ github.ref }}
 
       - name: Run tests
         # if: steps.cache-dependencies.outputs.cache-hit != 'true'
