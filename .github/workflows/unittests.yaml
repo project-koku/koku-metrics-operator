@@ -26,7 +26,14 @@ jobs:
 
       - name: Install kubebuilder
         run : |
-          curl -L https://git.io//getLatestKubebuilder | KUBEBUILDER_VERSION=v2.3.1 sh -
+          os=$(go env GOOS)
+          arch=$(go env GOARCH)
+
+          curl -L https://go.kubebuilder.io/dl/2.3.1/${os}/${arch} | tar -xz -C /tmp/
+
+          sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
+          export PATH=$PATH:/usr/local/kubebuilder/bin
+
 
       # - name: Cache dependencies
       #   id: cache-dependencies
