@@ -1,0 +1,50 @@
+name: Unit Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Display build environment
+        run: printenv
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          stable: 'true'
+          go-version: '1.13' # The Go version to download (if necessary) and use.
+
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
+
+
+      - name: Install kubebuilder
+        run : |
+          os=$(go env GOOS)
+          arch=$(go env GOARCH)
+          curl -L https://go.kubebuilder.io/dl/2.3.1/${os}/${arch} | tar -xz -C /tmp/
+          sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
+          export PATH=$PATH:/usr/local/kubebuilder/bin
+
+      - name: Run tests
+        run: |
+          make test
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./cover.out
+          flags: unittests
