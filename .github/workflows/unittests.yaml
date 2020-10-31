@@ -1,0 +1,37 @@
+name: Unit Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - name: Checkout repsository
+        uses: actions/checkout@v2
+
+      - name: Display build environment
+        run: printenv
+
+      # - name: Set up Python ${{ matrix.python-version }}
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: ${{ matrix.python-version }}
+
+      # - name: Cache dependencies
+      #   id: cache-dependencies
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: |
+      #       ~/.cache/pipenv
+      #       ~/.local/share/virtualenvs
+      #     key: os-${{ runner.os }}-env-${{ matrix.python-version }}-${{ hashFiles('**/Pipfile.lock') }}-${{ github.ref }}
+
+      - name: Run tests
+        # if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          make test
