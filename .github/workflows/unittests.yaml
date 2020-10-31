@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repsository
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Display build environment
@@ -48,4 +48,3 @@ jobs:
         with:
           file: ./cover.out
           flags: unittests
-          verbose: true
