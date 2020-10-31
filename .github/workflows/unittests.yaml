@@ -17,10 +17,11 @@ jobs:
       - name: Display build environment
         run: printenv
 
-      # - name: Set up Python ${{ matrix.python-version }}
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-go@v2
+        with:
+          stable: 'true'
+          go-version: '1.13' # The Go version to download (if necessary) and use.
+      - run: go version
 
       # - name: Cache dependencies
       #   id: cache-dependencies
