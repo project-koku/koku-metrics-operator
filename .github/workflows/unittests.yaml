@@ -26,7 +26,7 @@ jobs:
 
       - name: Install kubebuilder
         run : |
-          curl -L https://git.io//getLatestKubebuilder | KUBEBUILDER_VERSION=2.3.1 sh -
+          curl -L https://git.io//getLatestKubebuilder | KUBEBUILDER_VERSION=v2.3.1 sh -
 
       # - name: Cache dependencies
       #   id: cache-dependencies
