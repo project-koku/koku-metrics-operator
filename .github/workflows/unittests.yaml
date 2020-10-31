@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repsository
@@ -28,22 +28,24 @@ jobs:
         with:
           path: |
             ~/go/pkg/mod
-            /usr/local/kubebuilder/bin
           key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
 
 
       - name: Install kubebuilder
-        if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run : |
           os=$(go env GOOS)
           arch=$(go env GOARCH)
-
           curl -L https://go.kubebuilder.io/dl/2.3.1/${os}/${arch} | tar -xz -C /tmp/
-
           sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
           export PATH=$PATH:/usr/local/kubebuilder/bin
 
       - name: Run tests
-        # if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
           make test
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./cover.out
+          flags: unittests
+          verbose: true
