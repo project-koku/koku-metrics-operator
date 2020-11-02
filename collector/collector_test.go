@@ -8,7 +8,7 @@ import (
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
-	"go.uber.org/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const epsilon = 0.00001
