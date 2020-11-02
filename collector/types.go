@@ -156,7 +156,7 @@ func (row NodeRow) RowString() []string {
 		row.IntervalStart,
 		row.IntervalEnd,
 		row.Node,
-		// row.NodeCapacityCPUCores,
+		// row.NodeCapacityCPUCores,  // if Node and Pod reports are ever separated, these lines can be uncommented
 		// row.ModeCapacityCPUCoreSeconds,
 		// row.NodeCapacityMemoryBytes,
 		// row.NodeCapacityMemoryByteSeconds,

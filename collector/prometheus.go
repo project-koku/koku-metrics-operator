@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	promapi "github.com/prometheus/client_golang/api"
-	prom "github.com/prometheus/client_golang/api/prometheus/v1"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +42,7 @@ import (
 
 var (
 	costQuerier PrometheusConfig
-	promConn    prom.API
+	promConn    promv1.API
 
 	costMgmtNamespace   = "openshift-cost"
 	monitoringNamespace = "openshift-monitoring"
@@ -125,7 +125,7 @@ func getBearerToken(ctx context.Context, r client.Client, cfg *PrometheusConfig)
 
 }
 
-func getPrometheusConfig(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.CostManagement, log logr.Logger) (*PrometheusConfig, error) {
+func getPrometheusConfig(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.CostManagement) (*PrometheusConfig, error) {
 	cfg := &PrometheusConfig{
 		CAFile:  certFile,
 		Address: cost.Status.Prometheus.SvcAddress,
@@ -158,9 +158,9 @@ func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err erro
 	}
 }
 
-func GetPromConn(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.CostManagement, log logr.Logger) (prom.API, error) {
+func GetPromConn(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.CostManagement, log logr.Logger) (promv1.API, error) {
 	log = log.WithValues("costmanagement", "GetPromConn")
-	cfg, err := getPrometheusConfig(ctx, r, cost, log)
+	cfg, err := getPrometheusConfig(ctx, r, cost)
 	statusHelper(cost, "configuration", err)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get prometheus configuration: %v", err)
@@ -190,7 +190,7 @@ func GetPromConn(ctx context.Context, r client.Client, cost *costmgmtv1alpha1.Co
 	return promConn, nil
 }
 
-func newPrometheusConnFromCfg(cfg PrometheusConfig) (prom.API, error) {
+func newPrometheusConnFromCfg(cfg PrometheusConfig) (promv1.API, error) {
 	if promConn != nil && cfg == costQuerier {
 		// reuse the prometheus API
 		return promConn, nil
@@ -210,13 +210,13 @@ func newPrometheusConnFromCfg(cfg PrometheusConfig) (prom.API, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot create prometheus client: %v", err)
 	}
-	promConn = prom.NewAPI(client)
+	promConn = promv1.NewAPI(client)
 	return promConn, nil
 }
 
 func performMatrixQuery(q collector, query string) (model.Matrix, error) {
 	log := q.Log.WithValues("costmanagement", "performMatrixQuery")
-	result, warnings, err := q.PrometheusConnection.QueryRange(q.Context, query, q.TimeSeries)
+	result, warnings, err := q.PromConn.QueryRange(q.Context, query, q.TimeSeries)
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus: %v", err)
 	}

@@ -51,15 +51,19 @@ var (
 	statusTimeFormat = "2006-01-02 15:04:05"
 )
 
+type PrometheusConnection interface {
+	QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error)
+}
+
 type mappedCSVStruct map[string]CSVStruct
 type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
 type collector struct {
-	Context              context.Context
-	PrometheusConnection promv1.API
-	TimeSeries           promv1.Range
-	Log                  logr.Logger
+	Context    context.Context
+	PromConn   PrometheusConnection
+	TimeSeries promv1.Range
+	Log        logr.Logger
 }
 type Report struct {
 	filename    string
@@ -140,7 +144,7 @@ func getQueryResults(q collector, queries Querys) (mappedResults, error) {
 	for _, query := range queries {
 		matrix, err := performMatrixQuery(q, query.QueryString)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getQueryResults: %v", err)
 		}
 		results = iterateMatrix(matrix, query, results)
 	}
@@ -157,10 +161,10 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	defer cancel()
 
 	querier := collector{
-		Context:              ctx,
-		PrometheusConnection: promconn,
-		TimeSeries:           ts,
-		Log:                  log,
+		Context:    ctx,
+		PromConn:   promconn,
+		TimeSeries: ts,
+		Log:        log,
 	}
 
 	// yearMonth is used in filenames

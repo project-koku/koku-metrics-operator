@@ -31,7 +31,7 @@ var (
 		Query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "node", "provider_id"}},
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
 			QueryValue: &SaveQueryValue{
 				ValName:         "node-allocatable-cpu-cores",
 				Method:          "max",
@@ -43,7 +43,7 @@ var (
 		Query{
 			Name:        "node-allocatable-memory-bytes",
 			QueryString: "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "node", "provider_id"}},
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
 			QueryValue: &SaveQueryValue{
 				ValName:         "node-allocatable-memory-bytes",
 				Method:          "max",
@@ -55,7 +55,7 @@ var (
 		Query{
 			Name:        "node-capacity-cpu-cores",
 			QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "node", "provider_id"}},
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
 			QueryValue: &SaveQueryValue{
 				ValName:         "node-capacity-cpu-cores",
 				Method:          "max",
@@ -67,7 +67,7 @@ var (
 		Query{
 			Name:        "node-capacity-memory-bytes",
 			QueryString: "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"namespace", "node", "provider_id"}},
+			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
 			QueryValue: &SaveQueryValue{
 				ValName:         "node-capacity-memory-bytes",
 				Method:          "max",
