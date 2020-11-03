@@ -115,17 +115,13 @@ func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedRe
 			results[obj] = mappedValues{}
 		}
 		if q.MetricKey != nil {
-			for i, field := range q.MetricKey.MetricLabel {
-				index := string(field)
-				if len(q.MetricKey.LabelMap) > 0 {
-					index = q.MetricKey.LabelMap[i]
-				}
-				results[obj][index] = string(stream.Metric[field])
+			for key, field := range q.MetricKey {
+				results[obj][key] = string(stream.Metric[field])
 			}
 		}
 		if q.MetricKeyRegex != nil {
-			for i, field := range q.MetricKeyRegex.LabelMap {
-				results[obj][field] = parseFields(stream.Metric, q.MetricKeyRegex.MetricRegex[i])
+			for key, regexField := range q.MetricKeyRegex {
+				results[obj][key] = parseFields(stream.Metric, regexField)
 			}
 		}
 		if q.QueryValue != nil {

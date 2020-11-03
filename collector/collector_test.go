@@ -222,7 +222,7 @@ func TestIterateMatrix(t *testing.T) {
 			query: Query{
 				Name:        "node-allocatable-cpu-cores",
 				QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-				MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
+				MetricKey:   StaticFields{"node": "node", "provider_id": "provider_id"},
 				QueryValue: &SaveQueryValue{
 					ValName:         "node-allocatable-cpu-cores",
 					Method:          "max",
@@ -264,12 +264,10 @@ func TestIterateMatrix(t *testing.T) {
 		{
 			name: "with-regex query",
 			query: Query{
-				Name:        "node-labels",
-				QueryString: "kube_node_labels",
-				MetricKeyRegex: &RegexFields{
-					MetricRegex: []string{"label_*"},
-					LabelMap:    []string{"node_labels"}},
-				RowKey: "node",
+				Name:           "node-labels",
+				QueryString:    "kube_node_labels",
+				MetricKeyRegex: RegexFields{"node_labels": "label_*"},
+				RowKey:         "node",
 			},
 			matrix: model.Matrix{
 				{
@@ -319,10 +317,7 @@ func TestIterateMatrix(t *testing.T) {
 			query: Query{
 				Name:        "node-capacity-cpu-cores",
 				QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-				MetricKey: &StaticFields{
-					MetricLabel: []model.LabelName{"node", "provider_id"},
-					LabelMap:    []string{"node-renamed", "provider-id-renamed"},
-				},
+				MetricKey:   StaticFields{"node-renamed": "node", "provider-id-renamed": "provider_id"},
 				QueryValue: &SaveQueryValue{
 					ValName:         "node-capacity-cpu-cores",
 					Method:          "max",
@@ -466,7 +461,7 @@ func TestGetQueryResults(t *testing.T) {
 		Query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
+			MetricKey:   StaticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &SaveQueryValue{
 				ValName:         "node-allocatable-cpu-cores",
 				Method:          "max",
@@ -478,7 +473,7 @@ func TestGetQueryResults(t *testing.T) {
 		Query{
 			Name:        "node-capacity-cpu-cores",
 			QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   &StaticFields{MetricLabel: []model.LabelName{"node", "provider_id"}},
+			MetricKey:   StaticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &SaveQueryValue{
 				ValName:         "node-capacity-cpu-cores",
 				Method:          "max",
@@ -488,12 +483,10 @@ func TestGetQueryResults(t *testing.T) {
 			RowKey: "node",
 		},
 		Query{
-			Name:        "node-labels",
-			QueryString: "kube_node_labels",
-			MetricKeyRegex: &RegexFields{
-				MetricRegex: []string{"label_*"},
-				LabelMap:    []string{"node_labels"}},
-			RowKey: "node",
+			Name:           "node-labels",
+			QueryString:    "kube_node_labels",
+			MetricKeyRegex: RegexFields{"node_labels": "label_*"},
+			RowKey:         "node",
 		},
 	}
 	want := mappedResults{
