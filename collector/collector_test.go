@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"errors"
 	"math"
 	"reflect"
 	"testing"
@@ -49,7 +50,7 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 		return nil, nil, res.err
 	}
 	if res.warnings != nil {
-		return nil, res.warnings, nil
+		return res.matrix, res.warnings, nil
 	}
 	return res.matrix, nil, nil
 }
@@ -84,31 +85,31 @@ func TestGetValue(t *testing.T) {
 		{
 			name:  "sum",
 			query: SaveQueryValue{Method: "sum"},
-			array: []model.SamplePair{{Value: 1}, {Value: 2}, {Value: 3}},
-			want:  6,
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
+			want:  6.9,
 		},
 		{
 			name:  "sum inf",
 			query: SaveQueryValue{Method: "sum"},
-			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2}, {Value: 3}},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
 			want:  math.Inf(1),
 		},
 		{
 			name:  "max",
 			query: SaveQueryValue{Method: "max"},
-			array: []model.SamplePair{{Value: 1}, {Value: 2}, {Value: 3}},
-			want:  3,
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
+			want:  3.3,
 		},
 		{
 			name:  "max inf",
 			query: SaveQueryValue{Method: "max"},
-			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2}, {Value: 3}},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
 			want:  math.Inf(1),
 		},
 		{
 			name:  "unknown",
 			query: SaveQueryValue{Method: "unknown"},
-			array: []model.SamplePair{{Value: 1}, {Value: 2}, {Value: 3}},
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
 			want:  0,
 		},
 	}
@@ -511,5 +512,91 @@ func TestGetQueryResults(t *testing.T) {
 	eq := reflect.DeepEqual(got, want)
 	if !eq {
 		t.Errorf("getQueryResults got:\n\t%s\n  want:\n\t%s", got, want)
+	}
+}
+
+func TestGetQueryResultsError(t *testing.T) {
+	mapResults := mappedMockPromResult{
+		"kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)": mockPromResult{
+			matrix:   model.Matrix{},
+			warnings: promv1.Warnings{"This is a warning."},
+			err:      nil,
+		},
+		"kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)": mockPromResult{
+			matrix:   model.Matrix{},
+			warnings: nil,
+			err:      errors.New("this is an error"),
+		},
+		"kube_node_labels": mockPromResult{
+			matrix:   model.Matrix{},
+			warnings: promv1.Warnings{"This is another warning."},
+			err:      errors.New("this is another error"),
+		},
+	}
+	fakeCollector := collector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: mapResults,
+			t:             t,
+		},
+		TimeSeries: promv1.Range{},
+		Log:        zap.New(),
+	}
+	getQueryResultsErrorsTests := []struct {
+		name         string
+		collector    collector
+		queries      Querys
+		wantedResult mappedResults
+		wantedError  error
+	}{
+		{
+			name:      "warnings with no error",
+			collector: fakeCollector,
+			queries: Querys{
+				Query{
+					QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+					RowKey:      "node",
+				},
+			},
+			wantedResult: mappedResults{},
+			wantedError:  nil,
+		},
+		{
+			name:      "error with no warnings",
+			collector: fakeCollector,
+			queries: Querys{
+				Query{
+					QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+					RowKey:      "node",
+				},
+			},
+			wantedResult: nil,
+			wantedError:  errors.New("this is an error"),
+		},
+		{
+			name:      "error with warnings",
+			collector: fakeCollector,
+			queries: Querys{
+				Query{
+					QueryString: "kube_node_labels",
+					RowKey:      "node",
+				},
+			},
+			wantedResult: nil,
+			wantedError:  errors.New("this is another error"),
+		},
+	}
+	for _, tt := range getQueryResultsErrorsTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getQueryResults(tt.collector, tt.queries)
+			if got != nil {
+				eq := reflect.DeepEqual(got, tt.wantedResult)
+				if !eq {
+					t.Errorf("%s got: %s want: %s", tt.name, got, tt.wantedResult)
+				}
+			}
+			if tt.wantedError != nil && err == nil {
+				t.Errorf("%s got: nil error, want: error", tt.name)
+			}
+		})
 	}
 }

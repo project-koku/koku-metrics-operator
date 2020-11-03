@@ -68,6 +68,7 @@ type collector struct {
 type Report struct {
 	filename    string
 	filePath    string
+	size        int64
 	queryType   string
 	queryData   mappedCSVStruct
 	fileHeaders CSVStruct
@@ -335,6 +336,11 @@ func writeReport(report Report) error {
 	if err := writeToFile(csvFile, report.queryData, report.fileHeaders, created); err != nil {
 		return fmt.Errorf("writeReport: %v", err)
 	}
+	fileInfo, err := csvFile.Stat()
+	if err != nil {
+		return fmt.Errorf("writeReport: %v", err)
+	}
+	report.size = fileInfo.Size()
 	return nil
 }
 
