@@ -145,8 +145,8 @@ func TestFloatToString(t *testing.T) {
 	}
 }
 
-func TestParseFields(t *testing.T) {
-	parseFieldsTests := []struct {
+func TestFindFields(t *testing.T) {
+	findFieldsTests := []struct {
 		name  string
 		input model.Metric
 		str   string
@@ -198,9 +198,9 @@ func TestParseFields(t *testing.T) {
 			want: "label_controller_tools_k8s_io:1.0|label_openshift_io_cluster_monitoring:true",
 		},
 	}
-	for _, tt := range parseFieldsTests {
+	for _, tt := range findFieldsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseFields(tt.input, tt.str)
+			got := findFields(tt.input, tt.str)
 			if got != tt.want {
 				t.Errorf("%s got %s want %s", tt.name, got, tt.want)
 			}
@@ -450,12 +450,12 @@ func TestGetQueryResults(t *testing.T) {
 		},
 	}
 	fakeCollector := collector{
-		PromConn: mockPrometheusConnection{
+		promConn: mockPrometheusConnection{
 			mappedResults: mapResults,
 			t:             t,
 		},
-		TimeSeries: promv1.Range{},
-		Log:        zap.New(),
+		timeSeries: promv1.Range{},
+		log:        zap.New(),
 	}
 	queries := Querys{
 		Query{
@@ -527,12 +527,12 @@ func TestGetQueryResultsError(t *testing.T) {
 		},
 	}
 	fakeCollector := collector{
-		PromConn: mockPrometheusConnection{
+		promConn: mockPrometheusConnection{
 			mappedResults: mapResults,
 			t:             t,
 		},
-		TimeSeries: promv1.Range{},
-		Log:        zap.New(),
+		timeSeries: promv1.Range{},
+		log:        zap.New(),
 	}
 	getQueryResultsErrorsTests := []struct {
 		name         string

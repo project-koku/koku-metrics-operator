@@ -21,10 +21,7 @@ package collector
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -35,7 +32,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
-	"github.com/project-koku/korekuta-operator-go/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
@@ -51,7 +47,7 @@ var (
 	statusTimeFormat = "2006-01-02 15:04:05"
 )
 
-type PrometheusConnection interface {
+type prometheusConnection interface {
 	QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error)
 }
 
@@ -60,18 +56,10 @@ type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
 type collector struct {
-	Context    context.Context
-	PromConn   PrometheusConnection
-	TimeSeries promv1.Range
-	Log        logr.Logger
-}
-type Report struct {
-	filename    string
-	filePath    string
-	size        int64
-	queryType   string
-	queryData   mappedCSVStruct
-	fileHeaders CSVStruct
+	context    context.Context
+	promConn   prometheusConnection
+	timeSeries promv1.Range
+	log        logr.Logger
 }
 
 func floatToString(inputNum float64) string {
@@ -108,32 +96,17 @@ func getValue(query *SaveQueryValue, array []model.SamplePair) float64 {
 	}
 }
 
-func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedResults {
-	for _, stream := range matrix {
-		obj := string(stream.Metric[q.RowKey])
-		if results[obj] == nil {
-			results[obj] = mappedValues{}
-		}
-		if q.MetricKey != nil {
-			for key, field := range q.MetricKey {
-				results[obj][key] = string(stream.Metric[field])
-			}
-		}
-		if q.MetricKeyRegex != nil {
-			for key, regexField := range q.MetricKeyRegex {
-				results[obj][key] = parseFields(stream.Metric, regexField)
-			}
-		}
-		if q.QueryValue != nil {
-			saveStruct := q.QueryValue
-			value := getValue(saveStruct, stream.Values)
-			results[obj][saveStruct.ValName] = floatToString(value)
-			if saveStruct.TransformedName != "" {
-				results[obj][saveStruct.TransformedName] = floatToString(value * float64(len(stream.Values)*saveStruct.Factor))
-			}
-		}
+func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
+	if err := mapstructure.Decode(val, &usage); err != nil {
+		return fmt.Errorf("getStruct: failed to convert map to struct: %v", err)
 	}
-	return results
+	rowResults[key] = usage
+	return nil
+}
+
+func getResourceID(input string) string {
+	splitString := strings.Split(input, "/")
+	return splitString[len(splitString)-1]
 }
 
 func getQueryResults(q collector, queries Querys) (mappedResults, error) {
@@ -148,6 +121,34 @@ func getQueryResults(q collector, queries Querys) (mappedResults, error) {
 	return results, nil
 }
 
+func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedResults {
+	for _, stream := range matrix {
+		obj := string(stream.Metric[q.RowKey])
+		if results[obj] == nil {
+			results[obj] = mappedValues{}
+		}
+		if q.MetricKey != nil {
+			for key, field := range q.MetricKey {
+				results[obj][key] = string(stream.Metric[field])
+			}
+		}
+		if q.MetricKeyRegex != nil {
+			for key, regexField := range q.MetricKeyRegex {
+				results[obj][key] = findFields(stream.Metric, regexField)
+			}
+		}
+		if q.QueryValue != nil {
+			saveStruct := q.QueryValue
+			value := getValue(saveStruct, stream.Values)
+			results[obj][saveStruct.ValName] = floatToString(value)
+			if saveStruct.TransformedName != "" {
+				results[obj][saveStruct.TransformedName] = floatToString(value * float64(len(stream.Values)*saveStruct.Factor))
+			}
+		}
+	}
+	return results
+}
+
 // GenerateReports is responsible for querying prometheus and writing to report files
 func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, promconn promv1.API, ts promv1.Range, log logr.Logger) error {
 	if logger == nil {
@@ -158,10 +159,10 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	defer cancel()
 
 	querier := collector{
-		Context:    ctx,
-		PromConn:   promconn,
-		TimeSeries: ts,
-		Log:        log,
+		context:    ctx,
+		promConn:   promconn,
+		timeSeries: ts,
+		log:        log,
 	}
 
 	// yearMonth is used in filenames
@@ -211,14 +212,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			return err
 		}
 	}
-	nodeReport := Report{
-		filename:    nodeFilePrefix + yearMonth + ".csv",
+	nodeReport := report{
+		fileName:    nodeFilePrefix + yearMonth + ".csv",
 		filePath:    dirCfg.Reports.Path,
 		queryType:   "node",
 		queryData:   nodeRows,
 		fileHeaders: NewNodeRow(ts),
 	}
-	if err := writeReport(nodeReport); err != nil {
+	if err := nodeReport.writeReport(); err != nil {
 		return err
 	}
 
@@ -237,14 +238,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			}
 		}
 	}
-	podReport := Report{
-		filename:    podFilePrefix + yearMonth + ".csv",
+	podReport := report{
+		fileName:    podFilePrefix + yearMonth + ".csv",
 		filePath:    dirCfg.Reports.Path,
 		queryType:   "pod",
 		queryData:   podRows,
 		fileHeaders: NewPodRow(ts),
 	}
-	if err := writeReport(podReport); err != nil {
+	if err := podReport.writeReport(); err != nil {
 		return err
 	}
 
@@ -255,14 +256,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			return err
 		}
 	}
-	volReport := Report{
-		filename:    volFilePrefix + yearMonth + ".csv",
+	volReport := report{
+		fileName:    volFilePrefix + yearMonth + ".csv",
 		filePath:    dirCfg.Reports.Path,
 		queryType:   "volume",
 		queryData:   volRows,
 		fileHeaders: NewStorageRow(ts),
 	}
-	if err := writeReport(volReport); err != nil {
+	if err := volReport.writeReport(); err != nil {
 		return err
 	}
 
@@ -273,14 +274,14 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			return err
 		}
 	}
-	namespaceReport := Report{
-		filename:    namespaceFilePrefix + yearMonth + ".csv",
+	namespaceReport := report{
+		fileName:    namespaceFilePrefix + yearMonth + ".csv",
 		filePath:    dirCfg.Reports.Path,
 		queryType:   "namespace",
 		queryData:   namespaceRows,
 		fileHeaders: NewNamespaceRow(ts),
 	}
-	if err := writeReport(namespaceReport); err != nil {
+	if err := namespaceReport.writeReport(); err != nil {
 		return err
 	}
 
@@ -290,12 +291,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	return nil
 }
 
-func getResourceID(input string) string {
-	splitString := strings.Split(input, "/")
-	return splitString[len(splitString)-1]
-}
-
-func parseFields(input model.Metric, str string) string {
+func findFields(input model.Metric, str string) string {
 	result := []string{}
 	for name, val := range input {
 		name := string(name)
@@ -311,87 +307,6 @@ func parseFields(input model.Metric, str string) string {
 	default:
 		return ""
 	}
-}
-
-func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
-	if err := mapstructure.Decode(val, &usage); err != nil {
-		return fmt.Errorf("getStruct: failed to convert map to struct: %v", err)
-	}
-	rowResults[key] = usage
-	return nil
-}
-
-func writeReport(report Report) error {
-	csvFile, created, err := getOrCreateFile(report.filePath, report.filename)
-	if err != nil {
-		return fmt.Errorf("failed to get or create %s csv: %v", report.queryType, err)
-	}
-	defer csvFile.Close()
-	logMsg := fmt.Sprintf("writing %s results to file", report.queryType)
-	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", report.queryType)
-	if err := writeToFile(csvFile, report.queryData, report.fileHeaders, created); err != nil {
-		return fmt.Errorf("writeReport: %v", err)
-	}
-	fileInfo, err := csvFile.Stat()
-	if err != nil {
-		return fmt.Errorf("writeReport: %v", err)
-	}
-	report.size = fileInfo.Size()
-	return nil
-}
-
-func getOrCreateFile(path, filename string) (*os.File, bool, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			return nil, false, err
-		}
-	}
-	filePath := filepath.Join(path, filename)
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		file, err := os.Create(filePath)
-		return file, true, err
-	}
-	if err != nil {
-		return nil, false, err
-	}
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_RDWR, 0644)
-	return file, false, err
-}
-
-// writeToFile compares the data to what is in the file and only adds new data to the file
-func writeToFile(file *os.File, data mappedCSVStruct, headers CSVStruct, created bool) error {
-	set, err := readCsv(file, strset.NewSet())
-	if err != nil {
-		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
-	}
-	if created {
-		if err := headers.CSVheader(file); err != nil {
-			return fmt.Errorf("writeToFile: %v", err)
-		}
-	}
-
-	for _, row := range data {
-		if !set.Contains(row.String()) {
-			if err := row.CSVrow(file); err != nil {
-				return err
-			}
-		}
-	}
-
-	return file.Sync()
-}
-
-// readCsv reads the file and puts each row into a set
-func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
-	lines, err := csv.NewReader(f).ReadAll()
-	if err != nil {
-		return set, err
-	}
-	for _, line := range lines {
-		set.Add(strings.Join(line, ","))
-	}
-	return set, nil
 }
 
 func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts promv1.Range) {

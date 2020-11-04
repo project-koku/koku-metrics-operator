@@ -45,6 +45,16 @@ func NewDates(ts promv1.Range) *DateTimes {
 	return d
 }
 
+func (dt DateTimes) String() string {
+	str := []string{
+		dt.ReportPeriodStart,
+		dt.ReportPeriodEnd,
+		dt.IntervalStart,
+		dt.IntervalEnd,
+	}
+	return strings.Join(str, ",")
+}
+
 type CSVStruct interface {
 	CSVheader(w io.Writer) error
 	CSVrow(w io.Writer) error

@@ -215,8 +215,8 @@ func newPrometheusConnFromCfg(cfg PrometheusConfig) (promv1.API, error) {
 }
 
 func performMatrixQuery(q collector, query string) (model.Matrix, error) {
-	log := q.Log.WithValues("costmanagement", "performMatrixQuery")
-	result, warnings, err := q.PromConn.QueryRange(q.Context, query, q.TimeSeries)
+	log := q.log.WithValues("costmanagement", "performMatrixQuery")
+	result, warnings, err := q.promConn.QueryRange(q.context, query, q.timeSeries)
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus: %v", err)
 	}
