@@ -38,18 +38,20 @@ import (
 type packager interface {
 	BuildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string
 	NeedSplit(fileList []os.FileInfo, maxBytes int64) bool
-	RenderManifest(archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath, uid string) (string, error)
+	RenderManifest(archiveFiles []string, filepath, uid string) (string, error)
 	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
 	WriteTarball(tarFileName, manifestFileName, manifestUUID string, archiveFiles []string, fileNum ...int) error
 	WritePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (string, bool, error)
 	SplitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, error)
-	MoveFiles(reportsDir, stagingDir dirconfig.Directory, cost *costmgmtv1alpha1.CostManagement, uid string) ([]os.FileInfo, error)
-	PackageReports(dirCfg *dirconfig.DirectoryConfig, cost *costmgmtv1alpha1.CostManagement, maxSize int64) ([]os.FileInfo, error)
-	ReadUploadDir(dirCfg *dirconfig.DirectoryConfig) ([]os.FileInfo, error)
+	MoveFiles(reportsDir, stagingDir dirconfig.Directory, uid string) ([]os.FileInfo, error)
+	PackageReports(maxSize int64) ([]os.FileInfo, error)
+	ReadUploadDir() ([]os.FileInfo, error)
 }
 
 type FilePackager struct {
-	Log logr.Logger
+	Cost   *costmgmtv1alpha1.CostManagement
+	DirCfg *dirconfig.DirectoryConfig
+	Log    logr.Logger
 }
 
 // Define the global variables
@@ -104,7 +106,7 @@ func (p FilePackager) NeedSplit(fileList []os.FileInfo, maxBytes int64) bool {
 }
 
 // RenderManifest writes the manifest
-func (p FilePackager) RenderManifest(archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath, uid string) (string, error) {
+func (p FilePackager) RenderManifest(archiveFiles []string, filepath, uid string) (string, error) {
 	log := p.Log.WithValues("costmanagement", "RenderManifest")
 	// setup the manifest
 	manifestDate := metav1.Now()
@@ -115,8 +117,8 @@ func (p FilePackager) RenderManifest(archiveFiles []string, cost *costmgmtv1alph
 	}
 	fileManifest := Manifest{
 		UUID:      uid,
-		ClusterID: cost.Status.ClusterID,
-		Version:   cost.Status.OperatorCommit,
+		ClusterID: p.Cost.Status.ClusterID,
+		Version:   p.Cost.Status.OperatorCommit,
 		Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
 		Files:     manifestFiles,
 	}
@@ -279,12 +281,12 @@ func (p FilePackager) SplitFiles(filePath string, fileList []os.FileInfo, maxByt
 }
 
 // MoveFiles moves files from reportsDirectory to stagingDirectory
-func (p FilePackager) MoveFiles(reportsDir, stagingDir dirconfig.Directory, cost *costmgmtv1alpha1.CostManagement, uid string) ([]os.FileInfo, error) {
+func (p FilePackager) MoveFiles(uid string) ([]os.FileInfo, error) {
 	log := p.Log.WithValues("costmanagement", "MoveFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
-	fileList, err := ioutil.ReadDir(reportsDir.Path)
+	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
 	if err != nil {
 		return nil, fmt.Errorf("MoveFiles: could not read reports directory: %v", err)
 	}
@@ -293,10 +295,10 @@ func (p FilePackager) MoveFiles(reportsDir, stagingDir dirconfig.Directory, cost
 	}
 
 	// remove all files from staging directory
-	if cost.Status.Packaging.PackagingError == "" {
+	if p.Cost.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("Clearing out staging directory!")
-		if err := stagingDir.RemoveContents(); err != nil {
+		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
 			return nil, fmt.Errorf("MoveFiles: could not clear staging: %v", err)
 		}
 	}
@@ -304,8 +306,8 @@ func (p FilePackager) MoveFiles(reportsDir, stagingDir dirconfig.Directory, cost
 	log.Info("Moving report files to staging directory")
 	for _, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
-			from := path.Join(reportsDir.Path, file.Name())
-			to := path.Join(stagingDir.Path, uid+"-"+file.Name())
+			from := path.Join(p.DirCfg.Reports.Path, file.Name())
+			to := path.Join(p.DirCfg.Staging.Path, uid+"-"+file.Name())
 			if err := os.Rename(from, to); err != nil {
 				return nil, fmt.Errorf("MoveFiles: failed to move files: %v", err)
 			}
@@ -320,20 +322,20 @@ func (p FilePackager) MoveFiles(reportsDir, stagingDir dirconfig.Directory, cost
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p FilePackager) PackageReports(dirCfg *dirconfig.DirectoryConfig, cost *costmgmtv1alpha1.CostManagement, maxSize int64) ([]os.FileInfo, error) {
+func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
 	maxBytes := maxSize * megaByte
 	tarUUID := uuid.New().String()
 
 	// create reports/staging/upload directories if they do not exist
-	if err := dirconfig.CheckExistsOrRecreate(log, dirCfg.Reports, dirCfg.Staging, dirCfg.Upload); err != nil {
+	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
 		return nil, fmt.Errorf("PackageReports: could not check directory: %v", err)
 	}
 
 	// move CSV reports from data directory to staging directory
-	filesToPackage, err := p.MoveFiles(dirCfg.Reports, dirCfg.Staging, cost, tarUUID)
+	filesToPackage, err := p.MoveFiles(tarUUID)
 	if err == ErrNoReports || filesToPackage == nil {
-		return p.ReadUploadDir(dirCfg)
+		return p.ReadUploadDir()
 	} else if err != nil {
 		return nil, fmt.Errorf("PackageReports: %v", err)
 	}
@@ -343,12 +345,12 @@ func (p FilePackager) PackageReports(dirCfg *dirconfig.DirectoryConfig, cost *co
 
 	if p.NeedSplit(filesToPackage, maxBytes) {
 		log.Info("Report files exceed the max size. Splitting files")
-		filesToPackage, err := p.SplitFiles(dirCfg.Staging.Path, filesToPackage, maxBytes)
+		filesToPackage, err := p.SplitFiles(p.DirCfg.Staging.Path, filesToPackage, maxBytes)
 		if err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
-		fileList := p.BuildLocalCSVFileList(filesToPackage, dirCfg.Staging.Path)
-		manifestFileName, err := p.RenderManifest(fileList, cost, dirCfg.Staging.Path, tarUUID)
+		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
+		manifestFileName, err := p.RenderManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
 		if err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
@@ -356,7 +358,7 @@ func (p FilePackager) PackageReports(dirCfg *dirconfig.DirectoryConfig, cost *co
 			if strings.HasSuffix(fileName, ".csv") {
 				fileList = []string{fileName}
 				tarFileName := "cost-mgmt-" + tarUUID + "-" + strconv.Itoa(idx) + ".tar.gz"
-				tarFilePath := path.Join(dirCfg.Upload.Path, tarFileName)
+				tarFilePath := path.Join(p.DirCfg.Upload.Path, tarFileName)
 				log.Info("Generating tar.gz", "tarFile", tarFilePath)
 				if err := p.WriteTarball(tarFilePath, manifestFileName, tarUUID, fileList, idx); err != nil {
 					return nil, fmt.Errorf("PackageReports: %v", err)
@@ -365,10 +367,10 @@ func (p FilePackager) PackageReports(dirCfg *dirconfig.DirectoryConfig, cost *co
 		}
 	} else {
 		tarFileName := "cost-mgmt-" + tarUUID + ".tar.gz"
-		tarFilePath := path.Join(dirCfg.Upload.Path, tarFileName)
+		tarFilePath := path.Join(p.DirCfg.Upload.Path, tarFileName)
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
-		fileList := p.BuildLocalCSVFileList(filesToPackage, dirCfg.Staging.Path)
-		manifestFileName, err := p.RenderManifest(fileList, cost, dirCfg.Staging.Path, tarUUID)
+		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
+		manifestFileName, err := p.RenderManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
 		if err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
@@ -377,12 +379,12 @@ func (p FilePackager) PackageReports(dirCfg *dirconfig.DirectoryConfig, cost *co
 		}
 	}
 
-	return p.ReadUploadDir(dirCfg)
+	return p.ReadUploadDir()
 }
 
 // ReadUploadDir returns the fileinfo for each file in the upload dir
-func (p FilePackager) ReadUploadDir(dirCfg *dirconfig.DirectoryConfig) ([]os.FileInfo, error) {
-	outFiles, err := ioutil.ReadDir(dirCfg.Upload.Path)
+func (p FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
+	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
 	if err != nil {
 		return nil, fmt.Errorf("Could not read upload directory: %v", err)
 	}
