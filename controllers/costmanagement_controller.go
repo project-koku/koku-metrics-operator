@@ -467,8 +467,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// if its time to upload/package
 	if costConfig.UploadToggle && checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload") {
 		// Package and split the payload if necessary
-		packager := packaging.FilePackager{Log: r.Log}
-		uploadFiles, err := packager.PackageReports(dirCfg, cost, costConfig.MaxSize)
+		packager := packaging.FilePackager{
+			Cost:   cost,
+			DirCfg: dirCfg,
+			Log:    r.Log}
+		uploadFiles, err := packager.PackageReports(costConfig.MaxSize)
 		if err != nil {
 			log.Error(err, "Failed to package files.")
 			// update the CR packaging error status
