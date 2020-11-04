@@ -21,20 +21,31 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"io/ioutil"
+	"encoding/json"
+	"errors"
 	"os"
 	"path"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"strconv"
 	"strings"
 	"testing"
 
 	// uuidv4 "github.com/delaemon/go-uuidv4"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var DirMap = make(map[string][]os.FileInfo)
 var testingDir string
-var maxBytes int64 = 100 * 1024 * 1024
+var maxBytes int64
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
+
+// set up mocking scaffolding 
+var marshalMock func(Manifest, string, string) ([]byte, error)
+type marshalCheckMock struct{}
+func (u marshalCheckMock) marshalFile(manifestStruct Manifest, space string, delimiter string) ([]byte, error) {
+	return marshalMock(manifestStruct, space, delimiter)
+}
 
 func Copy(src, dst string) error {
 	in, err := os.Open(src)
@@ -68,7 +79,7 @@ func setup() {
 		}
 	}
 	// setup a large/small dir within the testing directory
-	// setup a data dir within each of the above directories and copy over a large and small CSV file to each respectively
+	// setup a data dir within each of the above directories and copy over the csv file to each respectively
 	for _, reportSize := range dirs {
 		reportPath := path.Join(testingDir, reportSize)
 		reportDataPath := path.Join(reportPath, "data")
@@ -80,11 +91,6 @@ func setup() {
 				fmt.Println("Could not create testing directory")
 			}
 			Copy("../testfiles/ocp_pod_usage.csv", path.Join(reportDataPath, "ocp_pod_usage.csv"))
-			// if reportSize == "large" {
-			// 	Copy("../testfiles/ocp_pod_usage_large.csv", path.Join(reportDataPath, "ocp_pod_usage-1.csv"))
-			// } else {
-			// 	Copy("../testfiles/ocp_pod_usage.csv", path.Join(reportDataPath, "ocp_pod_usage-1.csv"))
-			// }
 			fileList, err := ioutil.ReadDir(reportDataPath)
 			if err != nil {
 				fmt.Println("Something went wrong creating the test files")
@@ -111,6 +117,8 @@ func TestNeedSplit(t *testing.T) {
 		if strings.Contains(dirName, "large") {
 			// mimic a file that needs to be split by lowering the maxBytes
 			maxBytes = 10 * 1024 * 1024
+		} else {
+			maxBytes = 100 * 1024 * 1024
 		}
 		needSplit := NeedSplit(fileList, maxBytes)
 		var expectedNeedSplit bool
@@ -146,12 +154,6 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 	}
 }
 
-func TestReadUploadDir(t *testing.T) {
-	// fixme
-	outFiles, _ := ReadUploadDir(dirCfg)
-	fmt.Println(outFiles)
-}
-
 func TestMoveFiles(t *testing.T) {
 	log := zap.New()
 	fileUUID := uuid.New().String()
@@ -163,10 +165,6 @@ func TestMoveFiles(t *testing.T) {
 			dirCfg.GetDirectoryConfig()
 			movedFiles, _ := MoveFiles(log, dirCfg.Reports, dirCfg.Staging, cost, fileUUID)
 			for _, file := range movedFiles {
-				// check that the data directory has been removed
-				if _, err := os.Stat(path.Join(dirName, "data")); !os.IsNotExist(err) {
-					t.Fatalf("Expected %s to not exist", path.Join(dirName, "data"))
-				}
 				// check that the file contains the uuid 
 				if !strings.Contains(file.Name(), fileUUID){
 					t.Fatalf("Expected %s to be in the name but got %s", fileUUID, file.Name())
@@ -176,6 +174,16 @@ func TestMoveFiles(t *testing.T) {
 					t.Fatalf("File does not exist in the staging directory")
 				}
 			}
+			// test MoveFiles when the FileList is empty (create an empty dir)
+			if err := os.MkdirAll(path.Join(dirName, "emptyDir"), os.ModePerm); err != nil {
+				fmt.Println("Could not create empty directory")
+			}
+			dirconfig.ParentDir = path.Join(dirName, "emptyDir")
+			dirCfg.GetDirectoryConfig()
+			movedFiles, _ = MoveFiles(log, dirCfg.Reports, dirCfg.Staging, cost, fileUUID)
+			if movedFiles != nil {
+				t.Fatalf("Found files in an empty directory")
+			}
 		}
 	}
 }
@@ -183,12 +191,14 @@ func TestMoveFiles(t *testing.T) {
 func TestPackagingReports(t *testing.T) {
 	log := zap.New()
 	cost := &costmgmtv1alpha1.CostManagement{}
-	var maxSize int64 = 100
+	var maxSize int64
 	for dirName, _ := range DirMap {
 		if !strings.Contains(dirName, "moving") {
 			if strings.Contains(dirName, "large") {
 				// mimic a file that needs to be split by lowering the maxSize
 				maxSize = 10
+			} else {
+				maxSize = 100
 			}
 			dirconfig.ParentDir = dirName
 			dirCfg.GetDirectoryConfig()
@@ -209,47 +219,109 @@ func TestPackagingReports(t *testing.T) {
 	}
 }
 
-func TestSplitFiles(t *testing.T) {
-	// TODO: fix me this is a stub
-	log := zap.New()
-	for dirName, fileList := range DirMap {
-		if strings.Contains(dirName, "large") {
-			// mimic a file that needs to be split by lowering the maxBytes
-			maxBytes = 10 * 1024 * 1024
-		}
-		dirName = path.Join(dirName, "data")
-		files, _ := SplitFiles(log, dirName, fileList, maxBytes)
-		fmt.Println(files)
-	}
-}
-
 func TestRenderManifest(t *testing.T) {
 	// TODO: fix me this is a stub
 	log := zap.New()
 	fileUUID := uuid.New().String()
 	cost := &costmgmtv1alpha1.CostManagement{}
 	for dirName, fileList := range DirMap {
-		dirName = path.Join(dirName, "data")
-		csvFileNames := BuildLocalCSVFileList(fileList, dirName)
-		manifestName, _ := RenderManifest(log, csvFileNames, cost, dirName, fileUUID)
-		// check that the manifest was generated correctly
-		if manifestName != path.Join(dirName, "manifest.json") {
-			t.Fatalf("Manifest was not generated correctly")
+		if strings.Contains(dirName, "small") {
+			// test the marshal error
+			marshal = marshalCheckMock{}
+			marshalMock = func(manifestFile Manifest, space string, delimiter string) ([]byte, error){
+				marshalError := errors.New("Error marshaling occurred")
+				var byteArray []byte
+				return byteArray, marshalError
+			}
+			dirName = path.Join(dirName, "data")
+			csvFileNames := BuildLocalCSVFileList(fileList, dirName)
+			_, err := RenderManifest(log, csvFileNames, cost, dirName, fileUUID)
+			if err == nil {
+				t.Fatalf("Marshal mock did not raise an error as expected!")
+			}
+		} else {
+			dirName = path.Join(dirName, "data")
+			csvFileNames := BuildLocalCSVFileList(fileList, dirName)
+			manifestName, _ := RenderManifest(log, csvFileNames, cost, dirName, fileUUID)
+			// check that the manifest was generated correctly
+			if manifestName != path.Join(dirName, "manifest.json") {
+				t.Fatalf("Manifest was not generated correctly")
+			}
+			// check that the manifest content is correct
+			manifestData, _ := ioutil.ReadFile(manifestName)
+			var foundManifest Manifest 
+			err := json.Unmarshal(manifestData, &foundManifest)
+			if err != nil {
+				t.Fatalf("Error unmarshaling manifest")
+			}
+			// Define the expected manifest 
+			var expectedFiles []string
+			for idx := range csvFileNames {
+				uploadName := fileUUID + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+				expectedFiles = append(expectedFiles, uploadName)
+			}
+			manifestDate := metav1.Now()
+			expectedManifest := Manifest{
+				UUID:      fileUUID,
+				ClusterID: cost.Status.ClusterID,
+				Version:   cost.Status.OperatorCommit,
+				Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
+				Files:     expectedFiles,
+			}
+			// Compare the found manifest to the expected manifest
+			errorMsg := "Manifest does not match. Expected %s, recieved %s"
+			if foundManifest.UUID != expectedManifest.UUID {
+				t.Fatalf(errorMsg, expectedManifest.UUID, foundManifest.UUID)
+			}
+			if foundManifest.ClusterID != expectedManifest.ClusterID {
+				t.Fatalf(errorMsg, expectedManifest.ClusterID, foundManifest.ClusterID)
+			}
+			if foundManifest.Version != expectedManifest.Version {
+				t.Fatalf(errorMsg, expectedManifest.Version, foundManifest.Version)
+			}
+			for index, file := range expectedFiles {
+				if file != foundManifest.Files[index] {
+					t.Fatalf(errorMsg, file, foundManifest.Files[index])
+				}
+			}
 		}
-		// check that the manifest content is correct
-		
 	}
 }
 
 func TestWriteTarball(t *testing.T) {
-	//TODO: fix me this is a stub
 	log := zap.New()
 	fileUUID := uuid.New().String()
 	cost := &costmgmtv1alpha1.CostManagement{}
 	for dirName, fileList := range DirMap {
-		dirName = path.Join(dirName, "data")
+		uploadDir := path.Join(dirName, "upload")
+		dirName = path.Join(dirName, "staging")
 		csvFileNames := BuildLocalCSVFileList(fileList, dirName)
 		manifestName, _ := RenderManifest(log, csvFileNames, cost, dirName, fileUUID)
-		WriteTarball(log, "cost-mgmt.tar.gz", manifestName, fileUUID, csvFileNames)
+		tarFileName := path.Join(uploadDir, "cost-mgmt-test.tar.gz")
+		WriteTarball(log, tarFileName, manifestName, fileUUID, csvFileNames)
+		// ensure the tarfile was created
+		if _, err := os.Stat(tarFileName); os.IsNotExist(err) {
+			t.Fatalf("Tar file was not created")
+		  }
+		// TODO: check the contents of the tarfile
+	}
+}
+
+func TestSplitFiles(t *testing.T) {
+	log := zap.New()
+	for dirName, fileList := range DirMap {
+		if strings.Contains(dirName, "large") {
+			// mimic a file that needs to be split by lowering the maxBytes
+			maxBytes = 10 * 1024 * 1024
+		} else {
+			maxBytes = 100 * 1024 * 1024
+		}
+		dirName = path.Join(dirName, "data")
+		files, _ := SplitFiles(log, dirName, fileList, maxBytes)
+		fmt.Println("################################*************************** FILES: ")
+		fmt.Println(files)
+		for _, file := range files{
+			fmt.Println(file.Name())
+		}
 	}
 }

@@ -34,6 +34,18 @@ import (
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+// Define interfaces for testing errors in unit tests 
+type marshalChecker interface {
+	marshalFile(Manifest, string, string) ([]byte, error)
+}
+
+type marshalCheck struct {}
+
+func (r marshalCheck) marshalFile(fileStruct Manifest, spacing string, limiter string) ([]byte, error) {
+	return json.MarshalIndent(fileStruct, spacing, limiter)
+}
+
+var marshal marshalChecker
 
 // Define the global variables
 const megaByte int64 = 1024 * 1024
@@ -89,6 +101,7 @@ func NeedSplit(fileList []os.FileInfo, maxBytes int64) bool {
 // RenderManifest writes the manifest
 func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1alpha1.CostManagement, filepath, uid string) (string, error) {
 	log := logger.WithValues("costmanagement", "RenderManifest")
+	marshal = marshalCheck{}
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -105,7 +118,8 @@ func RenderManifest(logger logr.Logger, archiveFiles []string, cost *costmgmtv1a
 	}
 	manifestFileName := path.Join(filepath, "manifest.json")
 	// write the manifest file
-	file, err := json.MarshalIndent(fileManifest, "", " ")
+	// file, err := json.MarshalIndent(fileManifest, "", " ")
+	file, err := marshal.marshalFile(fileManifest, "", " ")
 	if err != nil {
 		return "", fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
 	}
