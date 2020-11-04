@@ -126,7 +126,7 @@ func (p FilePackager) NeedSplit(fileList []os.FileInfo, maxBytes int64) bool {
 	return false
 }
 
-func (p FilePackager) getManifest(archiveFiles []string, filepath, uid string) {
+func (p *FilePackager) getManifest(archiveFiles []string, filepath, uid string) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -147,10 +147,11 @@ func (p FilePackager) getManifest(archiveFiles []string, filepath, uid string) {
 }
 
 // RenderManifest writes the manifest
-func (m manifestInfo) renderManifest() error {
+func (m *manifestInfo) renderManifest() error {
 	// log := p.Log.WithValues("costmanagement", "RenderManifest")
 	// write the manifest file
 	file, err := json.MarshalIndent(m.manifest, "", " ")
+	fmt.Printf("\n\n\n%+v | %v\n\n", file, m)
 	if err != nil {
 		return fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
 	}
@@ -352,6 +353,7 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
 	maxBytes := maxSize * megaByte
 	tarUUID := uuid.New().String()
+	p.manifest = manifestInfo{}
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
