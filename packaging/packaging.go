@@ -35,6 +35,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type helper interface {
+	marshalToFile(v interface{}, prefix, indent string) ([]byte, error)
+	writeFile(filename string, data []byte, perm os.FileMode) error
+}
+
+type funcHelper struct{}
+
+func (funcHelper) marshalToFile(v interface{}, prefix, indent string) ([]byte, error) {
+	return json.MarshalIndent(v, prefix, indent)
+}
+
+func (funcHelper) writeFile(filename string, data []byte, perm os.FileMode) error {
+	return ioutil.WriteFile(filename, data, perm)
+}
+
 type packager interface {
 	BuildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string
 	NeedSplit(fileList []os.FileInfo, maxBytes int64) bool
@@ -52,6 +67,7 @@ type FilePackager struct {
 	Cost   *costmgmtv1alpha1.CostManagement
 	DirCfg *dirconfig.DirectoryConfig
 	Log    logr.Logger
+	fh     *funcHelper
 }
 
 // Define the global variables
@@ -124,11 +140,11 @@ func (p FilePackager) RenderManifest(archiveFiles []string, filepath, uid string
 	}
 	manifestFileName := path.Join(filepath, "manifest.json")
 	// write the manifest file
-	file, err := json.MarshalIndent(fileManifest, "", " ")
+	file, err := p.fh.marshalToFile(fileManifest, "", " ")
 	if err != nil {
 		return "", fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
 	}
-	if err := ioutil.WriteFile(manifestFileName, file, 0644); err != nil {
+	if err := p.fh.writeFile(manifestFileName, file, 0644); err != nil {
 		return "", fmt.Errorf("RenderManifest: failed to write manifest: %v", err)
 	}
 	// return the manifest file/uuid
