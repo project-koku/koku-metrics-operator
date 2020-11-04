@@ -64,10 +64,10 @@ type packager interface {
 }
 
 type FilePackager struct {
-	Cost   *costmgmtv1alpha1.CostManagement
-	DirCfg *dirconfig.DirectoryConfig
-	Log    logr.Logger
-	fh     *funcHelper
+	Cost     *costmgmtv1alpha1.CostManagement
+	DirCfg   *dirconfig.DirectoryConfig
+	Log      logr.Logger
+	manifest manifestInfo
 }
 
 // Define the global variables
@@ -84,13 +84,18 @@ const variance float64 = 0.03
 // if we're creating more than 1k files, something is probably wrong.
 var maxSplits int64 = 1000
 
-// Manifest template
-type Manifest struct {
+// manifest template
+type manifest struct {
 	UUID      string   `json:"uuid"`
 	ClusterID string   `json:"cluster_id"`
 	Version   string   `json:"version"`
 	Date      string   `json:"date"`
 	Files     []string `json:"files"`
+}
+
+type manifestInfo struct {
+	manifest manifest
+	filename string
 }
 
 // ErrNoReports a "no reports" Error type
@@ -121,9 +126,7 @@ func (p FilePackager) NeedSplit(fileList []os.FileInfo, maxBytes int64) bool {
 	return false
 }
 
-// RenderManifest writes the manifest
-func (p FilePackager) RenderManifest(archiveFiles []string, filepath, uid string) (string, error) {
-	log := p.Log.WithValues("costmanagement", "RenderManifest")
+func (p FilePackager) getManifest(archiveFiles []string, filepath, uid string) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -131,25 +134,32 @@ func (p FilePackager) RenderManifest(archiveFiles []string, filepath, uid string
 		uploadName := uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 		manifestFiles = append(manifestFiles, uploadName)
 	}
-	fileManifest := Manifest{
-		UUID:      uid,
-		ClusterID: p.Cost.Status.ClusterID,
-		Version:   p.Cost.Status.OperatorCommit,
-		Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
-		Files:     manifestFiles,
+	p.manifest = manifestInfo{
+		manifest: manifest{
+			UUID:      uid,
+			ClusterID: p.Cost.Status.ClusterID,
+			Version:   p.Cost.Status.OperatorCommit,
+			Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
+			Files:     manifestFiles,
+		},
+		filename: path.Join(filepath, "manifest.json"),
 	}
-	manifestFileName := path.Join(filepath, "manifest.json")
+}
+
+// RenderManifest writes the manifest
+func (m manifestInfo) renderManifest() error {
+	// log := p.Log.WithValues("costmanagement", "RenderManifest")
 	// write the manifest file
-	file, err := p.fh.marshalToFile(fileManifest, "", " ")
+	file, err := json.MarshalIndent(m.manifest, "", " ")
 	if err != nil {
-		return "", fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
+		return fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
 	}
-	if err := p.fh.writeFile(manifestFileName, file, 0644); err != nil {
-		return "", fmt.Errorf("RenderManifest: failed to write manifest: %v", err)
+	if err := ioutil.WriteFile(m.filename, file, 0644); err != nil {
+		return fmt.Errorf("RenderManifest: failed to write manifest: %v", err)
 	}
 	// return the manifest file/uuid
-	log.Info("Generated manifest file", "manifest", manifestFileName)
-	return manifestFileName, nil
+	// log.Info("Generated manifest file", "manifest", manifestFileName)
+	return nil
 }
 
 func (p FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error {
@@ -366,8 +376,8 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-		manifestFileName, err := p.RenderManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
-		if err != nil {
+		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
+		if err := p.manifest.renderManifest(); err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
 		for idx, fileName := range fileList {
@@ -376,7 +386,7 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 				tarFileName := "cost-mgmt-" + tarUUID + "-" + strconv.Itoa(idx) + ".tar.gz"
 				tarFilePath := path.Join(p.DirCfg.Upload.Path, tarFileName)
 				log.Info("Generating tar.gz", "tarFile", tarFilePath)
-				if err := p.WriteTarball(tarFilePath, manifestFileName, tarUUID, fileList, idx); err != nil {
+				if err := p.WriteTarball(tarFilePath, p.manifest.filename, tarUUID, fileList, idx); err != nil {
 					return nil, fmt.Errorf("PackageReports: %v", err)
 				}
 			}
@@ -386,11 +396,11 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 		tarFilePath := path.Join(p.DirCfg.Upload.Path, tarFileName)
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-		manifestFileName, err := p.RenderManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
-		if err != nil {
+		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
+		if err := p.manifest.renderManifest(); err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
-		if err := p.WriteTarball(tarFilePath, manifestFileName, tarUUID, fileList); err != nil {
+		if err := p.WriteTarball(tarFilePath, p.manifest.filename, tarUUID, fileList); err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
 	}
