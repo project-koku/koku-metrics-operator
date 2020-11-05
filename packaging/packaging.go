@@ -35,6 +35,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// type helper interface {
+// 	marshalToFile(v interface{}, prefix, indent string) ([]byte, error)
+// 	writeFile(filename string, data []byte, perm os.FileMode) error
+// }
+
+// type funcHelper struct{}
+
+// func (funcHelper) marshalToFile(v interface{}, prefix, indent string) ([]byte, error) {
+// 	return json.MarshalIndent(v, prefix, indent)
+// }
+
+// func (funcHelper) writeFile(filename string, data []byte, perm os.FileMode) error {
+// 	return ioutil.WriteFile(filename, data, perm)
+// }
+
 type packager interface {
 	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
 	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string
@@ -367,6 +382,7 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 	p.getManifest(fileList, p.DirCfg.Staging.Path)
+	log.Info("Rendering manifest.", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
@@ -387,13 +403,13 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 	} else {
 		tarFileName := "cost-mgmt-" + p.uid + ".tar.gz"
 		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
+		log.Info("Generating tar.gz", "tarFile", tarFilePath)
 		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
 
-	log.Info("Packaging was successful.")
+	log.Info("File packaging was successful.")
 
 	return nil
 }
