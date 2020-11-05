@@ -212,12 +212,12 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			return err
 		}
 	}
-	nodeReport := report{
-		fileName:    nodeFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "node",
-		queryData:   nodeRows,
-		fileHeaders: NewNodeRow(ts),
+	nodeReport := reportFile{
+		name:      nodeFilePrefix + yearMonth + ".csv",
+		path:      dirCfg.Reports.Path,
+		queryType: "node",
+		queryData: nodeRows,
+		headers:   NewNodeRow(ts),
 	}
 	if err := nodeReport.writeReport(); err != nil {
 		return err
@@ -238,12 +238,12 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			}
 		}
 	}
-	podReport := report{
-		fileName:    podFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "pod",
-		queryData:   podRows,
-		fileHeaders: NewPodRow(ts),
+	podReport := reportFile{
+		name:      podFilePrefix + yearMonth + ".csv",
+		path:      dirCfg.Reports.Path,
+		queryType: "pod",
+		queryData: podRows,
+		headers:   NewPodRow(ts),
 	}
 	if err := podReport.writeReport(); err != nil {
 		return err
@@ -256,12 +256,12 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			return err
 		}
 	}
-	volReport := report{
-		fileName:    volFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "volume",
-		queryData:   volRows,
-		fileHeaders: NewStorageRow(ts),
+	volReport := reportFile{
+		name:      volFilePrefix + yearMonth + ".csv",
+		path:      dirCfg.Reports.Path,
+		queryType: "volume",
+		queryData: volRows,
+		headers:   NewStorageRow(ts),
 	}
 	if err := volReport.writeReport(); err != nil {
 		return err
@@ -274,12 +274,12 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			return err
 		}
 	}
-	namespaceReport := report{
-		fileName:    namespaceFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "namespace",
-		queryData:   namespaceRows,
-		fileHeaders: NewNamespaceRow(ts),
+	namespaceReport := reportFile{
+		name:      namespaceFilePrefix + yearMonth + ".csv",
+		path:      dirCfg.Reports.Path,
+		queryType: "namespace",
+		queryData: namespaceRows,
+		headers:   NewNamespaceRow(ts),
 	}
 	if err := namespaceReport.writeReport(); err != nil {
 		return err

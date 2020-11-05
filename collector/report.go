@@ -30,25 +30,31 @@ import (
 	"github.com/project-koku/korekuta-operator-go/strset"
 )
 
-type report struct {
-	fileName    string
-	filePath    string
-	size        int64
-	queryType   string
-	queryData   mappedCSVStruct
-	fileHeaders CSVStruct
-	rowPrefix   string
+type report interface {
+	writeReport() error
+	getOrCreateFile() (*os.File, bool, error)
+	writeToFile(*os.File, bool) error
 }
 
-func (r report) writeReport() error {
-	csvFile, created, err := getOrCreateFile(r.filePath, r.fileName)
+type reportFile struct {
+	name      string
+	path      string
+	size      int64
+	queryType string
+	queryData mappedCSVStruct
+	headers   CSVStruct
+	rowPrefix string
+}
+
+func (r *reportFile) writeReport() error {
+	csvFile, fileCreated, err := r.getOrCreateFile()
 	if err != nil {
 		return fmt.Errorf("failed to get or create %s csv: %v", r.queryType, err)
 	}
 	defer csvFile.Close()
 	logMsg := fmt.Sprintf("writing %s results to file", r.queryType)
 	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", r.queryType)
-	if err := writeToFile(csvFile, r.queryData, r.fileHeaders, created); err != nil {
+	if err := r.writeToFile(csvFile, fileCreated); err != nil {
 		return fmt.Errorf("writeReport: %v", err)
 	}
 	fileInfo, err := csvFile.Stat()
@@ -59,13 +65,13 @@ func (r report) writeReport() error {
 	return nil
 }
 
-func getOrCreateFile(path, filename string) (*os.File, bool, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
+	if _, err := os.Stat(r.path); os.IsNotExist(err) {
+		if err := os.MkdirAll(r.path, os.ModePerm); err != nil {
 			return nil, false, err
 		}
 	}
-	filePath := filepath.Join(path, filename)
+	filePath := filepath.Join(r.path, r.name)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		file, err := os.Create(filePath)
@@ -79,18 +85,18 @@ func getOrCreateFile(path, filename string) (*os.File, bool, error) {
 }
 
 // writeToFile compares the data to what is in the file and only adds new data to the file
-func writeToFile(file *os.File, data mappedCSVStruct, headers CSVStruct, created bool) error {
+func (r *reportFile) writeToFile(file *os.File, created bool) error {
 	set, err := readCsv(file, strset.NewSet())
 	if err != nil {
 		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
 	}
 	if created {
-		if err := headers.CSVheader(file); err != nil {
+		if err := r.headers.CSVheader(file); err != nil {
 			return fmt.Errorf("writeToFile: %v", err)
 		}
 	}
 
-	for _, row := range data {
+	for _, row := range r.queryData {
 		if !set.Contains(row.String()) {
 			if err := row.CSVrow(file); err != nil {
 				return err
