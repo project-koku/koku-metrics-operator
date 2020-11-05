@@ -35,20 +35,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type helper interface {
-	marshalToFile(v interface{}, prefix, indent string) ([]byte, error)
-	writeFile(filename string, data []byte, perm os.FileMode) error
-}
+// type helper interface {
+// 	marshalToFile(v interface{}, prefix, indent string) ([]byte, error)
+// 	writeFile(filename string, data []byte, perm os.FileMode) error
+// }
 
-type funcHelper struct{}
+// type funcHelper struct{}
 
-func (funcHelper) marshalToFile(v interface{}, prefix, indent string) ([]byte, error) {
-	return json.MarshalIndent(v, prefix, indent)
-}
+// func (funcHelper) marshalToFile(v interface{}, prefix, indent string) ([]byte, error) {
+// 	return json.MarshalIndent(v, prefix, indent)
+// }
 
-func (funcHelper) writeFile(filename string, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
-}
+// func (funcHelper) writeFile(filename string, data []byte, perm os.FileMode) error {
+// 	return ioutil.WriteFile(filename, data, perm)
+// }
 
 type packager interface {
 	BuildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string
@@ -146,9 +146,8 @@ func (p *FilePackager) getManifest(archiveFiles []string, filepath, uid string) 
 	}
 }
 
-// RenderManifest writes the manifest
+// renderManifest writes the manifest
 func (m *manifestInfo) renderManifest() error {
-	// log := p.Log.WithValues("costmanagement", "RenderManifest")
 	// write the manifest file
 	file, err := json.MarshalIndent(m.manifest, "", " ")
 	fmt.Printf("\n\n\n%+v | %v\n\n", file, m)
@@ -158,8 +157,6 @@ func (m *manifestInfo) renderManifest() error {
 	if err := ioutil.WriteFile(m.filename, file, 0644); err != nil {
 		return fmt.Errorf("RenderManifest: failed to write manifest: %v", err)
 	}
-	// return the manifest file/uuid
-	// log.Info("Generated manifest file", "manifest", manifestFileName)
 	return nil
 }
 
@@ -379,6 +376,7 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 		}
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
+		log.Info("Rendering manifest.")
 		if err := p.manifest.renderManifest(); err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
@@ -399,6 +397,7 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
+		log.Info("Rendering manifest.")
 		if err := p.manifest.renderManifest(); err != nil {
 			return nil, fmt.Errorf("PackageReports: %v", err)
 		}
