@@ -150,7 +150,6 @@ func (p *FilePackager) getManifest(archiveFiles []string, filepath, uid string) 
 func (m *manifestInfo) renderManifest() error {
 	// write the manifest file
 	file, err := json.MarshalIndent(m.manifest, "", " ")
-	fmt.Printf("\n\n\n%+v | %v\n\n", file, m)
 	if err != nil {
 		return fmt.Errorf("RenderManifest: failed to marshal manifest: %v", err)
 	}
