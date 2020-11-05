@@ -376,7 +376,7 @@ func (p FilePackager) PackageReports(maxSize int64) error {
 		}
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
-		log.Info("Rendering manifest.")
+		log.Info("Rendering manifest.", "manifest", p.manifest.filename)
 		if err := p.manifest.renderManifest(); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
@@ -397,10 +397,11 @@ func (p FilePackager) PackageReports(maxSize int64) error {
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
-		log.Info("Rendering manifest.")
+		log.Info("Rendering manifest.", "manifest", p.manifest.filename)
 		if err := p.manifest.renderManifest(); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
+		log.Info("Generating tar.gz", "tarFile", tarFilePath)
 		if err := p.WriteTarball(tarFilePath, p.manifest.filename, tarUUID, fileList); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
