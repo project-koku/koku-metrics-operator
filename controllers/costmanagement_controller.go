@@ -29,6 +29,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -500,7 +501,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					log.Info("Uploading the following file: ")
 					fmt.Println(file.Name())
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(dirCfg.Upload.Path, file.Name()))
+					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 					if err != nil {
