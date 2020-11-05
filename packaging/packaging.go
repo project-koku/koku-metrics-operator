@@ -341,15 +341,14 @@ func (p *FilePackager) readUploadDir() ([]os.FileInfo, error) {
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
+func (p *FilePackager) PackageReports(maxSize int64) error {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
 	maxBytes := maxSize * megaByte
 	p.uid = uuid.New().String()
-	p.manifest = manifestInfo{}
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
-		return nil, fmt.Errorf("PackageReports: could not check directory: %v", err)
+		return fmt.Errorf("PackageReports: could not check directory: %v", err)
 	}
 
 	// move CSV reports from data directory to staging directory
@@ -357,19 +356,19 @@ func (p *FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 	if err == ErrNoReports || filesToPackage == nil {
 		return p.readUploadDir()
 	} else if err != nil {
-		return nil, fmt.Errorf("PackageReports: %v", err)
+		return fmt.Errorf("PackageReports: %v", err)
 	}
 
 	// check if the files need to be split
 	log.Info("Checking to see if the report files need to be split")
 	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage, maxBytes)
 	if err != nil {
-		return nil, fmt.Errorf("PackageReports: %v", err)
+		return fmt.Errorf("PackageReports: %v", err)
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 	p.getManifest(fileList, p.DirCfg.Staging.Path)
 	if err := p.manifest.renderManifest(); err != nil {
-		return nil, fmt.Errorf("PackageReports: %v", err)
+		return fmt.Errorf("PackageReports: %v", err)
 	}
 
 	if split {
@@ -382,7 +381,7 @@ func (p *FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
 			log.Info("Generating tar.gz", "tarFile", tarFilePath)
 			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
-				return nil, fmt.Errorf("PackageReports: %v", err)
+				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	} else {
@@ -390,9 +389,11 @@ func (p *FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
 		log.Info("Report files do not require split, generating tar.gz", "tarFile", tarFilePath)
 		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
-			return nil, fmt.Errorf("PackageReports: %v", err)
+			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
 
-	return p.readUploadDir()
+	log.Info("Packaging was successful.")
+
+	return nil
 }
