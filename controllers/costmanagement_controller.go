@@ -28,7 +28,6 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -520,7 +519,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(path.Join(dirCfg.Upload.Path, file.Name())); err != nil {
+							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file.Name())); err != nil {
 								log.Error(err, "Error removing tar file")
 							}
 						}
