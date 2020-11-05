@@ -117,7 +117,7 @@ func (m *manifestInfo) renderManifest() error {
 
 // buildLocalCSVFileList gets the list of files in the staging directory
 func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string {
-	var csvList map[int]string
+	csvList := make(map[int]string)
 	for idx, file := range fileList {
 		if strings.Contains(file.Name(), ".csv") {
 			csvFilePath := filepath.Join(stagingDirectory, file.Name())
