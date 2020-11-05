@@ -28,7 +28,7 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -503,7 +503,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					log.Info("Uploading the following file: ")
 					fmt.Println(file.Name())
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(dirCfg.Upload.Path, file.Name()))
+					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 					if err != nil {
@@ -519,7 +519,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(path.Join(dirCfg.Upload.Path, file.Name())); err != nil {
+							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file.Name())); err != nil {
 								log.Error(err, "Error removing tar file")
 							}
 						}
