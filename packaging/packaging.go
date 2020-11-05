@@ -345,7 +345,7 @@ func (p FilePackager) MoveFiles(uid string) ([]os.FileInfo, error) {
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
+func (p FilePackager) PackageReports(maxSize int64) error {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
 	maxBytes := maxSize * megaByte
 	tarUUID := uuid.New().String()
@@ -353,15 +353,16 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
-		return nil, fmt.Errorf("PackageReports: could not check directory: %v", err)
+		return fmt.Errorf("PackageReports: could not check directory: %v", err)
 	}
 
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.MoveFiles(tarUUID)
 	if err == ErrNoReports || filesToPackage == nil {
-		return p.ReadUploadDir()
+		log.Info("No files to package.")
+		return nil
 	} else if err != nil {
-		return nil, fmt.Errorf("PackageReports: %v", err)
+		return fmt.Errorf("PackageReports: %v", err)
 	}
 
 	// check if the files need to be split
@@ -371,13 +372,13 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 		log.Info("Report files exceed the max size. Splitting files")
 		filesToPackage, err := p.SplitFiles(p.DirCfg.Staging.Path, filesToPackage, maxBytes)
 		if err != nil {
-			return nil, fmt.Errorf("PackageReports: %v", err)
+			return fmt.Errorf("PackageReports: %v", err)
 		}
 		fileList := p.BuildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
 		log.Info("Rendering manifest.")
 		if err := p.manifest.renderManifest(); err != nil {
-			return nil, fmt.Errorf("PackageReports: %v", err)
+			return fmt.Errorf("PackageReports: %v", err)
 		}
 		for idx, fileName := range fileList {
 			if strings.HasSuffix(fileName, ".csv") {
@@ -386,7 +387,7 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 				tarFilePath := path.Join(p.DirCfg.Upload.Path, tarFileName)
 				log.Info("Generating tar.gz", "tarFile", tarFilePath)
 				if err := p.WriteTarball(tarFilePath, p.manifest.filename, tarUUID, fileList, idx); err != nil {
-					return nil, fmt.Errorf("PackageReports: %v", err)
+					return fmt.Errorf("PackageReports: %v", err)
 				}
 			}
 		}
@@ -398,14 +399,16 @@ func (p FilePackager) PackageReports(maxSize int64) ([]os.FileInfo, error) {
 		p.getManifest(fileList, p.DirCfg.Staging.Path, tarUUID)
 		log.Info("Rendering manifest.")
 		if err := p.manifest.renderManifest(); err != nil {
-			return nil, fmt.Errorf("PackageReports: %v", err)
+			return fmt.Errorf("PackageReports: %v", err)
 		}
 		if err := p.WriteTarball(tarFilePath, p.manifest.filename, tarUUID, fileList); err != nil {
-			return nil, fmt.Errorf("PackageReports: %v", err)
+			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
 
-	return p.ReadUploadDir()
+	log.Info("File packaging was successful.")
+
+	return nil
 }
 
 // ReadUploadDir returns the fileinfo for each file in the upload dir
@@ -414,6 +417,5 @@ func (p FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Could not read upload directory: %v", err)
 	}
-
 	return outFiles, nil
 }
