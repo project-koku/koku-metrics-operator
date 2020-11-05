@@ -41,10 +41,10 @@ type packager interface {
 	getManifest(archiveFiles map[int]string, filePath string)
 	moveFiles(reportsDir, stagingDir dirconfig.Directory, uid string) ([]os.FileInfo, error)
 	needSplit(fileList []os.FileInfo, maxBytes int64) bool
-	readUploadDir() ([]os.FileInfo, error)
 	splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error)
 	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
 	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (string, bool, error)
+	ReadUploadDir() ([]os.FileInfo, error)
 	PackageReports(maxSize int64) ([]os.FileInfo, error)
 }
 
@@ -332,7 +332,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 }
 
 // readUploadDir returns the fileinfo for each file in the upload dir
-func (p *FilePackager) readUploadDir() ([]os.FileInfo, error) {
+func (p *FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
 	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
 	if err != nil {
 		return nil, fmt.Errorf("Could not read upload directory: %v", err)
@@ -354,7 +354,7 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveFiles()
 	if err == ErrNoReports || filesToPackage == nil {
-		return p.readUploadDir()
+		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
