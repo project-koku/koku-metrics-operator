@@ -20,15 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package collector
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
@@ -37,8 +34,6 @@ import (
 )
 
 var (
-	logger logr.Logger
-
 	podFilePrefix       = "cm-openshift-pod-usage-"
 	volFilePrefix       = "cm-openshift-storage-usage-"
 	nodeFilePrefix      = "cm-openshift-node-usage-"
@@ -47,20 +42,10 @@ var (
 	statusTimeFormat = "2006-01-02 15:04:05"
 )
 
-type prometheusConnection interface {
-	QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error)
-}
-
 type mappedCSVStruct map[string]CSVStruct
 type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
-type collector struct {
-	context    context.Context
-	promConn   prometheusConnection
-	timeSeries promv1.Range
-	log        logr.Logger
-}
 
 func floatToString(inputNum float64) string {
 	// to convert a float number to a string
@@ -85,7 +70,7 @@ func sumSlice(array []model.SamplePair) float64 {
 	return float64(sum)
 }
 
-func getValue(query *SaveQueryValue, array []model.SamplePair) float64 {
+func getValue(query *saveQueryValue, array []model.SamplePair) float64 {
 	switch query.Method {
 	case "sum":
 		return sumSlice(array)
@@ -109,19 +94,7 @@ func getResourceID(input string) string {
 	return splitString[len(splitString)-1]
 }
 
-func getQueryResults(q collector, queries Querys) (mappedResults, error) {
-	results := mappedResults{}
-	for _, query := range queries {
-		matrix, err := performMatrixQuery(q, query.QueryString)
-		if err != nil {
-			return nil, fmt.Errorf("getQueryResults: %v", err)
-		}
-		results = iterateMatrix(matrix, query, results)
-	}
-	return results, nil
-}
-
-func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedResults {
+func iterateMatrix(matrix model.Matrix, q query, results mappedResults) mappedResults {
 	for _, stream := range matrix {
 		obj := string(stream.Metric[q.RowKey])
 		if results[obj] == nil {
@@ -150,27 +123,15 @@ func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedRe
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, promconn promv1.API, ts promv1.Range, log logr.Logger) error {
-	if logger == nil {
-		logger = log
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	log = log.WithValues("costmanagement", "GenerateReports")
-	defer cancel()
-
-	querier := collector{
-		context:    ctx,
-		promConn:   promconn,
-		timeSeries: ts,
-		log:        log,
-	}
+func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
+	log := c.Log.WithValues("costmanagement", "GenerateReports")
 
 	// yearMonth is used in filenames
-	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
-	updateReportStatus(cost, ts)
+	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
+	updateReportStatus(cost, c.TimeSeries)
 
 	log.Info("querying for node metrics")
-	nodeResults, err := getQueryResults(querier, nodeQueries)
+	nodeResults, err := c.getQueryResults(nodeQueries)
 	if err != nil {
 		return err
 	}
@@ -188,26 +149,26 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	}
 
 	log.Info("querying for pod metrics")
-	podResults, err := getQueryResults(querier, podQueries)
+	podResults, err := c.getQueryResults(podQueries)
 	if err != nil {
 		return err
 	}
 
 	log.Info("querying for storage metrics")
-	volResults, err := getQueryResults(querier, volQueries)
+	volResults, err := c.getQueryResults(volQueries)
 	if err != nil {
 		return err
 	}
 
 	log.Info("querying for namespaces")
-	namespaceResults, err := getQueryResults(querier, namespaceQueries)
+	namespaceResults, err := c.getQueryResults(namespaceQueries)
 	if err != nil {
 		return err
 	}
 
 	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
-		usage := NewNodeRow(ts)
+		usage := NewNodeRow(c.TimeSeries)
 		if err := getStruct(val, &usage, nodeRows, node); err != nil {
 			return err
 		}
@@ -217,15 +178,16 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "node",
 		queryData: nodeRows,
-		headers:   NewNodeRow(ts),
+		headers:   NewNodeRow(c.TimeSeries),
 	}
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.name)
 	if err := nodeReport.writeReport(); err != nil {
 		return err
 	}
 
 	podRows := make(mappedCSVStruct)
 	for pod, val := range podResults {
-		usage := NewPodRow(ts)
+		usage := NewPodRow(c.TimeSeries)
 		if err := getStruct(val, &usage, podRows, pod); err != nil {
 			return err
 		}
@@ -234,7 +196,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			if row, ok := nodeRows[node.(string)]; ok {
 				usage.NodeRow = *row.(*NodeRow)
 			} else {
-				usage.NodeRow = NewNodeRow(ts)
+				usage.NodeRow = NewNodeRow(c.TimeSeries)
 			}
 		}
 	}
@@ -243,15 +205,16 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "pod",
 		queryData: podRows,
-		headers:   NewPodRow(ts),
+		headers:   NewPodRow(c.TimeSeries),
 	}
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.name)
 	if err := podReport.writeReport(); err != nil {
 		return err
 	}
 
 	volRows := make(mappedCSVStruct)
 	for pvc, val := range volResults {
-		usage := NewStorageRow(ts)
+		usage := NewStorageRow(c.TimeSeries)
 		if err := getStruct(val, &usage, volRows, pvc); err != nil {
 			return err
 		}
@@ -261,15 +224,16 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "volume",
 		queryData: volRows,
-		headers:   NewStorageRow(ts),
+		headers:   NewStorageRow(c.TimeSeries),
 	}
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.name)
 	if err := volReport.writeReport(); err != nil {
 		return err
 	}
 
 	namespaceRows := make(mappedCSVStruct)
 	for namespace, val := range namespaceResults {
-		usage := NewNamespaceRow(ts)
+		usage := NewNamespaceRow(c.TimeSeries)
 		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
 			return err
 		}
@@ -279,8 +243,9 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "namespace",
 		queryData: namespaceRows,
-		headers:   NewNamespaceRow(ts),
+		headers:   NewNamespaceRow(c.TimeSeries),
 	}
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.name)
 	if err := namespaceReport.writeReport(); err != nil {
 		return err
 	}
@@ -309,7 +274,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts promv1.Range) {
+func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts *promv1.Range) {
 	cost.Status.Reports.ReportMonth = ts.Start.Format("01")
 	cost.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

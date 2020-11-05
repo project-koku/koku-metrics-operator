@@ -52,8 +52,8 @@ func (r *reportFile) writeReport() error {
 		return fmt.Errorf("failed to get or create %s csv: %v", r.queryType, err)
 	}
 	defer csvFile.Close()
-	logMsg := fmt.Sprintf("writing %s results to file", r.queryType)
-	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", r.queryType)
+	// logMsg := fmt.Sprintf("writing %s results to file", r.queryType)
+	// logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", r.queryType)
 	if err := r.writeToFile(csvFile, fileCreated); err != nil {
 		return fmt.Errorf("writeReport: %v", err)
 	}

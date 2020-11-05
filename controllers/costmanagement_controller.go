@@ -70,6 +70,7 @@ type CostManagementReconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	cvClientBuilder cv.ClusterVersionBuilder
+	promCollector   *collector.PromCollector
 }
 
 type serializedAuthMap struct {
@@ -529,8 +530,18 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
 
-	promConn, err := collector.GetPromConn(ctx, r.Client, cost, r.Log)
-	if err != nil {
+	if r.promCollector == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		r.promCollector = &collector.PromCollector{
+			Context: ctx,
+			Client:  r.Client,
+			Log:     r.Log,
+		}
+	}
+	r.promCollector.TimeSeries = nil
+
+	if err := r.promCollector.GetPromConn(cost); err != nil {
 		log.Error(err, "failed to get prometheus connection")
 	} else {
 		timeUTC := metav1.Now().UTC()
@@ -540,10 +551,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
 			Step:  time.Minute,
 		}
+		r.promCollector.TimeSeries = &timeRange
 		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.UTC().Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
 			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = collector.GenerateReports(cost, dirCfg, promConn, timeRange, r.Log)
+			err = r.promCollector.GenerateReports(cost, dirCfg)
 			if err != nil {
 				cost.Status.Reports.DataCollected = false
 				cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)

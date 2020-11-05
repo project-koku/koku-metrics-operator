@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -55,6 +56,10 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	return res.matrix, nil, nil
 }
 
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+	return nil, nil, nil
+}
+
 func TestGetResourceID(t *testing.T) {
 	getResourceIDTests := []struct {
 		name  string
@@ -78,37 +83,37 @@ func TestGetResourceID(t *testing.T) {
 func TestGetValue(t *testing.T) {
 	getValueTests := []struct {
 		name  string
-		query SaveQueryValue
+		query saveQueryValue
 		array []model.SamplePair
 		want  float64
 	}{
 		{
 			name:  "sum",
-			query: SaveQueryValue{Method: "sum"},
+			query: saveQueryValue{Method: "sum"},
 			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
 			want:  6.9,
 		},
 		{
 			name:  "sum inf",
-			query: SaveQueryValue{Method: "sum"},
+			query: saveQueryValue{Method: "sum"},
 			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
 			want:  math.Inf(1),
 		},
 		{
 			name:  "max",
-			query: SaveQueryValue{Method: "max"},
+			query: saveQueryValue{Method: "max"},
 			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
 			want:  3.3,
 		},
 		{
 			name:  "max inf",
-			query: SaveQueryValue{Method: "max"},
+			query: saveQueryValue{Method: "max"},
 			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
 			want:  math.Inf(1),
 		},
 		{
 			name:  "unknown",
-			query: SaveQueryValue{Method: "unknown"},
+			query: saveQueryValue{Method: "unknown"},
 			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
 			want:  0,
 		},
@@ -212,18 +217,18 @@ func TestIterateMatrix(t *testing.T) {
 	testResult := mappedResults{}
 	iterateMatrixTests := []struct {
 		name    string
-		query   Query
+		query   query
 		matrix  model.Matrix
 		results mappedResults
 		want    mappedResults
 	}{
 		{
 			name: "non-regex query",
-			query: Query{
+			query: query{
 				Name:        "node-allocatable-cpu-cores",
 				QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-				MetricKey:   StaticFields{"node": "node", "provider_id": "provider_id"},
-				QueryValue: &SaveQueryValue{
+				MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
+				QueryValue: &saveQueryValue{
 					ValName:         "node-allocatable-cpu-cores",
 					Method:          "max",
 					Factor:          maxFactor,
@@ -263,10 +268,10 @@ func TestIterateMatrix(t *testing.T) {
 		},
 		{
 			name: "with-regex query",
-			query: Query{
+			query: query{
 				Name:           "node-labels",
 				QueryString:    "kube_node_labels",
-				MetricKeyRegex: RegexFields{"node_labels": "label_*"},
+				MetricKeyRegex: regexFields{"node_labels": "label_*"},
 				RowKey:         "node",
 			},
 			matrix: model.Matrix{
@@ -314,11 +319,11 @@ func TestIterateMatrix(t *testing.T) {
 		},
 		{
 			name: "static field with label map query",
-			query: Query{
+			query: query{
 				Name:        "node-capacity-cpu-cores",
 				QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-				MetricKey:   StaticFields{"node-renamed": "node", "provider-id-renamed": "provider_id"},
-				QueryValue: &SaveQueryValue{
+				MetricKey:   staticFields{"node-renamed": "node", "provider-id-renamed": "provider_id"},
+				QueryValue: &saveQueryValue{
 					ValName:         "node-capacity-cpu-cores",
 					Method:          "max",
 					Factor:          maxFactor,
@@ -449,20 +454,20 @@ func TestGetQueryResults(t *testing.T) {
 			err:      nil,
 		},
 	}
-	fakeCollector := collector{
-		promConn: mockPrometheusConnection{
+	fakeCollector := PromCollector{
+		PromConn: mockPrometheusConnection{
 			mappedResults: mapResults,
 			t:             t,
 		},
-		timeSeries: promv1.Range{},
-		log:        zap.New(),
+		TimeSeries: &promv1.Range{},
+		Log:        zap.New(),
 	}
-	queries := Querys{
-		Query{
+	queries := querys{
+		query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   StaticFields{"node": "node", "provider_id": "provider_id"},
-			QueryValue: &SaveQueryValue{
+			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
+			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-cpu-cores",
 				Method:          "max",
 				Factor:          maxFactor,
@@ -470,11 +475,11 @@ func TestGetQueryResults(t *testing.T) {
 			},
 			RowKey: "node",
 		},
-		Query{
+		query{
 			Name:        "node-capacity-cpu-cores",
 			QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   StaticFields{"node": "node", "provider_id": "provider_id"},
-			QueryValue: &SaveQueryValue{
+			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
+			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-cpu-cores",
 				Method:          "max",
 				Factor:          maxFactor,
@@ -482,10 +487,10 @@ func TestGetQueryResults(t *testing.T) {
 			},
 			RowKey: "node",
 		},
-		Query{
+		query{
 			Name:           "node-labels",
 			QueryString:    "kube_node_labels",
-			MetricKeyRegex: RegexFields{"node_labels": "label_*"},
+			MetricKeyRegex: regexFields{"node_labels": "label_*"},
 			RowKey:         "node",
 		},
 	}
@@ -501,7 +506,7 @@ func TestGetQueryResults(t *testing.T) {
 			"node_labels":                       "label_beta_kubernetes_io_arch:amd64|label_topology_kubernetes_io_zone:us-east-2c",
 		},
 	}
-	got, _ := getQueryResults(fakeCollector, queries)
+	got, _ := fakeCollector.getQueryResults(queries)
 	eq := reflect.DeepEqual(got, want)
 	if !eq {
 		t.Errorf("getQueryResults got:\n\t%s\n  want:\n\t%s", got, want)
@@ -526,26 +531,26 @@ func TestGetQueryResultsError(t *testing.T) {
 			err:      errors.New("this is another error"),
 		},
 	}
-	fakeCollector := collector{
-		promConn: mockPrometheusConnection{
+	fakeCollector := PromCollector{
+		PromConn: mockPrometheusConnection{
 			mappedResults: mapResults,
 			t:             t,
 		},
-		timeSeries: promv1.Range{},
-		log:        zap.New(),
+		TimeSeries: &promv1.Range{},
+		Log:        zap.New(),
 	}
 	getQueryResultsErrorsTests := []struct {
 		name         string
-		collector    collector
-		queries      Querys
+		collector    PromCollector
+		queries      querys
 		wantedResult mappedResults
 		wantedError  error
 	}{
 		{
 			name:      "warnings with no error",
 			collector: fakeCollector,
-			queries: Querys{
-				Query{
+			queries: querys{
+				query{
 					QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 					RowKey:      "node",
 				},
@@ -556,8 +561,8 @@ func TestGetQueryResultsError(t *testing.T) {
 		{
 			name:      "error with no warnings",
 			collector: fakeCollector,
-			queries: Querys{
-				Query{
+			queries: querys{
+				query{
 					QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 					RowKey:      "node",
 				},
@@ -568,8 +573,8 @@ func TestGetQueryResultsError(t *testing.T) {
 		{
 			name:      "error with warnings",
 			collector: fakeCollector,
-			queries: Querys{
-				Query{
+			queries: querys{
+				query{
 					QueryString: "kube_node_labels",
 					RowKey:      "node",
 				},
@@ -580,7 +585,7 @@ func TestGetQueryResultsError(t *testing.T) {
 	}
 	for _, tt := range getQueryResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getQueryResults(tt.collector, tt.queries)
+			got, err := tt.collector.getQueryResults(tt.queries)
 			if got != nil {
 				eq := reflect.DeepEqual(got, tt.wantedResult)
 				if !eq {

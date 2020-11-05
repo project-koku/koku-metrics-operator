@@ -35,7 +35,7 @@ type DateTimes struct {
 	IntervalEnd       string
 }
 
-func NewDates(ts promv1.Range) *DateTimes {
+func NewDates(ts *promv1.Range) *DateTimes {
 	d := new(DateTimes)
 	d.IntervalStart = ts.Start.String()
 	d.IntervalEnd = ts.End.String()
@@ -68,7 +68,7 @@ type NamespaceRow struct {
 	NamespaceLabels string `mapstructure:"namespace_labels"`
 }
 
-func NewNamespaceRow(ts promv1.Range) NamespaceRow {
+func NewNamespaceRow(ts *promv1.Range) NamespaceRow {
 	row := NamespaceRow{}
 	row.DateTimes = NewDates(ts)
 	return row
@@ -124,7 +124,7 @@ type NodeRow struct {
 	NodeLabels                    string `mapstructure:"node_labels"`
 }
 
-func NewNodeRow(ts promv1.Range) NodeRow {
+func NewNodeRow(ts *promv1.Range) NodeRow {
 	row := NodeRow{}
 	row.DateTimes = NewDates(ts)
 	return row
@@ -193,7 +193,7 @@ type PodRow struct {
 	PodLabels                   string `mapstructure:"pod_labels"`
 }
 
-func NewPodRow(ts promv1.Range) PodRow {
+func NewPodRow(ts *promv1.Range) PodRow {
 	row := PodRow{}
 	row.DateTimes = NewDates(ts)
 	return row
@@ -279,7 +279,7 @@ type StorageRow struct {
 	PersistentVolumeClaimLabels              string `mapstructure:"persistentvolumeclaim_labels"`
 }
 
-func NewStorageRow(ts promv1.Range) StorageRow {
+func NewStorageRow(ts *promv1.Range) StorageRow {
 	row := StorageRow{}
 	row.DateTimes = NewDates(ts)
 	return row
