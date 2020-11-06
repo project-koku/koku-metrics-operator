@@ -34,6 +34,7 @@ commit
 
 # Ignore the testing directory for developing
 testing/*
+collector/test_reports/*
 
 # # Mac OSX
 .DS_Store

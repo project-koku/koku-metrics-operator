@@ -62,7 +62,8 @@ var (
 		Staging: dirconfig.Directory{Path: "./expected_reports"},
 		Reports: dirconfig.Directory{Path: "./test_reports"},
 	}
-	t, _          = time.Parse(time.RFC3339, "2020-11-06T16:43:23Z")
+	localTime, _  = time.Parse(time.RFC3339, "2020-11-06T19:43:23Z")
+	t             = localTime.UTC()
 	fakeTimeRange = promv1.Range{
 		Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
 		End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
@@ -99,11 +100,11 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	return nil, nil, nil
 }
 
-func TestLoadFile(t *testing.T) {
+func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []querys{*nodeQueries, *namespaceQueries, *podQueries, *volQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
 	for _, q := range queryList {
-		for _, query := range q {
+		for _, query := range *q {
 			res := &model.Matrix{}
 			Load("test_data/"+query.Name, res, t)
 			mapResults[query.QueryString] = mockPromResult{matrix: *res}
@@ -115,14 +116,14 @@ func TestLoadFile(t *testing.T) {
 			mappedResults: mapResults,
 			t:             t,
 		},
-		TimeSeries: &promv1.Range{},
+		TimeSeries: &fakeTimeRange,
 		Log:        zap.New(),
 	}
 	err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
 	if err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
-	fakeDirCfg.Reports.RemoveContents()
+	// fakeDirCfg.Reports.RemoveContents()
 }
 
 func TestGetResourceID(t *testing.T) {

@@ -2,7 +2,6 @@
 	{
 		"metric": {
 			"namespace": "openshift-apiserver",
-			"node": "ip-10-0-150-20.us-east-2.compute.internal",
 			"pod": "apiserver-6b74f489cb-tqsrm"
 		},
 		"values": [
