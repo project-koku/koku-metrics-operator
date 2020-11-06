@@ -28,7 +28,7 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -468,17 +468,24 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// if its time to upload/package
 	if costConfig.UploadToggle && checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload") {
 		// Package and split the payload if necessary
-		uploadFiles, err := packaging.PackageReports(r.Log, dirCfg, cost, costConfig.MaxSize)
-		if err != nil {
-			log.Error(err, "Failed to package files.")
+		packager := packaging.FilePackager{
+			Cost:   cost,
+			DirCfg: dirCfg,
+			Log:    r.Log}
+		if err := packager.PackageReports(costConfig.MaxSize); err != nil {
+			log.Error(err, "PackageReports failed.")
 			// update the CR packaging error status
 			cost.Status.Packaging.PackagingError = err.Error()
 			if err := r.Status().Update(ctx, cost); err != nil {
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		} else {
-			log.Info("File packaging was successful.")
 			cost.Status.Packaging.PackagingError = ""
+		}
+
+		uploadFiles, err := packager.ReadUploadDir()
+		if err != nil {
+			log.Error(err, "Failed to read upload directory.")
 		}
 
 		if uploadFiles != nil {
@@ -497,7 +504,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					log.Info("Uploading the following file: ")
 					fmt.Println(file.Name())
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, path.Join(dirCfg.Upload.Path, file.Name()))
+					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
 					if err != nil {
@@ -513,7 +520,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(path.Join(dirCfg.Upload.Path, file.Name())); err != nil {
+							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file.Name())); err != nil {
 								log.Error(err, "Error removing tar file")
 							}
 						}
