@@ -2,12 +2,17 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"math"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
+	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -29,6 +34,62 @@ func nearlyEqual(a, b float64) bool {
 	} else { // use relative error
 		return diff/math.Min((absA+absB), math.MaxFloat64) < epsilon
 	}
+}
+
+// Unmarshal is a function that unmarshals the data from the
+// reader into the specified value.
+var Unmarshal = func(r io.Reader, v interface{}) error {
+	return json.NewDecoder(r).Decode(v)
+}
+
+// Load loads the file at path into v.
+func Load(path string, v interface{}, t *testing.T) {
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("Failed to open file: %v", err)
+	}
+	defer f.Close()
+	if err := Unmarshal(f, v); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+}
+
+var (
+	fakeCost   = &costmgmtv1alpha1.CostManagement{}
+	fakeDirCfg = &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Upload:  dirconfig.Directory{Path: "./upload"},
+		Staging: dirconfig.Directory{Path: "./expected_reports"},
+		Reports: dirconfig.Directory{Path: "./test_reports"},
+	}
+	t, _          = time.Parse(time.RFC3339, "2020-11-06T16:43:23Z")
+	fakeTimeRange = promv1.Range{
+		Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
+		End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
+		Step:  time.Minute,
+	}
+)
+
+type FakeCollector struct {
+	Collector
+	results map[*querys]mappedResults
+	err     error
+	t       *testing.T
+}
+
+func NewFakeCollector(c Collector) *PromCollector {
+	return &PromCollector{collector: c}
+}
+
+func (fc *FakeCollector) getQueryResults(queries *querys) (mappedResults, error) {
+	if fc.err != nil {
+		return nil, fc.err
+	}
+	res, ok := fc.results[queries]
+	if !ok {
+		fc.t.Fatalf("FakeCollector: getQueryResults: failed to find query result")
+	}
+	return res, nil
 }
 
 type mappedMockPromResult map[string]mockPromResult
@@ -58,6 +119,35 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 
 func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
 	return nil, nil, nil
+}
+
+func TestLoadFile(t *testing.T) {
+	fakeResults := make(map[*querys]mappedResults)
+	resFileMap := map[*querys]string{
+		namespaceQueries: "test_data/namespace-results.data",
+		nodeQueries:      "test_data/node-results.data",
+		podQueries:       "test_data/pod-results.data",
+		volQueries:       "test_data/vol-results.data",
+	}
+	for q, s := range resFileMap {
+		res := &mappedResults{}
+		Load(s, res, t)
+		fakeResults[q] = *res
+	}
+
+	fc := NewFakeCollector(
+		&FakeCollector{
+			results: fakeResults,
+			t:       t,
+			err:     nil,
+		})
+	fc.TimeSeries = &fakeTimeRange
+	fc.Log = zap.New()
+
+	if err := GenerateReports(fakeCost, fakeDirCfg, fc); err != nil {
+		t.Errorf("Generating reports failed with err: %v", err)
+	}
+	fakeDirCfg.Reports.RemoveContents()
 }
 
 func TestGetResourceID(t *testing.T) {
@@ -370,10 +460,10 @@ func TestIterateMatrix(t *testing.T) {
 	}
 	for _, tt := range iterateMatrixTests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := iterateMatrix(tt.matrix, tt.query, tt.results)
-			eq := reflect.DeepEqual(got, tt.want)
+			tt.results.iterateMatrix(tt.matrix, tt.query)
+			eq := reflect.DeepEqual(tt.results, tt.want)
 			if !eq {
-				t.Errorf("%s got:\n\t%s\n  want:\n\t%s", tt.name, got, tt.want)
+				t.Errorf("%s got:\n\t%s\n  want:\n\t%s", tt.name, tt.results, tt.want)
 			}
 		})
 	}
@@ -462,7 +552,7 @@ func TestGetQueryResults(t *testing.T) {
 		TimeSeries: &promv1.Range{},
 		Log:        zap.New(),
 	}
-	queries := querys{
+	queries := &querys{
 		query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
@@ -542,14 +632,14 @@ func TestGetQueryResultsError(t *testing.T) {
 	getQueryResultsErrorsTests := []struct {
 		name         string
 		collector    PromCollector
-		queries      querys
+		queries      *querys
 		wantedResult mappedResults
 		wantedError  error
 	}{
 		{
 			name:      "warnings with no error",
 			collector: fakeCollector,
-			queries: querys{
+			queries: &querys{
 				query{
 					QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 					RowKey:      "node",
@@ -561,7 +651,7 @@ func TestGetQueryResultsError(t *testing.T) {
 		{
 			name:      "error with no warnings",
 			collector: fakeCollector,
-			queries: querys{
+			queries: &querys{
 				query{
 					QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 					RowKey:      "node",
@@ -573,7 +663,7 @@ func TestGetQueryResultsError(t *testing.T) {
 		{
 			name:      "error with warnings",
 			collector: fakeCollector,
-			queries: querys{
+			queries: &querys{
 				query{
 					QueryString: "kube_node_labels",
 					RowKey:      "node",

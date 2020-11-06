@@ -54,9 +54,17 @@ var (
 	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
 )
 
+type Collector interface {
+	getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement) error
+	testPrometheusConnection() error
+	newPrometheusConnFromCfg() error
+	performMatrixQuery(query string) (model.Matrix, error)
+	getQueryResults(queries *querys) (mappedResults, error)
+}
+
 type PromCollector struct {
+	collector  Collector
 	Client     client.Client
-	Context    context.Context
 	PromConn   prometheusConnection
 	PromCfg    *PrometheusConfig
 	TimeSeries *promv1.Range
@@ -94,7 +102,8 @@ func getRuntimeObj(ctx context.Context, r client.Client, obj runtime.Object, key
 	return nil
 }
 
-func getBearerToken(ctx context.Context, clt client.Client) (config.Secret, error) {
+func getBearerToken(clt client.Client) (config.Secret, error) {
+	ctx := context.Background()
 	sa := &corev1.ServiceAccount{}
 	objKey := client.ObjectKey{
 		Namespace: costMgmtNamespace,
@@ -141,7 +150,7 @@ func (c *PromCollector) getPrometheusConfig(cost *costmgmtv1alpha1.CostManagemen
 		Address: cost.Status.Prometheus.SvcAddress,
 		SkipTLS: *cost.Status.Prometheus.SkipTLSVerification,
 	}
-	token, err := getBearerToken(c.Context, c.Client)
+	token, err := getBearerToken(c.Client)
 	if err != nil {
 		return err
 	}
@@ -232,28 +241,32 @@ func (c *PromCollector) newPrometheusConnFromCfg() error {
 
 func (c *PromCollector) performMatrixQuery(query string) (model.Matrix, error) {
 	log := c.Log.WithValues("costmanagement", "performMatrixQuery")
-	result, warnings, err := c.PromConn.QueryRange(c.Context, query, *c.TimeSeries)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	queryResult, warnings, err := c.PromConn.QueryRange(ctx, query, *c.TimeSeries)
 	if err != nil {
 		return nil, fmt.Errorf("error querying prometheus: %v", err)
 	}
 	if len(warnings) > 0 {
 		log.Info("query warnings", "Warnings", warnings)
 	}
-	matrix, ok := result.(model.Matrix)
+	result, ok := queryResult.(model.Matrix)
 	if !ok {
-		return nil, fmt.Errorf("expected a matrix in response to query, got a %v", result.Type())
+		return nil, fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
 	}
-	return matrix, nil
+	return result, nil
 }
 
-func (c *PromCollector) getQueryResults(queries querys) (mappedResults, error) {
+func (c *PromCollector) getQueryResults(queries *querys) (mappedResults, error) {
 	results := mappedResults{}
-	for _, query := range queries {
+	for _, query := range *queries {
 		matrix, err := c.performMatrixQuery(query.QueryString)
 		if err != nil {
 			return nil, fmt.Errorf("getQueryResults: %v", err)
 		}
-		results = iterateMatrix(matrix, query, results)
+		results.iterateMatrix(matrix, query)
 	}
 	return results, nil
 }

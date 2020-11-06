@@ -94,7 +94,8 @@ func getResourceID(input string) string {
 	return splitString[len(splitString)-1]
 }
 
-func iterateMatrix(matrix model.Matrix, q query, results mappedResults) mappedResults {
+func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
+	results := (*r)
 	for _, stream := range matrix {
 		obj := string(stream.Metric[q.RowKey])
 		if results[obj] == nil {
@@ -119,11 +120,10 @@ func iterateMatrix(matrix model.Matrix, q query, results mappedResults) mappedRe
 			}
 		}
 	}
-	return results
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
+func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
 	log := c.Log.WithValues("costmanagement", "GenerateReports")
 
 	// yearMonth is used in filenames
@@ -132,7 +132,7 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 
 	// ################################################################################################################
 	log.Info("querying for node metrics")
-	nodeResults, err := c.getQueryResults(nodeQueries)
+	nodeResults, err := c.collector.getQueryResults(nodeQueries)
 	if err != nil {
 		return err
 	}
@@ -156,12 +156,14 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 			return err
 		}
 	}
+	emptyNodeRow := NewNodeRow(c.TimeSeries)
 	nodeReport := reportFile{
 		name:      nodeFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "node",
 		queryData: nodeRows,
-		headers:   NewNodeRow(c.TimeSeries),
+		headers:   emptyNodeRow.CSVheader(),
+		rowPrefix: emptyNodeRow.DateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.name)
 	if err := nodeReport.writeReport(); err != nil {
@@ -171,7 +173,7 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	//################################################################################################################
 
 	log.Info("querying for pod metrics")
-	podResults, err := c.getQueryResults(podQueries)
+	podResults, err := c.collector.getQueryResults(podQueries)
 	if err != nil {
 		return err
 	}
@@ -185,18 +187,20 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 		if node, ok := val["node"]; ok {
 			// Add the Node usage to the pod.
 			if row, ok := nodeRows[node.(string)]; ok {
-				usage.NodeRow = *row.(*NodeRow)
+				usage.nodeRow = *row.(*nodeRow)
 			} else {
-				usage.NodeRow = NewNodeRow(c.TimeSeries)
+				usage.nodeRow = NewNodeRow(c.TimeSeries)
 			}
 		}
 	}
+	emptyPodRow := NewPodRow(c.TimeSeries)
 	podReport := reportFile{
 		name:      podFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "pod",
 		queryData: podRows,
-		headers:   NewPodRow(c.TimeSeries),
+		headers:   emptyPodRow.CSVheader(),
+		rowPrefix: emptyPodRow.DateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.name)
 	if err := podReport.writeReport(); err != nil {
@@ -206,7 +210,7 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	//################################################################################################################
 
 	log.Info("querying for storage metrics")
-	volResults, err := c.getQueryResults(volQueries)
+	volResults, err := c.collector.getQueryResults(volQueries)
 	if err != nil {
 		return err
 	}
@@ -218,12 +222,14 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 			return err
 		}
 	}
+	emptyVolRow := NewStorageRow(c.TimeSeries)
 	volReport := reportFile{
 		name:      volFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "volume",
 		queryData: volRows,
-		headers:   NewStorageRow(c.TimeSeries),
+		headers:   emptyVolRow.CSVheader(),
+		rowPrefix: emptyVolRow.DateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.name)
 	if err := volReport.writeReport(); err != nil {
@@ -233,7 +239,7 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	//################################################################################################################
 
 	log.Info("querying for namespaces")
-	namespaceResults, err := c.getQueryResults(namespaceQueries)
+	namespaceResults, err := c.collector.getQueryResults(namespaceQueries)
 	if err != nil {
 		return err
 	}
@@ -245,12 +251,14 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 			return err
 		}
 	}
+	emptyNameRow := NewNamespaceRow(c.TimeSeries)
 	namespaceReport := reportFile{
 		name:      namespaceFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "namespace",
 		queryData: namespaceRows,
-		headers:   NewNamespaceRow(c.TimeSeries),
+		headers:   emptyNameRow.CSVheader(),
+		rowPrefix: emptyNameRow.DateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.name)
 	if err := namespaceReport.writeReport(); err != nil {

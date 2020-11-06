@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	nodeQueries = querys{
+	nodeQueries = &querys{
 		query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
@@ -83,7 +83,7 @@ var (
 			RowKey:         "node",
 		},
 	}
-	volQueries = querys{
+	volQueries = &querys{
 		query{
 			Name:        "persistentvolume_pod_info",
 			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
@@ -138,7 +138,7 @@ var (
 			RowKey:         "volumename",
 		},
 	}
-	podQueries = querys{
+	podQueries = &querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
 			QueryString: "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
@@ -218,7 +218,7 @@ var (
 			RowKey:         "pod",
 		},
 	}
-	namespaceQueries = querys{
+	namespaceQueries = &querys{
 		query{
 			Name:           "namespace-labels",
 			QueryString:    "kube_namespace_labels",

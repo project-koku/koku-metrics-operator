@@ -1,0 +1,17 @@
+{
+	"pvc-025604dc-93ff-4801-ac06-316243ccd45a": {
+		"namespace": "openshift-cost",
+		"persistentvolume": "pvc-025604dc-93ff-4801-ac06-316243ccd45a",
+		"persistentvolume_labels": "label_failure_domain_beta_kubernetes_io_region:us-east-2|label_failure_domain_beta_kubernetes_io_zone:us-east-2a",
+		"persistentvolumeclaim": "hive-metastore-db-data",
+		"persistentvolumeclaim-capacity-byte-seconds": "313039257600.000000",
+		"persistentvolumeclaim-capacity-bytes": "5217320960.000000",
+		"persistentvolumeclaim-request-byte-seconds": "322122547200.000000",
+		"persistentvolumeclaim-request-bytes": "5368709120.000000",
+		"persistentvolumeclaim-usage-byte-seconds": "94858444800.000000",
+		"persistentvolumeclaim-usage-bytes": "1580974080.000000",
+		"persistentvolumeclaim_labels": "label_app:hive-metastore|label_cost_openshift_io_ns_prune:openshift-cost|label_cost_openshift_io_prune:hive-metastore-pvc",
+		"pod": "hive-metastore-0",
+		"storageclass": "gp2"
+	}
+}

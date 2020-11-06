@@ -20,9 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package collector
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +42,7 @@ type reportFile struct {
 	size      int64
 	queryType string
 	queryData mappedCSVStruct
-	headers   CSVStruct
+	headers   []string
 	rowPrefix string
 }
 
@@ -86,53 +86,46 @@ func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
 
 // writeToFile compares the data to what is in the file and only adds new data to the file
 func (r *reportFile) writeToFile(file *os.File, created bool) error {
-	set, err := readCsv(file, strset.NewSet())
+	set, err := readCSVByLine(file, strset.NewSet(), r.rowPrefix)
 	if err != nil {
 		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
 	}
+	cw := csv.NewWriter(file)
 	if created {
-		if err := r.headers.CSVheader(file); err != nil {
+		if err := cw.Write(r.headers); err != nil {
 			return fmt.Errorf("writeToFile: %v", err)
 		}
 	}
 
 	for _, row := range r.queryData {
 		if !set.Contains(row.String()) {
-			if err := row.CSVrow(file); err != nil {
+			if err := cw.Write(row.CSVrow()); err != nil {
 				return err
 			}
 		}
 	}
 
+	cw.Flush()
 	return file.Sync()
 }
 
 // readCsv reads the file and puts each row into a set
 func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
-	lines, err := csv.NewReader(f).ReadAll()
-	if err != nil {
-		return set, err
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		set.Add(scanner.Text())
 	}
-	for _, line := range lines {
-		set.Add(strings.Join(line, ","))
-	}
-	return set, nil
+	return set, scanner.Err()
 }
 
 // readCSVByLine reads the file and puts each row into a set
 func readCSVByLine(f *os.File, set *strset.Set, prefix string) (*strset.Set, error) {
-	reader := csv.NewReader(f)
-	for {
-		line, err := reader.Read()
-		switch {
-		case err == io.EOF:
-			return set, nil
-		case err != nil:
-			return nil, err
-		}
-		stringLine := strings.Join(line, ",")
-		if strings.HasPrefix(stringLine, prefix) {
-			set.Add(stringLine)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, prefix) {
+			set.Add(scanner.Text())
 		}
 	}
+	return set, scanner.Err()
 }

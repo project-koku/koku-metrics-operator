@@ -538,12 +538,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	if r.promCollector == nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
 		r.promCollector = &collector.PromCollector{
-			Context: ctx,
-			Client:  r.Client,
-			Log:     r.Log,
+			Client: r.Client,
+			Log:    r.Log,
 		}
 	}
 	r.promCollector.TimeSeries = nil
@@ -562,7 +559,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.UTC().Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
 			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = r.promCollector.GenerateReports(cost, dirCfg)
+			err = collector.GenerateReports(cost, dirCfg, r.promCollector)
 			if err != nil {
 				cost.Status.Reports.DataCollected = false
 				cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
