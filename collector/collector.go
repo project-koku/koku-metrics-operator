@@ -132,7 +132,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	// ################################################################################################################
 	log.Info("querying for node metrics")
-	nodeResults, err := c.collector.getQueryResults(nodeQueries)
+	nodeResults, err := c.getQueryResults(nodeQueries)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	//################################################################################################################
 
 	log.Info("querying for pod metrics")
-	podResults, err := c.collector.getQueryResults(podQueries)
+	podResults, err := c.getQueryResults(podQueries)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	//################################################################################################################
 
 	log.Info("querying for storage metrics")
-	volResults, err := c.collector.getQueryResults(volQueries)
+	volResults, err := c.getQueryResults(volQueries)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	//################################################################################################################
 
 	log.Info("querying for namespaces")
-	namespaceResults, err := c.collector.getQueryResults(namespaceQueries)
+	namespaceResults, err := c.getQueryResults(namespaceQueries)
 	if err != nil {
 		return err
 	}

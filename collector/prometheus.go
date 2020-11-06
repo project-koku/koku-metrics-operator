@@ -62,6 +62,10 @@ type Collector interface {
 	getQueryResults(queries *querys) (mappedResults, error)
 }
 
+func NewCollector(c Collector) *PromCollector {
+	return &PromCollector{collector: c}
+}
+
 type PromCollector struct {
 	collector  Collector
 	Client     client.Client

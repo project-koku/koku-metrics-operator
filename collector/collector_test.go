@@ -70,28 +70,6 @@ var (
 	}
 )
 
-type FakeCollector struct {
-	Collector
-	results map[*querys]mappedResults
-	err     error
-	t       *testing.T
-}
-
-func NewFakeCollector(c Collector) *PromCollector {
-	return &PromCollector{collector: c}
-}
-
-func (fc *FakeCollector) getQueryResults(queries *querys) (mappedResults, error) {
-	if fc.err != nil {
-		return nil, fc.err
-	}
-	res, ok := fc.results[queries]
-	if !ok {
-		fc.t.Fatalf("FakeCollector: getQueryResults: failed to find query result")
-	}
-	return res, nil
-}
-
 type mappedMockPromResult map[string]mockPromResult
 type mockPromResult struct {
 	matrix   model.Matrix
@@ -122,30 +100,27 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 }
 
 func TestLoadFile(t *testing.T) {
-	fakeResults := make(map[*querys]mappedResults)
-	resFileMap := map[*querys]string{
-		namespaceQueries: "test_data/namespace-results.data",
-		nodeQueries:      "test_data/node-results.data",
-		podQueries:       "test_data/pod-results.data",
-		volQueries:       "test_data/vol-results.data",
-	}
-	for q, s := range resFileMap {
-		res := &mappedResults{}
-		Load(s, res, t)
-		fakeResults[q] = *res
+	mapResults := make(mappedMockPromResult)
+	queryList := []querys{*nodeQueries, *namespaceQueries, *podQueries, *volQueries}
+	for _, q := range queryList {
+		for _, query := range q {
+			res := &model.Matrix{}
+			Load("test_data/"+query.Name, res, t)
+			mapResults[query.QueryString] = mockPromResult{matrix: *res}
+		}
 	}
 
-	fc := NewFakeCollector(
-		&FakeCollector{
-			results: fakeResults,
-			t:       t,
-			err:     nil,
-		})
-	fc.TimeSeries = &fakeTimeRange
-	fc.Log = zap.New()
-
-	if err := GenerateReports(fakeCost, fakeDirCfg, fc); err != nil {
-		t.Errorf("Generating reports failed with err: %v", err)
+	fakeCollector := &PromCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: mapResults,
+			t:             t,
+		},
+		TimeSeries: &promv1.Range{},
+		Log:        zap.New(),
+	}
+	err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	if err != nil {
+		t.Errorf("Failed to generate reports: %v", err)
 	}
 	fakeDirCfg.Reports.RemoveContents()
 }
