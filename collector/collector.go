@@ -151,19 +151,19 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
-		usage := NewNodeRow(c.TimeSeries)
+		usage := newNodeRow(c.TimeSeries)
 		if err := getStruct(val, &usage, nodeRows, node); err != nil {
 			return err
 		}
 	}
-	emptyNodeRow := NewNodeRow(c.TimeSeries)
+	emptyNodeRow := newNodeRow(c.TimeSeries)
 	nodeReport := reportFile{
 		name:      nodeFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "node",
 		queryData: nodeRows,
 		headers:   emptyNodeRow.csvHeader(),
-		rowPrefix: emptyNodeRow.dateTimes.String(),
+		rowPrefix: emptyNodeRow.dateTimes.string(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.name)
 	if err := nodeReport.writeReport(); err != nil {
@@ -180,7 +180,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	podRows := make(mappedCSVStruct)
 	for pod, val := range podResults {
-		usage := NewPodRow(c.TimeSeries)
+		usage := newPodRow(c.TimeSeries)
 		if err := getStruct(val, &usage, podRows, pod); err != nil {
 			return err
 		}
@@ -189,18 +189,18 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			if row, ok := nodeRows[node.(string)]; ok {
 				usage.nodeRow = *row.(*nodeRow)
 			} else {
-				usage.nodeRow = NewNodeRow(c.TimeSeries)
+				usage.nodeRow = newNodeRow(c.TimeSeries)
 			}
 		}
 	}
-	emptyPodRow := NewPodRow(c.TimeSeries)
+	emptyPodRow := newPodRow(c.TimeSeries)
 	podReport := reportFile{
 		name:      podFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "pod",
 		queryData: podRows,
 		headers:   emptyPodRow.csvHeader(),
-		rowPrefix: emptyPodRow.dateTimes.String(),
+		rowPrefix: emptyPodRow.dateTimes.string(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.name)
 	if err := podReport.writeReport(); err != nil {
@@ -217,19 +217,19 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	volRows := make(mappedCSVStruct)
 	for pvc, val := range volResults {
-		usage := NewStorageRow(c.TimeSeries)
+		usage := newStorageRow(c.TimeSeries)
 		if err := getStruct(val, &usage, volRows, pvc); err != nil {
 			return err
 		}
 	}
-	emptyVolRow := NewStorageRow(c.TimeSeries)
+	emptyVolRow := newStorageRow(c.TimeSeries)
 	volReport := reportFile{
 		name:      volFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "volume",
 		queryData: volRows,
 		headers:   emptyVolRow.csvHeader(),
-		rowPrefix: emptyVolRow.dateTimes.String(),
+		rowPrefix: emptyVolRow.dateTimes.string(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.name)
 	if err := volReport.writeReport(); err != nil {
@@ -246,19 +246,19 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	namespaceRows := make(mappedCSVStruct)
 	for namespace, val := range namespaceResults {
-		usage := NewNamespaceRow(c.TimeSeries)
+		usage := newNamespaceRow(c.TimeSeries)
 		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
 			return err
 		}
 	}
-	emptyNameRow := NewNamespaceRow(c.TimeSeries)
+	emptyNameRow := newNamespaceRow(c.TimeSeries)
 	namespaceReport := reportFile{
 		name:      namespaceFilePrefix + yearMonth + ".csv",
 		path:      dirCfg.Reports.Path,
 		queryType: "namespace",
 		queryData: namespaceRows,
 		headers:   emptyNameRow.csvHeader(),
-		rowPrefix: emptyNameRow.dateTimes.String(),
+		rowPrefix: emptyNameRow.dateTimes.string(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.name)
 	if err := namespaceReport.writeReport(); err != nil {

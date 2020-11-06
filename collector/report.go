@@ -52,8 +52,7 @@ func (r *reportFile) writeReport() error {
 		return fmt.Errorf("failed to get or create %s csv: %v", r.queryType, err)
 	}
 	defer csvFile.Close()
-	// logMsg := fmt.Sprintf("writing %s results to file", r.queryType)
-	// logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", r.queryType)
+
 	if err := r.writeToFile(csvFile, fileCreated); err != nil {
 		return fmt.Errorf("writeReport: %v", err)
 	}
@@ -86,7 +85,7 @@ func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
 
 // writeToFile compares the data to what is in the file and only adds new data to the file
 func (r *reportFile) writeToFile(file *os.File, created bool) error {
-	set, err := readCSVByLine(file, strset.NewSet(), r.rowPrefix)
+	set, err := readCSV(file, strset.NewSet(), r.rowPrefix)
 	if err != nil {
 		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
 	}
@@ -109,17 +108,8 @@ func (r *reportFile) writeToFile(file *os.File, created bool) error {
 	return file.Sync()
 }
 
-// readCsv reads the file and puts each row into a set
-func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		set.Add(scanner.Text())
-	}
-	return set, scanner.Err()
-}
-
 // readCSVByLine reads the file and puts each row into a set
-func readCSVByLine(f *os.File, set *strset.Set, prefix string) (*strset.Set, error) {
+func readCSV(f *os.File, set *strset.Set, prefix string) (*strset.Set, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
