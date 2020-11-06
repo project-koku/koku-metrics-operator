@@ -26,15 +26,15 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 )
 
-type DateTimes struct {
+type dateTimes struct {
 	ReportPeriodStart string
 	ReportPeriodEnd   string
 	IntervalStart     string
 	IntervalEnd       string
 }
 
-func NewDates(ts *promv1.Range) *DateTimes {
-	d := new(DateTimes)
+func newDates(ts *promv1.Range) *dateTimes {
+	d := new(dateTimes)
 	d.IntervalStart = ts.Start.String()
 	d.IntervalEnd = ts.End.String()
 	t := ts.Start
@@ -43,7 +43,7 @@ func NewDates(ts *promv1.Range) *DateTimes {
 	return d
 }
 
-func (dt DateTimes) CSVrow() []string {
+func (dt dateTimes) csvRow() []string {
 	return []string{
 		dt.ReportPeriodStart,
 		dt.ReportPeriodEnd,
@@ -52,26 +52,26 @@ func (dt DateTimes) CSVrow() []string {
 	}
 }
 
-func (dt DateTimes) String() string { return strings.Join(dt.CSVrow(), ",") }
+func (dt dateTimes) string() string { return strings.Join(dt.csvRow(), ",") }
 
-type CSVStruct interface {
-	CSVheader() []string
-	CSVrow() []string
-	String() string
+type csvStruct interface {
+	csvHeader() []string
+	csvRow() []string
+	string() string
 }
 
-func NewNamespaceRow(ts *promv1.Range) namespaceRow { return namespaceRow{DateTimes: NewDates(ts)} }
-func NewNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{DateTimes: NewDates(ts)} }
-func NewPodRow(ts *promv1.Range) podRow             { return podRow{DateTimes: NewDates(ts)} }
-func NewStorageRow(ts *promv1.Range) storageRow     { return storageRow{DateTimes: NewDates(ts)} }
+func newNamespaceRow(ts *promv1.Range) namespaceRow { return namespaceRow{dateTimes: newDates(ts)} }
+func newNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{dateTimes: newDates(ts)} }
+func newPodRow(ts *promv1.Range) podRow             { return podRow{dateTimes: newDates(ts)} }
+func newStorageRow(ts *promv1.Range) storageRow     { return storageRow{dateTimes: newDates(ts)} }
 
 type namespaceRow struct {
-	*DateTimes
+	*dateTimes
 	Namespace       string `mapstructure:"namespace"`
 	NamespaceLabels string `mapstructure:"namespace_labels"`
 }
 
-func (namespaceRow) CSVheader() []string {
+func (namespaceRow) csvHeader() []string {
 	return []string{
 		"report_period_start",
 		"report_period_end",
@@ -81,7 +81,7 @@ func (namespaceRow) CSVheader() []string {
 		"namespace_labels"}
 }
 
-func (row namespaceRow) CSVrow() []string {
+func (row namespaceRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -92,10 +92,10 @@ func (row namespaceRow) CSVrow() []string {
 	}
 }
 
-func (row namespaceRow) String() string { return strings.Join(row.CSVrow(), ",") }
+func (row namespaceRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type nodeRow struct {
-	*DateTimes
+	*dateTimes
 	Node                          string `mapstructure:"node"`
 	NodeCapacityCPUCores          string `mapstructure:"node-capacity-cpu-cores"`
 	ModeCapacityCPUCoreSeconds    string `mapstructure:"node-capacity-cpu-core-seconds"`
@@ -105,7 +105,7 @@ type nodeRow struct {
 	NodeLabels                    string `mapstructure:"node_labels"`
 }
 
-func (nodeRow) CSVheader() []string {
+func (nodeRow) csvHeader() []string {
 	return []string{
 		"report_period_start",
 		"report_period_end",
@@ -120,7 +120,7 @@ func (nodeRow) CSVheader() []string {
 		"node_labels"}
 }
 
-func (row nodeRow) CSVrow() []string {
+func (row nodeRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -136,10 +136,10 @@ func (row nodeRow) CSVrow() []string {
 	}
 }
 
-func (row nodeRow) String() string { return strings.Join(row.CSVrow(), ",") }
+func (row nodeRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type podRow struct {
-	*DateTimes
+	*dateTimes
 	nodeRow
 	Namespace                   string `mapstructure:"namespace"`
 	Pod                         string `mapstructure:"pod"`
@@ -152,7 +152,7 @@ type podRow struct {
 	PodLabels                   string `mapstructure:"pod_labels"`
 }
 
-func (podRow) CSVheader() []string {
+func (podRow) csvHeader() []string {
 	return []string{
 		"report_period_start",
 		"report_period_end",
@@ -175,7 +175,7 @@ func (podRow) CSVheader() []string {
 		"pod_labels"}
 }
 
-func (row podRow) CSVrow() []string {
+func (row podRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -199,10 +199,10 @@ func (row podRow) CSVrow() []string {
 	}
 }
 
-func (row podRow) String() string { return strings.Join(row.CSVrow(), ",") }
+func (row podRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type storageRow struct {
-	*DateTimes
+	*dateTimes
 	Namespace                                string
 	Pod                                      string
 	PersistentVolumeClaim                    string `mapstructure:"persistentvolumeclaim"`
@@ -216,7 +216,7 @@ type storageRow struct {
 	PersistentVolumeClaimLabels              string `mapstructure:"persistentvolumeclaim_labels"`
 }
 
-func (storageRow) CSVheader() []string {
+func (storageRow) csvHeader() []string {
 	return []string{
 		"report_period_start",
 		"report_period_end",
@@ -235,7 +235,7 @@ func (storageRow) CSVheader() []string {
 		"persistentvolumeclaim_labels"}
 }
 
-func (row storageRow) CSVrow() []string {
+func (row storageRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -255,4 +255,4 @@ func (row storageRow) CSVrow() []string {
 	}
 }
 
-func (row storageRow) String() string { return strings.Join(row.CSVrow(), ",") }
+func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }

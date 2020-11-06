@@ -98,8 +98,8 @@ func (r *reportFile) writeToFile(file *os.File, created bool) error {
 	}
 
 	for _, row := range r.queryData {
-		if !set.Contains(row.String()) {
-			if err := cw.Write(row.CSVrow()); err != nil {
+		if !set.Contains(row.string()) {
+			if err := cw.Write(row.csvRow()); err != nil {
 				return err
 			}
 		}

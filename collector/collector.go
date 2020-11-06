@@ -42,7 +42,7 @@ var (
 	statusTimeFormat = "2006-01-02 15:04:05"
 )
 
-type mappedCSVStruct map[string]CSVStruct
+type mappedCSVStruct map[string]csvStruct
 type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
@@ -81,7 +81,7 @@ func getValue(query *saveQueryValue, array []model.SamplePair) float64 {
 	}
 }
 
-func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
+func getStruct(val mappedValues, usage csvStruct, rowResults mappedCSVStruct, key string) error {
 	if err := mapstructure.Decode(val, &usage); err != nil {
 		return fmt.Errorf("getStruct: failed to convert map to struct: %v", err)
 	}
@@ -162,8 +162,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "node",
 		queryData: nodeRows,
-		headers:   emptyNodeRow.CSVheader(),
-		rowPrefix: emptyNodeRow.DateTimes.String(),
+		headers:   emptyNodeRow.csvHeader(),
+		rowPrefix: emptyNodeRow.dateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.name)
 	if err := nodeReport.writeReport(); err != nil {
@@ -199,8 +199,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "pod",
 		queryData: podRows,
-		headers:   emptyPodRow.CSVheader(),
-		rowPrefix: emptyPodRow.DateTimes.String(),
+		headers:   emptyPodRow.csvHeader(),
+		rowPrefix: emptyPodRow.dateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.name)
 	if err := podReport.writeReport(); err != nil {
@@ -228,8 +228,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "volume",
 		queryData: volRows,
-		headers:   emptyVolRow.CSVheader(),
-		rowPrefix: emptyVolRow.DateTimes.String(),
+		headers:   emptyVolRow.csvHeader(),
+		rowPrefix: emptyVolRow.dateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.name)
 	if err := volReport.writeReport(); err != nil {
@@ -257,8 +257,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		path:      dirCfg.Reports.Path,
 		queryType: "namespace",
 		queryData: namespaceRows,
-		headers:   emptyNameRow.CSVheader(),
-		rowPrefix: emptyNameRow.DateTimes.String(),
+		headers:   emptyNameRow.csvHeader(),
+		rowPrefix: emptyNameRow.dateTimes.String(),
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.name)
 	if err := namespaceReport.writeReport(); err != nil {
