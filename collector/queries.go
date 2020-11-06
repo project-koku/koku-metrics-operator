@@ -222,7 +222,7 @@ var (
 		query{
 			Name:           "namespace-labels",
 			QueryString:    "kube_namespace_labels",
-			MetricKey:      staticFields{"namepsace": "namespace"},
+			MetricKey:      staticFields{"namespace": "namespace"},
 			MetricKeyRegex: regexFields{"namespace_labels": "label_*"},
 			RowKey:         "namespace",
 		},
