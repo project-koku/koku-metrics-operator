@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
@@ -60,7 +60,7 @@ func (dir *Directory) RemoveContents() error {
 		return fmt.Errorf("RemoveContents: could not read directory: %v", err)
 	}
 	for _, file := range fileList {
-		if err := os.RemoveAll(path.Join(dir.Path, file.Name())); err != nil {
+		if err := os.RemoveAll(filepath.Join(dir.Path, file.Name())); err != nil {
 			return fmt.Errorf("RemoveContents: could not remove file: %v", err)
 		}
 	}
@@ -123,7 +123,7 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 		"upload":  uploadDir,
 	}
 	for name, folder := range folders {
-		d := path.Join(ParentDir, folder)
+		d := filepath.Join(ParentDir, folder)
 		dirMap[name], err = getOrCreatePath(d)
 		if err != nil {
 			return fmt.Errorf("getDirectoryConfig: %v", err)
