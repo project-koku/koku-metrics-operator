@@ -130,6 +130,7 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
 	updateReportStatus(cost, c.TimeSeries)
 
+	// ################################################################################################################
 	log.Info("querying for node metrics")
 	nodeResults, err := c.getQueryResults(nodeQueries)
 	if err != nil {
@@ -148,24 +149,6 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 		nodeResults[node]["resource_id"] = resourceID
 	}
 
-	log.Info("querying for pod metrics")
-	podResults, err := c.getQueryResults(podQueries)
-	if err != nil {
-		return err
-	}
-
-	log.Info("querying for storage metrics")
-	volResults, err := c.getQueryResults(volQueries)
-	if err != nil {
-		return err
-	}
-
-	log.Info("querying for namespaces")
-	namespaceResults, err := c.getQueryResults(namespaceQueries)
-	if err != nil {
-		return err
-	}
-
 	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
 		usage := NewNodeRow(c.TimeSeries)
@@ -182,6 +165,14 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.name)
 	if err := nodeReport.writeReport(); err != nil {
+		return err
+	}
+
+	//################################################################################################################
+
+	log.Info("querying for pod metrics")
+	podResults, err := c.getQueryResults(podQueries)
+	if err != nil {
 		return err
 	}
 
@@ -212,6 +203,14 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 		return err
 	}
 
+	//################################################################################################################
+
+	log.Info("querying for storage metrics")
+	volResults, err := c.getQueryResults(volQueries)
+	if err != nil {
+		return err
+	}
+
 	volRows := make(mappedCSVStruct)
 	for pvc, val := range volResults {
 		usage := NewStorageRow(c.TimeSeries)
@@ -228,6 +227,14 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	}
 	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.name)
 	if err := volReport.writeReport(); err != nil {
+		return err
+	}
+
+	//################################################################################################################
+
+	log.Info("querying for namespaces")
+	namespaceResults, err := c.getQueryResults(namespaceQueries)
+	if err != nil {
 		return err
 	}
 
@@ -249,6 +256,8 @@ func (c PromCollector) GenerateReports(cost *costmgmtv1alpha1.CostManagement, di
 	if err := namespaceReport.writeReport(); err != nil {
 		return err
 	}
+
+	//################################################################################################################
 
 	cost.Status.Reports.DataCollected = true
 	cost.Status.Reports.DataCollectionMessage = ""
