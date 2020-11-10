@@ -123,7 +123,7 @@ func TestGenerateReports(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
-	// fakeDirCfg.Reports.RemoveContents()
+	fakeDirCfg.Reports.RemoveContents()
 }
 
 func TestGetResourceID(t *testing.T) {

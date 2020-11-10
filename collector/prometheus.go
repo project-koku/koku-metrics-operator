@@ -54,20 +54,7 @@ var (
 	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
 )
 
-type Collector interface {
-	getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement) error
-	testPrometheusConnection() error
-	newPrometheusConnFromCfg() error
-	performMatrixQuery(query string) (model.Matrix, error)
-	getQueryResults(queries *querys) (mappedResults, error)
-}
-
-func NewCollector(c Collector) *PromCollector {
-	return &PromCollector{collector: c}
-}
-
 type PromCollector struct {
-	collector  Collector
 	Client     client.Client
 	PromConn   prometheusConnection
 	PromCfg    *PrometheusConfig

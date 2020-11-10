@@ -29,3 +29,8 @@ func (s *Set) Contains(value string) bool {
 	_, c := s.m[value]
 	return c
 }
+
+// Len returns the length of the set
+func (s *Set) Len() int {
+	return len(s.m)
+}

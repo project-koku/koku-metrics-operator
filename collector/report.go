@@ -23,6 +23,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +34,7 @@ import (
 type report interface {
 	writeReport() error
 	getOrCreateFile() (*os.File, bool, error)
-	writeToFile(*os.File, bool) error
+	writeToFile(io.Writer, *strset.Set, bool) error
 }
 
 type reportFile struct {
@@ -52,8 +53,11 @@ func (r *reportFile) writeReport() error {
 		return fmt.Errorf("failed to get or create %s csv: %v", r.queryType, err)
 	}
 	defer csvFile.Close()
-
-	if err := r.writeToFile(csvFile, fileCreated); err != nil {
+	set, err := readCSV(csvFile, strset.NewSet(), r.rowPrefix)
+	if err != nil {
+		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
+	}
+	if err := r.writeToFile(csvFile, set, fileCreated); err != nil {
 		return fmt.Errorf("writeReport: %v", err)
 	}
 	fileInfo, err := csvFile.Stat()
@@ -61,7 +65,7 @@ func (r *reportFile) writeReport() error {
 		return fmt.Errorf("writeReport: %v", err)
 	}
 	r.size = fileInfo.Size()
-	return nil
+	return csvFile.Sync()
 }
 
 func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
@@ -83,34 +87,31 @@ func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
 	return file, false, err
 }
 
-// writeToFile compares the data to what is in the file and only adds new data to the file
-func (r *reportFile) writeToFile(file *os.File, created bool) error {
-	set, err := readCSV(file, strset.NewSet(), r.rowPrefix)
-	if err != nil {
-		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
-	}
+// writeToFile writes the rows to file. Writes headers if file was created.
+func (r *reportFile) writeToFile(file io.Writer, set *strset.Set, created bool) error {
 	cw := csv.NewWriter(file)
 	if created {
 		if err := cw.Write(r.headers); err != nil {
-			return fmt.Errorf("writeToFile: %v", err)
+			return fmt.Errorf("writeToFile: failed to write headers: %v", err)
 		}
 	}
 
 	for _, row := range r.queryData {
 		if !set.Contains(row.string()) {
 			if err := cw.Write(row.csvRow()); err != nil {
-				return err
+				return fmt.Errorf("writeToFile: failed to write data row: %v", err)
 			}
 		}
 	}
 
 	cw.Flush()
-	return file.Sync()
+	return nil
 }
 
-// readCSVByLine reads the file and puts each row into a set
-func readCSV(f *os.File, set *strset.Set, prefix string) (*strset.Set, error) {
-	scanner := bufio.NewScanner(f)
+// readCSV reads the file and puts each row into a set, excluding rows that do not start with prefix.
+func readCSV(handle io.Reader, set *strset.Set, prefix string) (*strset.Set, error) {
+	scanner := bufio.NewScanner(handle)
+	scanner.Scan() // skip headers
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, prefix) {
