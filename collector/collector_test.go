@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -58,9 +59,7 @@ var (
 	fakeCost   = &costmgmtv1alpha1.CostManagement{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
-		Upload:  dirconfig.Directory{Path: "./upload"},
-		Staging: dirconfig.Directory{Path: "./expected_reports"},
-		Reports: dirconfig.Directory{Path: "./test_reports"},
+		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},
 	}
 	localTime, _  = time.Parse(time.RFC3339, "2020-11-06T19:43:23Z")
 	t             = localTime.UTC()
@@ -106,7 +105,7 @@ func TestGenerateReports(t *testing.T) {
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
-			Load("test_data/"+query.Name, res, t)
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 			mapResults[query.QueryString] = mockPromResult{matrix: *res}
 		}
 	}
