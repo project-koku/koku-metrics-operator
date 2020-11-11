@@ -2,16 +2,21 @@ package collector
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
+	"github.com/project-koku/korekuta-operator-go/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -68,6 +73,54 @@ var (
 	}
 )
 
+func getFiles(dir string, t *testing.T) map[string]*os.File {
+	fileMap := make(map[string]*os.File)
+	filelist, err := ioutil.ReadDir(filepath.Join("test_files", dir))
+	if err != nil {
+		t.Fatalf("Failed to read expected reports dir")
+	}
+	for _, file := range filelist {
+		f, err := os.Open(filepath.Join("test_files", dir, file.Name()))
+		if err != nil {
+			t.Fatalf("failed to open %s: %v", file.Name(), err)
+		}
+		fileMap[file.Name()] = f
+	}
+	return fileMap
+}
+
+func compareFiles(expected, generated *os.File) error {
+	files := map[string]*os.File{"e": expected, "g": generated}
+	sets := map[string]*strset.Set{"e": strset.NewSet(), "g": strset.NewSet()}
+	for i, file := range files {
+		var err error
+		_, err = readCSV(file, sets[i], "")
+		if err != nil {
+			return fmt.Errorf("failed to readCSV %s: %v", file.Name(), err)
+		}
+	}
+
+	var b strings.Builder
+	b.WriteString("Missing Rows:\n")
+	b.WriteString("\tGenerated is missing:\n")
+	for val := range sets["e"].Range() {
+		if !sets["g"].Contains(val) {
+			fmt.Fprintf(&b, "\t\t%s\n", val)
+		}
+	}
+	b.WriteString("\tGenerated has extra rows:\n")
+	for val := range sets["g"].Range() {
+		if !sets["e"].Contains(val) {
+			fmt.Fprintf(&b, "\t\t%s\n", val)
+		}
+	}
+	if b.String() != "Missing Rows:\n\tGenerated is missing:\n\tGenerated has extra rows:\n" {
+		return errors.New(b.String())
+	}
+
+	return nil
+}
+
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
@@ -87,10 +140,29 @@ func TestGenerateReports(t *testing.T) {
 		TimeSeries: &fakeTimeRange,
 		Log:        zap.New(),
 	}
-	err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
-	if err != nil {
+	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
+
+	// ####### everything below compares the generated reports to the expected reports #######
+	expectedMap := getFiles("expected_reports", t)
+	generatedMap := getFiles("test_reports", t)
+
+	if len(expectedMap) != len(generatedMap) {
+		t.Errorf("incorrect number of reports generated")
+	}
+
+	for expected, expectedinfo := range expectedMap {
+		generatedinfo, ok := generatedMap[expected]
+		if !ok {
+			t.Errorf("%s report file was not generated", expected)
+		} else {
+			if err := compareFiles(expectedinfo, generatedinfo); err != nil {
+				t.Errorf("%s files do not compare: error: %v", expected, err)
+			}
+		}
+	}
+
 	fakeDirCfg.Reports.RemoveContents()
 }
 
