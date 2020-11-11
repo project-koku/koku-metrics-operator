@@ -77,7 +77,7 @@ func getFiles(dir string, t *testing.T) map[string]*os.File {
 	fileMap := make(map[string]*os.File)
 	filelist, err := ioutil.ReadDir(filepath.Join("test_files", dir))
 	if err != nil {
-		t.Fatalf("Failed to read expected reports dir")
+		t.Fatalf("Failed to read %s directory", dir)
 	}
 	for _, file := range filelist {
 		f, err := os.Open(filepath.Join("test_files", dir, file.Name()))
@@ -187,8 +187,16 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
-	if fakeCost.Status.Reports.DataCollectionMessage != "" {
-		t.Errorf("Status not updated correctly: got %s want %s", fakeCost.Status.Reports.DataCollectionMessage, "No data to report for the hour queried.")
+	wanted := "No data to report for the hour queried."
+	if fakeCost.Status.Reports.DataCollectionMessage != wanted {
+		t.Errorf("Status not updated correctly: got %s want %s", fakeCost.Status.Reports.DataCollectionMessage, wanted)
+	}
+	filelist, err := ioutil.ReadDir(filepath.Join("test_files", "test_reports"))
+	if err != nil {
+		t.Fatalf("Failed to read expected reports dir")
+	}
+	if len(filelist) != 0 {
+		t.Errorf("unexpected report(s) generated: %#v", filelist)
 	}
 }
 
