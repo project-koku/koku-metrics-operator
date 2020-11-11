@@ -166,6 +166,32 @@ func TestGenerateReports(t *testing.T) {
 	fakeDirCfg.Reports.RemoveContents()
 }
 
+func TestGenerateReportsNoNodeData(t *testing.T) {
+	mapResults := make(mappedMockPromResult)
+	queryList := []*querys{nodeQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+
+	fakeCollector := &PromCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: mapResults,
+			t:             t,
+		},
+		TimeSeries: &fakeTimeRange,
+		Log:        zap.New(),
+	}
+	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
+		t.Errorf("Failed to generate reports: %v", err)
+	}
+	if fakeCost.Status.Reports.DataCollectionMessage != "" {
+		t.Errorf("Status not updated correctly: got %s want %s", fakeCost.Status.Reports.DataCollectionMessage, "No data to report for the hour queried.")
+	}
+}
+
 func TestGetResourceID(t *testing.T) {
 	getResourceIDTests := []struct {
 		name  string
