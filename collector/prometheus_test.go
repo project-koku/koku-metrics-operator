@@ -38,7 +38,7 @@ type mockPromResult struct {
 }
 type mockPrometheusConnection struct {
 	mappedResults mappedMockPromResult
-	result        *mockPromResult
+	singleResult  *mockPromResult
 	t             *testing.T
 }
 
@@ -50,8 +50,8 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 		if !ok {
 			m.t.Fatalf("Could not find test result!")
 		}
-	} else if m.result != nil {
-		res = m.result
+	} else if m.singleResult != nil {
+		res = m.singleResult
 	} else {
 		m.t.Fatalf("Could not find test result!")
 	}
@@ -59,7 +59,7 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 }
 
 func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
-	res := m.result
+	res := m.singleResult
 	return res.value, res.warnings, res.err
 }
 
@@ -100,8 +100,8 @@ func TestPerformMatrixQuery(t *testing.T) {
 	for _, tt := range performMatrixQueryTests {
 		t.Run(tt.name, func(t *testing.T) {
 			col.PromConn = mockPrometheusConnection{
-				result: tt.queryResult,
-				t:      t,
+				singleResult: tt.queryResult,
+				t:            t,
 			}
 			got, err := col.performMatrixQuery(tt.query)
 			if err != nil && tt.err == nil {
@@ -296,8 +296,8 @@ func TestGetQueryResultsError(t *testing.T) {
 	for _, tt := range getQueryResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
 			col.PromConn = mockPrometheusConnection{
-				result: tt.queryResult,
-				t:      t,
+				singleResult: tt.queryResult,
+				t:            t,
 			}
 			got := mappedResults{}
 			err := col.getQueryResults(&querys{tt.query}, &got)
@@ -342,8 +342,8 @@ func TestTestPrometheusConnection(t *testing.T) {
 	for _, tt := range testPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
 			col.PromConn = mockPrometheusConnection{
-				result: tt.queryResult,
-				t:      t,
+				singleResult: tt.queryResult,
+				t:            t,
 			}
 			err := col.testPrometheusConnection()
 			if err != nil && tt.wantedError == nil {
