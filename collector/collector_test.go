@@ -166,6 +166,60 @@ func TestGenerateReports(t *testing.T) {
 	fakeDirCfg.Reports.RemoveContents()
 }
 
+func TestGenerateReportsQueryErrors(t *testing.T) {
+	mapResults := make(mappedMockPromResult)
+	fakeCollector := &PromCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: mapResults,
+			t:             t,
+		},
+		TimeSeries: &fakeTimeRange,
+		Log:        zap.New(),
+	}
+
+	queryList := []*querys{nodeQueries, podQueries, volQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+	namespaceError := "namespace error"
+	for _, q := range *namespaceQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(namespaceError)}
+	}
+	err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), namespaceError) {
+		t.Errorf("GenerateReports %s was expected, got %v", namespaceError, err)
+	}
+	storageError := "storage error"
+	for _, q := range *volQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(storageError)}
+	}
+	err = GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), storageError) {
+		t.Errorf("GenerateReports %s was expected, got %v", storageError, err)
+	}
+	podError := "pod error"
+	for _, q := range *podQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(podError)}
+	}
+	err = GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), podError) {
+		t.Errorf("GenerateReports %s was expected, got %v", podError, err)
+	}
+	nodeError := "node error"
+	for _, q := range *nodeQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(nodeError)}
+	}
+	err = GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), nodeError) {
+		t.Errorf("GenerateReports %s was expected, got %v", nodeError, err)
+	}
+	fakeDirCfg.Reports.RemoveContents()
+}
+
 func TestGenerateReportsNoNodeData(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	queryList := []*querys{nodeQueries}
