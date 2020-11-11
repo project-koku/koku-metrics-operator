@@ -59,7 +59,8 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 }
 
 func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
-	return nil, nil, nil
+	res := m.result
+	return res.value, res.warnings, res.err
 }
 
 func TestPerformMatrixQuery(t *testing.T) {
@@ -311,6 +312,45 @@ func TestGetQueryResultsError(t *testing.T) {
 			}
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
+			}
+		})
+	}
+}
+
+func TestTestPrometheusConnection(t *testing.T) {
+	col := PromCollector{
+		TimeSeries: &promv1.Range{},
+		Log:        zap.New(),
+	}
+	testPrometheusConnectionTests := []struct {
+		name        string
+		wait        time.Duration
+		queryResult *mockPromResult
+		wantedError error
+	}{
+		{
+			name:        "test query success",
+			queryResult: &mockPromResult{err: nil},
+			wantedError: nil,
+		},
+		{
+			name:        "test query error",
+			queryResult: &mockPromResult{err: errTest},
+			wantedError: errTest,
+		},
+	}
+	for _, tt := range testPrometheusConnectionTests {
+		t.Run(tt.name, func(t *testing.T) {
+			col.PromConn = mockPrometheusConnection{
+				result: tt.queryResult,
+				t:      t,
+			}
+			err := col.testPrometheusConnection()
+			if err != nil && tt.wantedError == nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if tt.wantedError != nil && err == nil {
+				t.Errorf("%s got: %v error, want: error", tt.name, err)
 			}
 		})
 	}
