@@ -250,14 +250,13 @@ func (c *PromCollector) performMatrixQuery(query string) (model.Matrix, error) {
 	return result, nil
 }
 
-func (c *PromCollector) getQueryResults(queries *querys) (mappedResults, error) {
-	results := mappedResults{}
+func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	for _, query := range *queries {
 		matrix, err := c.performMatrixQuery(query.QueryString)
 		if err != nil {
-			return nil, fmt.Errorf("getQueryResults: %v", err)
+			return fmt.Errorf("getQueryResults: %v", err)
 		}
 		results.iterateMatrix(matrix, query)
 	}
-	return results, nil
+	return nil
 }

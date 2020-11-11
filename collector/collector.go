@@ -95,7 +95,7 @@ func getResourceID(input string) string {
 }
 
 func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
-	results := (*r)
+	results := *r
 	for _, stream := range matrix {
 		obj := string(stream.Metric[q.RowKey])
 		if results[obj] == nil {
@@ -132,8 +132,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	// ################################################################################################################
 	log.Info("querying for node metrics")
-	nodeResults, err := c.getQueryResults(nodeQueries)
-	if err != nil {
+	nodeResults := mappedResults{}
+	if err := c.getQueryResults(nodeQueries, &nodeResults); err != nil {
 		return err
 	}
 
@@ -173,8 +173,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	//################################################################################################################
 
 	log.Info("querying for pod metrics")
-	podResults, err := c.getQueryResults(podQueries)
-	if err != nil {
+	podResults := mappedResults{}
+	if err := c.getQueryResults(podQueries, &podResults); err != nil {
 		return err
 	}
 
@@ -210,8 +210,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	//################################################################################################################
 
 	log.Info("querying for storage metrics")
-	volResults, err := c.getQueryResults(volQueries)
-	if err != nil {
+	volResults := mappedResults{}
+	if err := c.getQueryResults(volQueries, &volResults); err != nil {
 		return err
 	}
 
@@ -239,8 +239,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	//################################################################################################################
 
 	log.Info("querying for namespaces")
-	namespaceResults, err := c.getQueryResults(namespaceQueries)
-	if err != nil {
+	namespaceResults := mappedResults{}
+	if err := c.getQueryResults(namespaceQueries, &namespaceResults); err != nil {
 		return err
 	}
 

@@ -1,9 +1,7 @@
 package collector
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"math"
 	"os"
@@ -70,35 +68,6 @@ var (
 	}
 )
 
-type mappedMockPromResult map[string]mockPromResult
-type mockPromResult struct {
-	matrix   model.Matrix
-	warnings promv1.Warnings
-	err      error
-}
-type mockPrometheusConnection struct {
-	mappedResults mappedMockPromResult
-	t             *testing.T
-}
-
-func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
-	res, ok := m.mappedResults[query]
-	if !ok {
-		m.t.Fatalf("Could not find test result!")
-	}
-	if res.err != nil {
-		return nil, nil, res.err
-	}
-	if res.warnings != nil {
-		return res.matrix, res.warnings, nil
-	}
-	return res.matrix, nil, nil
-}
-
-func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
-	return nil, nil, nil
-}
-
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
@@ -106,7 +75,7 @@ func TestGenerateReports(t *testing.T) {
 		for _, query := range *q {
 			res := &model.Matrix{}
 			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-			mapResults[query.QueryString] = mockPromResult{matrix: *res}
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
 
@@ -439,226 +408,6 @@ func TestIterateMatrix(t *testing.T) {
 			eq := reflect.DeepEqual(tt.results, tt.want)
 			if !eq {
 				t.Errorf("%s got:\n\t%s\n  want:\n\t%s", tt.name, tt.results, tt.want)
-			}
-		})
-	}
-}
-
-func TestGetQueryResults(t *testing.T) {
-	mapResults := mappedMockPromResult{
-		"kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)": mockPromResult{
-			matrix: model.Matrix{
-				{
-					Metric: model.Metric{
-						"endpoint":    "https-main",
-						"instance":    "10.131.0.11:8443",
-						"job":         "kube-state-metrics",
-						"namespace":   "openshift-monitoring",
-						"node":        "ip-10-0-222-213.us-east-2.compute.internal",
-						"pod":         "kube-state-metrics-b88767d9b-dljtf",
-						"prometheus":  "openshift-monitoring/k8s",
-						"provider_id": "aws:///us-east-2c/i-070043b2c0291bdc2",
-						"service":     "kube-state-metrics",
-					},
-					Values: []model.SamplePair{
-						{Timestamp: 1604339340, Value: 4},
-						{Timestamp: 1604339400, Value: 4},
-						{Timestamp: 1604339460, Value: 4},
-					},
-				}},
-			warnings: nil,
-			err:      nil,
-		},
-		"kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)": mockPromResult{
-			matrix: model.Matrix{
-				{
-					Metric: model.Metric{
-						"endpoint":    "https-main",
-						"instance":    "10.131.0.11:8443",
-						"job":         "kube-state-metrics",
-						"namespace":   "openshift-monitoring",
-						"node":        "ip-10-0-222-213.us-east-2.compute.internal",
-						"pod":         "kube-state-metrics-b88767d9b-dljtf",
-						"prometheus":  "openshift-monitoring/k8s",
-						"provider_id": "aws:///us-east-2c/i-070043b2c0291bdc2",
-						"service":     "kube-state-metrics",
-					},
-					Values: []model.SamplePair{
-						{Timestamp: 1604339340, Value: 4},
-						{Timestamp: 1604339400, Value: 4},
-						{Timestamp: 1604339460, Value: 4},
-					},
-				},
-			},
-			warnings: nil,
-			err:      nil,
-		},
-		"kube_node_labels": mockPromResult{
-			matrix: model.Matrix{
-				{
-					Metric: model.Metric{
-						"endpoint":                          "https-main",
-						"instance":                          "10.131.0.11:8443",
-						"job":                               "kube-state-metrics",
-						"label_beta_kubernetes_io_arch":     "amd64",
-						"label_topology_kubernetes_io_zone": "us-east-2c",
-						"namespace":                         "openshift-monitoring",
-						"node":                              "ip-10-0-222-213.us-east-2.compute.internal",
-						"pod":                               "kube-state-metrics-b88767d9b-dljtf",
-						"prometheus":                        "openshift-monitoring/k8s",
-						"service":                           "kube-state-metrics",
-					},
-					Values: []model.SamplePair{
-						{Timestamp: 1604339340, Value: 4},
-						{Timestamp: 1604339400, Value: 4},
-						{Timestamp: 1604339460, Value: 4},
-					},
-				},
-			},
-			warnings: nil,
-			err:      nil,
-		},
-	}
-	fakeCollector := PromCollector{
-		PromConn: mockPrometheusConnection{
-			mappedResults: mapResults,
-			t:             t,
-		},
-		TimeSeries: &promv1.Range{},
-		Log:        zap.New(),
-	}
-	queries := &querys{
-		query{
-			Name:        "node-allocatable-cpu-cores",
-			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
-			QueryValue: &saveQueryValue{
-				ValName:         "node-allocatable-cpu-cores",
-				Method:          "max",
-				Factor:          maxFactor,
-				TransformedName: "node-allocatable-cpu-core-seconds",
-			},
-			RowKey: "node",
-		},
-		query{
-			Name:        "node-capacity-cpu-cores",
-			QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
-			QueryValue: &saveQueryValue{
-				ValName:         "node-capacity-cpu-cores",
-				Method:          "max",
-				Factor:          maxFactor,
-				TransformedName: "node-capacity-cpu-core-seconds",
-			},
-			RowKey: "node",
-		},
-		query{
-			Name:           "node-labels",
-			QueryString:    "kube_node_labels",
-			MetricKeyRegex: regexFields{"node_labels": "label_*"},
-			RowKey:         "node",
-		},
-	}
-	want := mappedResults{
-		// since reusing the testResult, this query adds node labels
-		"ip-10-0-222-213.us-east-2.compute.internal": {
-			"node":                              "ip-10-0-222-213.us-east-2.compute.internal",
-			"provider_id":                       "aws:///us-east-2c/i-070043b2c0291bdc2",
-			"node-allocatable-cpu-cores":        "4.000000",
-			"node-allocatable-cpu-core-seconds": "720.000000",
-			"node-capacity-cpu-cores":           "4.000000",
-			"node-capacity-cpu-core-seconds":    "720.000000",
-			"node_labels":                       "label_beta_kubernetes_io_arch:amd64|label_topology_kubernetes_io_zone:us-east-2c",
-		},
-	}
-	got, _ := fakeCollector.getQueryResults(queries)
-	eq := reflect.DeepEqual(got, want)
-	if !eq {
-		t.Errorf("getQueryResults got:\n\t%s\n  want:\n\t%s", got, want)
-	}
-}
-
-func TestGetQueryResultsError(t *testing.T) {
-	mapResults := mappedMockPromResult{
-		"kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)": mockPromResult{
-			matrix:   model.Matrix{},
-			warnings: promv1.Warnings{"This is a warning."},
-			err:      nil,
-		},
-		"kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)": mockPromResult{
-			matrix:   model.Matrix{},
-			warnings: nil,
-			err:      errors.New("this is an error"),
-		},
-		"kube_node_labels": mockPromResult{
-			matrix:   model.Matrix{},
-			warnings: promv1.Warnings{"This is another warning."},
-			err:      errors.New("this is another error"),
-		},
-	}
-	fakeCollector := PromCollector{
-		PromConn: mockPrometheusConnection{
-			mappedResults: mapResults,
-			t:             t,
-		},
-		TimeSeries: &promv1.Range{},
-		Log:        zap.New(),
-	}
-	getQueryResultsErrorsTests := []struct {
-		name         string
-		collector    PromCollector
-		queries      *querys
-		wantedResult mappedResults
-		wantedError  error
-	}{
-		{
-			name:      "warnings with no error",
-			collector: fakeCollector,
-			queries: &querys{
-				query{
-					QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-					RowKey:      "node",
-				},
-			},
-			wantedResult: mappedResults{},
-			wantedError:  nil,
-		},
-		{
-			name:      "error with no warnings",
-			collector: fakeCollector,
-			queries: &querys{
-				query{
-					QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
-					RowKey:      "node",
-				},
-			},
-			wantedResult: nil,
-			wantedError:  errors.New("this is an error"),
-		},
-		{
-			name:      "error with warnings",
-			collector: fakeCollector,
-			queries: &querys{
-				query{
-					QueryString: "kube_node_labels",
-					RowKey:      "node",
-				},
-			},
-			wantedResult: nil,
-			wantedError:  errors.New("this is another error"),
-		},
-	}
-	for _, tt := range getQueryResultsErrorsTests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.collector.getQueryResults(tt.queries)
-			if got != nil {
-				eq := reflect.DeepEqual(got, tt.wantedResult)
-				if !eq {
-					t.Errorf("%s got: %s want: %s", tt.name, got, tt.wantedResult)
-				}
-			}
-			if tt.wantedError != nil && err == nil {
-				t.Errorf("%s got: nil error, want: error", tt.name)
 			}
 		})
 	}
