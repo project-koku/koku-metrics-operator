@@ -31,50 +31,71 @@ import (
 	"github.com/project-koku/korekuta-operator-go/strset"
 )
 
-type report interface {
-	writeReport() error
-	getOrCreateFile() (*os.File, bool, error)
+type dataInterface interface {
 	writeToFile(io.Writer, *strset.Set, bool) error
+	getPrefix() string
 }
 
-type reportFile struct {
-	name      string
-	path      string
-	size      int64
-	queryType string
+type fileInterface interface {
+	getName() string
+	getOrCreateFile() (*os.File, bool, error)
+}
+
+type reportInterface interface {
+	writeReport() error
+}
+
+type data struct {
 	queryData mappedCSVStruct
 	headers   []string
-	rowPrefix string
+	prefix    string
 }
 
-func (r *reportFile) writeReport() error {
-	csvFile, fileCreated, err := r.getOrCreateFile()
-	if err != nil {
-		return fmt.Errorf("failed to get or create %s csv: %v", r.queryType, err)
-	}
-	defer csvFile.Close()
-	set, err := readCSV(csvFile, strset.NewSet(), r.rowPrefix)
-	if err != nil {
-		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
-	}
-	if err := r.writeToFile(csvFile, set, fileCreated); err != nil {
-		return fmt.Errorf("writeReport: %v", err)
-	}
-	fileInfo, err := csvFile.Stat()
-	if err != nil {
-		return fmt.Errorf("writeReport: %v", err)
-	}
-	r.size = fileInfo.Size()
-	return csvFile.Sync()
+type file struct {
+	name string
+	path string
 }
 
-func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
-	if _, err := os.Stat(r.path); os.IsNotExist(err) {
-		if err := os.MkdirAll(r.path, os.ModePerm); err != nil {
+type report struct {
+	data dataInterface
+	file fileInterface
+	size int64
+}
+
+// writeToFile writes the rows to file. Writes headers if file was created.
+func (d *data) writeToFile(file io.Writer, set *strset.Set, created bool) error {
+	cw := csv.NewWriter(file)
+	if created {
+		if err := cw.Write(d.headers); err != nil {
+			return fmt.Errorf("writeToFile: failed to write headers: %v", err)
+		}
+	}
+	for _, row := range d.queryData {
+		if !set.Contains(row.string()) {
+			if err := cw.Write(row.csvRow()); err != nil {
+				return fmt.Errorf("writeToFile: failed to write data row: %v", err)
+			}
+		}
+	}
+	cw.Flush()
+	return nil
+}
+
+func (d *data) getPrefix() string {
+	return d.prefix
+}
+
+func (f *file) getName() string {
+	return f.name
+}
+
+func (f *file) getOrCreateFile() (*os.File, bool, error) {
+	if _, err := os.Stat(f.path); os.IsNotExist(err) {
+		if err := os.MkdirAll(f.path, os.ModePerm); err != nil {
 			return nil, false, err
 		}
 	}
-	filePath := filepath.Join(r.path, r.name)
+	filePath := filepath.Join(f.path, f.name)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		file, err := os.Create(filePath)
@@ -87,25 +108,25 @@ func (r *reportFile) getOrCreateFile() (*os.File, bool, error) {
 	return file, false, err
 }
 
-// writeToFile writes the rows to file. Writes headers if file was created.
-func (r *reportFile) writeToFile(file io.Writer, set *strset.Set, created bool) error {
-	cw := csv.NewWriter(file)
-	if created {
-		if err := cw.Write(r.headers); err != nil {
-			return fmt.Errorf("writeToFile: failed to write headers: %v", err)
-		}
+func (r *report) writeReport() error {
+	csvFile, fileCreated, err := r.file.getOrCreateFile()
+	if err != nil {
+		return fmt.Errorf("writeReport: failed to get or create csv: %v", err)
 	}
-
-	for _, row := range r.queryData {
-		if !set.Contains(row.string()) {
-			if err := cw.Write(row.csvRow()); err != nil {
-				return fmt.Errorf("writeToFile: failed to write data row: %v", err)
-			}
-		}
+	defer csvFile.Close()
+	set, err := readCSV(csvFile, strset.NewSet(), r.data.getPrefix())
+	if err != nil {
+		return fmt.Errorf("writeReport: failed to read csv: %v", err)
 	}
-
-	cw.Flush()
-	return nil
+	if err := r.data.writeToFile(csvFile, set, fileCreated); err != nil {
+		return fmt.Errorf("writeReport: failed to write to file: %v", err)
+	}
+	fileInfo, err := csvFile.Stat()
+	if err != nil {
+		return fmt.Errorf("writeReport: failed to get file size: %v", err)
+	}
+	r.size = fileInfo.Size()
+	return csvFile.Sync()
 }
 
 // readCSV reads the file and puts each row into a set, excluding rows that do not start with prefix.

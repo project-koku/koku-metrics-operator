@@ -157,17 +157,20 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		}
 	}
 	emptyNodeRow := newNodeRow(c.TimeSeries)
-	nodeReport := reportFile{
-		name:      nodeFilePrefix + yearMonth + ".csv",
-		path:      dirCfg.Reports.Path,
-		queryType: "node",
-		queryData: nodeRows,
-		headers:   emptyNodeRow.csvHeader(),
-		rowPrefix: emptyNodeRow.dateTimes.string(),
+	nodeReport := report{
+		file: &file{
+			name: nodeFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: nodeRows,
+			headers:   emptyNodeRow.csvHeader(),
+			prefix:    emptyNodeRow.dateTimes.string(),
+		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.name)
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.file.getName())
 	if err := nodeReport.writeReport(); err != nil {
-		return err
+		return fmt.Errorf("failed to write node report: %v", err)
 	}
 
 	//################################################################################################################
@@ -194,17 +197,20 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		}
 	}
 	emptyPodRow := newPodRow(c.TimeSeries)
-	podReport := reportFile{
-		name:      podFilePrefix + yearMonth + ".csv",
-		path:      dirCfg.Reports.Path,
-		queryType: "pod",
-		queryData: podRows,
-		headers:   emptyPodRow.csvHeader(),
-		rowPrefix: emptyPodRow.dateTimes.string(),
+	podReport := report{
+		file: &file{
+			name: podFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: podRows,
+			headers:   emptyPodRow.csvHeader(),
+			prefix:    emptyPodRow.dateTimes.string(),
+		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.name)
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
 	if err := podReport.writeReport(); err != nil {
-		return err
+		return fmt.Errorf("failed to write pod report: %v", err)
 	}
 
 	//################################################################################################################
@@ -223,17 +229,20 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		}
 	}
 	emptyVolRow := newStorageRow(c.TimeSeries)
-	volReport := reportFile{
-		name:      volFilePrefix + yearMonth + ".csv",
-		path:      dirCfg.Reports.Path,
-		queryType: "volume",
-		queryData: volRows,
-		headers:   emptyVolRow.csvHeader(),
-		rowPrefix: emptyVolRow.dateTimes.string(),
+	volReport := report{
+		file: &file{
+			name: volFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: volRows,
+			headers:   emptyVolRow.csvHeader(),
+			prefix:    emptyVolRow.dateTimes.string(),
+		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.name)
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
 	if err := volReport.writeReport(); err != nil {
-		return err
+		return fmt.Errorf("failed to write volume report: %v", err)
 	}
 
 	//################################################################################################################
@@ -252,17 +261,20 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		}
 	}
 	emptyNameRow := newNamespaceRow(c.TimeSeries)
-	namespaceReport := reportFile{
-		name:      namespaceFilePrefix + yearMonth + ".csv",
-		path:      dirCfg.Reports.Path,
-		queryType: "namespace",
-		queryData: namespaceRows,
-		headers:   emptyNameRow.csvHeader(),
-		rowPrefix: emptyNameRow.dateTimes.string(),
+	namespaceReport := report{
+		file: &file{
+			name: namespaceFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: namespaceRows,
+			headers:   emptyNameRow.csvHeader(),
+			prefix:    emptyNameRow.dateTimes.string(),
+		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.name)
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
 	if err := namespaceReport.writeReport(); err != nil {
-		return err
+		return fmt.Errorf("failed to write namespace report: %v", err)
 	}
 
 	//################################################################################################################

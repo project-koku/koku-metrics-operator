@@ -26,6 +26,32 @@ func (f fakeCSVstruct) csvHeader() []string { return []string{"fake-header", "fa
 func (f fakeCSVstruct) csvRow() []string    { return []string{"fake-row", "fake-row2"} }
 func (f fakeCSVstruct) string() string      { return strings.Join(f.csvRow(), ",") }
 
+type fakeFile struct {
+	file      *os.File
+	created   bool
+	createErr error
+}
+
+func (f *fakeFile) getOrCreateFile() (*os.File, bool, error) {
+	return f.file, f.created, f.createErr
+}
+func (f *fakeFile) getName() string {
+	return "this is a fake file"
+}
+
+type fakeData struct {
+	writeErr error
+	prefix   string
+}
+
+func (f *fakeData) getPrefix() string {
+	return f.prefix
+}
+
+func (f *fakeData) writeToFile(w io.Writer, s *strset.Set, b bool) error {
+	return f.writeErr
+}
+
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 	tempFile, err := ioutil.TempFile(dir, "temp-file-")
 	if err != nil {
@@ -48,6 +74,81 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	return tempDir
 }
 
+func TestWriteReport(t *testing.T) {
+	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
+	// tempFile := getTempFile(t, 0777, tempDir)
+	tempBadFile := getTempFile(t, 0777, tempDir)
+	tempBadFile.Close()
+	// defer tempFile.Close()
+	defer os.RemoveAll(tempDir)
+
+	writeReportTests := []struct {
+		name   string
+		report *report
+		want   error
+	}{
+		{
+			name: "successful write",
+			report: &report{
+				file: &fakeFile{
+					file:      getTempFile(t, 0777, tempDir),
+					created:   false,
+					createErr: nil,
+				},
+				data: &fakeData{writeErr: nil},
+			},
+			want: nil,
+		},
+		{
+			name: "failed to create file",
+			report: &report{
+				file: &fakeFile{
+					file:      nil,
+					created:   false,
+					createErr: errTest,
+				},
+				data: &fakeData{writeErr: nil},
+			},
+			want: errTest,
+		},
+		{
+			name: "failed to read file",
+			report: &report{
+				file: &fakeFile{
+					file:      tempBadFile,
+					created:   false,
+					createErr: nil,
+				},
+				data: &fakeData{writeErr: nil},
+			},
+			want: errTest,
+		},
+		{
+			name: "failed to write to file",
+			report: &report{
+				file: &fakeFile{
+					file:      getTempFile(t, 0777, tempDir),
+					created:   false,
+					createErr: nil,
+				},
+				data: &fakeData{writeErr: errTest},
+			},
+			want: errTest,
+		},
+	}
+	for _, tt := range writeReportTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.report.writeReport()
+			if tt.want != nil && got == nil {
+				t.Errorf("%s got %v want error", tt.name, got)
+			}
+			if tt.want == nil && got != nil {
+				t.Errorf("%s got %v want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetOrCreateFile(t *testing.T) {
 	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
 	defer os.RemoveAll(tempDir)
@@ -59,14 +160,14 @@ func TestGetOrCreateFile(t *testing.T) {
 
 	getOrCreateTests := []struct {
 		name          string
-		report        report
+		report        *file
 		wantedFile    string
 		wantedCreated bool
 		err           error
 	}{
 		{
 			name: "get existing file",
-			report: &reportFile{
+			report: &file{
 				name: "single-line.csv",
 				path: "./test_files",
 			},
@@ -76,7 +177,7 @@ func TestGetOrCreateFile(t *testing.T) {
 		},
 		{
 			name: "create new file",
-			report: &reportFile{
+			report: &file{
 				name: "file-to-create.csv",
 				path: tempDir,
 			},
@@ -86,7 +187,7 @@ func TestGetOrCreateFile(t *testing.T) {
 		},
 		{
 			name: "create directory in directory with no permissions",
-			report: &reportFile{
+			report: &file{
 				name: "file-to-create.csv",
 				path: filepath.Join(tempDir, "new-dir"),
 			},
@@ -96,7 +197,7 @@ func TestGetOrCreateFile(t *testing.T) {
 		},
 		{
 			name: "create file in directory with no permissions",
-			report: &reportFile{
+			report: &file{
 				name: "file-to-create.csv",
 				path: tempDirNoPerm,
 			},
@@ -106,7 +207,7 @@ func TestGetOrCreateFile(t *testing.T) {
 		},
 		{
 			name: "existing file with no permissions",
-			report: &reportFile{
+			report: &file{
 				name: tempFileNoPerm.Name(),
 				path: tempDir,
 			},
@@ -142,7 +243,7 @@ func TestWriteToFile(t *testing.T) {
 
 	writeToFileTests := []struct {
 		name     string
-		report   report
+		report   *data
 		set      *strset.Set
 		writer   io.Writer
 		created  bool
@@ -151,7 +252,7 @@ func TestWriteToFile(t *testing.T) {
 	}{
 		{
 			name:     "write header to writer",
-			report:   &reportFile{headers: []string{"header1"}},
+			report:   &data{headers: []string{"header1"}},
 			set:      strset.NewSet(),
 			writer:   builder,
 			created:  true,
@@ -160,7 +261,7 @@ func TestWriteToFile(t *testing.T) {
 		},
 		{
 			name: "write headers and fake data to writer",
-			report: &reportFile{
+			report: &data{
 				headers:   fakeCSVstruct{}.csvHeader(),
 				queryData: fakeQueryData,
 			},
@@ -172,7 +273,7 @@ func TestWriteToFile(t *testing.T) {
 		},
 		{
 			name: "write fake data to writer",
-			report: &reportFile{
+			report: &data{
 				headers:   fakeCSVstruct{}.csvHeader(),
 				queryData: fakeQueryData,
 			},
