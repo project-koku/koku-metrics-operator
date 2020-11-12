@@ -35,32 +35,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// type helper interface {
-// 	marshalToFile(v interface{}, prefix, indent string) ([]byte, error)
-// 	writeFile(filename string, data []byte, perm os.FileMode) error
-// }
-
-// type funcHelper struct{}
-
-// func (funcHelper) marshalToFile(v interface{}, prefix, indent string) ([]byte, error) {
-// 	return json.MarshalIndent(v, prefix, indent)
-// }
-
-// func (funcHelper) writeFile(filename string, data []byte, perm os.FileMode) error {
-// 	return ioutil.WriteFile(filename, data, perm)
-// }
-
 type packager interface {
 	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
-	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string
+	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string 
 	getManifest(archiveFiles map[int]string, filePath string)
 	moveFiles() ([]os.FileInfo, error)
 	needSplit(fileList []os.FileInfo, maxBytes int64) bool
 	splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error)
 	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
-	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (string, bool, error)
+	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (*os.File, bool, error) 
 	ReadUploadDir() ([]os.FileInfo, error)
-	PackageReports(maxSize int64) ([]os.FileInfo, error)
+	PackageReports() error
 }
 
 type FilePackager struct {
@@ -69,7 +54,14 @@ type FilePackager struct {
 	Log      logr.Logger
 	manifest manifestInfo
 	uid      string
+	MaxSize  int64
 }
+
+// var packageInstance packager
+
+// func init() {
+// 	packageInstance = FilePackager{}
+// }
 
 // Define the global variables
 const megaByte int64 = 1024 * 1024
@@ -88,9 +80,9 @@ var maxSplits int64 = 1000
 // ErrNoReports a "no reports" Error type
 var ErrNoReports = errors.New("reports not found")
 
-
 // try this for testing
 type Manifest interface{}
+
 // manifest template
 type manifest struct {
 	UUID      string   `json:"uuid"`
@@ -199,10 +191,8 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 	// add the files to the tarFile
 	for idx, filePath := range archiveFiles {
-		fmt.Println(filePath)
-		if strings.Contains(filePath, ".csv") {
+		if strings.HasSuffix(filePath, ".csv") {
 			uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
-			fmt.Println(uploadName)
 			if err := p.addFileToTarWriter(uploadName, filePath, tw); err != nil {
 				return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
 			}
@@ -286,7 +276,6 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 				}
 			}
 			os.Remove(absPath)
-			fmt.Println(splitFiles)
 		} else {
 			splitFiles = append(splitFiles, file)
 		}
@@ -359,9 +348,9 @@ func (p *FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports(maxSize int64) error {
+func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
-	maxBytes := maxSize * megaByte
+	maxBytes := p.MaxSize * megaByte
 	p.uid = uuid.New().String()
 
 	// create reports/staging/upload directories if they do not exist
@@ -371,7 +360,7 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveFiles()
-	if err == ErrNoReports || filesToPackage == nil {
+	if err == ErrNoReports {
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -413,6 +402,10 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 	}
 
 	log.Info("File packaging was successful.")
-
+	generatedFiles, err := p.ReadUploadDir()
+	log.Info("Generated the following files for upload: ")
+	for _, file := range generatedFiles {
+		log.Info(file.Name())
+	}
 	return nil
 }
