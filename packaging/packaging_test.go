@@ -245,6 +245,7 @@ func TestMain(m *testing.M) {
 	err := setup()
 	if err != nil {
 		fmt.Println("Can not run tests because setup failed to create testing directories and files")
+		shutdown()
 	} else {
 		code := m.Run()
 		shutdown()
