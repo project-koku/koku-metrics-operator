@@ -112,7 +112,7 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	return tempDir
 }
 
-func setup() {
+func setup() error {
 	type dirInfo struct {
 		dirName  string
 		files    []string
@@ -176,6 +176,7 @@ func setup() {
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			fmt.Println("Could not create testing directory")
+			return err
 		}
 	}
 	for _, directory := range dirInfoList {
@@ -184,10 +185,12 @@ func setup() {
 		if _, err := os.Stat(reportPath); os.IsNotExist(err) {
 			if err := os.Mkdir(reportPath, directory.dirMode); err != nil {
 				fmt.Println("Could not create testing directory")
+				return err
 			}
 			if directory.dirName != "empty" && directory.dirName != "restrictedEmpty" {
 				if err := os.Mkdir(reportDataPath, directory.fileMode); err != nil {
 					fmt.Println("Could not create testing directory")
+					return err
 				}
 			}
 			if !strings.Contains(directory.dirName, "restricted") && directory.dirName != "empty" {
@@ -197,11 +200,11 @@ func setup() {
 				os.Create(filepath.Join(reportDataPath, "nonCSV.txt"))
 			}
 			var fileList []os.FileInfo
-			if !strings.Contains(directory.dirName, "restricted") {
+			if !strings.Contains(directory.dirName, "restricted") && !strings.Contains(directory.dirName, "empty") {
 				fileList, err = ioutil.ReadDir(reportDataPath)
 				if err != nil {
-					fmt.Println("Something went wrong creating the test files")
-					fileList = nil
+					fmt.Println("Test files were not successfully created")
+					return err
 				}
 			} else {
 				fileList = nil
@@ -230,6 +233,7 @@ func setup() {
 			}
 		}
 	}
+	return nil
 }
 
 func shutdown() {
@@ -238,10 +242,14 @@ func shutdown() {
 }
 
 func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	shutdown()
-	os.Exit(code)
+	err := setup()
+	if err != nil {
+		fmt.Println("Can not run tests because setup failed to create testing directories and files")
+	} else {
+		code := m.Run()
+		shutdown()
+		os.Exit(code)
+	}
 }
 
 func TestNeedSplit(t *testing.T) {
