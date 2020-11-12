@@ -16,23 +16,23 @@ package packaging
 
 import (
 	"archive/tar"
-	// "bytes"
 	"compress/gzip"
-	"fmt"
-	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var testingDir string
@@ -53,20 +53,20 @@ func (m fakeManifest) MarshalJSON() ([]byte, error) {
 	return nil, errors.New("This is a marshaling error")
 }
 
-// setup a testDirConfig helper for tests 
-type testDirConfig struct{
-	directory	string
-	files		[]os.FileInfo
+// setup a testDirConfig helper for tests
+type testDirConfig struct {
+	directory string
+	files     []os.FileInfo
 }
 type testDirMap struct {
-	large	testDirConfig
-	small	testDirConfig
-	moving	testDirConfig
-	split	testDirConfig
-	tar		testDirConfig
-	restricted	testDirConfig
-	empty		testDirConfig
-	restrictedEmpty	testDirConfig
+	large           testDirConfig
+	small           testDirConfig
+	moving          testDirConfig
+	split           testDirConfig
+	tar             testDirConfig
+	restricted      testDirConfig
+	empty           testDirConfig
+	restrictedEmpty testDirConfig
 }
 
 var testDirs testDirMap
@@ -114,62 +114,60 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 
 func setup() {
 	type dirInfo struct {
-		dirName	 string
-		files	 []string
-		dirMode	 os.FileMode
+		dirName  string
+		files    []string
+		dirMode  os.FileMode
 		fileMode os.FileMode
 	}
 	testFiles := []string{"ocp_node_label.csv", "ocp_pod_usage.csv"}
 	dirInfoList := []dirInfo{
 		dirInfo{
 			dirName:  "large",
-			files:	  testFiles,
+			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
 		dirInfo{
 			dirName:  "small",
-			files:	  testFiles,
+			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
 		dirInfo{
 			dirName:  "moving",
-			files:	  testFiles,
+			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
 		dirInfo{
 			dirName:  "split",
-			files:	  testFiles,
+			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
 		dirInfo{
 			dirName:  "tar",
-			files:	  testFiles,
+			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
 		dirInfo{
 			dirName:  "restricted",
-			files:	  testFiles,
+			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0000,
-
 		},
 		dirInfo{
 			dirName:  "empty",
-			files:	  nil,
+			files:    nil,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
 		dirInfo{
-			dirName:  "restrictedEmpty",
-			files:	  nil,
-			dirMode:  0000,
+			dirName: "restrictedEmpty",
+			files:   nil,
+			dirMode: 0000,
 		},
-
 	}
 	// setup the initial testing directory
 	fmt.Println("Setting up for packaging tests")
@@ -180,26 +178,26 @@ func setup() {
 			fmt.Println("Could not create testing directory")
 		}
 	}
-	for _, directory := range dirInfoList{
+	for _, directory := range dirInfoList {
 		reportPath := filepath.Join(testingDir, directory.dirName)
 		reportDataPath := filepath.Join(reportPath, "data")
 		if _, err := os.Stat(reportPath); os.IsNotExist(err) {
 			if err := os.Mkdir(reportPath, directory.dirMode); err != nil {
 				fmt.Println("Could not create testing directory")
 			}
-			if directory.dirName != "empty" && directory.dirName != "restrictedEmpty"{
+			if directory.dirName != "empty" && directory.dirName != "restrictedEmpty" {
 				if err := os.Mkdir(reportDataPath, directory.fileMode); err != nil {
 					fmt.Println("Could not create testing directory")
 				}
 			}
-			if !strings.Contains(directory.dirName, "restricted") && directory.dirName != "empty"{
+			if !strings.Contains(directory.dirName, "restricted") && directory.dirName != "empty" {
 				for _, reportFile := range directory.files {
 					Copy(filepath.Join("../testfiles/", reportFile), filepath.Join(reportDataPath, reportFile))
 				}
 				os.Create(filepath.Join(reportDataPath, "nonCSV.txt"))
 			}
 			var fileList []os.FileInfo
-			if !strings.Contains(directory.dirName, "restricted"){
+			if !strings.Contains(directory.dirName, "restricted") {
 				fileList, err = ioutil.ReadDir(reportDataPath)
 				if err != nil {
 					fmt.Println("Something went wrong creating the test files")
@@ -208,26 +206,26 @@ func setup() {
 			} else {
 				fileList = nil
 			}
-			
+
 			tmpDirMap := testDirConfig{
-				directory:	reportPath,
-				files:		fileList,
+				directory: reportPath,
+				files:     fileList,
 			}
-			if directory.dirName == "large"{
+			if directory.dirName == "large" {
 				testDirs.large = tmpDirMap
-			} else if directory.dirName == "small"{
+			} else if directory.dirName == "small" {
 				testDirs.small = tmpDirMap
-			} else if directory.dirName == "moving"{
+			} else if directory.dirName == "moving" {
 				testDirs.moving = tmpDirMap
 			} else if directory.dirName == "empty" {
 				testDirs.empty = tmpDirMap
-			} else if directory.dirName == "restricted"{
+			} else if directory.dirName == "restricted" {
 				testDirs.restricted = tmpDirMap
-			} else if directory.dirName == "restrictedEmpty"{
+			} else if directory.dirName == "restrictedEmpty" {
 				testDirs.restrictedEmpty = tmpDirMap
-			} else if directory.dirName == "split"{
+			} else if directory.dirName == "split" {
 				testDirs.split = tmpDirMap
-			} else if directory.dirName == "tar"{
+			} else if directory.dirName == "tar" {
 				testDirs.tar = tmpDirMap
 			}
 		}
@@ -249,22 +247,22 @@ func TestMain(m *testing.M) {
 func TestNeedSplit(t *testing.T) {
 	// create the needSplitTests
 	needSplitTests := []struct {
-		name string
-		fileList  []os.FileInfo
+		name     string
+		fileList []os.FileInfo
 		maxBytes int64
-		want  bool
+		want     bool
 	}{
 		{
-			name: "test split required",
+			name:     "test split required",
 			fileList: testDirs.large.files,
 			maxBytes: 10 * 1024 * 1024,
-			want: true,
+			want:     true,
 		},
 		{
-			name: "test split not required",
+			name:     "test split not required",
 			fileList: testDirs.small.files,
 			maxBytes: 100 * 1024 * 1024,
-			want: false,
+			want:     false,
 		},
 	}
 	for _, tt := range needSplitTests {
@@ -281,18 +279,18 @@ func TestNeedSplit(t *testing.T) {
 func TestBuildLocalCSVFileList(t *testing.T) {
 	// create the buildLocalCSVFileList tests
 	buildLocalCSVFileListTests := []struct {
-		name string
-		dirName string
-		fileList  []os.FileInfo
+		name     string
+		dirName  string
+		fileList []os.FileInfo
 	}{
 		{
-			name: "test regular dir",
-			dirName: filepath.Join(testDirs.large.directory, "data"),
+			name:     "test regular dir",
+			dirName:  filepath.Join(testDirs.large.directory, "data"),
 			fileList: testDirs.large.files,
 		},
 		{
-			name: "test empty dir",
-			dirName: filepath.Join(testDirs.empty.directory, "data"),
+			name:     "test empty dir",
+			dirName:  filepath.Join(testDirs.empty.directory, "data"),
 			fileList: testDirs.empty.files,
 		},
 	}
@@ -321,28 +319,28 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 func TestMoveFiles(t *testing.T) {
 	// create the moveFiles tests
 	moveFilesTests := []struct {
-		name string
-		dirName string
+		name     string
+		dirName  string
 		fileUUID string
-		want  []os.FileInfo
+		want     []os.FileInfo
 	}{
 		{
-			name: "test moving dir",
-			dirName: testDirs.moving.directory,
+			name:     "test moving dir",
+			dirName:  testDirs.moving.directory,
 			fileUUID: uuid.New().String(),
-			want: testDirs.large.files,
+			want:     testDirs.large.files,
 		},
 		{
-			name: "test empty dir",
-			dirName: testDirs.empty.directory,
+			name:     "test empty dir",
+			dirName:  testDirs.empty.directory,
 			fileUUID: uuid.New().String(),
-			want: nil,
+			want:     nil,
 		},
 		{
-			name: "test restricted dir",
-			dirName: testDirs.restricted.directory,
+			name:     "test restricted dir",
+			dirName:  testDirs.restricted.directory,
 			fileUUID: uuid.New().String(),
-			want: nil,
+			want:     nil,
 		},
 	}
 	for _, tt := range moveFilesTests {
@@ -353,7 +351,7 @@ func TestMoveFiles(t *testing.T) {
 			testPackager.DirCfg = dirCfg
 			testPackager.uid = tt.fileUUID
 			got, _ := testPackager.moveFiles()
-			if tt.want != nil{
+			if tt.want != nil {
 				for _, file := range got {
 					// check that the file contains the uuid
 					if !strings.Contains(file.Name(), tt.fileUUID) {
@@ -364,7 +362,7 @@ func TestMoveFiles(t *testing.T) {
 						t.Errorf("File does not exist in the staging directory")
 					}
 				}
-			} else if got != nil{
+			} else if got != nil {
 				t.Errorf("Expected moved files to be nil")
 			}
 		})
@@ -374,46 +372,46 @@ func TestMoveFiles(t *testing.T) {
 func TestPackagingReports(t *testing.T) {
 	// create the packagingReports tests
 	packagingReportTests := []struct {
-		name string
-		dirName string
-		maxSize int64
-		want    error
+		name          string
+		dirName       string
+		maxSize       int64
+		want          error
 		multipleFiles bool
 	}{
 		{
-			name: "test large dir",
-			dirName: testDirs.large.directory,
-			maxSize: 10,
+			name:          "test large dir",
+			dirName:       testDirs.large.directory,
+			maxSize:       10,
 			multipleFiles: true,
-			want: nil,
+			want:          nil,
 		},
 		{
-			name: "test small dir",
-			dirName: testDirs.small.directory,
-			maxSize: 100,
+			name:          "test small dir",
+			dirName:       testDirs.small.directory,
+			maxSize:       100,
 			multipleFiles: false,
-			want: nil,
+			want:          nil,
 		},
 		{
-			name: "test empty dir",
-			dirName: testDirs.empty.directory,
-			maxSize: 100,
+			name:          "test empty dir",
+			dirName:       testDirs.empty.directory,
+			maxSize:       100,
 			multipleFiles: false,
-			want: errors.New("No reports found"),
+			want:          errors.New("No reports found"),
 		},
 		{
-			name: "restricted",
-			dirName: testDirs.restrictedEmpty.directory,
-			maxSize: 100,
+			name:          "restricted",
+			dirName:       testDirs.restrictedEmpty.directory,
+			maxSize:       100,
 			multipleFiles: false,
-			want: errors.New("Restricted"),
+			want:          errors.New("Restricted"),
 		},
 		{
-			name: "nonexistent",
-			dirName: filepath.Join(testingDir, uuid.New().String()),
-			maxSize: 100,
+			name:          "nonexistent",
+			dirName:       filepath.Join(testingDir, uuid.New().String()),
+			maxSize:       100,
 			multipleFiles: false,
-			want: errors.New("nonexistent"),
+			want:          errors.New("nonexistent"),
 		},
 	}
 	for _, tt := range packagingReportTests {
@@ -437,7 +435,7 @@ func TestPackagingReports(t *testing.T) {
 			err := testPackager.PackageReports()
 			if err == nil {
 				outFiles, _ := testPackager.ReadUploadDir()
-				if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1){
+				if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
 					t.Errorf("Outcome for test %s:\nReceived: %s\nExpected multpile files: %v", tt.name, strconv.Itoa(len(outFiles)), tt.multipleFiles)
 				}
 			} else {
@@ -452,7 +450,6 @@ func TestPackagingReports(t *testing.T) {
 					t.Errorf("Expected an error but recieved nil.")
 				}
 			}
-			
 
 		})
 	}
@@ -461,18 +458,18 @@ func TestPackagingReports(t *testing.T) {
 func TestGetAndRenderManifest(t *testing.T) {
 	// set up the tests to check the manifest contents
 	getAndRenderManifestTests := []struct {
-		name string
-		dirName string
-		fileList  []os.FileInfo
+		name     string
+		dirName  string
+		fileList []os.FileInfo
 	}{
 		{
-			name: "test regular dir",
-			dirName: filepath.Join(testDirs.large.directory, "staging"),
+			name:     "test regular dir",
+			dirName:  filepath.Join(testDirs.large.directory, "staging"),
 			fileList: testDirs.large.files,
 		},
 		{
-			name: "test empty dir",
-			dirName: filepath.Join(testDirs.empty.directory, "staging"),
+			name:     "test empty dir",
+			dirName:  filepath.Join(testDirs.empty.directory, "staging"),
 			fileList: testDirs.empty.files,
 		},
 	}
@@ -584,61 +581,61 @@ func TestRenderManifest(t *testing.T) {
 	}
 }
 
-func TestWriteTarball(t *testing.T){
+func TestWriteTarball(t *testing.T) {
 	// setup the writeTarball tests
 	writeTarballTests := []struct {
-		name string
-		dirName string
-		fileList  []os.FileInfo
+		name         string
+		dirName      string
+		fileList     []os.FileInfo
 		manifestName string
 		tarFileName  string
-		genCSVs	bool
-		expectedErr bool
+		genCSVs      bool
+		expectedErr  bool
 	}{
 		{
-			name: "test regular dir",
-			dirName: testDirs.tar.directory,
-			fileList: testDirs.tar.files,
+			name:         "test regular dir",
+			dirName:      testDirs.tar.directory,
+			fileList:     testDirs.tar.files,
 			manifestName: "",
-			tarFileName: filepath.Join(filepath.Join(testDirs.tar.directory, "upload"), "cost.tar.gz"),
-			genCSVs: true,
-			expectedErr: false,
+			tarFileName:  filepath.Join(filepath.Join(testDirs.tar.directory, "upload"), "cost.tar.gz"),
+			genCSVs:      true,
+			expectedErr:  false,
 		},
 		{
-			name: "test mismatched files",
-			dirName: testDirs.large.directory,
-			fileList: testDirs.large.files,
+			name:         "test mismatched files",
+			dirName:      testDirs.large.directory,
+			fileList:     testDirs.large.files,
 			manifestName: "",
-			tarFileName: filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
-			genCSVs: true,
-			expectedErr: true,
+			tarFileName:  filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
+			genCSVs:      true,
+			expectedErr:  true,
 		},
 		{
-			name: "test empty dir",
-			dirName: testDirs.empty.directory,
-			fileList: testDirs.empty.files,
+			name:         "test empty dir",
+			dirName:      testDirs.empty.directory,
+			fileList:     testDirs.empty.files,
 			manifestName: "",
-			tarFileName: filepath.Join(filepath.Join(testDirs.empty.directory, "upload"), "cost.tar.gz"),
-			genCSVs: true,
-			expectedErr: false,
+			tarFileName:  filepath.Join(filepath.Join(testDirs.empty.directory, "upload"), "cost.tar.gz"),
+			genCSVs:      true,
+			expectedErr:  false,
 		},
 		{
-			name: "test nonexistant manifest path",
-			dirName: testDirs.large.directory,
-			fileList: testDirs.large.files,
-			manifestName: testPackager.manifest.filename + "nonexistent", 
-			tarFileName: filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
-			genCSVs: false,
-			expectedErr: true,
+			name:         "test nonexistant manifest path",
+			dirName:      testDirs.large.directory,
+			fileList:     testDirs.large.files,
+			manifestName: testPackager.manifest.filename + "nonexistent",
+			tarFileName:  filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
+			genCSVs:      false,
+			expectedErr:  true,
 		},
 		{
-			name: "test bad tarfile path",
-			dirName: testDirs.large.directory,
-			fileList: testDirs.large.files,
+			name:         "test bad tarfile path",
+			dirName:      testDirs.large.directory,
+			fileList:     testDirs.large.files,
 			manifestName: "",
-			tarFileName: filepath.Join(filepath.Join(filepath.Join(uuid.New().String(), testDirs.large.directory), "upload"), "cost-mgmt.tar.gz"),
-			genCSVs: true,
-			expectedErr: true,
+			tarFileName:  filepath.Join(filepath.Join(filepath.Join(uuid.New().String(), testDirs.large.directory), "upload"), "cost-mgmt.tar.gz"),
+			genCSVs:      true,
+			expectedErr:  true,
 		},
 	}
 	for _, tt := range writeTarballTests {
@@ -665,12 +662,12 @@ func TestWriteTarball(t *testing.T){
 			err := testPackager.writeTarball(tt.tarFileName, manifestName, csvFileNames)
 			// ensure the tarfile was created if we expect it to be
 			if !tt.expectedErr {
-				if _, err := os.Stat(tt.tarFileName); os.IsNotExist(err){
+				if _, err := os.Stat(tt.tarFileName); os.IsNotExist(err) {
 					t.Errorf("Tar file was not created")
 				}
-				// the only testcases that should generate tars are the normal use case 
-				// and the empty use case 
-				var numFiles int 
+				// the only testcases that should generate tars are the normal use case
+				// and the empty use case
+				var numFiles int
 				if strings.Contains(tt.name, "empty") {
 					// if the test case is the empty dir, there should only be a manifest
 					numFiles = 1
@@ -712,40 +709,40 @@ func TestWriteTarball(t *testing.T){
 func TestSplitFiles(t *testing.T) {
 	// create the buildLocalCSVFileList tests
 	splitFilesTests := []struct {
-		name string
-		dirName string
-		fileList  []os.FileInfo
+		name          string
+		dirName       string
+		fileList      []os.FileInfo
 		expectedSplit bool
-		maxBytes int64
+		maxBytes      int64
 		originalFiles int
-		expectErr bool
+		expectErr     bool
 	}{
 		{
-			name: "test requires split",
-			dirName: testDirs.split.directory,
-			fileList: testDirs.split.files,
-			maxBytes: 10 * 1024 * 1024,
+			name:          "test requires split",
+			dirName:       testDirs.split.directory,
+			fileList:      testDirs.split.files,
+			maxBytes:      10 * 1024 * 1024,
 			expectedSplit: true,
 			originalFiles: len(testDirs.split.files),
-			expectErr: false,
+			expectErr:     false,
 		},
 		{
-			name: "test does not require split",
-			dirName: testDirs.split.directory,
-			fileList: testDirs.split.files,
-			maxBytes: 100 * 1024 * 1024,
+			name:          "test does not require split",
+			dirName:       testDirs.split.directory,
+			fileList:      testDirs.split.files,
+			maxBytes:      100 * 1024 * 1024,
 			expectedSplit: false,
 			originalFiles: len(testDirs.split.files),
-			expectErr: false,
+			expectErr:     false,
 		},
 		{
-			name: "test mismatched files",
-			dirName: testDirs.large.directory,
-			fileList: testDirs.large.files,
-			maxBytes: 10 * 1024 * 1024,
+			name:          "test mismatched files",
+			dirName:       testDirs.large.directory,
+			fileList:      testDirs.large.files,
+			maxBytes:      10 * 1024 * 1024,
 			expectedSplit: true,
 			originalFiles: len(testDirs.split.files),
-			expectErr: true,
+			expectErr:     true,
 		},
 	}
 	for _, tt := range splitFilesTests {
@@ -765,7 +762,7 @@ func TestSplitFiles(t *testing.T) {
 					t.Errorf("Outcome for test %s:\nneedSplit Received: %v\nneedSPlit Expected: %v", tt.name, split, tt.expectedSplit)
 				}
 				// check the number of files created is more than the original if the split was required
-				if (len(files) <= tt.originalFiles && tt.expectedSplit) || (!tt.expectedSplit && len(files) != tt.originalFiles){
+				if (len(files) <= tt.originalFiles && tt.expectedSplit) || (!tt.expectedSplit && len(files) != tt.originalFiles) {
 					t.Errorf("Outcome for test %s:\nOriginal number of files: %s\nResulting number of files: %s", tt.name, strconv.Itoa(tt.originalFiles), strconv.Itoa(len(files)))
 				}
 			}

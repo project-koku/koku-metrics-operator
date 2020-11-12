@@ -37,13 +37,13 @@ import (
 
 type packager interface {
 	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
-	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string 
+	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string
 	getManifest(archiveFiles map[int]string, filePath string)
 	moveFiles() ([]os.FileInfo, error)
 	needSplit(fileList []os.FileInfo, maxBytes int64) bool
 	splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error)
 	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
-	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (*os.File, bool, error) 
+	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (*os.File, bool, error)
 	ReadUploadDir() ([]os.FileInfo, error)
 	PackageReports() error
 }
