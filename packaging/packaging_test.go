@@ -15,7 +15,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package packaging
 
 import (
-	// "archive/tar"
+	"archive/tar"
+	// "bytes"
+	"compress/gzip"
 	"fmt"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	"encoding/json"
@@ -61,6 +63,7 @@ type testDirMap struct {
 	small	testDirConfig
 	moving	testDirConfig
 	split	testDirConfig
+	tar		testDirConfig
 	restricted	testDirConfig
 	empty		testDirConfig
 	restrictedEmpty	testDirConfig
@@ -143,6 +146,12 @@ func setup() {
 			fileMode: 0777,
 		},
 		dirInfo{
+			dirName:  "tar",
+			files:	  testFiles,
+			dirMode:  0777,
+			fileMode: 0777,
+		},
+		dirInfo{
 			dirName:  "restricted",
 			files:	  testFiles,
 			dirMode:  0777,
@@ -218,6 +227,8 @@ func setup() {
 				testDirs.restrictedEmpty = tmpDirMap
 			} else if directory.dirName == "split"{
 				testDirs.split = tmpDirMap
+			} else if directory.dirName == "tar"{
+				testDirs.tar = tmpDirMap
 			}
 		}
 	}
@@ -433,8 +444,13 @@ func TestPackagingReports(t *testing.T) {
 				if tt.want == nil {
 					t.Errorf("Expected no error but recieved one")
 				}
-				_, err = testPackager.ReadUploadDir()
-				fmt.Println(err)
+				outFiles, err := testPackager.ReadUploadDir()
+				if len(outFiles) != 0 {
+					t.Errorf("An error occurred, but upload files were still generated.")
+				}
+				if err == nil {
+					t.Errorf("Expected an error but recieved nil.")
+				}
 			}
 			
 
@@ -577,25 +593,34 @@ func TestWriteTarball(t *testing.T){
 		manifestName string
 		tarFileName  string
 		genCSVs	bool
-		expectedCreate bool
+		expectedErr bool
 	}{
 		{
 			name: "test regular dir",
+			dirName: testDirs.tar.directory,
+			fileList: testDirs.tar.files,
+			manifestName: "",
+			tarFileName: filepath.Join(filepath.Join(testDirs.tar.directory, "upload"), "cost.tar.gz"),
+			genCSVs: true,
+			expectedErr: false,
+		},
+		{
+			name: "test mismatched files",
 			dirName: testDirs.large.directory,
 			fileList: testDirs.large.files,
-			manifestName: testPackager.manifest.filename,
+			manifestName: "",
 			tarFileName: filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
 			genCSVs: true,
-			expectedCreate: true,
+			expectedErr: true,
 		},
 		{
 			name: "test empty dir",
 			dirName: testDirs.empty.directory,
 			fileList: testDirs.empty.files,
-			manifestName: testPackager.manifest.filename,
+			manifestName: "",
 			tarFileName: filepath.Join(filepath.Join(testDirs.empty.directory, "upload"), "cost.tar.gz"),
 			genCSVs: true,
-			expectedCreate: true,
+			expectedErr: false,
 		},
 		{
 			name: "test nonexistant manifest path",
@@ -604,16 +629,16 @@ func TestWriteTarball(t *testing.T){
 			manifestName: testPackager.manifest.filename + "nonexistent", 
 			tarFileName: filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
 			genCSVs: false,
-			expectedCreate: true,
+			expectedErr: true,
 		},
 		{
 			name: "test bad tarfile path",
 			dirName: testDirs.large.directory,
 			fileList: testDirs.large.files,
-			manifestName: testPackager.manifest.filename,
+			manifestName: "",
 			tarFileName: filepath.Join(filepath.Join(filepath.Join(uuid.New().String(), testDirs.large.directory), "upload"), "cost-mgmt.tar.gz"),
 			genCSVs: true,
-			expectedCreate: false,
+			expectedErr: true,
 		},
 	}
 	for _, tt := range writeTarballTests {
@@ -622,21 +647,64 @@ func TestWriteTarball(t *testing.T){
 			dirconfig.ParentDir = tt.dirName
 			dirCfg.GetDirectoryConfig()
 			testPackager.DirCfg = dirCfg
-			stagingDir := testPackager.DirCfg.Staging.Path
+			stagingDir := testPackager.DirCfg.Reports.Path
 			var csvFileNames map[int]string
 			if tt.genCSVs {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
 			} else {
 				csvFileNames = make(map[int]string)
 			}
+			var manifestName string
 			testPackager.getManifest(csvFileNames, stagingDir)
 			testPackager.manifest.renderManifest()
-			testPackager.writeTarball(tt.tarFileName, tt.manifestName, csvFileNames)
-			// ensure the tarfile was created if we expect it to be
-			if _, err := os.Stat(tt.tarFileName); os.IsNotExist(err) && tt.expectedCreate{
-				t.Errorf("Tar file was not created")
+			if tt.manifestName == "" {
+				manifestName = testPackager.manifest.filename
+			} else {
+				manifestName = tt.manifestName
 			}
-			// check the contents of the tarball 
+			err := testPackager.writeTarball(tt.tarFileName, manifestName, csvFileNames)
+			// ensure the tarfile was created if we expect it to be
+			if !tt.expectedErr {
+				if _, err := os.Stat(tt.tarFileName); os.IsNotExist(err){
+					t.Errorf("Tar file was not created")
+				}
+				// the only testcases that should generate tars are the normal use case 
+				// and the empty use case 
+				var numFiles int 
+				if strings.Contains(tt.name, "empty") {
+					// if the test case is the empty dir, there should only be a manifest
+					numFiles = 1
+				} else {
+					// if the regular test case, there should be a manifest and 2 csv files
+					numFiles = 3
+				}
+				// check the contents of the tarball
+				file, err := os.Open(tt.tarFileName)
+				archive, err := gzip.NewReader(file)
+
+				if err != nil {
+					t.Errorf("Can not read tarfile generated by %s", tt.name)
+				}
+				tr := tar.NewReader(archive)
+				var files []string
+				for {
+					hdr, err := tr.Next()
+					if err == io.EOF {
+						break
+					}
+
+					if err != nil {
+						fmt.Println(err)
+						t.Errorf("An error occurred reading the tarfile generated by %s", tt.name)
+					}
+					files = append(files, hdr.Name)
+				}
+				if len(files) != numFiles {
+					t.Errorf("Expected %s files in the tar.gz but received %s", strconv.Itoa(numFiles), strconv.Itoa(len(files)))
+				}
+			} else if err == nil {
+				t.Errorf("Expected test %s to generate an error, but received nil.", tt.name)
+			}
 		})
 	}
 }
