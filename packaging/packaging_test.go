@@ -33,9 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var DirMap = make(map[string][]os.FileInfo)
 var testingDir string
-var maxBytes int64
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var log = zap.New()
 var cost = &costmgmtv1alpha1.CostManagement{}
@@ -66,7 +64,6 @@ type testDirMap struct {
 	restricted	testDirConfig
 	empty		testDirConfig
 	restrictedEmpty	testDirConfig
-	testingDirPath	string
 }
 
 var testDirs testDirMap
@@ -169,7 +166,6 @@ func setup() {
 	fmt.Println("Setting up for packaging tests")
 	testingUUID := uuid.New().String()
 	testingDir = filepath.Join("../testing", testingUUID)
-	testDirs.testingDirPath = testingDir
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			fmt.Println("Could not create testing directory")
@@ -204,7 +200,6 @@ func setup() {
 				fileList = nil
 			}
 			
-			DirMap[reportPath] = fileList
 			tmpDirMap := testDirConfig{
 				directory:	reportPath,
 				files:		fileList,
@@ -404,7 +399,7 @@ func TestPackagingReports(t *testing.T) {
 		},
 		{
 			name: "nonexistent",
-			dirName: filepath.Join(testDirs.testingDirPath, uuid.New().String()),
+			dirName: filepath.Join(testingDir, uuid.New().String()),
 			maxSize: 100,
 			multipleFiles: false,
 			want: errors.New("nonexistent"),
