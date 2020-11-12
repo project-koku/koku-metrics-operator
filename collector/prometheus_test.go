@@ -25,8 +25,14 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -355,3 +361,141 @@ func TestTestPrometheusConnection(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusHelper(t *testing.T) {
+
+	statusHelperTests := []struct {
+		name   string
+		cost   *costmgmtv1alpha1.CostManagement
+		status string
+		want   bool
+		err    error
+	}{
+		{
+			name:   "config success",
+			cost:   &costmgmtv1alpha1.CostManagement{},
+			status: "configuration",
+			want:   true,
+			err:    nil,
+		},
+		{
+			name:   "config failed",
+			cost:   &costmgmtv1alpha1.CostManagement{},
+			status: "configuration",
+			want:   false,
+			err:    errTest,
+		},
+		{
+			name:   "connection success",
+			cost:   &costmgmtv1alpha1.CostManagement{},
+			status: "connection",
+			want:   true,
+			err:    nil,
+		},
+		{
+			name:   "connection failed",
+			cost:   &costmgmtv1alpha1.CostManagement{},
+			status: "connection",
+			want:   false,
+			err:    errTest,
+		},
+	}
+	for _, tt := range statusHelperTests {
+		t.Run(tt.name, func(t *testing.T) {
+			statusHelper(tt.cost, tt.status, tt.err)
+			var gotMsg string
+			var gotBool bool
+			switch tt.status {
+			case "configuration":
+				gotMsg = tt.cost.Status.Prometheus.ConfigError
+				gotBool = tt.cost.Status.Prometheus.PrometheusConfigured
+			case "connection":
+				gotMsg = tt.cost.Status.Prometheus.ConnectionError
+				gotBool = tt.cost.Status.Prometheus.PrometheusConnected
+			}
+			if tt.err != nil && gotMsg == "" {
+				t.Errorf("%s got '' want %v", tt.name, tt.err)
+			}
+			if tt.err == nil && gotMsg != "" {
+				t.Errorf("%s got %s want %v", tt.name, gotMsg, tt.err)
+			}
+			if tt.want != gotBool {
+				t.Errorf("%s got %t want %t", tt.name, gotBool, tt.want)
+			}
+		})
+	}
+}
+
+var _ = Describe("Collector Tests", func() {
+
+	const timeout = time.Second * 60
+	const interval = time.Second * 1
+
+	BeforeEach(func() {
+		// failed test runs that don't clean up leave resources behind.
+		// &corev1.Pod{}, client.InNamespace("foo")
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(costMgmtNamespace))).Should(Succeed())
+	})
+
+	AfterEach(func() {
+
+	})
+
+	Describe("Get Bearer Token", func() {
+		Context("with env running", func() {
+			It("should not find service account", func() {
+				createNamespace(costMgmtNamespace)
+				result, err := getBearerToken(k8sClient)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).Should(BeEmpty())
+			})
+			It("should get the service account but not find secret", func() {
+				createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				result, err := getBearerToken(k8sClient)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).Should(BeEmpty())
+			})
+			It("should find secrets but not the default", func() {
+				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				addSecretsToSA(secrets, sa)
+				result, err := getBearerToken(k8sClient)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).Should(BeEmpty())
+			})
+			It("should get secret but token is not found", func() {
+				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+				secrets = append(secrets, corev1.ObjectReference{
+					Name: createPullSecret(costMgmtNamespace, "default-token", "wrong-key", []byte{})})
+				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				addSecretsToSA(secrets, sa)
+
+				result, err := getBearerToken(k8sClient)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).Should(BeEmpty())
+			})
+			It("should successfully find token but token is empty", func() {
+				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+				secrets = append(secrets, corev1.ObjectReference{
+					Name: createPullSecret(costMgmtNamespace, "default-token", "token", []byte{})})
+				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				addSecretsToSA(secrets, sa)
+
+				result, err := getBearerToken(k8sClient)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).Should(BeEmpty())
+			})
+			It("should successfully find token", func() {
+				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+				secrets = append(secrets, corev1.ObjectReference{
+					Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				addSecretsToSA(secrets, sa)
+
+				result, err := getBearerToken(k8sClient)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(result).Should(Equal(config.Secret(fakeEncodedData(testSecretData))))
+			})
+		})
+	})
+})

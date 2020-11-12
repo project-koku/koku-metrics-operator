@@ -48,7 +48,6 @@ var (
 	monitoringNamespace = "openshift-monitoring"
 	secretKey           = "token"
 	serviceAccountName  = "default"
-	thanosRouteName     = "thanos-querier"
 	tokenRegex          = "default-token-*"
 
 	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
