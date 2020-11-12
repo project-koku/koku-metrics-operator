@@ -53,13 +53,6 @@ func (m fakeManifest) MarshalJSON() ([]byte, error) {
 	return nil, errors.New("This is a marshaling error")
 }
 
-// trying to mock things here
-type mockPackager struct{}
-
-func (p mockPackager)writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error {
-	return errors.New("This is an error")
-}
-
 // setup a testDirConfig helper for tests 
 type testDirConfig struct{
 	directory	string
@@ -69,6 +62,7 @@ type testDirMap struct {
 	large	testDirConfig
 	small	testDirConfig
 	moving	testDirConfig
+	split	testDirConfig
 	restricted	testDirConfig
 	empty		testDirConfig
 	restrictedEmpty	testDirConfig
@@ -100,20 +94,20 @@ func Copy(src, dst string) error {
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 	tempFile, err := ioutil.TempFile(".", "garbage-file")
 	if err != nil {
-		t.Fatalf("Failed to create temp file.")
+		t.Errorf("Failed to create temp file.")
 	}
 	if err := os.Chmod(tempFile.Name(), mode); err != nil {
-		t.Fatalf("Failed to change permissions of temp file.")
+		t.Errorf("Failed to change permissions of temp file.")
 	}
 	return tempFile
 }
 func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	tempDir, err := ioutil.TempDir(dir, pattern)
 	if err != nil {
-		t.Fatalf("Failed to create temp folder.")
+		t.Errorf("Failed to create temp folder.")
 	}
 	if err := os.Chmod(tempDir, mode); err != nil {
-		t.Fatalf("Failed to change permissions of temp file.")
+		t.Errorf("Failed to change permissions of temp file.")
 	}
 	return tempDir
 }
@@ -125,7 +119,6 @@ func setup() {
 		dirMode	 os.FileMode
 		fileMode os.FileMode
 	}
-	// testFiles := []string{"ocp_node_label.csv", "ocp_pod_usage.csv", "fake.csv"}
 	testFiles := []string{"ocp_node_label.csv", "ocp_pod_usage.csv"}
 	dirInfoList := []dirInfo{
 		dirInfo{
@@ -147,6 +140,12 @@ func setup() {
 			fileMode: 0777,
 		},
 		dirInfo{
+			dirName:  "split",
+			files:	  testFiles,
+			dirMode:  0777,
+			fileMode: 0777,
+		},
+		dirInfo{
 			dirName:  "restricted",
 			files:	  testFiles,
 			dirMode:  0777,
@@ -157,7 +156,7 @@ func setup() {
 			dirName:  "empty",
 			files:	  nil,
 			dirMode:  0777,
-			// fileMode: 0777,
+			fileMode: 0777,
 		},
 		dirInfo{
 			dirName:  "restrictedEmpty",
@@ -166,7 +165,6 @@ func setup() {
 		},
 
 	}
-	// dirs := [5]string{"large", "small", "moving", "restricted", }
 	// setup the initial testing directory
 	fmt.Println("Setting up for packaging tests")
 	testingUUID := uuid.New().String()
@@ -223,6 +221,8 @@ func setup() {
 				testDirs.restricted = tmpDirMap
 			} else if directory.dirName == "restrictedEmpty"{
 				testDirs.restrictedEmpty = tmpDirMap
+			} else if directory.dirName == "split"{
+				testDirs.split = tmpDirMap
 			}
 		}
 	}
@@ -304,7 +304,7 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 			}
 			for index, fileName := range want {
 				if fileName != got[index] {
-					t.Fatalf("Expected %s but got %s", fileName, got[index])
+					t.Errorf("Expected %s but got %s", fileName, got[index])
 				}
 			}
 
@@ -351,15 +351,15 @@ func TestMoveFiles(t *testing.T) {
 				for _, file := range got {
 					// check that the file contains the uuid
 					if !strings.Contains(file.Name(), tt.fileUUID) {
-						t.Fatalf("Expected %s to be in the name but got %s", tt.fileUUID, file.Name())
+						t.Errorf("Expected %s to be in the name but got %s", tt.fileUUID, file.Name())
 					}
 					// check that the file exists in the staging directory
 					if _, err := os.Stat(filepath.Join(filepath.Join(tt.dirName, "staging"), file.Name())); os.IsNotExist(err) {
-						t.Fatalf("File does not exist in the staging directory")
+						t.Errorf("File does not exist in the staging directory")
 					}
 				}
 			} else if got != nil{
-				t.Fatalf("Expected moved files to be nil")
+				t.Errorf("Expected moved files to be nil")
 			}
 		})
 	}
@@ -432,11 +432,11 @@ func TestPackagingReports(t *testing.T) {
 			if err == nil {
 				outFiles, _ := testPackager.ReadUploadDir()
 				if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1){
-					t.Fatalf("Outcome for test %s:\nReceived: %s\nExpected multpile files: %v", tt.name, strconv.Itoa(len(outFiles)), tt.multipleFiles)
+					t.Errorf("Outcome for test %s:\nReceived: %s\nExpected multpile files: %v", tt.name, strconv.Itoa(len(outFiles)), tt.multipleFiles)
 				}
 			} else {
 				if tt.want == nil {
-					t.Fatalf("Expected no error but recieved one")
+					t.Errorf("Expected no error but recieved one")
 				}
 				_, err = testPackager.ReadUploadDir()
 				fmt.Println(err)
@@ -477,14 +477,14 @@ func TestGetAndRenderManifest(t *testing.T) {
 			testPackager.manifest.renderManifest()
 			// check that the manifest was generated correctly
 			if testPackager.manifest.filename != filepath.Join(tt.dirName, "manifest.json") {
-				t.Fatalf("Manifest was not generated correctly")
+				t.Errorf("Manifest was not generated correctly")
 			}
 			// check that the manifest content is correct
 			manifestData, _ := ioutil.ReadFile(testPackager.manifest.filename)
 			var foundManifest manifest
 			err := json.Unmarshal(manifestData, &foundManifest)
 			if err != nil {
-				t.Fatalf("Error unmarshaling manifest")
+				t.Errorf("Error unmarshaling manifest")
 			}
 			// Define the expected manifest
 			var expectedFiles []string
@@ -503,13 +503,13 @@ func TestGetAndRenderManifest(t *testing.T) {
 			// Compare the found manifest to the expected manifest
 			errorMsg := "Manifest does not match. Expected %s, recieved %s"
 			if foundManifest.UUID != expectedManifest.UUID {
-				t.Fatalf(errorMsg, expectedManifest.UUID, foundManifest.UUID)
+				t.Errorf(errorMsg, expectedManifest.UUID, foundManifest.UUID)
 			}
 			if foundManifest.ClusterID != expectedManifest.ClusterID {
-				t.Fatalf(errorMsg, expectedManifest.ClusterID, foundManifest.ClusterID)
+				t.Errorf(errorMsg, expectedManifest.ClusterID, foundManifest.ClusterID)
 			}
 			if foundManifest.Version != expectedManifest.Version {
-				t.Fatalf(errorMsg, expectedManifest.Version, foundManifest.Version)
+				t.Errorf(errorMsg, expectedManifest.Version, foundManifest.Version)
 			}
 			for _, file := range expectedFiles {
 				found := false
@@ -519,7 +519,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 					}
 				}
 				if !found {
-					t.Fatalf(errorMsg, file, foundManifest.Files)
+					t.Errorf(errorMsg, file, foundManifest.Files)
 				}
 			}
 
@@ -579,16 +579,46 @@ func TestWriteTarball(t *testing.T){
 		name string
 		dirName string
 		fileList  []os.FileInfo
+		manifestName string
+		tarFileName  string
+		genCSVs	bool
+		expectedCreate bool
 	}{
 		{
 			name: "test regular dir",
 			dirName: testDirs.large.directory,
 			fileList: testDirs.large.files,
+			manifestName: testPackager.manifest.filename,
+			tarFileName: filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
+			genCSVs: true,
+			expectedCreate: true,
 		},
 		{
 			name: "test empty dir",
 			dirName: testDirs.empty.directory,
 			fileList: testDirs.empty.files,
+			manifestName: testPackager.manifest.filename,
+			tarFileName: filepath.Join(filepath.Join(testDirs.empty.directory, "upload"), "cost.tar.gz"),
+			genCSVs: true,
+			expectedCreate: true,
+		},
+		{
+			name: "test nonexistant manifest path",
+			dirName: testDirs.large.directory,
+			fileList: testDirs.large.files,
+			manifestName: testPackager.manifest.filename + "nonexistent", 
+			tarFileName: filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
+			genCSVs: false,
+			expectedCreate: true,
+		},
+		{
+			name: "test bad tarfile path",
+			dirName: testDirs.large.directory,
+			fileList: testDirs.large.files,
+			manifestName: testPackager.manifest.filename,
+			tarFileName: filepath.Join(filepath.Join(filepath.Join(uuid.New().String(), testDirs.large.directory), "upload"), "cost-mgmt.tar.gz"),
+			genCSVs: true,
+			expectedCreate: false,
 		},
 	}
 	for _, tt := range writeTarballTests {
@@ -597,65 +627,26 @@ func TestWriteTarball(t *testing.T){
 			dirconfig.ParentDir = tt.dirName
 			dirCfg.GetDirectoryConfig()
 			testPackager.DirCfg = dirCfg
-			uploadDir := testPackager.DirCfg.Upload.Path
-			dirName := filepath.Join(tt.dirName, "staging")
-			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, dirName)
-			testPackager.getManifest(csvFileNames, dirCfg.Staging.Path)
-			testPackager.manifest.renderManifest()
-			tarFileName := filepath.Join(uploadDir, "cost-mgmt-test.tar.gz")
-			testPackager.writeTarball(tarFileName, testPackager.manifest.filename, csvFileNames)
-			// ensure the tarfile was created
-			if _, err := os.Stat(tarFileName); os.IsNotExist(err) {
-				t.Fatalf("Tar file was not created")
+			stagingDir := testPackager.DirCfg.Staging.Path
+			var csvFileNames map[int]string
+			if tt.genCSVs {
+				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
+			} else {
+				csvFileNames = make(map[int]string)
 			}
+			testPackager.getManifest(csvFileNames, stagingDir)
+			testPackager.manifest.renderManifest()
+			testPackager.writeTarball(tt.tarFileName, tt.manifestName, csvFileNames)
+			// ensure the tarfile was created if we expect it to be
+			if _, err := os.Stat(tt.tarFileName); os.IsNotExist(err) && tt.expectedCreate{
+				t.Errorf("Tar file was not created")
+			}
+			// check the contents of the tarball 
 		})
 	}
 }
 
-func TestWriteTarballError(t *testing.T) {
-	// TODO: refactor this test 
-	for dirName, fileList := range DirMap {
-		dirconfig.ParentDir = dirName
-		dirCfg.GetDirectoryConfig()
-		testPackager.DirCfg = dirCfg
-		uploadDir := testPackager.DirCfg.Upload.Path
-		dirName = filepath.Join(dirName, "staging")
-		csvFileNames := testPackager.buildLocalCSVFileList(fileList, dirName)
-		testPackager.getManifest(csvFileNames, dirCfg.Staging.Path)
-		testPackager.manifest.renderManifest()
-		tarFileName := filepath.Join(uploadDir, "cost-mgmt-test.tar.gz")
-		// testPackager.writeTarball(tarFileName, testPackager.manifest.filename, csvFileNames)
-		csvList := make(map[int]string)
-		// mockedPackager := mockPackager{}
-		// pass in a tarfilename that does not exist
-		testPackager.writeTarball(tarFileName, testPackager.manifest.filename + "doesnotexist", csvList)
-		// test the error cases 
-		testPackager.writeTarball(tarFileName, testPackager.manifest.filename, csvFileNames)
-		// ensure the tarfile was created
-		if _, err := os.Stat(tarFileName); os.IsNotExist(err) {
-			t.Fatalf("Tar file was not created")
-		}
-		// csvList := make(map[int]string)
-		fmt.Println("this is the csvList")
-		fmt.Println(csvList)
-		// test a bad path 
-		testPackager.writeTarball("foo" + tarFileName, testPackager.manifest.filename, csvList)
-		// ensure the tarfile was created
-		if _, err := os.Stat(tarFileName); os.IsNotExist(err) {
-			t.Fatalf("Tar file was not created")
-		}
-		testPackager.writeTarball(filepath.Join(uploadDir, "cost-mgmt-test-23.tar.gz"), testPackager.manifest.filename, csvList)
-		// fmt.Println("\n\n\n\n\n\n ASHLEY THIS IS YOUR ERROR: ")
-		// fmt.Println(err)
-		// ensure the tarfile was created
-		if _, err := os.Stat(tarFileName); os.IsNotExist(err) {
-			t.Fatalf("Tar file was not created")
-		}
-		// TODO: check the contents of the tarfile
-	}
-}
-
-func TestSplitFiles2(t *testing.T) {
+func TestSplitFiles(t *testing.T) {
 	// create the buildLocalCSVFileList tests
 	splitFilesTests := []struct {
 		name string
@@ -663,20 +654,35 @@ func TestSplitFiles2(t *testing.T) {
 		fileList  []os.FileInfo
 		expectedSplit bool
 		maxBytes int64
+		originalFiles int
+		expectErr bool
 	}{
 		{
-			name: "test regular dir",
+			name: "test requires split",
+			dirName: testDirs.split.directory,
+			fileList: testDirs.split.files,
+			maxBytes: 10 * 1024 * 1024,
+			expectedSplit: true,
+			originalFiles: len(testDirs.split.files),
+			expectErr: false,
+		},
+		{
+			name: "test does not require split",
+			dirName: testDirs.split.directory,
+			fileList: testDirs.split.files,
+			maxBytes: 100 * 1024 * 1024,
+			expectedSplit: false,
+			originalFiles: len(testDirs.split.files),
+			expectErr: false,
+		},
+		{
+			name: "test mismatched files",
 			dirName: testDirs.large.directory,
 			fileList: testDirs.large.files,
 			maxBytes: 10 * 1024 * 1024,
 			expectedSplit: true,
-		},
-		{
-			name: "test small dir",
-			dirName: testDirs.small.directory,
-			fileList: testDirs.small.files,
-			maxBytes: 100 * 1024 * 1024,
-			expectedSplit: false,
+			originalFiles: len(testDirs.split.files),
+			expectErr: true,
 		},
 	}
 	for _, tt := range splitFilesTests {
@@ -685,13 +691,21 @@ func TestSplitFiles2(t *testing.T) {
 			dirconfig.ParentDir = tt.dirName
 			dirCfg.GetDirectoryConfig()
 			testPackager.DirCfg = dirCfg
-			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Staging.Path, tt.fileList, tt.maxBytes)
-			fmt.Println(files)
-			fmt.Println(split)
-			fmt.Println(err)
-			// if split != tt.expectedSplit {
-			// 	t.Fatalf("Well that failed")
-			// }
+			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList, tt.maxBytes)
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("Expected an error but received nil")
+				}
+			} else {
+				// make sure that the expected split matches
+				if split != tt.expectedSplit {
+					t.Errorf("Outcome for test %s:\nneedSplit Received: %v\nneedSPlit Expected: %v", tt.name, split, tt.expectedSplit)
+				}
+				// check the number of files created is more than the original if the split was required
+				if (len(files) <= tt.originalFiles && tt.expectedSplit) || (!tt.expectedSplit && len(files) != tt.originalFiles){
+					t.Errorf("Outcome for test %s:\nOriginal number of files: %s\nResulting number of files: %s", tt.name, strconv.Itoa(tt.originalFiles), strconv.Itoa(len(files)))
+				}
+			}
 		})
 	}
 }

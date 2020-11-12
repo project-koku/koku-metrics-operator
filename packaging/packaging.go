@@ -57,12 +57,6 @@ type FilePackager struct {
 	MaxSize  int64
 }
 
-// var packageInstance packager
-
-// func init() {
-// 	packageInstance = FilePackager{}
-// }
-
 // Define the global variables
 const megaByte int64 = 1024 * 1024
 
