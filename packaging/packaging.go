@@ -40,10 +40,10 @@ type packager interface {
 	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string
 	getManifest(archiveFiles map[int]string, filePath string)
 	moveFiles() ([]os.FileInfo, error)
-	needSplit(fileList []os.FileInfo, maxBytes int64) bool
-	splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error)
+	needSplit(fileList []os.FileInfo) bool
+	splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error)
 	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
-	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (*os.File, bool, error)
+	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error)
 	ReadUploadDir() ([]os.FileInfo, error)
 	PackageReports() error
 }
@@ -55,6 +55,7 @@ type FilePackager struct {
 	manifest manifestInfo
 	uid      string
 	MaxSize  int64
+	maxBytes int64
 }
 
 // Define the global variables
@@ -200,7 +201,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 }
 
 // WritePart writes a portion of a split file into a new file
-func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (*os.File, bool, error) {
+func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
 	log := p.Log.WithValues("costmanagement", "WritePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
@@ -226,7 +227,7 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 		rowLen := len(strings.Join(row, ","))
 		rowSize := rowLen + int(float64(rowLen)*variance)
 		sizeEstimate += rowSize
-		if sizeEstimate >= int(maxBytes) {
+		if sizeEstimate >= int(p.maxBytes) {
 			writer.Flush()
 			return splitFile, false, nil
 		}
@@ -234,9 +235,9 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 }
 
 // splitFiles breaks larger files into smaller ones
-func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error) {
+func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
 	log := p.Log.WithValues("costmanagement", "splitFiles")
-	if !p.needSplit(fileList, maxBytes) {
+	if !p.needSplit(fileList) {
 		log.Info("Files do not require splitting.")
 		return fileList, false, nil
 	}
@@ -245,7 +246,7 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 	for _, file := range fileList {
 		absPath := filepath.Join(filePath, file.Name())
 		fileSize := file.Size()
-		if fileSize >= maxBytes {
+		if fileSize >= p.maxBytes {
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
@@ -255,7 +256,7 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 			csvHeader, err := csvReader.Read()
 			var part int64 = 1
 			for {
-				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part, maxBytes)
+				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part)
 				if err != nil {
 					return nil, false, fmt.Errorf("SplitFiles: %v", err)
 				}
@@ -278,12 +279,12 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 }
 
 // needSplit determines if any of the files to be packaged need to be split.
-func (p *FilePackager) needSplit(fileList []os.FileInfo, maxBytes int64) bool {
+func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	var totalSize int64 = 0
 	for _, file := range fileList {
 		fileSize := file.Size()
 		totalSize += fileSize
-		if fileSize >= maxBytes || totalSize >= maxBytes {
+		if fileSize >= p.maxBytes || totalSize >= p.maxBytes {
 			return true
 		}
 	}
@@ -344,7 +345,7 @@ func (p *FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
-	maxBytes := p.MaxSize * megaByte
+	p.maxBytes = p.MaxSize * megaByte
 	p.uid = uuid.New().String()
 
 	// create reports/staging/upload directories if they do not exist
@@ -362,7 +363,7 @@ func (p *FilePackager) PackageReports() error {
 
 	// check if the files need to be split
 	log.Info("Checking to see if the report files need to be split")
-	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage, maxBytes)
+	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)
 	if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}

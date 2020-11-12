@@ -268,7 +268,8 @@ func TestNeedSplit(t *testing.T) {
 	for _, tt := range needSplitTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			got := testPackager.needSplit(tt.fileList, tt.maxBytes)
+			testPackager.maxBytes = tt.maxBytes
+			got := testPackager.needSplit(tt.fileList)
 			if tt.want != got {
 				t.Errorf("Outcome for test %s:\nReceived: %v\nExpected: %v", tt.name, got, tt.want)
 			}
@@ -751,7 +752,8 @@ func TestSplitFiles(t *testing.T) {
 			dirconfig.ParentDir = tt.dirName
 			dirCfg.GetDirectoryConfig()
 			testPackager.DirCfg = dirCfg
-			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList, tt.maxBytes)
+			testPackager.maxBytes = tt.maxBytes
+			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList)
 			if tt.expectErr {
 				if err == nil {
 					t.Errorf("Expected an error but received nil")
