@@ -119,51 +119,51 @@ func setup() {
 		dirMode  os.FileMode
 		fileMode os.FileMode
 	}
-	testFiles := []string{"ocp_node_label.csv", "ocp_pod_usage.csv"}
+	testFiles := []string{"ocp_node_label.csv"}
 	dirInfoList := []dirInfo{
-		dirInfo{
+		{
 			dirName:  "large",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
-		dirInfo{
+		{
 			dirName:  "small",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
-		dirInfo{
+		{
 			dirName:  "moving",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
-		dirInfo{
+		{
 			dirName:  "split",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
-		dirInfo{
+		{
 			dirName:  "tar",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
-		dirInfo{
+		{
 			dirName:  "restricted",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0000,
 		},
-		dirInfo{
+		{
 			dirName:  "empty",
 			files:    nil,
 			dirMode:  0777,
 			fileMode: 0777,
 		},
-		dirInfo{
+		{
 			dirName: "restrictedEmpty",
 			files:   nil,
 			dirMode: 0000,
@@ -255,7 +255,7 @@ func TestNeedSplit(t *testing.T) {
 		{
 			name:     "test split required",
 			fileList: testDirs.large.files,
-			maxBytes: 10 * 1024 * 1024,
+			maxBytes: 1 * 1024 * 1024,
 			want:     true,
 		},
 		{
@@ -381,7 +381,7 @@ func TestPackagingReports(t *testing.T) {
 		{
 			name:          "test large dir",
 			dirName:       testDirs.large.directory,
-			maxSize:       10,
+			maxSize:       1,
 			multipleFiles: true,
 			want:          nil,
 		},
@@ -672,8 +672,8 @@ func TestWriteTarball(t *testing.T) {
 					// if the test case is the empty dir, there should only be a manifest
 					numFiles = 1
 				} else {
-					// if the regular test case, there should be a manifest and 2 csv files
-					numFiles = 3
+					// if the regular test case, there should be a manifest and 1 csv file
+					numFiles = 2
 				}
 				// check the contents of the tarball
 				file, err := os.Open(tt.tarFileName)
@@ -721,7 +721,7 @@ func TestSplitFiles(t *testing.T) {
 			name:          "test requires split",
 			dirName:       testDirs.split.directory,
 			fileList:      testDirs.split.files,
-			maxBytes:      10 * 1024 * 1024,
+			maxBytes:      1 * 1024 * 1024,
 			expectedSplit: true,
 			originalFiles: len(testDirs.split.files),
 			expectErr:     false,
@@ -739,7 +739,7 @@ func TestSplitFiles(t *testing.T) {
 			name:          "test mismatched files",
 			dirName:       testDirs.large.directory,
 			fileList:      testDirs.large.files,
-			maxBytes:      10 * 1024 * 1024,
+			maxBytes:      1 * 1024 * 1024,
 			expectedSplit: true,
 			originalFiles: len(testDirs.split.files),
 			expectErr:     true,
