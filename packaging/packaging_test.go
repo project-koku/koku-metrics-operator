@@ -547,7 +547,9 @@ func TestGetAndRenderManifest(t *testing.T) {
 					t.Errorf(errorMsg, file, foundManifest.Files)
 				}
 			}
-
+			if len(foundManifest.Files) != len(expectedFiles) {
+				t.Errorf("%s manifest filelist length does not match. Expected %d, got %d", tt.name, len(foundManifest.Files), len(expectedFiles))
+			}
 		})
 	}
 }
