@@ -31,6 +31,7 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
+	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -432,60 +433,87 @@ var _ = Describe("Collector Tests", func() {
 	})
 
 	Describe("Get Bearer Token", func() {
-		Context("with env running", func() {
-			It("should not find service account", func() {
-				createNamespace(costMgmtNamespace)
-				result, err := getBearerToken(k8sClient)
-				Expect(err).Should(HaveOccurred())
-				Expect(result).Should(BeEmpty())
-			})
-			It("should get the service account but not find secret", func() {
-				createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
-				result, err := getBearerToken(k8sClient)
-				Expect(err).Should(HaveOccurred())
-				Expect(result).Should(BeEmpty())
-			})
-			It("should find secrets but not the default", func() {
-				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
-				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
-				addSecretsToSA(secrets, sa)
-				result, err := getBearerToken(k8sClient)
-				Expect(err).Should(HaveOccurred())
-				Expect(result).Should(BeEmpty())
-			})
-			It("should get secret but token is not found", func() {
-				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
-				secrets = append(secrets, corev1.ObjectReference{
-					Name: createPullSecret(costMgmtNamespace, "default-token", "wrong-key", []byte{})})
-				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
-				addSecretsToSA(secrets, sa)
 
-				result, err := getBearerToken(k8sClient)
-				Expect(err).Should(HaveOccurred())
-				Expect(result).Should(BeEmpty())
-			})
-			It("should successfully find token but token is empty", func() {
-				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
-				secrets = append(secrets, corev1.ObjectReference{
-					Name: createPullSecret(costMgmtNamespace, "default-token", "token", []byte{})})
-				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
-				addSecretsToSA(secrets, sa)
+		It("should not find service account", func() {
+			createNamespace(costMgmtNamespace)
+			result, err := getBearerToken(k8sClient)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).Should(BeEmpty())
+		})
+		It("should get the service account but not find secret", func() {
+			createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			result, err := getBearerToken(k8sClient)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).Should(BeEmpty())
+		})
+		It("should find secrets but not the default", func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
+			result, err := getBearerToken(k8sClient)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).Should(BeEmpty())
+		})
+		It("should get secret but token is not found", func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets = append(secrets, corev1.ObjectReference{
+				Name: createPullSecret(costMgmtNamespace, "default-token", "wrong-key", []byte{})})
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
 
-				result, err := getBearerToken(k8sClient)
-				Expect(err).Should(HaveOccurred())
-				Expect(result).Should(BeEmpty())
-			})
-			It("should successfully find token", func() {
-				secrets := createListOfRandomSecrets(5, costMgmtNamespace)
-				secrets = append(secrets, corev1.ObjectReference{
-					Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
-				sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
-				addSecretsToSA(secrets, sa)
+			result, err := getBearerToken(k8sClient)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).Should(BeEmpty())
+		})
+		It("should successfully find token but token is empty", func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets = append(secrets, corev1.ObjectReference{
+				Name: createPullSecret(costMgmtNamespace, "default-token", "token", []byte{})})
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
 
-				result, err := getBearerToken(k8sClient)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(result).Should(Equal(config.Secret(fakeEncodedData(testSecretData))))
-			})
+			result, err := getBearerToken(k8sClient)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).Should(BeEmpty())
+		})
+		It("should successfully find token", func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets = append(secrets, corev1.ObjectReference{
+				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
+
+			result, err := getBearerToken(k8sClient)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(result).Should(Equal(config.Secret(fakeEncodedData(testSecretData))))
+		})
+	})
+	Describe("Get Prometheus Config", func() {
+		It("could not find bearer token", func() {
+			cost := &costmgmtv1alpha1.CostManagement{}
+			cost.Status.Prometheus.SvcAddress = "svc-address"
+			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			result, err := getPrometheusConfig(cost, k8sClient)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).Should(BeNil())
+		})
+		It("could find bearer token", func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets = append(secrets, corev1.ObjectReference{
+				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
+
+			cost := &costmgmtv1alpha1.CostManagement{}
+			cost.Status.Prometheus.SvcAddress = "svc-address"
+			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			result, err := getPrometheusConfig(cost, k8sClient)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(result.BearerToken).Should(Equal(config.Secret(fakeEncodedData(testSecretData))))
+			Expect(result.Address).Should(Equal("svc-address"))
+			Expect(result.SkipTLS).Should(BeTrue())
+			Expect(result.CAFile).Should(Equal(certFile))
 		})
 	})
 })
