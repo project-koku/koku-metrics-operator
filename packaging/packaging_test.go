@@ -182,7 +182,7 @@ func setup() error {
 	// setup the initial testing directory
 	fmt.Println("Setting up for packaging tests")
 	testingUUID := uuid.New().String()
-	testingDir = filepath.Join("../testing", testingUUID)
+	testingDir = filepath.Join("test_files/", testingUUID)
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			return fmt.Errorf("could not create %s directory: %v", testingDir, err)
@@ -202,7 +202,7 @@ func setup() error {
 			}
 			fileList := []os.FileInfo{}
 			for _, reportFile := range directory.files {
-				fileInfo, err := Copy(filepath.Join("../testfiles/", reportFile), filepath.Join(reportDataPath, reportFile))
+				fileInfo, err := Copy(filepath.Join("test_files/", reportFile), filepath.Join(reportDataPath, reportFile))
 				if err != nil {
 					return fmt.Errorf("could not copy %s file: %v", reportFile, err)
 				}
@@ -514,7 +514,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 			}
 			// Define the expected manifest
 			var expectedFiles []string
-			for idx, _ := range csvFileNames {
+			for idx := range csvFileNames {
 				uploadName := testPackager.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 				expectedFiles = append(expectedFiles, uploadName)
 			}
@@ -523,7 +523,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 				UUID:      testPackager.uid,
 				ClusterID: testPackager.Cost.Status.ClusterID,
 				Version:   testPackager.Cost.Status.OperatorCommit,
-				Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
+				Date:      manifestDate.UTC(),
 				Files:     expectedFiles,
 			}
 			// Compare the found manifest to the expected manifest

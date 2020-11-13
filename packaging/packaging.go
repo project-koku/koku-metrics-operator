@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -80,11 +81,11 @@ type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string   `json:"uuid"`
-	ClusterID string   `json:"cluster_id"`
-	Version   string   `json:"version"`
-	Date      string   `json:"date"`
-	Files     []string `json:"files"`
+	UUID      string    `json:"uuid"`
+	ClusterID string    `json:"cluster_id"`
+	Version   string    `json:"version"`
+	Date      time.Time `json:"date"`
+	Files     []string  `json:"files"`
 }
 
 type manifestInfo struct {
@@ -130,7 +131,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 			UUID:      p.uid,
 			ClusterID: p.Cost.Status.ClusterID,
 			Version:   p.Cost.Status.OperatorCommit,
-			Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
+			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
