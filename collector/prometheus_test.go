@@ -44,7 +44,7 @@ type mockPromResult struct {
 	err      error
 }
 type mockPrometheusConnection struct {
-	mappedResults mappedMockPromResult
+	mappedResults *mappedMockPromResult
 	singleResult  *mockPromResult
 	t             *testing.T
 }
@@ -53,7 +53,7 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	var res *mockPromResult
 	var ok bool
 	if m.mappedResults != nil {
-		res, ok = m.mappedResults[query]
+		res, ok = (*m.mappedResults)[query]
 		if !ok {
 			m.t.Fatalf("Could not find test result!")
 		}
@@ -226,7 +226,7 @@ func TestGetQueryResults(t *testing.T) {
 	for _, tt := range getQueryResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
 			col.PromConn = mockPrometheusConnection{
-				mappedResults: tt.queriesResult,
+				mappedResults: &tt.queriesResult,
 				t:             t,
 			}
 			got := mappedResults{}
@@ -456,7 +456,71 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 }
 
 func TestGetPromConn(t *testing.T) {
-
+	getPromConnTests := []struct {
+		name   string
+		cfg    *PrometheusConfig
+		cfgErr string
+		con    prometheusConnection
+		conErr string
+		err    error
+	}{
+		{
+			name:   "nil promconn: return getConn error",
+			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr: "",
+			con:    nil,
+			conErr: "",
+			err:    errTest,
+		},
+		{
+			name:   "not empty ConnectionError: return getConn error",
+			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr: "",
+			con:    &mockPrometheusConnection{},
+			conErr: "not empty",
+			err:    errTest,
+		},
+		{
+			name:   "return getConn successed, test con fails",
+			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr: "",
+			con: &mockPrometheusConnection{
+				singleResult: &mockPromResult{err: errTest},
+			},
+			conErr: "",
+			err:    errTest,
+		},
+		{
+			name:   "return getConn successed, test con succeeds",
+			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr: "",
+			con: &mockPrometheusConnection{
+				singleResult: &mockPromResult{err: nil},
+			},
+			conErr: "",
+			err:    nil,
+		},
+	}
+	for _, tt := range getPromConnTests {
+		t.Run(tt.name, func(t *testing.T) {
+			cost := &costmgmtv1alpha1.CostManagement{}
+			cost.Status.Prometheus.ConfigError = tt.cfgErr
+			cost.Status.Prometheus.ConnectionError = tt.conErr
+			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			col := &PromCollector{
+				PromConn: tt.con,
+				PromCfg:  tt.cfg,
+				Log:      zap.New(),
+			}
+			got := col.GetPromConn(cost)
+			if got != nil && tt.err == nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, got)
+			}
+			if got == nil && tt.err != nil {
+				t.Errorf("%s expected error, got %v", tt.name, got)
+			}
+		})
+	}
 }
 
 var _ = Describe("Collector Tests", func() {

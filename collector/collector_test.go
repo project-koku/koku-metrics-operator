@@ -134,7 +134,7 @@ func TestGenerateReports(t *testing.T) {
 
 	fakeCollector := &PromCollector{
 		PromConn: mockPrometheusConnection{
-			mappedResults: mapResults,
+			mappedResults: &mapResults,
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
@@ -170,7 +170,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	fakeCollector := &PromCollector{
 		PromConn: mockPrometheusConnection{
-			mappedResults: mapResults,
+			mappedResults: &mapResults,
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
@@ -232,7 +232,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 
 	fakeCollector := &PromCollector{
 		PromConn: mockPrometheusConnection{
-			mappedResults: mapResults,
+			mappedResults: &mapResults,
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
