@@ -266,12 +266,10 @@ func TestMain(m *testing.M) {
 	err := setup()
 	if err != nil {
 		fmt.Printf("Test setup failed: %v\n", err)
-		shutdown()
 	} else {
-		code := m.Run()
-		shutdown()
-		os.Exit(code)
+		m.Run()
 	}
+	shutdown()
 }
 
 func TestNeedSplit(t *testing.T) {
@@ -662,19 +660,15 @@ func TestWriteTarball(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = genDirCfg(tt.dirName)
 			stagingDir := testPackager.DirCfg.Reports.Path
-			var csvFileNames map[int]string
+			csvFileNames := make(map[int]string)
 			if tt.genCSVs {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
-			} else {
-				csvFileNames = make(map[int]string)
 			}
-			var manifestName string
+			manifestName := tt.manifestName
 			testPackager.getManifest(csvFileNames, stagingDir)
 			testPackager.manifest.renderManifest()
 			if tt.manifestName == "" {
 				manifestName = testPackager.manifest.filename
-			} else {
-				manifestName = tt.manifestName
 			}
 			err := testPackager.writeTarball(tt.tarFileName, manifestName, csvFileNames)
 			// ensure the tarfile was created if we expect it to be
@@ -684,13 +678,11 @@ func TestWriteTarball(t *testing.T) {
 				}
 				// the only testcases that should generate tars are the normal use case
 				// and the empty use case
-				var numFiles int
+				// if the regular test case, there should be a manifest and 1 csv file
+				numFiles := 2
 				if strings.Contains(tt.name, "empty") {
 					// if the test case is the empty dir, there should only be a manifest
 					numFiles = 1
-				} else {
-					// if the regular test case, there should be a manifest and 1 csv file
-					numFiles = 2
 				}
 				// check the contents of the tarball
 				file, err := os.Open(tt.tarFileName)
