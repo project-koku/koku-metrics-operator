@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -71,24 +72,29 @@ type testDirMap struct {
 
 var testDirs testDirMap
 
-func Copy(src, dst string) error {
+func Copy(src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer in.Close()
 
 	out, err := os.Create(dst)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, in)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return out.Close()
+	info, err := out.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	return info, out.Close()
 }
 
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
@@ -119,7 +125,7 @@ func setup() error {
 		dirMode  os.FileMode
 		fileMode os.FileMode
 	}
-	testFiles := []string{"ocp_node_label.csv"}
+	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt"}
 	dirInfoList := []dirInfo{
 		{
 			dirName:  "large",
@@ -153,19 +159,18 @@ func setup() error {
 		},
 		{
 			dirName:  "restricted",
-			files:    testFiles,
+			files:    []string{},
 			dirMode:  0777,
 			fileMode: 0000,
 		},
 		{
-			dirName:  "empty",
-			files:    nil,
-			dirMode:  0777,
-			fileMode: 0777,
+			dirName: "empty",
+			files:   []string{},
+			dirMode: 0777,
 		},
 		{
 			dirName: "restrictedEmpty",
-			files:   nil,
+			files:   []string{},
 			dirMode: 0000,
 		},
 	}
@@ -175,8 +180,7 @@ func setup() error {
 	testingDir = filepath.Join("../testing", testingUUID)
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
-			fmt.Println("Could not create testing directory")
-			return err
+			return fmt.Errorf("could not create %s directory: %v", testingDir, err)
 		}
 	}
 	for _, directory := range dirInfoList {
@@ -184,30 +188,20 @@ func setup() error {
 		reportDataPath := filepath.Join(reportPath, "data")
 		if _, err := os.Stat(reportPath); os.IsNotExist(err) {
 			if err := os.Mkdir(reportPath, directory.dirMode); err != nil {
-				fmt.Println("Could not create testing directory")
-				return err
+				return fmt.Errorf("could not create %s directory: %v", reportPath, err)
 			}
 			if directory.dirName != "empty" && directory.dirName != "restrictedEmpty" {
 				if err := os.Mkdir(reportDataPath, directory.fileMode); err != nil {
-					fmt.Println("Could not create testing directory")
-					return err
+					return fmt.Errorf("could not create %s directory: %v", reportDataPath, err)
 				}
 			}
-			if !strings.Contains(directory.dirName, "restricted") && directory.dirName != "empty" {
-				for _, reportFile := range directory.files {
-					Copy(filepath.Join("../testfiles/", reportFile), filepath.Join(reportDataPath, reportFile))
-				}
-				os.Create(filepath.Join(reportDataPath, "nonCSV.txt"))
-			}
-			var fileList []os.FileInfo
-			if !strings.Contains(directory.dirName, "restricted") && !strings.Contains(directory.dirName, "empty") {
-				fileList, err = ioutil.ReadDir(reportDataPath)
+			fileList := []os.FileInfo{}
+			for _, reportFile := range directory.files {
+				fileInfo, err := Copy(filepath.Join("../testfiles/", reportFile), filepath.Join(reportDataPath, reportFile))
 				if err != nil {
-					fmt.Println("Test files were not successfully created")
-					return err
+					return fmt.Errorf("could not copy %s file: %v", reportFile, err)
 				}
-			} else {
-				fileList = nil
+				fileList = append(fileList, fileInfo)
 			}
 
 			tmpDirMap := testDirConfig{
@@ -244,7 +238,7 @@ func shutdown() {
 func TestMain(m *testing.M) {
 	err := setup()
 	if err != nil {
-		fmt.Println("Can not run tests because setup failed to create testing directories and files")
+		fmt.Printf("Test setup failed: %v\n", err)
 		shutdown()
 	} else {
 		code := m.Run()
@@ -309,17 +303,14 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			want := make(map[int]string)
-			fileInfoList, _ := ioutil.ReadDir(tt.dirName)
-			for idx, file := range fileInfoList {
+			for idx, file := range tt.fileList {
 				// generate the expected file list
 				if strings.HasSuffix(file.Name(), ".csv") {
 					want[idx] = filepath.Join(tt.dirName, file.Name())
 				}
 			}
-			for index, fileName := range want {
-				if fileName != got[index] {
-					t.Errorf("Expected %s but got %s", fileName, got[index])
-				}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("%s expected %v but got %v", tt.name, got, want)
 			}
 
 		})
@@ -329,28 +320,32 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 func TestMoveFiles(t *testing.T) {
 	// create the moveFiles tests
 	moveFilesTests := []struct {
-		name     string
-		dirName  string
-		fileUUID string
-		want     []os.FileInfo
+		name      string
+		dirName   string
+		fileUUID  string
+		want      []os.FileInfo
+		expectErr bool
 	}{
 		{
-			name:     "test moving dir",
-			dirName:  testDirs.moving.directory,
-			fileUUID: uuid.New().String(),
-			want:     testDirs.large.files,
+			name:      "test moving dir",
+			dirName:   testDirs.moving.directory,
+			fileUUID:  uuid.New().String(),
+			want:      testDirs.large.files,
+			expectErr: false,
 		},
 		{
-			name:     "test empty dir",
-			dirName:  testDirs.empty.directory,
-			fileUUID: uuid.New().String(),
-			want:     nil,
+			name:      "test empty dir",
+			dirName:   testDirs.empty.directory,
+			fileUUID:  uuid.New().String(),
+			want:      nil,
+			expectErr: true,
 		},
 		{
-			name:     "test restricted dir",
-			dirName:  testDirs.restricted.directory,
-			fileUUID: uuid.New().String(),
-			want:     nil,
+			name:      "test restricted dir",
+			dirName:   testDirs.restricted.directory,
+			fileUUID:  uuid.New().String(),
+			want:      nil,
+			expectErr: true,
 		},
 	}
 	for _, tt := range moveFilesTests {
@@ -360,8 +355,12 @@ func TestMoveFiles(t *testing.T) {
 			dirCfg.GetDirectoryConfig()
 			testPackager.DirCfg = dirCfg
 			testPackager.uid = tt.fileUUID
-			got, _ := testPackager.moveFiles()
-			if tt.want != nil {
+			got, err := testPackager.moveFiles()
+			if tt.want == nil && got != nil {
+				t.Errorf("Expected moved files to be nil")
+			} else if tt.want != nil && got == nil {
+				t.Errorf("Expected moved files to not be nil")
+			} else {
 				for _, file := range got {
 					// check that the file contains the uuid
 					if !strings.Contains(file.Name(), tt.fileUUID) {
@@ -372,8 +371,9 @@ func TestMoveFiles(t *testing.T) {
 						t.Errorf("File does not exist in the staging directory")
 					}
 				}
-			} else if got != nil {
-				t.Errorf("Expected moved files to be nil")
+			}
+			if err != nil && !tt.expectErr {
+				t.Errorf("An unexpected error occurred %v", err)
 			}
 		})
 	}

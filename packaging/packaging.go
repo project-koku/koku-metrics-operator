@@ -75,7 +75,7 @@ var maxSplits int64 = 1000
 // ErrNoReports a "no reports" Error type
 var ErrNoReports = errors.New("reports not found")
 
-// try this for testing
+// Manifest interface
 type Manifest interface{}
 
 // manifest template
