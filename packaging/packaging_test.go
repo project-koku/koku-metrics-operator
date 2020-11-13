@@ -1,13 +1,18 @@
 /*
+
+
 Copyright 2020 Red Hat, Inc.
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
 published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Affero General Public License for more details.
+
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
@@ -208,22 +213,25 @@ func setup() error {
 				directory: reportPath,
 				files:     fileList,
 			}
-			if directory.dirName == "large" {
+			switch directory.dirName {
+			case "large":
 				testDirs.large = tmpDirMap
-			} else if directory.dirName == "small" {
+			case "small":
 				testDirs.small = tmpDirMap
-			} else if directory.dirName == "moving" {
+			case "moving":
 				testDirs.moving = tmpDirMap
-			} else if directory.dirName == "empty" {
+			case "empty":
 				testDirs.empty = tmpDirMap
-			} else if directory.dirName == "restricted" {
+			case "restricted":
 				testDirs.restricted = tmpDirMap
-			} else if directory.dirName == "restrictedEmpty" {
+			case "restrictedEmpty":
 				testDirs.restrictedEmpty = tmpDirMap
-			} else if directory.dirName == "split" {
+			case "split":
 				testDirs.split = tmpDirMap
-			} else if directory.dirName == "tar" {
+			case "tar":
 				testDirs.tar = tmpDirMap
+			default:
+				return fmt.Errorf("unknown directory.dirName")
 			}
 		}
 	}
