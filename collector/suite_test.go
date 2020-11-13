@@ -50,7 +50,7 @@ var testEnv *envtest.Environment
 var ctx = context.Background()
 var testSecretData = "this-is-the-data"
 
-func TestAPIs(t *testing.T) {
+func TestCollector(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,

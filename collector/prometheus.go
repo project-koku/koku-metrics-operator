@@ -148,6 +148,25 @@ func getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement, clt client.Clien
 	return promCfg, nil
 }
 
+func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
+	promconf := config.HTTPClientConfig{
+		BearerToken: cfg.BearerToken,
+		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
+	}
+	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf", false, false)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create roundTripper: %v", err)
+	}
+	client, err := promapi.NewClient(promapi.Config{
+		Address:      cfg.Address,
+		RoundTripper: roundTripper,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot create prometheus client: %v", err)
+	}
+	return promv1.NewAPI(client), nil
+}
+
 func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err error) {
 	switch status {
 	case "configuration":
@@ -169,6 +188,16 @@ func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err erro
 	}
 }
 
+func testPrometheusConnection(promConn prometheusConnection) error {
+	return wait.Poll(1*time.Second, 15*time.Second, func() (bool, error) {
+		_, _, err := promConn.Query(context.TODO(), "up", time.Now())
+		if err != nil {
+			return false, err
+		}
+		return true, err
+	})
+}
+
 // GetPromConn returns the prometheus connection
 func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error {
 	log := c.Log.WithValues("costmanagement", "GetPromConn")
@@ -183,7 +212,7 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	}
 
 	if c.PromConn == nil || cost.Status.Prometheus.ConnectionError != "" {
-		c.PromConn, err = newPrometheusConnFromCfg(c.PromCfg)
+		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
 			return err
@@ -201,61 +230,24 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	return nil
 }
 
-func testPrometheusConnection(promConn prometheusConnection) error {
-	return wait.Poll(1*time.Second, 15*time.Second, func() (bool, error) {
-		_, _, err := promConn.Query(context.TODO(), "up", time.Now())
-		if err != nil {
-			return false, err
-		}
-		return true, err
-	})
-}
-
-func newPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
-	promconf := config.HTTPClientConfig{
-		BearerToken: cfg.BearerToken,
-		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
-	}
-	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf", false, false)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create roundTripper: %v", err)
-	}
-	client, err := promapi.NewClient(promapi.Config{
-		Address:      cfg.Address,
-		RoundTripper: roundTripper,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("cannot create prometheus client: %v", err)
-	}
-	return promv1.NewAPI(client), nil
-}
-
-func (c *PromCollector) performMatrixQuery(query string) (model.Matrix, error) {
-	log := c.Log.WithValues("costmanagement", "performMatrixQuery")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	queryResult, warnings, err := c.PromConn.QueryRange(ctx, query, *c.TimeSeries)
-	if err != nil {
-		return nil, fmt.Errorf("error querying prometheus: %v", err)
-	}
-	if len(warnings) > 0 {
-		log.Info("query warnings", "Warnings", warnings)
-	}
-	result, ok := queryResult.(model.Matrix)
-	if !ok {
-		return nil, fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
-	}
-	return result, nil
-}
-
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
+	log := c.Log.WithValues("costmanagement", "getQueryResults")
 	for _, query := range *queries {
-		matrix, err := c.performMatrixQuery(query.QueryString)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
 		if err != nil {
-			return fmt.Errorf("getQueryResults: %v", err)
+			return fmt.Errorf("error querying prometheus: %v", err)
 		}
+		if len(warnings) > 0 {
+			log.Info("query warnings", "Warnings", warnings)
+		}
+		matrix, ok := queryResult.(model.Matrix)
+		if !ok {
+			return fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
+		}
+
 		results.iterateMatrix(matrix, query)
 	}
 	return nil

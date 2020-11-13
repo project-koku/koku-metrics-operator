@@ -69,37 +69,29 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	return res.value, res.warnings, res.err
 }
 
-func TestPerformMatrixQuery(t *testing.T) {
+func TestGetQueryResultsWrongType(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
 		Log:        zap.New(),
 	}
 	performMatrixQueryTests := []struct {
 		name        string
-		query       string
 		queryResult *mockPromResult
-		want        model.Matrix
 		err         error
 	}{
 		{
 			name:        "return incorrect type (model.Scalar)",
-			query:       "fake-query",
 			queryResult: &mockPromResult{value: &model.Scalar{}},
-			want:        nil,
 			err:         errTest,
 		},
 		{
 			name:        "return incorrect type (model.Vector)",
-			query:       "fake-query",
 			queryResult: &mockPromResult{value: &model.Vector{}},
-			want:        nil,
 			err:         errTest,
 		},
 		{
 			name:        "return incorrect type (model.String)",
-			query:       "fake-query",
 			queryResult: &mockPromResult{value: &model.String{}},
-			want:        nil,
 			err:         errTest,
 		},
 	}
@@ -109,15 +101,13 @@ func TestPerformMatrixQuery(t *testing.T) {
 				singleResult: tt.queryResult,
 				t:            t,
 			}
-			got, err := col.performMatrixQuery(tt.query)
+			got := mappedResults{}
+			err := col.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
 			if err != nil && tt.err == nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
 			if tt.err != nil && err == nil {
 				t.Errorf("%s got `%v` error, wanted error", tt.name, err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("%s got %s want %s", tt.name, got, tt.want)
 			}
 		})
 	}
