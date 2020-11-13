@@ -351,7 +351,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 				singleResult: tt.queryResult,
 				t:            t,
 			}
-			err := col.testPrometheusConnection()
+			err := testPrometheusConnection(col.PromConn)
 			if err != nil && tt.wantedError == nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}

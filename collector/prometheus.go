@@ -134,18 +134,18 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 
 }
 
-func (c *PromCollector) getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement) error {
-	c.PromCfg = &PrometheusConfig{
+func getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement, clt client.Client) (*PrometheusConfig, error) {
+	promCfg := &PrometheusConfig{
 		CAFile:  certFile,
 		Address: cost.Status.Prometheus.SvcAddress,
 		SkipTLS: *cost.Status.Prometheus.SkipTLSVerification,
 	}
-	token, err := getBearerToken(c.Client)
+	token, err := getBearerToken(clt)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	c.PromCfg.BearerToken = token
-	return nil
+	promCfg.BearerToken = token
+	return promCfg, nil
 }
 
 func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err error) {
@@ -169,11 +169,13 @@ func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err erro
 	}
 }
 
+// GetPromConn returns the prometheus connection
 func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error {
 	log := c.Log.WithValues("costmanagement", "GetPromConn")
+	var err error
 
 	if c.PromCfg == nil || cost.Status.Prometheus.ConfigError != "" {
-		err := c.getPrometheusConfig(cost)
+		c.PromCfg, err = getPrometheusConfig(cost, c.Client)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
@@ -181,7 +183,7 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	}
 
 	if c.PromConn == nil || cost.Status.Prometheus.ConnectionError != "" {
-		err := c.newPrometheusConnFromCfg()
+		c.PromConn, err = newPrometheusConnFromCfg(c.PromCfg)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
 			return err
@@ -189,7 +191,7 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	}
 
 	log.Info("testing the ability to query prometheus")
-	err := c.testPrometheusConnection()
+	err = testPrometheusConnection(c.PromConn)
 	statusHelper(cost, "connection", err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)
@@ -199,9 +201,9 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	return nil
 }
 
-func (c *PromCollector) testPrometheusConnection() error {
+func testPrometheusConnection(promConn prometheusConnection) error {
 	return wait.Poll(1*time.Second, 15*time.Second, func() (bool, error) {
-		_, _, err := c.PromConn.Query(context.TODO(), "up", time.Now())
+		_, _, err := promConn.Query(context.TODO(), "up", time.Now())
 		if err != nil {
 			return false, err
 		}
@@ -209,24 +211,23 @@ func (c *PromCollector) testPrometheusConnection() error {
 	})
 }
 
-func (c *PromCollector) newPrometheusConnFromCfg() error {
+func newPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
 	promconf := config.HTTPClientConfig{
-		BearerToken: c.PromCfg.BearerToken,
-		TLSConfig:   config.TLSConfig{CAFile: c.PromCfg.CAFile, InsecureSkipVerify: c.PromCfg.SkipTLS},
+		BearerToken: cfg.BearerToken,
+		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
 	}
 	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf", false, false)
 	if err != nil {
-		return fmt.Errorf("cannot create roundTripper: %v", err)
+		return nil, fmt.Errorf("cannot create roundTripper: %v", err)
 	}
 	client, err := promapi.NewClient(promapi.Config{
-		Address:      c.PromCfg.Address,
+		Address:      cfg.Address,
 		RoundTripper: roundTripper,
 	})
 	if err != nil {
-		return fmt.Errorf("cannot create prometheus client: %v", err)
+		return nil, fmt.Errorf("cannot create prometheus client: %v", err)
 	}
-	c.PromConn = promv1.NewAPI(client)
-	return nil
+	return promv1.NewAPI(client), nil
 }
 
 func (c *PromCollector) performMatrixQuery(query string) (model.Matrix, error) {
