@@ -1,13 +1,18 @@
 /*
+
+
 Copyright 2020 Red Hat, Inc.
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
 published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Affero General Public License for more details.
+
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
@@ -27,6 +32,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -35,32 +41,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// type helper interface {
-// 	marshalToFile(v interface{}, prefix, indent string) ([]byte, error)
-// 	writeFile(filename string, data []byte, perm os.FileMode) error
-// }
-
-// type funcHelper struct{}
-
-// func (funcHelper) marshalToFile(v interface{}, prefix, indent string) ([]byte, error) {
-// 	return json.MarshalIndent(v, prefix, indent)
-// }
-
-// func (funcHelper) writeFile(filename string, data []byte, perm os.FileMode) error {
-// 	return ioutil.WriteFile(filename, data, perm)
-// }
-
 type packager interface {
 	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
-	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) []string
+	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string
 	getManifest(archiveFiles map[int]string, filePath string)
-	moveFiles(reportsDir, stagingDir dirconfig.Directory, uid string) ([]os.FileInfo, error)
-	needSplit(fileList []os.FileInfo, maxBytes int64) bool
-	splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error)
+	moveFiles() ([]os.FileInfo, error)
+	needSplit(fileList []os.FileInfo) bool
+	splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error)
 	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
-	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (string, bool, error)
+	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error)
 	ReadUploadDir() ([]os.FileInfo, error)
-	PackageReports(maxSize int64) ([]os.FileInfo, error)
+	PackageReports() error
 }
 
 type FilePackager struct {
@@ -69,6 +60,8 @@ type FilePackager struct {
 	Log      logr.Logger
 	manifest manifestInfo
 	uid      string
+	MaxSize  int64
+	maxBytes int64
 }
 
 // Define the global variables
@@ -88,17 +81,20 @@ var maxSplits int64 = 1000
 // ErrNoReports a "no reports" Error type
 var ErrNoReports = errors.New("reports not found")
 
+// Manifest interface
+type Manifest interface{}
+
 // manifest template
 type manifest struct {
-	UUID      string   `json:"uuid"`
-	ClusterID string   `json:"cluster_id"`
-	Version   string   `json:"version"`
-	Date      string   `json:"date"`
-	Files     []string `json:"files"`
+	UUID      string    `json:"uuid"`
+	ClusterID string    `json:"cluster_id"`
+	Version   string    `json:"version"`
+	Date      time.Time `json:"date"`
+	Files     []string  `json:"files"`
 }
 
 type manifestInfo struct {
-	manifest manifest
+	manifest Manifest
 	filename string
 }
 
@@ -119,7 +115,7 @@ func (m *manifestInfo) renderManifest() error {
 func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string {
 	csvList := make(map[int]string)
 	for idx, file := range fileList {
-		if strings.Contains(file.Name(), ".csv") {
+		if strings.HasSuffix(file.Name(), ".csv") {
 			csvFilePath := filepath.Join(stagingDirectory, file.Name())
 			csvList[idx] = csvFilePath
 		}
@@ -140,7 +136,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 			UUID:      p.uid,
 			ClusterID: p.Cost.Status.ClusterID,
 			Version:   p.Cost.Status.OperatorCommit,
-			Date:      manifestDate.UTC().Format("2006-01-02 15:04:05"),
+			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
@@ -196,10 +192,8 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 	// add the files to the tarFile
 	for idx, filePath := range archiveFiles {
-		fmt.Println(filePath)
-		if strings.Contains(filePath, ".csv") {
+		if strings.HasSuffix(filePath, ".csv") {
 			uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
-			fmt.Println(uploadName)
 			if err := p.addFileToTarWriter(uploadName, filePath, tw); err != nil {
 				return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
 			}
@@ -213,7 +207,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 }
 
 // WritePart writes a portion of a split file into a new file
-func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64, maxBytes int64) (*os.File, bool, error) {
+func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
 	log := p.Log.WithValues("costmanagement", "WritePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
@@ -239,7 +233,7 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 		rowLen := len(strings.Join(row, ","))
 		rowSize := rowLen + int(float64(rowLen)*variance)
 		sizeEstimate += rowSize
-		if sizeEstimate >= int(maxBytes) {
+		if sizeEstimate >= int(p.maxBytes) {
 			writer.Flush()
 			return splitFile, false, nil
 		}
@@ -247,9 +241,9 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 }
 
 // splitFiles breaks larger files into smaller ones
-func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBytes int64) ([]os.FileInfo, bool, error) {
+func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
 	log := p.Log.WithValues("costmanagement", "splitFiles")
-	if !p.needSplit(fileList, maxBytes) {
+	if !p.needSplit(fileList) {
 		log.Info("Files do not require splitting.")
 		return fileList, false, nil
 	}
@@ -258,7 +252,7 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 	for _, file := range fileList {
 		absPath := filepath.Join(filePath, file.Name())
 		fileSize := file.Size()
-		if fileSize >= maxBytes {
+		if fileSize >= p.maxBytes {
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
@@ -268,7 +262,7 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 			csvHeader, err := csvReader.Read()
 			var part int64 = 1
 			for {
-				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part, maxBytes)
+				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part)
 				if err != nil {
 					return nil, false, fmt.Errorf("SplitFiles: %v", err)
 				}
@@ -283,7 +277,6 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 				}
 			}
 			os.Remove(absPath)
-			fmt.Println(splitFiles)
 		} else {
 			splitFiles = append(splitFiles, file)
 		}
@@ -292,12 +285,12 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo, maxBy
 }
 
 // needSplit determines if any of the files to be packaged need to be split.
-func (p *FilePackager) needSplit(fileList []os.FileInfo, maxBytes int64) bool {
+func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	var totalSize int64 = 0
 	for _, file := range fileList {
 		fileSize := file.Size()
 		totalSize += fileSize
-		if fileSize >= maxBytes || totalSize >= maxBytes {
+		if fileSize >= p.maxBytes || totalSize >= p.maxBytes {
 			return true
 		}
 	}
@@ -356,9 +349,9 @@ func (p *FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports(maxSize int64) error {
+func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("costmanagement", "PackageReports")
-	maxBytes := maxSize * megaByte
+	p.maxBytes = p.MaxSize * megaByte
 	p.uid = uuid.New().String()
 
 	// create reports/staging/upload directories if they do not exist
@@ -368,7 +361,7 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveFiles()
-	if err == ErrNoReports || filesToPackage == nil {
+	if err == ErrNoReports {
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -376,7 +369,7 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 
 	// check if the files need to be split
 	log.Info("Checking to see if the report files need to be split")
-	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage, maxBytes)
+	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)
 	if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
@@ -410,6 +403,10 @@ func (p *FilePackager) PackageReports(maxSize int64) error {
 	}
 
 	log.Info("File packaging was successful.")
-
+	generatedFiles, err := p.ReadUploadDir()
+	log.Info("Generated the following files for upload: ")
+	for _, file := range generatedFiles {
+		log.Info(file.Name())
+	}
 	return nil
 }
