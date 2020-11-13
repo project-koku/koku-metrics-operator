@@ -378,8 +378,7 @@ func TestMoveFiles(t *testing.T) {
 	for _, tt := range moveFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirCfg = genDirCfg(tt.dirName)
-			testPackager.DirCfg = dirCfg
+			testPackager.DirCfg = genDirCfg(tt.dirName)
 			testPackager.uid = tt.fileUUID
 			got, err := testPackager.moveFiles()
 			if tt.want == nil && got != nil {
@@ -453,8 +452,7 @@ func TestPackagingReports(t *testing.T) {
 	for _, tt := range packagingReportTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirCfg = genDirCfg(tt.dirName)
-			testPackager.DirCfg = dirCfg
+			testPackager.DirCfg = genDirCfg(tt.dirName)
 			testPackager.MaxSize = tt.maxSize
 			err := testPackager.PackageReports()
 			if err == nil {
@@ -500,8 +498,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 	for _, tt := range getAndRenderManifestTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirCfg = genDirCfg(tt.dirName)
-			testPackager.DirCfg = dirCfg
+			testPackager.DirCfg = genDirCfg(tt.dirName)
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			testPackager.getManifest(csvFileNames, tt.dirName)
 			testPackager.manifest.renderManifest()
@@ -663,8 +660,7 @@ func TestWriteTarball(t *testing.T) {
 	for _, tt := range writeTarballTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirCfg = genDirCfg(tt.dirName)
-			testPackager.DirCfg = dirCfg
+			testPackager.DirCfg = genDirCfg(tt.dirName)
 			stagingDir := testPackager.DirCfg.Reports.Path
 			var csvFileNames map[int]string
 			if tt.genCSVs {
@@ -769,8 +765,7 @@ func TestSplitFiles(t *testing.T) {
 	for _, tt := range splitFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirCfg = genDirCfg(tt.dirName)
-			testPackager.DirCfg = dirCfg
+			testPackager.DirCfg = genDirCfg(tt.dirName)
 			testPackager.maxBytes = tt.maxBytes
 			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList)
 			if tt.expectErr {
