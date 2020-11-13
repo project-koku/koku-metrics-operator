@@ -123,6 +123,25 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	return tempDir
 }
 
+func genDirCfg(dirName string) *dirconfig.DirectoryConfig {
+	dirCfg := dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: dirName},
+		Upload:  dirconfig.Directory{Path: filepath.Join(dirName, "upload")},
+		Staging: dirconfig.Directory{Path: filepath.Join(dirName, "staging")},
+		Reports: dirconfig.Directory{Path: filepath.Join(dirName, "data")},
+		Archive: dirconfig.Directory{Path: filepath.Join(dirName, "archive")},
+	}
+	folders := []string{"upload", "staging", "data", "archive"}
+	for _, folder := range folders {
+		d := filepath.Join(dirName, folder)
+		dir := dirconfig.Directory{Path: d}
+		if !dir.Exists() {
+			dir.Create()
+		}
+	}
+	return &dirCfg
+}
+
 func setup() error {
 	type dirInfo struct {
 		dirName  string
@@ -359,8 +378,7 @@ func TestMoveFiles(t *testing.T) {
 	for _, tt := range moveFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirconfig.ParentDir = tt.dirName
-			dirCfg.GetDirectoryConfig()
+			dirCfg = genDirCfg(tt.dirName)
 			testPackager.DirCfg = dirCfg
 			testPackager.uid = tt.fileUUID
 			got, err := testPackager.moveFiles()
@@ -435,20 +453,8 @@ func TestPackagingReports(t *testing.T) {
 	for _, tt := range packagingReportTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirconfig.ParentDir = tt.dirName
-			if tt.name != "restricted" {
-				dirCfg.GetDirectoryConfig()
-				testPackager.DirCfg = dirCfg
-			} else {
-				dirCfg := dirconfig.DirectoryConfig{
-					Parent:  dirconfig.Directory{Path: tt.dirName},
-					Upload:  dirconfig.Directory{Path: filepath.Join(tt.dirName, "upload")},
-					Staging: dirconfig.Directory{Path: filepath.Join(tt.dirName, "staging")},
-					Reports: dirconfig.Directory{Path: filepath.Join(tt.dirName, "reports")},
-					Archive: dirconfig.Directory{Path: filepath.Join(tt.dirName, "archive")},
-				}
-				testPackager.DirCfg = &dirCfg
-			}
+			dirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = dirCfg
 			testPackager.MaxSize = tt.maxSize
 			err := testPackager.PackageReports()
 			if err == nil {
@@ -494,10 +500,8 @@ func TestGetAndRenderManifest(t *testing.T) {
 	for _, tt := range getAndRenderManifestTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirconfig.ParentDir = tt.dirName
-			dirCfg.GetDirectoryConfig()
+			dirCfg = genDirCfg(tt.dirName)
 			testPackager.DirCfg = dirCfg
-			// dirName = filepath.Join(tt.dirName, "staging")
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			testPackager.getManifest(csvFileNames, tt.dirName)
 			testPackager.manifest.renderManifest()
@@ -659,8 +663,7 @@ func TestWriteTarball(t *testing.T) {
 	for _, tt := range writeTarballTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirconfig.ParentDir = tt.dirName
-			dirCfg.GetDirectoryConfig()
+			dirCfg = genDirCfg(tt.dirName)
 			testPackager.DirCfg = dirCfg
 			stagingDir := testPackager.DirCfg.Reports.Path
 			var csvFileNames map[int]string
@@ -766,8 +769,7 @@ func TestSplitFiles(t *testing.T) {
 	for _, tt := range splitFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			dirconfig.ParentDir = tt.dirName
-			dirCfg.GetDirectoryConfig()
+			dirCfg = genDirCfg(tt.dirName)
 			testPackager.DirCfg = dirCfg
 			testPackager.maxBytes = tt.maxBytes
 			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList)
