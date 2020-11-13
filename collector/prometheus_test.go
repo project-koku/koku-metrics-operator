@@ -354,7 +354,6 @@ func TestTestPrometheusConnection(t *testing.T) {
 }
 
 func TestStatusHelper(t *testing.T) {
-
 	statusHelperTests := []struct {
 		name   string
 		cost   *costmgmtv1alpha1.CostManagement
@@ -415,6 +414,49 @@ func TestStatusHelper(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetPrometheusConnFromCfg(t *testing.T) {
+	getPrometheusConnFromCfgTests := []struct {
+		name string
+		cfg  *PrometheusConfig
+		err  error
+	}{
+		{
+			name: "wrong cert file config",
+			cfg: &PrometheusConfig{
+				CAFile: "not-a-real-file",
+			},
+			err: errTest,
+		},
+		{
+			name: "wrong svc address config",
+			cfg: &PrometheusConfig{
+				Address: "%gh&%ij", // this causes a url Parse error in promapi.NewClient
+			},
+			err: errTest,
+		},
+		{
+			name: "empty config returns no errors",
+			cfg:  &PrometheusConfig{},
+			err:  nil,
+		},
+	}
+	for _, tt := range getPrometheusConnFromCfgTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := getPrometheusConnFromCfg(tt.cfg)
+			if err != nil && tt.err == nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if err == nil && tt.err != nil {
+				t.Errorf("%s expected error, got %v", tt.name, err)
+			}
+		})
+	}
+}
+
+func TestGetPromConn(t *testing.T) {
+
 }
 
 var _ = Describe("Collector Tests", func() {
