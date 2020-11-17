@@ -264,7 +264,6 @@ func TestGetResourceID(t *testing.T) {
 		{name: "without slashes", input: "metering-ci-3-ig-m-91kw", want: "metering-ci-3-ig-m-91kw"},
 	}
 	for _, tt := range getResourceIDTests {
-		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			got := getResourceID(tt.input)
 			if got != tt.want {
@@ -313,7 +312,6 @@ func TestGetValue(t *testing.T) {
 		},
 	}
 	for _, tt := range getValueTests {
-		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			got := getValue(&tt.query, tt.array)
 			if !nearlyEqual(got, tt.want) {
@@ -334,7 +332,6 @@ func TestFloatToString(t *testing.T) {
 		{name: "no decimal", input: 1234567890, want: "1234567890.000000"},
 	}
 	for _, tt := range floatToStringTests {
-		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			got := floatToString(tt.input)
 			if got != tt.want {

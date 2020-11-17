@@ -70,50 +70,6 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	return res.value, res.warnings, res.err
 }
 
-func TestGetQueryResultsWrongType(t *testing.T) {
-	col := PromCollector{
-		TimeSeries: &promv1.Range{},
-		Log:        zap.New(),
-	}
-	performMatrixQueryTests := []struct {
-		name        string
-		queryResult *mockPromResult
-		err         error
-	}{
-		{
-			name:        "return incorrect type (model.Scalar)",
-			queryResult: &mockPromResult{value: &model.Scalar{}},
-			err:         errTest,
-		},
-		{
-			name:        "return incorrect type (model.Vector)",
-			queryResult: &mockPromResult{value: &model.Vector{}},
-			err:         errTest,
-		},
-		{
-			name:        "return incorrect type (model.String)",
-			queryResult: &mockPromResult{value: &model.String{}},
-			err:         errTest,
-		},
-	}
-	for _, tt := range performMatrixQueryTests {
-		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
-				singleResult: tt.queryResult,
-				t:            t,
-			}
-			got := mappedResults{}
-			err := col.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
-			if err != nil && tt.err == nil {
-				t.Errorf("%s got unexpected error: %v", tt.name, err)
-			}
-			if tt.err != nil && err == nil {
-				t.Errorf("%s got `%v` error, wanted error", tt.name, err)
-			}
-		})
-	}
-}
-
 func TestGetQueryResults(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
@@ -231,7 +187,7 @@ func TestGetQueryResults(t *testing.T) {
 			}
 			got := mappedResults{}
 			err := col.getQueryResults(tt.queries, &got)
-			if err != nil && tt.wantedError != nil {
+			if tt.wantedError == nil && err != nil {
 				t.Errorf("got unexpected error: %v", err)
 			}
 			if tt.wantedError != nil && err == nil {
@@ -251,14 +207,30 @@ func TestGetQueryResultsError(t *testing.T) {
 	}
 	getQueryResultsErrorsTests := []struct {
 		name         string
-		query        query
 		queryResult  *mockPromResult
 		wantedResult mappedResults
 		wantedError  error
 	}{
 		{
-			name:  "warnings with no error",
-			query: query{QueryString: "fake-query-1", RowKey: "node"},
+			name:         "return incorrect type (model.Scalar)",
+			queryResult:  &mockPromResult{value: &model.Scalar{}},
+			wantedResult: mappedResults{},
+			wantedError:  errTest,
+		},
+		{
+			name:         "return incorrect type (model.Vector)",
+			queryResult:  &mockPromResult{value: &model.Vector{}},
+			wantedResult: mappedResults{},
+			wantedError:  errTest,
+		},
+		{
+			name:         "return incorrect type (model.String)",
+			queryResult:  &mockPromResult{value: &model.String{}},
+			wantedResult: mappedResults{},
+			wantedError:  errTest,
+		},
+		{
+			name: "warnings with no error",
 			queryResult: &mockPromResult{
 				value:    model.Matrix{},
 				warnings: promv1.Warnings{"This is a warning."},
@@ -268,8 +240,7 @@ func TestGetQueryResultsError(t *testing.T) {
 			wantedError:  nil,
 		},
 		{
-			name:  "error with no warnings",
-			query: query{QueryString: "fake-query-2", RowKey: "node"},
+			name: "error with no warnings",
 			queryResult: &mockPromResult{
 				value:    model.Matrix{},
 				warnings: nil,
@@ -279,8 +250,7 @@ func TestGetQueryResultsError(t *testing.T) {
 			wantedError:  errTest,
 		},
 		{
-			name:  "error with warnings",
-			query: query{QueryString: "fake-query-3", RowKey: "node"},
+			name: "error with warnings",
 			queryResult: &mockPromResult{
 				value:    model.Matrix{},
 				warnings: promv1.Warnings{"This is another warning."},
@@ -297,18 +267,15 @@ func TestGetQueryResultsError(t *testing.T) {
 				t:            t,
 			}
 			got := mappedResults{}
-			err := col.getQueryResults(&querys{tt.query}, &got)
-			if err != nil && tt.wantedError == nil {
+			err := col.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
+			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
-			}
-			if got != nil {
-				eq := reflect.DeepEqual(got, tt.wantedResult)
-				if !eq {
-					t.Errorf("%s got: %s want: %s", tt.name, got, tt.wantedResult)
-				}
 			}
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
+			}
+			if got != nil && !reflect.DeepEqual(got, tt.wantedResult) {
+				t.Errorf("%s got: %s want: %s", tt.name, got, tt.wantedResult)
 			}
 		})
 	}
@@ -343,7 +310,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 				t:            t,
 			}
 			err := testPrometheusConnection(col.PromConn)
-			if err != nil && tt.wantedError == nil {
+			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
 			if tt.wantedError != nil && err == nil {
@@ -418,37 +385,37 @@ func TestStatusHelper(t *testing.T) {
 
 func TestGetPrometheusConnFromCfg(t *testing.T) {
 	getPrometheusConnFromCfgTests := []struct {
-		name string
-		cfg  *PrometheusConfig
-		err  error
+		name        string
+		cfg         *PrometheusConfig
+		wantedError error
 	}{
 		{
 			name: "wrong cert file config",
 			cfg: &PrometheusConfig{
 				CAFile: "not-a-real-file",
 			},
-			err: errTest,
+			wantedError: errTest,
 		},
 		{
 			name: "wrong svc address config",
 			cfg: &PrometheusConfig{
 				Address: "%gh&%ij", // this causes a url Parse error in promapi.NewClient
 			},
-			err: errTest,
+			wantedError: errTest,
 		},
 		{
-			name: "empty config returns no errors",
-			cfg:  &PrometheusConfig{},
-			err:  nil,
+			name:        "empty config returns no errors",
+			cfg:         &PrometheusConfig{},
+			wantedError: nil,
 		},
 	}
 	for _, tt := range getPrometheusConnFromCfgTests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := getPrometheusConnFromCfg(tt.cfg)
-			if err != nil && tt.err == nil {
+			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
-			if err == nil && tt.err != nil {
+			if tt.wantedError != nil && err != nil {
 				t.Errorf("%s expected error, got %v", tt.name, err)
 			}
 		})
@@ -457,28 +424,28 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 
 func TestGetPromConn(t *testing.T) {
 	getPromConnTests := []struct {
-		name   string
-		cfg    *PrometheusConfig
-		cfgErr string
-		con    prometheusConnection
-		conErr string
-		err    error
+		name        string
+		cfg         *PrometheusConfig
+		cfgErr      string
+		con         prometheusConnection
+		conErr      string
+		wantedError error
 	}{
 		{
-			name:   "nil promconn: return getConn error",
-			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr: "",
-			con:    nil,
-			conErr: "",
-			err:    errTest,
+			name:        "nil promconn: return getConn error",
+			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr:      "",
+			con:         nil,
+			conErr:      "",
+			wantedError: errTest,
 		},
 		{
-			name:   "not empty ConnectionError: return getConn error",
-			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr: "",
-			con:    &mockPrometheusConnection{},
-			conErr: "not empty",
-			err:    errTest,
+			name:        "not empty ConnectionError: return getConn error",
+			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr:      "",
+			con:         &mockPrometheusConnection{},
+			conErr:      "not empty",
+			wantedError: errTest,
 		},
 		{
 			name:   "return getConn successed, test con fails",
@@ -487,8 +454,8 @@ func TestGetPromConn(t *testing.T) {
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: errTest},
 			},
-			conErr: "",
-			err:    errTest,
+			conErr:      "",
+			wantedError: errTest,
 		},
 		{
 			name:   "return getConn successed, test con succeeds",
@@ -497,8 +464,8 @@ func TestGetPromConn(t *testing.T) {
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: nil},
 			},
-			conErr: "",
-			err:    nil,
+			conErr:      "",
+			wantedError: nil,
 		},
 	}
 	for _, tt := range getPromConnTests {
@@ -512,12 +479,12 @@ func TestGetPromConn(t *testing.T) {
 				PromCfg:  tt.cfg,
 				Log:      zap.New(),
 			}
-			got := col.GetPromConn(cost)
-			if got != nil && tt.err == nil {
-				t.Errorf("%s got unexpected error: %v", tt.name, got)
+			err := col.GetPromConn(cost)
+			if tt.wantedError == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
-			if got == nil && tt.err != nil {
-				t.Errorf("%s expected error, got %v", tt.name, got)
+			if tt.wantedError != nil && err == nil {
+				t.Errorf("%s expected error, got %v", tt.name, err)
 			}
 		})
 	}
