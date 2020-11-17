@@ -409,7 +409,7 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
-			if tt.wantedError != nil && err != nil {
+			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s expected error, got %v", tt.name, err)
 			}
 		})
