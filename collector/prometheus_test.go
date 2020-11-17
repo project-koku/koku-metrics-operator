@@ -70,7 +70,7 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	return res.value, res.warnings, res.err
 }
 
-func TestGetQueryResults(t *testing.T) {
+func TestGetQueryResultsSuccess(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
 		Log:        zap.New(),
@@ -190,9 +190,6 @@ func TestGetQueryResults(t *testing.T) {
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("got unexpected error: %v", err)
 			}
-			if tt.wantedError != nil && err == nil {
-				t.Errorf("%s got: nil error, want: error", tt.name)
-			}
 			if !reflect.DeepEqual(got, tt.wantedResult) {
 				t.Errorf("getQueryResults got:\n\t%s\n  want:\n\t%s", got, tt.wantedResult)
 			}
@@ -268,13 +265,10 @@ func TestGetQueryResultsError(t *testing.T) {
 			}
 			got := mappedResults{}
 			err := col.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
-			if tt.wantedError == nil && err != nil {
-				t.Errorf("%s got unexpected error: %v", tt.name, err)
-			}
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
 			}
-			if got != nil && !reflect.DeepEqual(got, tt.wantedResult) {
+			if !reflect.DeepEqual(got, tt.wantedResult) {
 				t.Errorf("%s got: %s want: %s", tt.name, got, tt.wantedResult)
 			}
 		})
