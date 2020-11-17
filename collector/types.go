@@ -20,23 +20,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package collector
 
 import (
-	"encoding/csv"
-	"io"
 	"strings"
 	"time"
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 )
 
-type DateTimes struct {
+type dateTimes struct {
 	ReportPeriodStart string
 	ReportPeriodEnd   string
 	IntervalStart     string
 	IntervalEnd       string
 }
 
-func NewDates(ts promv1.Range) *DateTimes {
-	d := new(DateTimes)
+func newDates(ts *promv1.Range) *dateTimes {
+	d := new(dateTimes)
 	d.IntervalStart = ts.Start.String()
 	d.IntervalEnd = ts.End.String()
 	t := ts.Start
@@ -45,50 +43,45 @@ func NewDates(ts promv1.Range) *DateTimes {
 	return d
 }
 
-type CSVStruct interface {
-	CSVheader(w io.Writer) error
-	CSVrow(w io.Writer) error
-	RowString() []string
-	String() string
+func (dt dateTimes) csvRow() []string {
+	return []string{
+		dt.ReportPeriodStart,
+		dt.ReportPeriodEnd,
+		dt.IntervalStart,
+		dt.IntervalEnd,
+	}
 }
 
-type NamespaceRow struct {
-	*DateTimes
+func (dt dateTimes) string() string { return strings.Join(dt.csvRow(), ",") }
+
+type csvStruct interface {
+	csvHeader() []string
+	csvRow() []string
+	string() string
+}
+
+func newNamespaceRow(ts *promv1.Range) namespaceRow { return namespaceRow{dateTimes: newDates(ts)} }
+func newNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{dateTimes: newDates(ts)} }
+func newPodRow(ts *promv1.Range) podRow             { return podRow{dateTimes: newDates(ts)} }
+func newStorageRow(ts *promv1.Range) storageRow     { return storageRow{dateTimes: newDates(ts)} }
+
+type namespaceRow struct {
+	*dateTimes
 	Namespace       string `mapstructure:"namespace"`
 	NamespaceLabels string `mapstructure:"namespace_labels"`
 }
 
-func NewNamespaceRow(ts promv1.Range) NamespaceRow {
-	row := NamespaceRow{}
-	row.DateTimes = NewDates(ts)
-	return row
-}
-
-func (NamespaceRow) CSVheader(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write([]string{
+func (namespaceRow) csvHeader() []string {
+	return []string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
 		"interval_end",
 		"namespace",
-		"namespace_labels"}); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
+		"namespace_labels"}
 }
 
-func (row NamespaceRow) CSVrow(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write(row.RowString()); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
-}
-
-func (row NamespaceRow) RowString() []string {
+func (row namespaceRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -99,12 +92,10 @@ func (row NamespaceRow) RowString() []string {
 	}
 }
 
-func (row NamespaceRow) String() string {
-	return strings.Join(row.RowString(), ",")
-}
+func (row namespaceRow) string() string { return strings.Join(row.csvRow(), ",") }
 
-type NodeRow struct {
-	*DateTimes
+type nodeRow struct {
+	*dateTimes
 	Node                          string `mapstructure:"node"`
 	NodeCapacityCPUCores          string `mapstructure:"node-capacity-cpu-cores"`
 	ModeCapacityCPUCoreSeconds    string `mapstructure:"node-capacity-cpu-core-seconds"`
@@ -114,15 +105,8 @@ type NodeRow struct {
 	NodeLabels                    string `mapstructure:"node_labels"`
 }
 
-func NewNodeRow(ts promv1.Range) NodeRow {
-	row := NodeRow{}
-	row.DateTimes = NewDates(ts)
-	return row
-}
-
-func (NodeRow) CSVheader(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write([]string{
+func (nodeRow) csvHeader() []string {
+	return []string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
@@ -133,30 +117,17 @@ func (NodeRow) CSVheader(w io.Writer) error {
 		// "node_capacity_memory_bytes",
 		// "node_capacity_memory_byte_seconds",
 		// "resource_id",
-		"node_labels"}); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
+		"node_labels"}
 }
 
-func (row NodeRow) CSVrow(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write(row.RowString()); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
-}
-
-func (row NodeRow) RowString() []string {
+func (row nodeRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
 		row.IntervalStart,
 		row.IntervalEnd,
 		row.Node,
-		// row.NodeCapacityCPUCores,
+		// row.NodeCapacityCPUCores,  // if Node and Pod reports are ever separated, these lines can be uncommented
 		// row.ModeCapacityCPUCoreSeconds,
 		// row.NodeCapacityMemoryBytes,
 		// row.NodeCapacityMemoryByteSeconds,
@@ -165,13 +136,11 @@ func (row NodeRow) RowString() []string {
 	}
 }
 
-func (row NodeRow) String() string {
-	return strings.Join(row.RowString(), ",")
-}
+func (row nodeRow) string() string { return strings.Join(row.csvRow(), ",") }
 
-type PodRow struct {
-	*DateTimes
-	NodeRow
+type podRow struct {
+	*dateTimes
+	nodeRow
 	Namespace                   string `mapstructure:"namespace"`
 	Pod                         string `mapstructure:"pod"`
 	PodUsageCPUCoreSeconds      string `mapstructure:"pod-usage-cpu-core-seconds"`
@@ -183,15 +152,8 @@ type PodRow struct {
 	PodLabels                   string `mapstructure:"pod_labels"`
 }
 
-func NewPodRow(ts promv1.Range) PodRow {
-	row := PodRow{}
-	row.DateTimes = NewDates(ts)
-	return row
-}
-
-func (PodRow) CSVheader(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write([]string{
+func (podRow) csvHeader() []string {
+	return []string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
@@ -210,23 +172,10 @@ func (PodRow) CSVheader(w io.Writer) error {
 		"node_capacity_memory_bytes",
 		"node_capacity_memory_byte_seconds",
 		"resource_id",
-		"pod_labels"}); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
+		"pod_labels"}
 }
 
-func (row PodRow) CSVrow(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write(row.RowString()); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
-}
-
-func (row PodRow) RowString() []string {
+func (row podRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -250,12 +199,10 @@ func (row PodRow) RowString() []string {
 	}
 }
 
-func (row PodRow) String() string {
-	return strings.Join(row.RowString(), ",")
-}
+func (row podRow) string() string { return strings.Join(row.csvRow(), ",") }
 
-type StorageRow struct {
-	*DateTimes
+type storageRow struct {
+	*dateTimes
 	Namespace                                string
 	Pod                                      string
 	PersistentVolumeClaim                    string `mapstructure:"persistentvolumeclaim"`
@@ -269,15 +216,8 @@ type StorageRow struct {
 	PersistentVolumeClaimLabels              string `mapstructure:"persistentvolumeclaim_labels"`
 }
 
-func NewStorageRow(ts promv1.Range) StorageRow {
-	row := StorageRow{}
-	row.DateTimes = NewDates(ts)
-	return row
-}
-
-func (StorageRow) CSVheader(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write([]string{
+func (storageRow) csvHeader() []string {
+	return []string{
 		"report_period_start",
 		"report_period_end",
 		"interval_start",
@@ -292,23 +232,10 @@ func (StorageRow) CSVheader(w io.Writer) error {
 		"volume_request_storage_byte_seconds",
 		"persistentvolumeclaim_usage_byte_seconds",
 		"persistentvolume_labels",
-		"persistentvolumeclaim_labels"}); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
+		"persistentvolumeclaim_labels"}
 }
 
-func (row StorageRow) CSVrow(w io.Writer) error {
-	cw := csv.NewWriter(w)
-	if err := cw.Write(row.RowString()); err != nil {
-		return err
-	}
-	cw.Flush()
-	return nil
-}
-
-func (row StorageRow) RowString() []string {
+func (row storageRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -328,6 +255,4 @@ func (row StorageRow) RowString() []string {
 	}
 }
 
-func (row StorageRow) String() string {
-	return strings.Join(row.RowString(), ",")
-}
+func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }
