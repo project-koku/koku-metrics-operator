@@ -74,13 +74,29 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	return tempDir
 }
 
+func closeAndDelete(tempDir string) error {
+	fs, err := ioutil.ReadDir(tempDir)
+	if err != nil {
+		return err
+	}
+	for _, f := range fs {
+		fname := filepath.Join(tempDir, f.Name())
+		file, err := os.Open(fname)
+		if err != nil {
+			return err
+		}
+		if err := file.Close(); err != nil {
+			return err
+		}
+	}
+	return os.RemoveAll(tempDir)
+}
+
 func TestWriteReport(t *testing.T) {
 	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
-	// tempFile := getTempFile(t, 0777, tempDir)
 	tempBadFile := getTempFile(t, 0777, tempDir)
 	tempBadFile.Close()
-	// defer tempFile.Close()
-	defer os.RemoveAll(tempDir)
+	defer closeAndDelete(tempDir)
 
 	writeReportTests := []struct {
 		name   string
