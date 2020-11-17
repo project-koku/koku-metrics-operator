@@ -111,7 +111,7 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 	return tempFile
 }
 
-func genDirCfg(dirName string) *dirconfig.DirectoryConfig {
+func genDirCfg(t *testing.T, dirName string) *dirconfig.DirectoryConfig {
 	dirCfg := dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: dirName},
 		Upload:  dirconfig.Directory{Path: filepath.Join(dirName, "upload")},
@@ -119,13 +119,14 @@ func genDirCfg(dirName string) *dirconfig.DirectoryConfig {
 		Reports: dirconfig.Directory{Path: filepath.Join(dirName, "data")},
 		Archive: dirconfig.Directory{Path: filepath.Join(dirName, "archive")},
 	}
-	folders := []string{"upload", "staging", "data", "archive"}
-	for _, folder := range folders {
-		d := filepath.Join(dirName, folder)
-		dir := dirconfig.Directory{Path: d}
-		if !dir.Exists() {
-			dir.Create()
-		}
+	if err := dirconfig.CheckExistsOrRecreate(
+		zap.New(),
+		dirCfg.Upload,
+		dirCfg.Staging,
+		dirCfg.Reports,
+		dirCfg.Archive,
+	); err != nil {
+		t.Fatalf("failed to create dirCfg: %v", err)
 	}
 	return &dirCfg
 }
@@ -364,7 +365,7 @@ func TestMoveFiles(t *testing.T) {
 	for _, tt := range moveFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			testPackager.uid = tt.fileUUID
 			got, err := testPackager.moveFiles()
 			if tt.want == nil && got != nil {
@@ -438,7 +439,7 @@ func TestPackagingReports(t *testing.T) {
 	for _, tt := range packagingReportTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			testPackager.MaxSize = tt.maxSize
 			err := testPackager.PackageReports()
 			if err == nil {
@@ -484,10 +485,12 @@ func TestGetAndRenderManifest(t *testing.T) {
 	for _, tt := range getAndRenderManifestTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			testPackager.getManifest(csvFileNames, tt.dirName)
-			testPackager.manifest.renderManifest()
+			if err := testPackager.manifest.renderManifest(); err != nil {
+				t.Fatal("failed to render manifest")
+			}
 			// check that the manifest was generated correctly
 			if testPackager.manifest.filename != filepath.Join(tt.dirName, "manifest.json") {
 				t.Errorf("Manifest was not generated correctly")
@@ -648,7 +651,7 @@ func TestWriteTarball(t *testing.T) {
 	for _, tt := range writeTarballTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			stagingDir := testPackager.DirCfg.Reports.Path
 			csvFileNames := make(map[int]string)
 			if tt.genCSVs {
@@ -656,7 +659,9 @@ func TestWriteTarball(t *testing.T) {
 			}
 			manifestName := tt.manifestName
 			testPackager.getManifest(csvFileNames, stagingDir)
-			testPackager.manifest.renderManifest()
+			if err := testPackager.manifest.renderManifest(); err != nil {
+				t.Fatal("failed to render manifest")
+			}
 			if tt.manifestName == "" {
 				manifestName = testPackager.manifest.filename
 			}
@@ -747,7 +752,7 @@ func TestSplitFiles(t *testing.T) {
 	for _, tt := range splitFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			testPackager.maxBytes = tt.maxBytes
 			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList)
 			if tt.expectErr {

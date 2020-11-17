@@ -488,6 +488,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if err != nil {
 			log.Error(err, "Failed to read upload directory.")
 		}
+		log.Info("Files ready for upload: ", "files", uploadFiles)
 
 		if uploadFiles != nil {
 			// Upload to c.rh.com

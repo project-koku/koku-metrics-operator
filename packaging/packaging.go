@@ -243,10 +243,13 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
-				return nil, false, fmt.Errorf("SplitFiles: error reading file: %v", err)
+				return nil, false, fmt.Errorf("SplitFiles: error opening file: %v", err)
 			}
 			csvReader := csv.NewReader(csvFile)
 			csvHeader, err := csvReader.Read()
+			if err != nil {
+				return nil, false, fmt.Errorf("SplitFiles: error reading file: %v", err)
+			}
 			var part int64 = 1
 			for {
 				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part)
@@ -390,10 +393,5 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("File packaging was successful.")
-	generatedFiles, err := p.ReadUploadDir()
-	log.Info("Generated the following files for upload: ")
-	for _, file := range generatedFiles {
-		log.Info(file.Name())
-	}
 	return nil
 }
