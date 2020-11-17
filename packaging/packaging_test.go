@@ -50,8 +50,6 @@ var testPackager = FilePackager{
 	Log:    log,
 	Cost:   cost,
 }
-var testManifest manifest
-var testManifestInfo manifestInfo
 
 type fakeManifest struct{}
 
@@ -111,16 +109,6 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 		t.Errorf("Failed to change permissions of temp file.")
 	}
 	return tempFile
-}
-func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
-	tempDir, err := ioutil.TempDir(dir, pattern)
-	if err != nil {
-		t.Errorf("Failed to create temp folder.")
-	}
-	if err := os.Chmod(tempDir, mode); err != nil {
-		t.Errorf("Failed to change permissions of temp file.")
-	}
-	return tempDir
 }
 
 func genDirCfg(dirName string) *dirconfig.DirectoryConfig {

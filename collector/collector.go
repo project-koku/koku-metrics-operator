@@ -43,7 +43,6 @@ var (
 )
 
 type mappedCSVStruct map[string]csvStruct
-type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
 

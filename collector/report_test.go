@@ -74,29 +74,29 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	return tempDir
 }
 
-func closeAndDelete(tempDir string) error {
+func closeAndDelete(t *testing.T, tempDir string) {
 	fs, err := ioutil.ReadDir(tempDir)
 	if err != nil {
-		return err
+		t.Fatalf("failed to read dir: %v", err)
 	}
 	for _, f := range fs {
 		fname := filepath.Join(tempDir, f.Name())
 		file, err := os.Open(fname)
 		if err != nil {
-			return err
+			t.Fatalf("failed to open: %v", err)
 		}
 		if err := file.Close(); err != nil {
-			return err
+			t.Fatalf("failed to close: %v", err)
 		}
 	}
-	return os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir)
 }
 
 func TestWriteReport(t *testing.T) {
 	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
 	tempBadFile := getTempFile(t, 0777, tempDir)
 	tempBadFile.Close()
-	defer closeAndDelete(tempDir)
+	defer closeAndDelete(t, tempDir)
 
 	writeReportTests := []struct {
 		name   string
@@ -167,10 +167,10 @@ func TestWriteReport(t *testing.T) {
 
 func TestGetOrCreateFile(t *testing.T) {
 	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
-	defer closeAndDelete(tempDir)
+	defer closeAndDelete(t, tempDir)
 
 	tempDirNoPerm := getTempDir(t, os.ModeDir, ".", "test_dir")
-	defer closeAndDelete(tempDirNoPerm)
+	defer closeAndDelete(t, tempDirNoPerm)
 
 	tempFileNoPerm := getTempFile(t, 0000, tempDir)
 

@@ -41,19 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type packager interface {
-	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
-	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string
-	getManifest(archiveFiles map[int]string, filePath string)
-	moveFiles() ([]os.FileInfo, error)
-	needSplit(fileList []os.FileInfo) bool
-	splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error)
-	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
-	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error)
-	ReadUploadDir() ([]os.FileInfo, error)
-	PackageReports() error
-}
-
 type FilePackager struct {
 	Cost     *costmgmtv1alpha1.CostManagement
 	DirCfg   *dirconfig.DirectoryConfig
