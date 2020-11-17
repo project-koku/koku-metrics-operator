@@ -6,6 +6,7 @@
 * A clone of [korekuta-go-operator](https://github.com/project-koku/korekuta-operator-go)
 * [Go 1.13 or greater](https://golang.org/doc/install)
 * [Openshift-CLI](https://docs.openshift.com/container-platform/4.5/cli_reference/openshift_cli/getting-started-cli.html) (preferably a version that matches your Openshift cluster version)
+* [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [kustomize](https://kubernetes-sigs.github.io/kustomize/installation/) (before installing this separately, check that it was not already installed along with kubectl)
 * [Docker Desktop](https://www.docker.com/products/docker-desktop)
