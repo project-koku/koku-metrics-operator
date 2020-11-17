@@ -167,10 +167,10 @@ func TestWriteReport(t *testing.T) {
 
 func TestGetOrCreateFile(t *testing.T) {
 	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
-	defer os.RemoveAll(tempDir)
+	defer closeAndDelete(tempDir)
 
 	tempDirNoPerm := getTempDir(t, os.ModeDir, ".", "test_dir")
-	defer os.RemoveAll(tempDirNoPerm)
+	defer closeAndDelete(tempDirNoPerm)
 
 	tempFileNoPerm := getTempFile(t, 0000, tempDir)
 
