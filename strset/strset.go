@@ -9,9 +9,7 @@ type Set struct {
 
 // NewSet creates a new *set
 func NewSet() *Set {
-	s := &Set{}
-	s.m = make(map[string]struct{})
-	return s
+	return &Set{m: make(map[string]struct{})}
 }
 
 // Add adds a new value to the set
@@ -28,4 +26,23 @@ func (s *Set) Remove(value string) {
 func (s *Set) Contains(value string) bool {
 	_, c := s.m[value]
 	return c
+}
+
+// Len returns the length of the set
+func (s *Set) Len() int {
+	return len(s.m)
+}
+
+// Range lets use range over the struct values
+func (s *Set) Range() <-chan string {
+	chnl := make(chan string)
+	go func() {
+		for v := range s.m {
+			chnl <- v
+		}
+
+		// Ensure that at the end of the loop we close the channel!
+		close(chnl)
+	}()
+	return chnl
 }

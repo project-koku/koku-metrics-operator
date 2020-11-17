@@ -20,29 +20,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package collector
 
 import (
-	"context"
-	"encoding/csv"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
-	"github.com/project-koku/korekuta-operator-go/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
 
 var (
-	logger logr.Logger
-
 	podFilePrefix       = "cm-openshift-pod-usage-"
 	volFilePrefix       = "cm-openshift-storage-usage-"
 	nodeFilePrefix      = "cm-openshift-node-usage-"
@@ -51,23 +42,10 @@ var (
 	statusTimeFormat = "2006-01-02 15:04:05"
 )
 
-type mappedCSVStruct map[string]CSVStruct
+type mappedCSVStruct map[string]csvStruct
 type mappedQuery map[string]string
 type mappedResults map[string]mappedValues
 type mappedValues map[string]interface{}
-type collector struct {
-	Context              context.Context
-	PrometheusConnection promv1.API
-	TimeSeries           promv1.Range
-	Log                  logr.Logger
-}
-type Report struct {
-	filename    string
-	filePath    string
-	queryType   string
-	queryData   mappedCSVStruct
-	fileHeaders CSVStruct
-}
 
 func floatToString(inputNum float64) string {
 	// to convert a float number to a string
@@ -92,7 +70,7 @@ func sumSlice(array []model.SamplePair) float64 {
 	return float64(sum)
 }
 
-func getValue(query *SaveQueryValue, array []model.SamplePair) float64 {
+func getValue(query *saveQueryValue, array []model.SamplePair) float64 {
 	switch query.Method {
 	case "sum":
 		return sumSlice(array)
@@ -103,24 +81,34 @@ func getValue(query *SaveQueryValue, array []model.SamplePair) float64 {
 	}
 }
 
-func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedResults {
+func getStruct(val mappedValues, usage csvStruct, rowResults mappedCSVStruct, key string) error {
+	if err := mapstructure.Decode(val, &usage); err != nil {
+		return fmt.Errorf("getStruct: failed to convert map to struct: %v", err)
+	}
+	rowResults[key] = usage
+	return nil
+}
+
+func getResourceID(input string) string {
+	splitString := strings.Split(input, "/")
+	return splitString[len(splitString)-1]
+}
+
+func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
+	results := *r
 	for _, stream := range matrix {
 		obj := string(stream.Metric[q.RowKey])
 		if results[obj] == nil {
 			results[obj] = mappedValues{}
 		}
 		if q.MetricKey != nil {
-			for i, field := range q.MetricKey.MetricLabel {
-				index := string(field)
-				if len(q.MetricKey.LabelMap) > 0 {
-					index = q.MetricKey.LabelMap[i]
-				}
-				results[obj][index] = string(stream.Metric[field])
+			for key, field := range q.MetricKey {
+				results[obj][key] = string(stream.Metric[field])
 			}
 		}
 		if q.MetricKeyRegex != nil {
-			for i, field := range q.MetricKeyRegex.LabelMap {
-				results[obj][field] = parseFields(stream.Metric, q.MetricKeyRegex.MetricRegex[i])
+			for key, regexField := range q.MetricKeyRegex {
+				results[obj][key] = findFields(stream.Metric, regexField)
 			}
 		}
 		if q.QueryValue != nil {
@@ -132,44 +120,20 @@ func iterateMatrix(matrix model.Matrix, q Query, results mappedResults) mappedRe
 			}
 		}
 	}
-	return results
-}
-
-func getQueryResults(q collector, queries Querys) (mappedResults, error) {
-	results := mappedResults{}
-	for _, query := range queries {
-		matrix, err := performMatrixQuery(q, query.QueryString)
-		if err != nil {
-			return nil, err
-		}
-		results = iterateMatrix(matrix, query, results)
-	}
-	return results, nil
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, promconn promv1.API, ts promv1.Range, log logr.Logger) error {
-	if logger == nil {
-		logger = log
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	log = log.WithValues("costmanagement", "GenerateReports")
-	defer cancel()
-
-	querier := collector{
-		Context:              ctx,
-		PrometheusConnection: promconn,
-		TimeSeries:           ts,
-		Log:                  log,
-	}
+func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+	log := c.Log.WithValues("costmanagement", "GenerateReports")
 
 	// yearMonth is used in filenames
-	yearMonth := ts.Start.Format("200601") // this corresponds to YYYYMM format
-	updateReportStatus(cost, ts)
+	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
+	updateReportStatus(cost, c.TimeSeries)
 
+	// ################################################################################################################
 	log.Info("querying for node metrics")
-	nodeResults, err := getQueryResults(querier, nodeQueries)
-	if err != nil {
+	nodeResults := mappedResults{}
+	if err := c.getQueryResults(nodeQueries, &nodeResults); err != nil {
 		return err
 	}
 
@@ -185,103 +149,135 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 		nodeResults[node]["resource_id"] = resourceID
 	}
 
-	log.Info("querying for pod metrics")
-	podResults, err := getQueryResults(querier, podQueries)
-	if err != nil {
-		return err
-	}
-
-	log.Info("querying for storage metrics")
-	volResults, err := getQueryResults(querier, volQueries)
-	if err != nil {
-		return err
-	}
-
-	log.Info("querying for namespaces")
-	namespaceResults, err := getQueryResults(querier, namespaceQueries)
-	if err != nil {
-		return err
-	}
-
 	nodeRows := make(mappedCSVStruct)
 	for node, val := range nodeResults {
-		usage := NewNodeRow(ts)
+		usage := newNodeRow(c.TimeSeries)
 		if err := getStruct(val, &usage, nodeRows, node); err != nil {
 			return err
 		}
 	}
-	nodeReport := Report{
-		filename:    nodeFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "node",
-		queryData:   nodeRows,
-		fileHeaders: NewNodeRow(ts),
+	emptyNodeRow := newNodeRow(c.TimeSeries)
+	nodeReport := report{
+		file: &file{
+			name: nodeFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: nodeRows,
+			headers:   emptyNodeRow.csvHeader(),
+			prefix:    emptyNodeRow.dateTimes.string(),
+		},
 	}
-	if err := writeReport(nodeReport); err != nil {
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.file.getName())
+	if err := nodeReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write node report: %v", err)
+	}
+
+	//################################################################################################################
+
+	log.Info("querying for pod metrics")
+	podResults := mappedResults{}
+	if err := c.getQueryResults(podQueries, &podResults); err != nil {
 		return err
 	}
 
 	podRows := make(mappedCSVStruct)
 	for pod, val := range podResults {
-		usage := NewPodRow(ts)
+		usage := newPodRow(c.TimeSeries)
 		if err := getStruct(val, &usage, podRows, pod); err != nil {
 			return err
 		}
 		if node, ok := val["node"]; ok {
 			// Add the Node usage to the pod.
 			if row, ok := nodeRows[node.(string)]; ok {
-				usage.NodeRow = *row.(*NodeRow)
+				usage.nodeRow = *row.(*nodeRow)
 			} else {
-				usage.NodeRow = NewNodeRow(ts)
+				usage.nodeRow = newNodeRow(c.TimeSeries)
 			}
 		}
 	}
-	podReport := Report{
-		filename:    podFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "pod",
-		queryData:   podRows,
-		fileHeaders: NewPodRow(ts),
+	emptyPodRow := newPodRow(c.TimeSeries)
+	podReport := report{
+		file: &file{
+			name: podFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: podRows,
+			headers:   emptyPodRow.csvHeader(),
+			prefix:    emptyPodRow.dateTimes.string(),
+		},
 	}
-	if err := writeReport(podReport); err != nil {
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
+	if err := podReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write pod report: %v", err)
+	}
+
+	//################################################################################################################
+
+	log.Info("querying for storage metrics")
+	volResults := mappedResults{}
+	if err := c.getQueryResults(volQueries, &volResults); err != nil {
 		return err
 	}
 
 	volRows := make(mappedCSVStruct)
 	for pvc, val := range volResults {
-		usage := NewStorageRow(ts)
+		usage := newStorageRow(c.TimeSeries)
 		if err := getStruct(val, &usage, volRows, pvc); err != nil {
 			return err
 		}
 	}
-	volReport := Report{
-		filename:    volFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "volume",
-		queryData:   volRows,
-		fileHeaders: NewStorageRow(ts),
+	emptyVolRow := newStorageRow(c.TimeSeries)
+	volReport := report{
+		file: &file{
+			name: volFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: volRows,
+			headers:   emptyVolRow.csvHeader(),
+			prefix:    emptyVolRow.dateTimes.string(),
+		},
 	}
-	if err := writeReport(volReport); err != nil {
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
+	if err := volReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write volume report: %v", err)
+	}
+
+	//################################################################################################################
+
+	log.Info("querying for namespaces")
+	namespaceResults := mappedResults{}
+	if err := c.getQueryResults(namespaceQueries, &namespaceResults); err != nil {
 		return err
 	}
 
 	namespaceRows := make(mappedCSVStruct)
 	for namespace, val := range namespaceResults {
-		usage := NewNamespaceRow(ts)
+		usage := newNamespaceRow(c.TimeSeries)
 		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
 			return err
 		}
 	}
-	namespaceReport := Report{
-		filename:    namespaceFilePrefix + yearMonth + ".csv",
-		filePath:    dirCfg.Reports.Path,
-		queryType:   "namespace",
-		queryData:   namespaceRows,
-		fileHeaders: NewNamespaceRow(ts),
+	emptyNameRow := newNamespaceRow(c.TimeSeries)
+	namespaceReport := report{
+		file: &file{
+			name: namespaceFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: namespaceRows,
+			headers:   emptyNameRow.csvHeader(),
+			prefix:    emptyNameRow.dateTimes.string(),
+		},
 	}
-	if err := writeReport(namespaceReport); err != nil {
-		return err
+	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
+	if err := namespaceReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write namespace report: %v", err)
 	}
+
+	//################################################################################################################
 
 	cost.Status.Reports.DataCollected = true
 	cost.Status.Reports.DataCollectionMessage = ""
@@ -289,12 +285,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 	return nil
 }
 
-func getResourceID(input string) string {
-	splitString := strings.Split(input, "/")
-	return splitString[len(splitString)-1]
-}
-
-func parseFields(input model.Metric, str string) string {
+func findFields(input model.Metric, str string) string {
 	result := []string{}
 	for name, val := range input {
 		name := string(name)
@@ -312,83 +303,7 @@ func parseFields(input model.Metric, str string) string {
 	}
 }
 
-func getStruct(val mappedValues, usage CSVStruct, rowResults mappedCSVStruct, key string) error {
-	if err := mapstructure.Decode(val, &usage); err != nil {
-		return fmt.Errorf("getStruct: failed to convert map to struct: %v", err)
-	}
-	rowResults[key] = usage
-	return nil
-}
-
-func writeReport(report Report) error {
-	csvFile, created, err := getOrCreateFile(report.filePath, report.filename)
-	if err != nil {
-		return fmt.Errorf("failed to get or create %s csv: %v", report.queryType, err)
-	}
-	defer csvFile.Close()
-	logMsg := fmt.Sprintf("writing %s results to file", report.queryType)
-	logger.WithValues("costmanagement", "writeResults").Info(logMsg, "filename", csvFile.Name(), "data set", report.queryType)
-	if err := writeToFile(csvFile, report.queryData, report.fileHeaders, created); err != nil {
-		return fmt.Errorf("writeReport: %v", err)
-	}
-	return nil
-}
-
-func getOrCreateFile(path, filename string) (*os.File, bool, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			return nil, false, err
-		}
-	}
-	filePath := filepath.Join(path, filename)
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		file, err := os.Create(filePath)
-		return file, true, err
-	}
-	if err != nil {
-		return nil, false, err
-	}
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_RDWR, 0644)
-	return file, false, err
-}
-
-// writeToFile compares the data to what is in the file and only adds new data to the file
-func writeToFile(file *os.File, data mappedCSVStruct, headers CSVStruct, created bool) error {
-	set, err := readCsv(file, strset.NewSet())
-	if err != nil {
-		return fmt.Errorf("writeToFile: failed to read csv: %v", err)
-	}
-	if created {
-		if err := headers.CSVheader(file); err != nil {
-			return fmt.Errorf("writeToFile: %v", err)
-		}
-	}
-
-	for _, row := range data {
-		if !set.Contains(row.String()) {
-			if err := row.CSVrow(file); err != nil {
-				return err
-			}
-		}
-	}
-
-	return file.Sync()
-}
-
-// readCsv reads the file and puts each row into a set
-func readCsv(f *os.File, set *strset.Set) (*strset.Set, error) {
-	lines, err := csv.NewReader(f).ReadAll()
-	if err != nil {
-		return set, err
-	}
-	for _, line := range lines {
-		set.Add(strings.Join(line, ","))
-	}
-	return set, nil
-}
-
-func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts promv1.Range) {
+func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts *promv1.Range) {
 	cost.Status.Reports.ReportMonth = ts.Start.Format("01")
 	cost.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }
