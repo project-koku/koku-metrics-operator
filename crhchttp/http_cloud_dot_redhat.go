@@ -39,7 +39,7 @@ import (
 )
 
 // GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
-func GetMultiPartBodyAndHeaders(logger logr.Logger, filename string) (*bytes.Buffer, *multipart.Writer) {
+func GetMultiPartBodyAndHeaders(logger logr.Logger, filename string) (*bytes.Buffer, string, error) {
 	log := logger.WithValues("costmanagement", "GetBodyAndHeaders")
 	// set the content and content type
 	buf := new(bytes.Buffer)
@@ -48,54 +48,54 @@ func GetMultiPartBodyAndHeaders(logger logr.Logger, filename string) (*bytes.Buf
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
 	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
 	fw, err := mw.CreatePart(h)
+	if err != nil {
+		return nil, "", fmt.Errorf("Failed to create part: %v", err)
+	}
 	f, err := os.Open(filename)
 	if err != nil {
 		log.Info("error opening file", err)
+		return nil, "", fmt.Errorf("Failed to open file: %v", err)
 	}
 	defer f.Close()
 	_, err = io.Copy(fw, f)
 	if err != nil {
 		log.Error(err, "The following error occurred")
+		return nil, "", fmt.Errorf("Failed to copy file: %v", err)
 	}
-	mw.Close()
-	return buf, mw
+	return buf, mw.FormDataContentType(), mw.Close()
 }
 
-// SetupRequest Adds headers to request object for communication to cloud.redhat.com
-func SetupRequest(logger logr.Logger, costConfig *CostManagementConfig, method string, uri string, body *bytes.Buffer, contentType string) (*http.Request, error) {
-	ctx := context.Background()
-	log := logger.WithValues("costmanagement", "SetupRequest")
-	req, err := http.NewRequest(method, uri, body)
+// SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
+func SetupRequest(costConfig *CostManagementConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
+	log := costConfig.Log.WithValues("costmanagement", "SetupRequest")
+
+	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
 	if err != nil {
 		log.Error(err, "Could not create request")
 		return nil, err
 	}
-	// Create the header
-	if req.Header == nil {
-		req.Header = make(http.Header)
+
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
-	req = req.WithContext(ctx)
-	req.Header.Set("Content-Type", contentType)
-	if costConfig.Authentication == "basic" {
+
+	switch costConfig.Authentication {
+	case "basic":
 		log.Info("Request using basic authentication!")
 		req.SetBasicAuth(costConfig.BasicAuthUser, costConfig.BasicAuthPassword)
-	} else {
+	default:
 		log.Info("Request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costConfig.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costConfig.OperatorCommit, costConfig.ClusterID))
 	}
-	// Log the headers - probably remove this later
-	log.Info("Request Headers:")
-	for key, val := range req.Header {
-		fmt.Println(key, val)
-	}
+
 	return req, nil
 }
 
 // GetClient Return client with certificate handling based on configuration
-func GetClient(logger logr.Logger, validateCert bool) http.Client {
-	log := logger.WithValues("costmanagement", "GetClient")
-	if validateCert {
+func GetClient(costConfig *CostManagementConfig) http.Client {
+	log := costConfig.Log.WithValues("costmanagement", "GetClient")
+	if costConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
 		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
 		if err != nil {
@@ -113,12 +113,11 @@ func GetClient(logger logr.Logger, validateCert bool) http.Client {
 			},
 		}
 		return client
-	} else {
-		log.Info("Configured to not using the certificate for this request!")
-		// Default the client
-		client := http.Client{Timeout: 30 * time.Second}
-		return client
 	}
+	log.Info("Configured to not using the certificate for this request!")
+	// Default the client
+	client := http.Client{Timeout: 30 * time.Second}
+	return client
 }
 
 // ProcessResponse Log response for request and return valid
@@ -150,15 +149,15 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string, uri string, body *bytes.Buffer, mw *multipart.Writer) (string, metav1.Time, error) {
-	log := logger.WithValues("costmanagement", "Upload")
-	req, err := SetupRequest(logger, costConfig, method, uri, body, mw.FormDataContentType())
+func Upload(costConfig *CostManagementConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
+	log := costConfig.Log.WithValues("costmanagement", "Upload")
 	currentTime := metav1.Now()
+	req, err := SetupRequest(costConfig, contentType, method, uri, body)
 	if err != nil {
 		return "", currentTime, err
 	}
 
-	client := GetClient(logger, costConfig.ValidateCert)
+	client := GetClient(costConfig)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err, "Could not send request")
@@ -170,7 +169,7 @@ func Upload(logger logr.Logger, costConfig *CostManagementConfig, method string,
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	bodyBytes, err := ProcessResponse(logger, resp)
+	bodyBytes, err := ProcessResponse(log, resp)
 	if err != nil {
 		log.Error(err, "The following error occurred")
 	}

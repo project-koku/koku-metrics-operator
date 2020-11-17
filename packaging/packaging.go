@@ -207,7 +207,9 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 	// Create the csv writer
 	writer := csv.NewWriter(splitFile)
 	// Preserve the header
-	writer.Write(csvHeader)
+	if err := writer.Write(csvHeader); err != nil {
+		return nil, false, err
+	}
 	for {
 		row, err := csvReader.Read()
 		if err == io.EOF {
@@ -216,7 +218,9 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 		} else if err != nil {
 			return nil, false, err
 		}
-		writer.Write(row)
+		if err := writer.Write(row); err != nil {
+			return nil, false, err
+		}
 		rowLen := len(strings.Join(row, ","))
 		rowSize := rowLen + int(float64(rowLen)*variance)
 		sizeEstimate += rowSize

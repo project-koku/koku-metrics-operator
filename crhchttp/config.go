@@ -22,11 +22,13 @@ package crhchttp
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/go-logr/logr"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 )
 
 // CostManagementConfig provide the data for procesing the reconcile with defaults
 type CostManagementConfig struct {
+	Log                      logr.Logger
 	ClusterID                string
 	ValidateCert             bool
 	APIURL                   string

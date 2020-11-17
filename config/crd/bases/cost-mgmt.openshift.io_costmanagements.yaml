@@ -258,11 +258,6 @@ spec:
                   description: ReportMonth is a field of CostManagementStatus to represent
                     the month for which reports are being generated.
                   type: string
-              required:
-              - data_collected
-              - data_collection_message
-              - last_hour_queried
-              - report_month
               type: object
             source:
               description: Source is a field of CostManagement to represent the observed

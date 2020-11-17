@@ -20,13 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"mime/multipart"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -368,7 +366,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	log.Info("Reconciling custom resource", "CostManagement", cost)
-	costConfig := &crhchttp.CostManagementConfig{}
+	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
 	err = ReflectSpec(r, cost, costConfig)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement status")
@@ -448,12 +446,14 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// Check if source is defined and should be confirmed/created
 	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
-		defined, errMsg, lastCheck, err := sources.SourceGetOrCreate(r.Log, costConfig)
-		cost.Status.Source.SourceDefined = &defined
-		cost.Status.Source.SourceError = errMsg
-		cost.Status.Source.LastSourceCheckTime = lastCheck
-		err = r.Status().Update(ctx, cost)
+		cost.Status.Source.SourceError = ""
+		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig)
 		if err != nil {
+			cost.Status.Source.SourceError = err.Error()
+		}
+		cost.Status.Source.SourceDefined = &defined
+		cost.Status.Source.LastSourceCheckTime = lastCheck
+		if err := r.Status().Update(ctx, cost); err != nil {
 			log.Error(err, "Failed to update CostManagement Status")
 		}
 	}
@@ -488,27 +488,31 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if err != nil {
 			log.Error(err, "Failed to read upload directory.")
 		}
-		log.Info("Files ready for upload: ", "files", uploadFiles)
 
-		if uploadFiles != nil {
+		if len(uploadFiles) > 0 {
+			var b strings.Builder
+			for _, f := range uploadFiles {
+				fmt.Fprintf(&b, "%s, ", f.Name())
+			}
+			log.Info("Files ready for upload: ", "files", b.String())
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
-			var body *bytes.Buffer
-			var mw *multipart.Writer
 
-			if len(uploadFiles) > 0 {
-				log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
-				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
-			}
+			log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
+			time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
+
 			for _, file := range uploadFiles {
 				if strings.Contains(file.Name(), "tar.gz") {
 					log.Info("Uploading the following file: ")
 					fmt.Println(file.Name())
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
+					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
+					if err != nil {
+						return ctrl.Result{}, err
+					}
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
-					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
+					uploadStatus, uploadTime, err = crhchttp.Upload(costConfig, contentType, "POST", ingressURL, body)
 					if err != nil {
 						return ctrl.Result{}, err
 					}
