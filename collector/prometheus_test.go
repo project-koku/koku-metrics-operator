@@ -486,9 +486,6 @@ func TestGetPromConn(t *testing.T) {
 
 var _ = Describe("Collector Tests", func() {
 
-	const timeout = time.Second * 60
-	const interval = time.Second * 1
-
 	BeforeEach(func() {
 		// failed test runs that don't clean up leave resources behind.
 		// &corev1.Pod{}, client.InNamespace("foo")

@@ -41,10 +41,6 @@ type fileInterface interface {
 	getOrCreateFile() (*os.File, bool, error)
 }
 
-type reportInterface interface {
-	writeReport() error
-}
-
 type data struct {
 	queryData mappedCSVStruct
 	headers   []string
