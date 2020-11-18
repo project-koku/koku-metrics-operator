@@ -28,6 +28,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/go-logr/logr"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
 )
 
@@ -115,39 +116,71 @@ type ApplicationTypeResponse struct {
 // 	applicationType ApplicationTypeDataItem
 // }
 
-// GetSourceTypeID Request the source type ID for OpenShift
-func GetSourceTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) {
-	log := costConfig.Log.WithValues("costmanagement", "GetSourceTypeID")
-	client := crhchttp.GetClient(costConfig)
-	sourceAPIRoot := costConfig.APIURL + costConfig.SourcesAPIPath
-	var emptyBytes []byte
-	emptyBody := bytes.NewBuffer(emptyBytes)
+type sourceReq struct {
+	client crhchttp.HTTPClient
+	root   string
+}
 
-	// Get Source Type ID
-	// https://cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift
-	sourceTypeURI := sourceAPIRoot + SourceTypesEndpoint + "?" + NameFilterQueryParam + "=" + OpenShiftSourceType
-	req, err := crhchttp.SetupRequest(costConfig, "", "GET", sourceTypeURI, emptyBody)
+func getRequest(costConfig *crhchttp.CostManagementConfig, root, endpoint string) (*http.Request, error) {
+	uri := root + endpoint
+	return crhchttp.SetupRequest(costConfig, "", "GET", uri, &bytes.Buffer{})
+}
+
+func jsonRequest(costConfig *crhchttp.CostManagementConfig, values map[string]string, root, endpoint string) (*http.Request, error) {
+	uri := root + endpoint
+	jsonValue, err := json.Marshal(values)
 	if err != nil {
-		return "", fmt.Errorf("Failed to construct query for OpenShift source type from Sources API: %v", err)
+		return nil, fmt.Errorf("Failed to construct body for call to create a Source with the Sources API: %v", err)
 	}
-	log.Info("GET Request - " + sourceTypeURI)
-	resp, err := client.Do(req)
+	return crhchttp.SetupRequest(costConfig, "application/json", "POST", uri, bytes.NewBuffer(jsonValue))
+}
+
+func addKeyValues(r *http.Request, kvs map[string]string) {
+	q := r.URL.Query()
+	for k, v := range kvs {
+		q.Add(k, v)
+	}
+	r.URL.RawQuery = q.Encode()
+}
+
+func doRequest(log logr.Logger, r *http.Request, client crhchttp.HTTPClient, errKey string) ([]byte, error) {
+	resp, err := client.Do(r)
 	if err != nil {
-		log.Error(err, "Could not send request")
-		return "", fmt.Errorf("Failed to query OpenShift source type from Sources API: %v", err)
+		return nil, fmt.Errorf("Failed to query Sources API (%s) for %s: %v", r.URL.Path, errKey, err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
+	respMsg := fmt.Sprintf("HTTP Response Status: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+	log.Info(respMsg)
 
-	bodyBytes, err := crhchttp.ProcessResponse(log, resp)
+	byteBody, err := crhchttp.ProcessResponse(log, resp)
 	if err != nil {
-		log.Error(err, "The following error occurred")
-		return "", fmt.Errorf("Failed to process the response for obtaining the OpenShift source type ID: %v", err)
+		return nil, fmt.Errorf("Failed to process the response for %s: %v", errKey, err)
 	}
-	bodyString := string(bodyBytes)
-	log.Info("Response body: ")
-	log.Info(bodyString)
+
+	return byteBody, nil
+}
+
+// GetSourceTypeID Request the source type ID for OpenShift
+func (r *sourceReq) GetSourceTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) {
+	log := costConfig.Log.WithValues("costmanagement", "GetSourceTypeID")
+	queries := map[string]string{
+		NameFilterQueryParam: OpenShiftSourceType,
+	}
+
+	// Get Source Type ID
+	// https://cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift
+	req, err := getRequest(costConfig, r.root, SourceTypesEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("Failed to construct query for OpenShift source type from Sources API: %v", err)
+	}
+	addKeyValues(req, queries)
+
+	log.Info("GET Request - " + req.URL.Path)
+	bodyBytes, err := doRequest(log, req, r.client, "source type lookup")
+	if err != nil {
+		return "", err
+	}
 
 	var data SourceTypeResponse
 	err = json.Unmarshal(bodyBytes, &data)
@@ -166,57 +199,37 @@ func GetSourceTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) 
 }
 
 // CheckSourceExists Determine if the source exists with given parameters
-func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, sourceTypeID string, name string, sourceRef string) (*SourceItem, error) {
+func (r *sourceReq) CheckSourceExists(costConfig *crhchttp.CostManagementConfig, sourceTypeID string, name string, sourceRef string) (*SourceItem, error) {
 	log := costConfig.Log.WithValues("costmanagement", "CheckSourceExists")
-	client := crhchttp.GetClient(costConfig)
-	sourceAPIRoot := costConfig.APIURL + costConfig.SourcesAPIPath
-	var emptyBytes []byte
-	emptyBody := bytes.NewBuffer(emptyBytes)
+	queries := map[string]string{}
+	if sourceTypeID != "" {
+		queries[SourceTypeIDFilterQueryParam] = sourceTypeID
+	}
+	if name != "" {
+		queries[NameFilterQueryParam] = name
+	}
+	if sourceRef != "" {
+		queries[SourceRefFilterQueryParam] = sourceRef
+	}
 
 	// Check if Source exists already
 	// https://cloud.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
-	sourceURI := sourceAPIRoot + SourcesEndpoint
-	req, err := crhchttp.SetupRequest(costConfig, "", "GET", sourceURI, emptyBody)
+	req, err := getRequest(costConfig, r.root, SourcesEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct query for OpenShift sources from Sources API: %v", err)
 	}
-	q := req.URL.Query()
+	addKeyValues(req, queries)
 
-	if sourceTypeID != "" {
-		q.Add(SourceTypeIDFilterQueryParam, sourceTypeID)
-	}
-	if name != "" {
-		q.Add(NameFilterQueryParam, name)
-	}
-	if sourceRef != "" {
-		q.Add(SourceRefFilterQueryParam, sourceRef)
-	}
-	req.URL.RawQuery = q.Encode()
-
-	log.Info("GET Request - " + q.Encode())
-	resp, err := client.Do(req)
+	log.Info("GET Request - " + req.URL.Path)
+	bodyBytes, err := doRequest(log, req, r.client, "obtaining the OpenShift source")
 	if err != nil {
-		log.Error(err, "Could not send request")
-		return nil, fmt.Errorf("Failed to query OpenShift sources from Sources API: %v", err)
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
-
-	bodyBytes, err := crhchttp.ProcessResponse(log, resp)
-	if err != nil {
-		log.Error(err, "The following error occurred")
-		return nil, fmt.Errorf("Failed to process the response for obtaining the OpenShift source: %v", err)
-	}
-	bodyString := string(bodyBytes)
-	log.Info("Response body: ")
-	log.Info(bodyString)
 
 	var data SourceResponse
 	err = json.Unmarshal(bodyBytes, &data)
 	if err != nil {
-		log.Error(err, "Could not parse output of response")
-		return nil, fmt.Errorf("Failed to parse OpenShift source type response from Sources API: %v", err)
+		return nil, fmt.Errorf("Failed to parse OpenShift source response from Sources API: %v", err)
 	}
 
 	if data.Meta.Count != 1 {
@@ -228,38 +241,26 @@ func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, sourceTypeID s
 }
 
 // GetApplicationTypeID Request the application type ID for Cost Management
-func GetApplicationTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) {
+func (r *sourceReq) GetApplicationTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) {
 	log := costConfig.Log.WithValues("costmanagement", "GetApplicationTypeID")
-	client := crhchttp.GetClient(costConfig)
-	sourceAPIRoot := costConfig.APIURL + costConfig.SourcesAPIPath
-	var emptyBytes []byte
-	emptyBody := bytes.NewBuffer(emptyBytes)
+	queries := map[string]string{
+		NameFilterQueryParam: CostManagementAppType,
+	}
 
 	// Get Application Type ID
 	// https://cloud.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management
-	appTypeURI := sourceAPIRoot + ApplicationTypesEndpoint + "?" + NameFilterQueryParam + "=" + CostManagementAppType
-	req, err := crhchttp.SetupRequest(costConfig, "", "GET", appTypeURI, emptyBody)
+	req, err := getRequest(costConfig, r.root, ApplicationTypesEndpoint)
 	if err != nil {
-		return "", fmt.Errorf("Failed to construct query for Cost Management application type from Sources API: %v", err)
+		return "", fmt.Errorf("Failed to construct query for OpenShift sources from Sources API: %v", err)
 	}
-	log.Info("GET Request - " + appTypeURI)
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Error(err, "Could not send request")
-		return "", fmt.Errorf("Failed to query Cost Management application type from Sources API: %v", err)
-	}
-	defer resp.Body.Close()
+	addKeyValues(req, queries)
 
-	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
-
-	bodyBytes, err := crhchttp.ProcessResponse(log, resp)
+	log.Info("GET Request - " + req.URL.Path)
+	bodyBytes, err := doRequest(log, req, r.client, "application type lookup")
 	if err != nil {
 		log.Error(err, "The following error occurred")
-		return "", fmt.Errorf("Failed to process the response for obtaining the Cost Management application type ID: %v", err)
+		return "", err
 	}
-	bodyString := string(bodyBytes)
-	log.Info("Response body: ")
-	log.Info(bodyString)
 
 	var data ApplicationTypeResponse
 	err = json.Unmarshal(bodyBytes, &data)
@@ -278,43 +279,22 @@ func GetApplicationTypeID(costConfig *crhchttp.CostManagementConfig) (string, er
 }
 
 // PostSource Creates a source with the provided name and cluster ID
-func PostSource(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) (*SourceItem, error) {
+func (r *sourceReq) PostSource(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) (*SourceItem, error) {
 	log := costConfig.Log.WithValues("costmanagement", "PostSource")
-	client := crhchttp.GetClient(costConfig)
-	sourceAPIRoot := costConfig.APIURL + costConfig.SourcesAPIPath
-
 	// Post Source
 	// https://cloud.redhat.com/api/sources/v1.0/sources
 	// BODY:
 	// {"source_type_id": "1", "name": "source_name", "source_ref": "clusterId"}
-	sourceURI := sourceAPIRoot + SourcesEndpoint
 	values := map[string]string{"source_type_id": sourceTypeID, "name": costConfig.SourceName, "source_ref": costConfig.ClusterID}
-	jsonValue, err := json.Marshal(values)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to construct body for call to create a Source with the Sources API: %v", err)
-	}
-	req, err := crhchttp.SetupRequest(costConfig, "application/json", "POST", sourceURI, bytes.NewBuffer(jsonValue))
+	req, err := jsonRequest(costConfig, values, r.root, SourcesEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct call to create a Source with the Sources API: %v", err)
 	}
-	log.Info("POST Request - " + sourceURI)
-	resp, err := client.Do(req)
+	log.Info("POST Request - " + req.URL.Path)
+	bodyBytes, err := doRequest(log, req, r.client, "creating the OpenShift source")
 	if err != nil {
-		log.Error(err, "Could not send request")
-		return nil, fmt.Errorf("Failed to send request to create a Source with the Sources API: %v", err)
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
-
-	bodyBytes, err := crhchttp.ProcessResponse(log, resp)
-	if err != nil {
-		log.Error(err, "The following error occurred")
-		return nil, fmt.Errorf("Failed to process the response for creating the OpenShift source: %v", err)
-	}
-	bodyString := string(bodyBytes)
-	log.Info("Response body: ")
-	log.Info(bodyString)
 
 	var data SourceItem
 	err = json.Unmarshal(bodyBytes, &data)
@@ -326,63 +306,43 @@ func PostSource(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) 
 }
 
 // PostApplication Associate a source with an application
-func PostApplication(costConfig *crhchttp.CostManagementConfig, source *SourceItem, appTypeID string) (*SourceItem, error) {
+func (r *sourceReq) PostApplication(costConfig *crhchttp.CostManagementConfig, source *SourceItem, appTypeID string) error {
 	log := costConfig.Log.WithValues("costmanagement", "PostApplication")
-	client := crhchttp.GetClient(costConfig)
-	sourceAPIRoot := costConfig.APIURL + costConfig.SourcesAPIPath
 
 	// Post Source
 	// https://cloud.redhat.com/api/sources/v1.0/applications
 	// BODY:
 	// {"source_id": "source", "application_type_id": "app_type"}
-	applicationURI := sourceAPIRoot + ApplicationsEndpoint
 	values := map[string]string{"source_id": source.ID, "application_type_id": appTypeID}
-	jsonValue, err := json.Marshal(values)
+	req, err := jsonRequest(costConfig, values, r.root, ApplicationsEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to construct body for call to associate an Application with a Source using the Sources API: %v", err)
+		return fmt.Errorf("Failed to construct call to create an Application for a Source using the Sources API: %v", err)
 	}
-	req, err := crhchttp.SetupRequest(costConfig, "application/json", "POST", applicationURI, bytes.NewBuffer(jsonValue))
+	log.Info("POST Request - " + req.URL.Path)
+	_, err = doRequest(log, req, r.client, "creating the OpenShift source with the Cost Management application")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to construct call to create an Application for a Source using the Sources API: %v", err)
+		return err
 	}
-	log.Info("POST Request - " + applicationURI)
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Error(err, "Could not send request")
-		return nil, fmt.Errorf("Failed to send request to create an Application with the Sources API: %v", err)
-	}
-	defer resp.Body.Close()
 
-	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
-
-	bodyBytes, err := crhchttp.ProcessResponse(log, resp)
-	if err != nil {
-		log.Error(err, "The following error occurred")
-		return nil, fmt.Errorf("Failed to process the response for associating the OpenShift source with the Cost Management application: %v", err)
-	}
-	bodyString := string(bodyBytes)
-	log.Info("Response body: ")
-	log.Info(bodyString)
-
-	return source, nil
+	return nil
 }
 
 // SourceCreate Creates a source with the provided name and cluster ID
-func SourceCreate(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) (*SourceItem, error) {
+func (r *sourceReq) SourceCreate(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) (*SourceItem, error) {
 	log := costConfig.Log.WithValues("costmanagement", "SourceGetOrCreate")
 
 	// Get App Type ID
-	appTypeID, err := GetApplicationTypeID(costConfig)
+	appTypeID, err := r.GetApplicationTypeID(costConfig)
 	if err != nil {
 		return nil, err
 	}
 	log.Info("Cost Management application type is " + appTypeID)
 
 	// Create the source
-	source, err := PostSource(costConfig, sourceTypeID)
+	source, err := r.PostSource(costConfig, sourceTypeID)
 	if err == nil {
 		// Associate the source with Cost Management
-		source, err = PostApplication(costConfig, source, appTypeID)
+		err = r.PostApplication(costConfig, source, appTypeID)
 	}
 
 	return source, err
@@ -392,16 +352,20 @@ func SourceCreate(costConfig *crhchttp.CostManagementConfig, sourceTypeID string
 func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.Time, error) {
 	log := costConfig.Log.WithValues("costmanagement", "SourceGetOrCreate")
 	currentTime := metav1.Now()
+	request := &sourceReq{
+		client: crhchttp.GetClient(costConfig),
+		root:   costConfig.APIURL + costConfig.SourcesAPIPath,
+	}
 
 	// Get Source Type ID
-	openShiftSourceTypeID, err := GetSourceTypeID(costConfig)
+	openShiftSourceTypeID, err := request.GetSourceTypeID(costConfig)
 	if err != nil {
 		return false, currentTime, err
 	}
 	log.Info("OpenShift source type is " + openShiftSourceTypeID)
 
 	// Check if Source exists already
-	source, err := CheckSourceExists(costConfig, openShiftSourceTypeID, costConfig.SourceName, costConfig.ClusterID)
+	source, err := request.CheckSourceExists(costConfig, openShiftSourceTypeID, costConfig.SourceName, costConfig.ClusterID)
 	if err != nil {
 		return false, currentTime, err
 	}
@@ -415,7 +379,7 @@ func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.
 	log.Info("No OpenShift source registered with name " + costConfig.SourceName + " and Cluster ID " + costConfig.ClusterID + ".")
 
 	// Check if cluster ID is registered
-	source, err = CheckSourceExists(costConfig, openShiftSourceTypeID, "", costConfig.ClusterID)
+	source, err = request.CheckSourceExists(costConfig, openShiftSourceTypeID, "", costConfig.ClusterID)
 	if err != nil {
 		return false, currentTime, err
 	}
@@ -428,7 +392,7 @@ func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.
 	}
 
 	// Check if source name is already in use
-	source, err = CheckSourceExists(costConfig, "", costConfig.SourceName, "")
+	source, err = request.CheckSourceExists(costConfig, "", costConfig.SourceName, "")
 	if err != nil {
 		return false, currentTime, err
 	}
@@ -449,7 +413,7 @@ func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.
 	log.Info("Attempting to create OpenShift source registered with name " + costConfig.SourceName + " and Cluster ID " + costConfig.ClusterID + ".")
 
 	// Create the source
-	_, err = SourceCreate(costConfig, openShiftSourceTypeID)
+	_, err = request.SourceCreate(costConfig, openShiftSourceTypeID)
 	if err != nil {
 		return false, metav1.Now(), err
 	}

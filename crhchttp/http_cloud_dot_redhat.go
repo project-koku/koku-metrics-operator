@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/http/httputil"
 	"net/textproto"
 	"os"
 	"time"
@@ -38,9 +39,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Client is an http.Client
+var Client HTTPClient
+
+// HTTPClient gives us a testable interface
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
-func GetMultiPartBodyAndHeaders(logger logr.Logger, filename string) (*bytes.Buffer, string, error) {
-	log := logger.WithValues("costmanagement", "GetBodyAndHeaders")
+func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) {
 	// set the content and content type
 	buf := new(bytes.Buffer)
 	mw := multipart.NewWriter(buf)
@@ -53,13 +61,11 @@ func GetMultiPartBodyAndHeaders(logger logr.Logger, filename string) (*bytes.Buf
 	}
 	f, err := os.Open(filename)
 	if err != nil {
-		log.Info("error opening file", err)
 		return nil, "", fmt.Errorf("Failed to open file: %v", err)
 	}
 	defer f.Close()
 	_, err = io.Copy(fw, f)
 	if err != nil {
-		log.Error(err, "The following error occurred")
 		return nil, "", fmt.Errorf("Failed to copy file: %v", err)
 	}
 	return buf, mw.FormDataContentType(), mw.Close()
@@ -71,8 +77,7 @@ func SetupRequest(costConfig *CostManagementConfig, contentType, method, uri str
 
 	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
 	if err != nil {
-		log.Error(err, "Could not create request")
-		return nil, err
+		return nil, fmt.Errorf("could not create request: %v", err)
 	}
 
 	if contentType != "" {
@@ -93,57 +98,55 @@ func SetupRequest(costConfig *CostManagementConfig, contentType, method, uri str
 }
 
 // GetClient Return client with certificate handling based on configuration
-func GetClient(costConfig *CostManagementConfig) http.Client {
+func GetClient(costConfig *CostManagementConfig) HTTPClient {
 	log := costConfig.Log.WithValues("costmanagement", "GetClient")
 	if costConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
 		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
 		if err != nil {
-			log.Error(err, "The following error occurred: ")
+			log.Error(err, "The following error occurred: ") // TODO fix this error handling
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 
-		client := http.Client{
-			Timeout: 30 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: caCertPool,
-				},
-			},
+		transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: caCertPool}}
+		return &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		}
-		return client
 	}
 	log.Info("Configured to not using the certificate for this request!")
 	// Default the client
-	client := http.Client{Timeout: 30 * time.Second}
-	return client
+	return &http.Client{Timeout: 30 * time.Second}
 }
 
 // ProcessResponse Log response for request and return valid
 func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 	log := logger.WithValues("costmanagement", "ProcessResponse")
-	// Add error handling and logging here
-	requestID := resp.Header.Get("x-rh-insights-request-id")
+	log.Info("request response",
+		"method", resp.Request.Method,
+		"status", resp.StatusCode,
+		"URL", resp.Request.URL,
+		"x-rh-insights-request-id", resp.Header.Get("x-rh-insights-request-id"))
 
-	log.Info(fmt.Sprintf("gateway server %s - %s returned %d, x-rh-insights-request-id=%s", resp.Request.Method, resp.Request.URL, resp.StatusCode, requestID))
+	dump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dump response body: %v", err)
+	}
+	log.Info(fmt.Sprintf("request response:\n%s", dump))
+
+	bodySlice := bytes.SplitN(dump, []byte("\r\n\r\n"), 2)
+	if len(bodySlice) != 2 {
+		return nil, fmt.Errorf("failed to read response body: DumpResponse split length does not equal 2")
+	}
+	body := bodySlice[1]
+
 	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		if len(body) > 1024 {
-			body = body[:1024]
-		}
-		log.Info(fmt.Sprintf("Error Response Body: %s", string(body)))
-		return nil, fmt.Errorf(string(body))
+		return nil, fmt.Errorf("error response: %s", body)
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Info(fmt.Sprintf("Successfully request x-rh-insights-request-id=%s", requestID))
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Error(err, "Error occurred reading the response body.")
-			return nil, err
-		}
-		return bodyBytes, nil
+		return body, nil
 	}
 	return nil, fmt.Errorf("Unexpected Response")
 }
@@ -160,22 +163,17 @@ func Upload(costConfig *CostManagementConfig, contentType, method, uri string, b
 	client := GetClient(costConfig)
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error(err, "Could not send request")
-		return "", currentTime, err
+		return "", currentTime, fmt.Errorf("could not send the request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("HTTP Response Status:", resp.StatusCode, http.StatusText(resp.StatusCode))
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	bodyBytes, err := ProcessResponse(log, resp)
+	_, err = ProcessResponse(log, resp)
 	if err != nil {
-		log.Error(err, "The following error occurred")
+		return "", currentTime, fmt.Errorf("failed to process the response: %v", err)
 	}
-	bodyString := string(bodyBytes)
-	log.Info("Response body: ")
-	log.Info(bodyString)
 
-	return uploadStatus, uploadTime, err
+	return uploadStatus, uploadTime, nil
 }

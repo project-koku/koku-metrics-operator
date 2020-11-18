@@ -450,6 +450,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig)
 		if err != nil {
 			cost.Status.Source.SourceError = err.Error()
+			log.Info("source get or create failure", "error", err)
 		}
 		cost.Status.Source.SourceDefined = &defined
 		cost.Status.Source.LastSourceCheckTime = lastCheck
@@ -504,16 +505,17 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 			for _, file := range uploadFiles {
 				if strings.Contains(file.Name(), "tar.gz") {
-					log.Info("Uploading the following file: ")
-					fmt.Println(file.Name())
+					log.Info(fmt.Sprintf("Uploading file: %s", file.Name()))
 					// grab the body and the multipart file header
-					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
+					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file.Name()))
 					if err != nil {
+						log.Error(err, "failed to set multipart body and headers")
 						return ctrl.Result{}, err
 					}
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(costConfig, contentType, "POST", ingressURL, body)
 					if err != nil {
+						log.Error(err, "upload failed")
 						return ctrl.Result{}, err
 					}
 					if uploadStatus != "" {
