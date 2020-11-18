@@ -104,18 +104,6 @@ type ApplicationTypeResponse struct {
 	Data []ApplicationTypeDataItem
 }
 
-// type SourceHandler struct {
-// 	Log     *logr.Logger
-// 	CostCfg *crhchttp.CostManagementConfig
-// 	source  source
-// }
-
-// type source struct {
-// 	sourceType      SourceTypeDataItem
-// 	sourceItem      SourceItem
-// 	applicationType ApplicationTypeDataItem
-// }
-
 type sourceGetReq struct {
 	client   crhchttp.HTTPClient
 	root     string
@@ -185,10 +173,10 @@ func doRequest(log logr.Logger, r *http.Request, client crhchttp.HTTPClient, err
 }
 
 // GetSourceTypeID Request the source type ID for OpenShift
-func GetSourceTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) {
+func GetSourceTypeID(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient) (string, error) {
 	log := costConfig.Log.WithValues("costmanagement", "GetSourceTypeID")
 	request := &sourceGetReq{
-		client:   crhchttp.GetClient(costConfig),
+		client:   client,
 		root:     costConfig.APIURL + costConfig.SourcesAPIPath,
 		endpoint: SourceTypesEndpoint,
 		queries:  map[string]string{NameFilterQueryParam: OpenShiftSourceType},
@@ -219,10 +207,10 @@ func GetSourceTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) 
 }
 
 // CheckSourceExists Determine if the source exists with given parameters
-func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, sourceTypeID string, name string, sourceRef string) (*SourceItem, error) {
+func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient, sourceTypeID string, name string, sourceRef string) (*SourceItem, error) {
 	log := costConfig.Log.WithValues("costmanagement", "CheckSourceExists")
 	request := &sourceGetReq{
-		client:   crhchttp.GetClient(costConfig),
+		client:   client,
 		root:     costConfig.APIURL + costConfig.SourcesAPIPath,
 		endpoint: SourcesEndpoint,
 		errKey:   "obtaining the OpenShift source",
@@ -261,10 +249,10 @@ func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, sourceTypeID s
 }
 
 // GetApplicationTypeID Request the application type ID for Cost Management
-func GetApplicationTypeID(costConfig *crhchttp.CostManagementConfig) (string, error) {
+func GetApplicationTypeID(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient) (string, error) {
 	log := costConfig.Log.WithValues("costmanagement", "GetApplicationTypeID")
 	request := &sourceGetReq{
-		client:   crhchttp.GetClient(costConfig),
+		client:   client,
 		root:     costConfig.APIURL + costConfig.SourcesAPIPath,
 		endpoint: ApplicationTypesEndpoint,
 		queries:  map[string]string{NameFilterQueryParam: CostManagementAppType},
@@ -295,10 +283,10 @@ func GetApplicationTypeID(costConfig *crhchttp.CostManagementConfig) (string, er
 }
 
 // PostSource Creates a source with the provided name and cluster ID
-func PostSource(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) (*SourceItem, error) {
+func PostSource(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
 	log := costConfig.Log.WithValues("costmanagement", "PostSource")
 	request := &sourcePostReq{
-		client:   crhchttp.GetClient(costConfig),
+		client:   client,
 		root:     costConfig.APIURL + costConfig.SourcesAPIPath,
 		endpoint: SourcesEndpoint,
 		values:   map[string]string{"source_type_id": sourceTypeID, "name": costConfig.SourceName, "source_ref": costConfig.ClusterID},
@@ -324,9 +312,9 @@ func PostSource(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) 
 }
 
 // PostApplication Associate a source with an application
-func PostApplication(costConfig *crhchttp.CostManagementConfig, source *SourceItem, appTypeID string) error {
+func PostApplication(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient, source *SourceItem, appTypeID string) error {
 	request := &sourcePostReq{
-		client:   crhchttp.GetClient(costConfig),
+		client:   client,
 		root:     costConfig.APIURL + costConfig.SourcesAPIPath,
 		endpoint: ApplicationsEndpoint,
 		values:   map[string]string{"source_id": source.ID, "application_type_id": appTypeID},
@@ -346,21 +334,21 @@ func PostApplication(costConfig *crhchttp.CostManagementConfig, source *SourceIt
 }
 
 // SourceCreate Creates a source with the provided name and cluster ID
-func SourceCreate(costConfig *crhchttp.CostManagementConfig, sourceTypeID string) (*SourceItem, error) {
+func SourceCreate(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
 	log := costConfig.Log.WithValues("costmanagement", "SourceGetOrCreate")
 
 	// Get App Type ID
-	appTypeID, err := GetApplicationTypeID(costConfig)
+	appTypeID, err := GetApplicationTypeID(costConfig, client)
 	if err != nil {
 		return nil, err
 	}
 	log.Info("Cost Management application type is " + appTypeID)
 
 	// Create the source
-	source, err := PostSource(costConfig, sourceTypeID)
+	source, err := PostSource(costConfig, client, sourceTypeID)
 	if err == nil {
 		// Associate the source with Cost Management
-		err = PostApplication(costConfig, source, appTypeID)
+		err = PostApplication(costConfig, client, source, appTypeID)
 	}
 
 	return source, err
@@ -369,17 +357,18 @@ func SourceCreate(costConfig *crhchttp.CostManagementConfig, sourceTypeID string
 // SourceGetOrCreate Check if source exists, if not create the source if specified
 func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.Time, error) {
 	log := costConfig.Log.WithValues("costmanagement", "SourceGetOrCreate")
+	client := crhchttp.GetClient(costConfig)
 	currentTime := metav1.Now()
 
 	// Get Source Type ID
-	openShiftSourceTypeID, err := GetSourceTypeID(costConfig)
+	openShiftSourceTypeID, err := GetSourceTypeID(costConfig, client)
 	if err != nil {
 		return false, currentTime, err
 	}
 	log.Info("OpenShift source type is " + openShiftSourceTypeID)
 
 	// Check if Source exists already
-	source, err := CheckSourceExists(costConfig, openShiftSourceTypeID, costConfig.SourceName, costConfig.ClusterID)
+	source, err := CheckSourceExists(costConfig, client, openShiftSourceTypeID, costConfig.SourceName, costConfig.ClusterID)
 	if err != nil {
 		return false, currentTime, err
 	}
@@ -393,7 +382,7 @@ func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.
 	log.Info("No OpenShift source registered with name " + costConfig.SourceName + " and Cluster ID " + costConfig.ClusterID + ".")
 
 	// Check if cluster ID is registered
-	source, err = CheckSourceExists(costConfig, openShiftSourceTypeID, "", costConfig.ClusterID)
+	source, err = CheckSourceExists(costConfig, client, openShiftSourceTypeID, "", costConfig.ClusterID)
 	if err != nil {
 		return false, currentTime, err
 	}
@@ -406,7 +395,7 @@ func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.
 	}
 
 	// Check if source name is already in use
-	source, err = CheckSourceExists(costConfig, "", costConfig.SourceName, "")
+	source, err = CheckSourceExists(costConfig, client, "", costConfig.SourceName, "")
 	if err != nil {
 		return false, currentTime, err
 	}
@@ -427,7 +416,7 @@ func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.
 	log.Info("Attempting to create OpenShift source registered with name " + costConfig.SourceName + " and Cluster ID " + costConfig.ClusterID + ".")
 
 	// Create the source
-	_, err = SourceCreate(costConfig, openShiftSourceTypeID)
+	_, err = SourceCreate(costConfig, client, openShiftSourceTypeID)
 	if err != nil {
 		return false, metav1.Now(), err
 	}
