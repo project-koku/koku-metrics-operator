@@ -126,7 +126,7 @@ func genDirCfg(t *testing.T, dirName string) *dirconfig.DirectoryConfig {
 		dirCfg.Reports,
 		dirCfg.Archive,
 	); err != nil {
-		t.Fatalf("failed to create dirCfg: %v", err)
+		t.Logf("failed to create dirCfg: %v", err)
 	}
 	return &dirCfg
 }
