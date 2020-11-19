@@ -269,6 +269,10 @@ spec:
                     default is 1440 min (24 hours).
                   format: int64
                   type: integer
+                create_source:
+                  description: CreateSource is a field of CostManagementStatus to
+                    represent if the source should be created if not found.
+                  type: boolean
                 error:
                   description: SourceError is a field of CostManagementStatus to represent
                     the error encountered creating the source.

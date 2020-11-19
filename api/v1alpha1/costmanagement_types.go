@@ -263,6 +263,10 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
+	// CreateSource is a field of CostManagementStatus to represent if the source should be created if not found.
+	// +optional
+	CreateSource *bool `json:"create_source,omitempty"`
+
 	// SourceError is a field of CostManagementStatus to represent the error encountered creating the source.
 	// +optional
 	SourceError string `json:"error,omitempty"`

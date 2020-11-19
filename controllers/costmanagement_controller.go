@@ -169,6 +169,8 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	if cost.Spec.Source.CreateSource != nil {
 		costConfig.CreateSource = *cost.Spec.Source.CreateSource
 	}
+	cost.Status.Source.CreateSource = &costConfig.CreateSource
+
 	sourceCycleChange := false
 	if !reflect.DeepEqual(cost.Spec.Source.CheckCycle, cost.Status.Source.CheckCycle) {
 		cost.Status.Source.CheckCycle = cost.Spec.Source.CheckCycle
@@ -450,7 +452,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig)
 		if err != nil {
 			cost.Status.Source.SourceError = err.Error()
-			log.Info("source get or create failure", "error", err)
+			log.Info("source get or create message", "error", err)
 		}
 		cost.Status.Source.SourceDefined = &defined
 		cost.Status.Source.LastSourceCheckTime = lastCheck

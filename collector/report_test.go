@@ -75,7 +75,7 @@ func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 }
 
 func TestWriteReport(t *testing.T) {
-	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
+	tempDir := getTempDir(t, os.ModePerm, "./test_files", "test-dir-*")
 	tempBadFile := getTempFile(t, 0777, tempDir)
 	tempBadFile.Close()
 	defer os.RemoveAll(tempDir)
@@ -148,10 +148,10 @@ func TestWriteReport(t *testing.T) {
 }
 
 func TestGetOrCreateFile(t *testing.T) {
-	tempDir := getTempDir(t, os.ModePerm, ".", "test_dir")
+	tempDir := getTempDir(t, os.ModePerm, "./test_files", "test-dir-*")
 	defer os.RemoveAll(tempDir)
 
-	tempDirNoPerm := getTempDir(t, os.ModeDir, ".", "test_dir")
+	tempDirNoPerm := getTempDir(t, os.ModeDir, "./test_files", "test-dir-*")
 	defer os.RemoveAll(tempDirNoPerm)
 
 	tempFileNoPerm := getTempFile(t, 0000, tempDir)
