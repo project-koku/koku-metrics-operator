@@ -106,7 +106,7 @@ func boolReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostMan
 			*statusItem = *pointer.Bool(defaultVal)
 		}
 	}
-	return *statusItem, (changed && *statusItem) // if _new_ status is false, `changed` is returned as false
+	return *statusItem, changed
 }
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
