@@ -95,6 +95,11 @@ func (in *CloudDotRedHatSourceStatus) DeepCopyInto(out *CloudDotRedHatSourceStat
 		*out = new(bool)
 		**out = **in
 	}
+	if in.CreateSource != nil {
+		in, out := &in.CreateSource, &out.CreateSource
+		*out = new(bool)
+		**out = **in
+	}
 	in.LastSourceCheckTime.DeepCopyInto(&out.LastSourceCheckTime)
 	if in.CheckCycle != nil {
 		in, out := &in.CheckCycle, &out.CheckCycle

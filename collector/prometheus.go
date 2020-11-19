@@ -41,14 +41,10 @@ import (
 )
 
 var (
-	costQuerier PrometheusConfig
-	promConn    promv1.API
-
-	costMgmtNamespace   = "openshift-cost"
-	monitoringNamespace = "openshift-monitoring"
-	secretKey           = "token"
-	serviceAccountName  = "default"
-	tokenRegex          = "default-token-*"
+	costMgmtNamespace  = "openshift-cost"
+	secretKey          = "token"
+	serviceAccountName = "default"
+	tokenRegex         = "default-token-*"
 
 	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
 )

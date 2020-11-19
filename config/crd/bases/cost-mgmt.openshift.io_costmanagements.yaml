@@ -258,11 +258,6 @@ spec:
                   description: ReportMonth is a field of CostManagementStatus to represent
                     the month for which reports are being generated.
                   type: string
-              required:
-              - data_collected
-              - data_collection_message
-              - last_hour_queried
-              - report_month
               type: object
             source:
               description: Source is a field of CostManagement to represent the observed
@@ -274,6 +269,10 @@ spec:
                     default is 1440 min (24 hours).
                   format: int64
                   type: integer
+                create_source:
+                  description: CreateSource is a field of CostManagementStatus to
+                    represent if the source should be created if not found.
+                  type: boolean
                 error:
                   description: SourceError is a field of CostManagementStatus to represent
                     the error encountered creating the source.

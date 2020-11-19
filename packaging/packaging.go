@@ -41,19 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type packager interface {
-	addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error
-	buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string
-	getManifest(archiveFiles map[int]string, filePath string)
-	moveFiles() ([]os.FileInfo, error)
-	needSplit(fileList []os.FileInfo) bool
-	splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error)
-	writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error
-	writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error)
-	ReadUploadDir() ([]os.FileInfo, error)
-	PackageReports() error
-}
-
 type FilePackager struct {
 	Cost     *costmgmtv1alpha1.CostManagement
 	DirCfg   *dirconfig.DirectoryConfig
@@ -220,7 +207,9 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 	// Create the csv writer
 	writer := csv.NewWriter(splitFile)
 	// Preserve the header
-	writer.Write(csvHeader)
+	if err := writer.Write(csvHeader); err != nil {
+		return nil, false, err
+	}
 	for {
 		row, err := csvReader.Read()
 		if err == io.EOF {
@@ -229,7 +218,9 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 		} else if err != nil {
 			return nil, false, err
 		}
-		writer.Write(row)
+		if err := writer.Write(row); err != nil {
+			return nil, false, err
+		}
 		rowLen := len(strings.Join(row, ","))
 		rowSize := rowLen + int(float64(rowLen)*variance)
 		sizeEstimate += rowSize
@@ -256,10 +247,13 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
-				return nil, false, fmt.Errorf("SplitFiles: error reading file: %v", err)
+				return nil, false, fmt.Errorf("SplitFiles: error opening file: %v", err)
 			}
 			csvReader := csv.NewReader(csvFile)
 			csvHeader, err := csvReader.Read()
+			if err != nil {
+				return nil, false, fmt.Errorf("SplitFiles: error reading file: %v", err)
+			}
 			var part int64 = 1
 			for {
 				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part)
@@ -339,13 +333,17 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
-// readUploadDir returns the fileinfo for each file in the upload dir
-func (p *FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
+// ReadUploadDir returns the fileinfo for each file in the upload dir
+func (p *FilePackager) ReadUploadDir() ([]string, error) {
 	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
 	if err != nil {
 		return nil, fmt.Errorf("Could not read upload directory: %v", err)
 	}
-	return outFiles, nil
+	fileList := []string{}
+	for _, file := range outFiles {
+		fileList = append(fileList, file.Name())
+	}
+	return fileList, nil
 }
 
 // PackageReports is responsible for packing report files for upload
@@ -403,10 +401,5 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("File packaging was successful.")
-	generatedFiles, err := p.ReadUploadDir()
-	log.Info("Generated the following files for upload: ")
-	for _, file := range generatedFiles {
-		log.Info(file.Name())
-	}
 	return nil
 }

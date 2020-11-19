@@ -20,13 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"mime/multipart"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -167,10 +165,15 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	var sourceNameChanged bool
 	costConfig.SourcesAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
 	costConfig.SourceName, sourceNameChanged = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
-	costConfig.CreateSource = false
+
+	createBefore := false
 	if cost.Spec.Source.CreateSource != nil {
 		costConfig.CreateSource = *cost.Spec.Source.CreateSource
+		createBefore = *cost.Spec.Source.CreateSource
 	}
+	cost.Status.Source.CreateSource = &costConfig.CreateSource
+	createChanged := !(createBefore == *cost.Status.Source.CreateSource)
+
 	sourceCycleChange := false
 	if !reflect.DeepEqual(cost.Spec.Source.CheckCycle, cost.Status.Source.CheckCycle) {
 		cost.Status.Source.CheckCycle = cost.Spec.Source.CheckCycle
@@ -181,7 +184,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	} else {
 		costConfig.SourceCheckCycle = costmgmtv1alpha1.DefaultSourceCheckCycle
 	}
-	if !sourceNameChanged && !sourceCycleChange {
+	if !sourceNameChanged && !sourceCycleChange && !createChanged {
 		costConfig.LastSourceCheckTime = cost.Status.Source.LastSourceCheckTime
 	}
 
@@ -368,7 +371,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	log.Info("Reconciling custom resource", "CostManagement", cost)
-	costConfig := &crhchttp.CostManagementConfig{}
+	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
 	err = ReflectSpec(r, cost, costConfig)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement status")
@@ -448,12 +451,15 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// Check if source is defined and should be confirmed/created
 	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
-		defined, errMsg, lastCheck, err := sources.SourceGetOrCreate(r.Log, costConfig)
-		cost.Status.Source.SourceDefined = &defined
-		cost.Status.Source.SourceError = errMsg
-		cost.Status.Source.LastSourceCheckTime = lastCheck
-		err = r.Status().Update(ctx, cost)
+		cost.Status.Source.SourceError = ""
+		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig)
 		if err != nil {
+			cost.Status.Source.SourceError = err.Error()
+			log.Info("source get or create message", "error", err)
+		}
+		cost.Status.Source.SourceDefined = &defined
+		cost.Status.Source.LastSourceCheckTime = lastCheck
+		if err := r.Status().Update(ctx, cost); err != nil {
 			log.Error(err, "Failed to update CostManagement Status")
 		}
 	}
@@ -489,26 +495,28 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			log.Error(err, "Failed to read upload directory.")
 		}
 
-		if uploadFiles != nil {
+		if len(uploadFiles) > 0 {
+			log.Info("Files ready for upload: " + strings.Join(uploadFiles, ", "))
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
-			var body *bytes.Buffer
-			var mw *multipart.Writer
 
-			if len(uploadFiles) > 0 {
-				log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
-				time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
-			}
+			log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
+			time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
+
 			for _, file := range uploadFiles {
-				if strings.Contains(file.Name(), "tar.gz") {
-					log.Info("Uploading the following file: ")
-					fmt.Println(file.Name())
+				if strings.Contains(file, "tar.gz") {
+					log.Info(fmt.Sprintf("Uploading file: %s", file))
 					// grab the body and the multipart file header
-					body, mw = crhchttp.GetMultiPartBodyAndHeaders(r.Log, filepath.Join(dirCfg.Upload.Path, file.Name()))
-					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
-					uploadStatus, uploadTime, err = crhchttp.Upload(r.Log, costConfig, "POST", ingressURL, body, mw)
+					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 					if err != nil {
+						log.Error(err, "failed to set multipart body and headers")
+						return ctrl.Result{}, err
+					}
+					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
+					uploadStatus, uploadTime, err = crhchttp.Upload(costConfig, contentType, "POST", ingressURL, body)
+					if err != nil {
+						log.Error(err, "upload failed")
 						return ctrl.Result{}, err
 					}
 					if uploadStatus != "" {
@@ -521,7 +529,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file.Name())); err != nil {
+							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
 								log.Error(err, "Error removing tar file")
 							}
 						}
