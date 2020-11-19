@@ -135,3 +135,91 @@ func TestGetSourceTypeID(t *testing.T) {
 		})
 	}
 }
+
+func TestGetApplicationTypeID(t *testing.T) {
+	getApplicationTypeIDTests := []struct {
+		name        string
+		response    *http.Response
+		responseErr error
+		expected    string
+		expectedErr error
+	}{
+		{
+			name: "successful response with data",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "1",
+			expectedErr: nil,
+		},
+		{
+			name:        "request failure",
+			response:    &http.Response{},
+			responseErr: errSources,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "400 bad response",
+			response: &http.Response{
+				StatusCode: 400,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "parse error",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "too many count from response",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"},{\"id\":\"2\",\"name\":\"amazon\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "no count from response",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+	}
+	for _, tt := range getApplicationTypeIDTests {
+		t.Run(tt.name, func(t *testing.T) {
+			clt := MockClient{res: tt.response, err: tt.responseErr}
+			got, err := GetApplicationTypeID(cost, clt)
+			if tt.expectedErr != nil && err == nil {
+				t.Errorf("%s expected error, got: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if got != tt.expected {
+				t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
+			}
+		})
+	}
+}
