@@ -163,7 +163,9 @@ func TestGenerateReports(t *testing.T) {
 		}
 	}
 
-	fakeDirCfg.Reports.RemoveContents()
+	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
+		t.Fatal("failed to cleanup reports directory")
+	}
 }
 
 func TestGenerateReportsQueryErrors(t *testing.T) {
@@ -217,7 +219,9 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	if !strings.Contains(err.Error(), nodeError) {
 		t.Errorf("GenerateReports %s was expected, got %v", nodeError, err)
 	}
-	fakeDirCfg.Reports.RemoveContents()
+	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
+		t.Fatal("failed to cleanup reports directory")
+	}
 }
 
 func TestGenerateReportsNoNodeData(t *testing.T) {

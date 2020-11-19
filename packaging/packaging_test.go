@@ -50,8 +50,6 @@ var testPackager = FilePackager{
 	Log:    log,
 	Cost:   cost,
 }
-var testManifest manifest
-var testManifestInfo manifestInfo
 
 type fakeManifest struct{}
 
@@ -68,7 +66,6 @@ type testDirMap struct {
 	large           testDirConfig
 	small           testDirConfig
 	moving          testDirConfig
-	split           testDirConfig
 	tar             testDirConfig
 	restricted      testDirConfig
 	empty           testDirConfig
@@ -77,7 +74,7 @@ type testDirMap struct {
 
 var testDirs testDirMap
 
-func Copy(src, dst string) (os.FileInfo, error) {
+func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
 	if err != nil {
 		return nil, err
@@ -99,6 +96,10 @@ func Copy(src, dst string) (os.FileInfo, error) {
 		return nil, err
 	}
 
+	if err := os.Chmod(out.Name(), mode); err != nil {
+		return nil, err
+	}
+
 	return info, out.Close()
 }
 
@@ -107,23 +108,26 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 	if err != nil {
 		t.Errorf("Failed to create temp file.")
 	}
-	if err := os.Chmod(tempFile.Name(), mode); err != nil {
-		t.Errorf("Failed to change permissions of temp file.")
-	}
+	setPerm(t, mode, tempFile.Name())
 	return tempFile
 }
+
 func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	tempDir, err := ioutil.TempDir(dir, pattern)
 	if err != nil {
-		t.Errorf("Failed to create temp folder.")
+		t.Fatalf("Failed to create temp folder.")
 	}
-	if err := os.Chmod(tempDir, mode); err != nil {
-		t.Errorf("Failed to change permissions of temp file.")
-	}
+	setPerm(t, mode, tempDir)
 	return tempDir
 }
 
-func genDirCfg(dirName string) *dirconfig.DirectoryConfig {
+func setPerm(t *testing.T, mode os.FileMode, dir string) {
+	if err := os.Chmod(dir, mode); err != nil {
+		t.Fatalf("Failed to change permissions of temp folder.")
+	}
+}
+
+func genDirCfg(t *testing.T, dirName string) *dirconfig.DirectoryConfig {
 	dirCfg := dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: dirName},
 		Upload:  dirconfig.Directory{Path: filepath.Join(dirName, "upload")},
@@ -131,13 +135,14 @@ func genDirCfg(dirName string) *dirconfig.DirectoryConfig {
 		Reports: dirconfig.Directory{Path: filepath.Join(dirName, "data")},
 		Archive: dirconfig.Directory{Path: filepath.Join(dirName, "archive")},
 	}
-	folders := []string{"upload", "staging", "data", "archive"}
-	for _, folder := range folders {
-		d := filepath.Join(dirName, folder)
-		dir := dirconfig.Directory{Path: d}
-		if !dir.Exists() {
-			dir.Create()
-		}
+	if err := dirconfig.CheckExistsOrRecreate(
+		zap.New(),
+		dirCfg.Upload,
+		dirCfg.Staging,
+		dirCfg.Reports,
+		dirCfg.Archive,
+	); err != nil {
+		t.Logf("failed to create dirCfg: %v", err)
 	}
 	return &dirCfg
 }
@@ -170,12 +175,6 @@ func setup() error {
 			fileMode: 0777,
 		},
 		{
-			dirName:  "split",
-			files:    testFiles,
-			dirMode:  0777,
-			fileMode: 0777,
-		},
-		{
 			dirName:  "tar",
 			files:    testFiles,
 			dirMode:  0777,
@@ -183,7 +182,7 @@ func setup() error {
 		},
 		{
 			dirName:  "restricted",
-			files:    []string{},
+			files:    []string{"bad-csv.csv"},
 			dirMode:  0777,
 			fileMode: 0000,
 		},
@@ -215,13 +214,13 @@ func setup() error {
 				return fmt.Errorf("could not create %s directory: %v", reportPath, err)
 			}
 			if directory.dirName != "empty" && directory.dirName != "restrictedEmpty" {
-				if err := os.Mkdir(reportDataPath, directory.fileMode); err != nil {
+				if err := os.Mkdir(reportDataPath, directory.dirMode); err != nil {
 					return fmt.Errorf("could not create %s directory: %v", reportDataPath, err)
 				}
 			}
 			fileList := []os.FileInfo{}
 			for _, reportFile := range directory.files {
-				fileInfo, err := Copy(filepath.Join("test_files/", reportFile), filepath.Join(reportDataPath, reportFile))
+				fileInfo, err := Copy(directory.fileMode, filepath.Join("test_files/", reportFile), filepath.Join(reportDataPath, reportFile))
 				if err != nil {
 					return fmt.Errorf("could not copy %s file: %v", reportFile, err)
 				}
@@ -245,8 +244,6 @@ func setup() error {
 				testDirs.restricted = tmpDirMap
 			case "restrictedEmpty":
 				testDirs.restrictedEmpty = tmpDirMap
-			case "split":
-				testDirs.split = tmpDirMap
 			case "tar":
 				testDirs.tar = tmpDirMap
 			default:
@@ -263,13 +260,15 @@ func shutdown() {
 }
 
 func TestMain(m *testing.M) {
+	code := 1 // default to failing code
 	err := setup()
 	if err != nil {
 		fmt.Printf("Test setup failed: %v\n", err)
 	} else {
-		m.Run()
+		code = m.Run()
 	}
 	shutdown()
+	os.Exit(code)
 }
 
 func TestNeedSplit(t *testing.T) {
@@ -355,7 +354,7 @@ func TestMoveFiles(t *testing.T) {
 			name:      "test moving dir",
 			dirName:   testDirs.moving.directory,
 			fileUUID:  uuid.New().String(),
-			want:      testDirs.large.files,
+			want:      testDirs.moving.files,
 			expectErr: false,
 		},
 		{
@@ -365,18 +364,11 @@ func TestMoveFiles(t *testing.T) {
 			want:      nil,
 			expectErr: true,
 		},
-		{
-			name:      "test restricted dir",
-			dirName:   testDirs.restricted.directory,
-			fileUUID:  uuid.New().String(),
-			want:      nil,
-			expectErr: true,
-		},
 	}
 	for _, tt := range moveFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			testPackager.uid = tt.fileUUID
 			got, err := testPackager.moveFiles()
 			if tt.want == nil && got != nil {
@@ -396,7 +388,10 @@ func TestMoveFiles(t *testing.T) {
 				}
 			}
 			if err != nil && !tt.expectErr {
-				t.Errorf("An unexpected error occurred %v", err)
+				t.Errorf("%s an unexpected error occurred %v", tt.name, err)
+			}
+			if err == nil && tt.expectErr {
+				t.Errorf("%s expected error but got %v", tt.name, err)
 			}
 		})
 	}
@@ -406,42 +401,42 @@ func TestPackagingReports(t *testing.T) {
 	// create the packagingReports tests
 	packagingReportTests := []struct {
 		name          string
-		dirName       string
+		dirCfg        *dirconfig.DirectoryConfig
 		maxSize       int64
 		want          error
 		multipleFiles bool
 	}{
 		{
 			name:          "test large dir",
-			dirName:       testDirs.large.directory,
+			dirCfg:        genDirCfg(t, testDirs.large.directory),
 			maxSize:       1,
 			multipleFiles: true,
 			want:          nil,
 		},
 		{
 			name:          "test small dir",
-			dirName:       testDirs.small.directory,
+			dirCfg:        genDirCfg(t, testDirs.small.directory),
 			maxSize:       100,
 			multipleFiles: false,
 			want:          nil,
 		},
 		{
 			name:          "test empty dir",
-			dirName:       testDirs.empty.directory,
+			dirCfg:        genDirCfg(t, testDirs.empty.directory),
 			maxSize:       100,
 			multipleFiles: false,
-			want:          errors.New("No reports found"),
+			want:          nil,
 		},
 		{
 			name:          "restricted",
-			dirName:       testDirs.restrictedEmpty.directory,
+			dirCfg:        genDirCfg(t, testDirs.restrictedEmpty.directory),
 			maxSize:       100,
 			multipleFiles: false,
 			want:          errors.New("Restricted"),
 		},
 		{
 			name:          "nonexistent",
-			dirName:       filepath.Join(testingDir, uuid.New().String()),
+			dirCfg:        new(dirconfig.DirectoryConfig),
 			maxSize:       100,
 			multipleFiles: false,
 			want:          errors.New("nonexistent"),
@@ -450,27 +445,19 @@ func TestPackagingReports(t *testing.T) {
 	for _, tt := range packagingReportTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = tt.dirCfg
 			testPackager.MaxSize = tt.maxSize
 			err := testPackager.PackageReports()
-			if err == nil {
-				outFiles, _ := testPackager.ReadUploadDir()
-				if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
-					t.Errorf("Outcome for test %s:\nReceived: %s\nExpected multpile files: %v", tt.name, strconv.Itoa(len(outFiles)), tt.multipleFiles)
-				}
-			} else {
-				if tt.want == nil {
-					t.Errorf("Expected no error but recieved one")
-				}
-				outFiles, err := testPackager.ReadUploadDir()
-				if len(outFiles) != 0 {
-					t.Errorf("An error occurred, but upload files were still generated.")
-				}
-				if err == nil {
-					t.Errorf("Expected an error but recieved nil.")
-				}
+			if tt.want != nil && err == nil {
+				t.Errorf("%s wanted error got %v", tt.name, err)
 			}
-
+			if tt.want == nil && err != nil {
+				t.Errorf("%s unexpected err: %v", tt.name, err)
+			}
+			outFiles, _ := testPackager.ReadUploadDir()
+			if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
+				t.Errorf("%s expected multpile files: %v, received: %d", tt.name, tt.multipleFiles, len(outFiles))
+			}
 		})
 	}
 }
@@ -496,10 +483,12 @@ func TestGetAndRenderManifest(t *testing.T) {
 	for _, tt := range getAndRenderManifestTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			testPackager.getManifest(csvFileNames, tt.dirName)
-			testPackager.manifest.renderManifest()
+			if err := testPackager.manifest.renderManifest(); err != nil {
+				t.Fatal("failed to render manifest")
+			}
 			// check that the manifest was generated correctly
 			if testPackager.manifest.filename != filepath.Join(tt.dirName, "manifest.json") {
 				t.Errorf("Manifest was not generated correctly")
@@ -660,7 +649,7 @@ func TestWriteTarball(t *testing.T) {
 	for _, tt := range writeTarballTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			stagingDir := testPackager.DirCfg.Reports.Path
 			csvFileNames := make(map[int]string)
 			if tt.genCSVs {
@@ -668,7 +657,9 @@ func TestWriteTarball(t *testing.T) {
 			}
 			manifestName := tt.manifestName
 			testPackager.getManifest(csvFileNames, stagingDir)
-			testPackager.manifest.renderManifest()
+			if err := testPackager.manifest.renderManifest(); err != nil {
+				t.Fatal("failed to render manifest")
+			}
 			if tt.manifestName == "" {
 				manifestName = testPackager.manifest.filename
 			}
@@ -688,8 +679,10 @@ func TestWriteTarball(t *testing.T) {
 				}
 				// check the contents of the tarball
 				file, err := os.Open(tt.tarFileName)
+				if err != nil {
+					t.Errorf("Can not open tarfile generated by %s", tt.name)
+				}
 				archive, err := gzip.NewReader(file)
-
 				if err != nil {
 					t.Errorf("Can not read tarfile generated by %s", tt.name)
 				}
@@ -718,64 +711,105 @@ func TestWriteTarball(t *testing.T) {
 }
 
 func TestSplitFiles(t *testing.T) {
-	// create the buildLocalCSVFileList tests
+	tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
+	defer os.RemoveAll(tmpDir)
 	splitFilesTests := []struct {
 		name          string
-		dirName       string
-		fileList      []os.FileInfo
+		dirMode       os.FileMode
+		fileMode      os.FileMode
+		files         []string
 		expectedSplit bool
 		maxBytes      int64
-		originalFiles int
 		expectErr     bool
 	}{
 		{
 			name:          "test requires split",
-			dirName:       testDirs.split.directory,
-			fileList:      testDirs.split.files,
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv"},
 			maxBytes:      1 * 1024 * 1024,
 			expectedSplit: true,
-			originalFiles: len(testDirs.split.files),
 			expectErr:     false,
 		},
 		{
 			name:          "test does not require split",
-			dirName:       testDirs.split.directory,
-			fileList:      testDirs.split.files,
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv"},
 			maxBytes:      100 * 1024 * 1024,
 			expectedSplit: false,
-			originalFiles: len(testDirs.split.files),
 			expectErr:     false,
 		},
 		{
-			name:          "test mismatched files",
-			dirName:       testDirs.large.directory,
-			fileList:      testDirs.large.files,
+			name:          "test failure to open file",
+			dirMode:       0777,
+			fileMode:      0000,
+			files:         []string{"ocp_node_label.csv"},
+			maxBytes:      1 * 1024 * 1024,
+			expectedSplit: false,
+			expectErr:     true,
+		},
+		{
+			name:          "test bad csv read",
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"bad-csv.csv"},
+			maxBytes:      512,
+			expectedSplit: false,
+			expectErr:     true,
+		},
+		{
+			name:          "dir without write permissions",
+			dirMode:       0555,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv"},
+			maxBytes:      1 * 1024 * 1024,
+			expectedSplit: false,
+			expectErr:     true,
+		},
+		{
+			name:          "small csv skips split",
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv", "small-csv.csv"},
 			maxBytes:      1 * 1024 * 1024,
 			expectedSplit: true,
-			originalFiles: len(testDirs.split.files),
-			expectErr:     true,
+			expectErr:     false,
 		},
 	}
 	for _, tt := range splitFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(tt.dirName)
-			testPackager.maxBytes = tt.maxBytes
-			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList)
-			if tt.expectErr {
-				if err == nil {
-					t.Errorf("Expected an error but received nil")
+			dstTemp := getTempDir(t, 0777, tmpDir, "tmp-dir-*") // use 0777 so we can write file
+			fileList := []os.FileInfo{}
+			for _, file := range tt.files {
+				fileInf, err := Copy(tt.fileMode, filepath.Join("test_files/", file), filepath.Join(dstTemp, file))
+				if err != nil {
+					t.Fatalf("%s failed to create file", tt.name)
 				}
-			} else {
-				// make sure that the expected split matches
-				if split != tt.expectedSplit {
-					t.Errorf("Outcome for test %s:\nneedSplit Received: %v\nneedSPlit Expected: %v", tt.name, split, tt.expectedSplit)
-				}
-				// check the number of files created is more than the original if the split was required
-				if (len(files) <= tt.originalFiles && tt.expectedSplit) || (!tt.expectedSplit && len(files) != tt.originalFiles) {
-					t.Errorf("Outcome for test %s:\nOriginal number of files: %s\nResulting number of files: %s", tt.name, strconv.Itoa(tt.originalFiles), strconv.Itoa(len(files)))
-				}
+				fileList = append(fileList, fileInf)
 			}
+			setPerm(t, tt.dirMode, dstTemp) // now set the expected test permissions
+
+			testPackager.maxBytes = tt.maxBytes
+			files, split, err := testPackager.splitFiles(dstTemp, fileList)
+			fmt.Printf("\n\n%v\n\n", err)
+			if tt.expectErr && err == nil {
+				t.Errorf("%s expected an error but received nil", tt.name)
+			}
+			if !tt.expectErr && err != nil {
+				t.Errorf("%s did not expect error but got: %v", tt.name, err)
+			}
+			// make sure that the expected split matches
+			if split != tt.expectedSplit {
+				t.Errorf("Outcome for test %s:\nneedSplit Received: %v\nneedSPlit Expected: %v", tt.name, split, tt.expectedSplit)
+			}
+			// check the number of files created is more than the original if the split was required
+			if len(files) > 0 && ((len(files) <= len(tt.files) && tt.expectedSplit) || (!tt.expectedSplit && len(files) != len(tt.files))) {
+				t.Errorf("Outcome for test %s:\nOriginal number of files: %d\nResulting number of files: %d", tt.name, len(tt.files), len(files))
+			}
+
+			setPerm(t, 0777, dstTemp) // reset dir permissions for proper cleanup
 		})
 	}
 }

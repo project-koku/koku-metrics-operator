@@ -34,7 +34,7 @@ var (
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
-	archive      = "archive"
+	// archive      = "archive"
 )
 
 // DirectoryConfig stores the path for each directory
