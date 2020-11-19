@@ -333,7 +333,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
-// readUploadDir returns the fileinfo for each file in the upload dir
+// ReadUploadDir returns the fileinfo for each file in the upload dir
 func (p *FilePackager) ReadUploadDir() ([]string, error) {
 	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
 	if err != nil {

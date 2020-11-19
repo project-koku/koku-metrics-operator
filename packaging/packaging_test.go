@@ -65,9 +65,7 @@ type testDirConfig struct {
 type testDirMap struct {
 	large           testDirConfig
 	small           testDirConfig
-	badCSV          testDirConfig
 	moving          testDirConfig
-	split           testDirConfig
 	tar             testDirConfig
 	restricted      testDirConfig
 	empty           testDirConfig
@@ -110,10 +108,23 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 	if err != nil {
 		t.Errorf("Failed to create temp file.")
 	}
-	if err := os.Chmod(tempFile.Name(), mode); err != nil {
-		t.Errorf("Failed to change permissions of temp file.")
-	}
+	setPerm(t, mode, tempFile.Name())
 	return tempFile
+}
+
+func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
+	tempDir, err := ioutil.TempDir(dir, pattern)
+	if err != nil {
+		t.Fatalf("Failed to create temp folder.")
+	}
+	setPerm(t, mode, tempDir)
+	return tempDir
+}
+
+func setPerm(t *testing.T, mode os.FileMode, dir string) {
+	if err := os.Chmod(dir, mode); err != nil {
+		t.Fatalf("Failed to change permissions of temp folder.")
+	}
 }
 
 func genDirCfg(t *testing.T, dirName string) *dirconfig.DirectoryConfig {
@@ -158,19 +169,7 @@ func setup() error {
 			fileMode: 0777,
 		},
 		{
-			dirName:  "bad-csv",
-			files:    []string{"bad-csv.csv"},
-			dirMode:  0777,
-			fileMode: 0777,
-		},
-		{
 			dirName:  "moving",
-			files:    testFiles,
-			dirMode:  0777,
-			fileMode: 0777,
-		},
-		{
-			dirName:  "split",
 			files:    testFiles,
 			dirMode:  0777,
 			fileMode: 0777,
@@ -237,8 +236,6 @@ func setup() error {
 				testDirs.large = tmpDirMap
 			case "small":
 				testDirs.small = tmpDirMap
-			case "bad-csv":
-				testDirs.badCSV = tmpDirMap
 			case "moving":
 				testDirs.moving = tmpDirMap
 			case "empty":
@@ -247,8 +244,6 @@ func setup() error {
 				testDirs.restricted = tmpDirMap
 			case "restrictedEmpty":
 				testDirs.restrictedEmpty = tmpDirMap
-			case "split":
-				testDirs.split = tmpDirMap
 			case "tar":
 				testDirs.tar = tmpDirMap
 			default:
@@ -716,73 +711,105 @@ func TestWriteTarball(t *testing.T) {
 }
 
 func TestSplitFiles(t *testing.T) {
-	// create the buildLocalCSVFileList tests
+	tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
+	defer os.RemoveAll(tmpDir)
 	splitFilesTests := []struct {
 		name          string
-		dirName       string
-		fileList      []os.FileInfo
+		dirMode       os.FileMode
+		fileMode      os.FileMode
+		files         []string
 		expectedSplit bool
 		maxBytes      int64
-		originalFiles int
 		expectErr     bool
 	}{
 		{
 			name:          "test requires split",
-			dirName:       testDirs.split.directory,
-			fileList:      testDirs.split.files,
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv"},
 			maxBytes:      1 * 1024 * 1024,
 			expectedSplit: true,
-			originalFiles: len(testDirs.split.files),
 			expectErr:     false,
 		},
 		{
 			name:          "test does not require split",
-			dirName:       testDirs.split.directory,
-			fileList:      testDirs.split.files,
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv"},
 			maxBytes:      100 * 1024 * 1024,
 			expectedSplit: false,
-			originalFiles: len(testDirs.split.files),
 			expectErr:     false,
 		},
 		{
-			name:          "test mismatched files",
-			dirName:       testDirs.large.directory,
-			fileList:      testDirs.large.files,
+			name:          "test failure to open file",
+			dirMode:       0777,
+			fileMode:      0000,
+			files:         []string{"ocp_node_label.csv"},
 			maxBytes:      1 * 1024 * 1024,
-			expectedSplit: true,
-			originalFiles: len(testDirs.split.files),
+			expectedSplit: false,
 			expectErr:     true,
 		},
 		{
 			name:          "test bad csv read",
-			dirName:       testDirs.badCSV.directory,
-			fileList:      testDirs.badCSV.files,
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"bad-csv.csv"},
 			maxBytes:      512,
 			expectedSplit: false,
-			originalFiles: len(testDirs.split.files),
 			expectErr:     true,
+		},
+		{
+			name:          "dir without write permissions",
+			dirMode:       0555,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv"},
+			maxBytes:      1 * 1024 * 1024,
+			expectedSplit: false,
+			expectErr:     true,
+		},
+		{
+			name:          "small csv skips split",
+			dirMode:       0777,
+			fileMode:      0777,
+			files:         []string{"ocp_node_label.csv", "small-csv.csv"},
+			maxBytes:      1 * 1024 * 1024,
+			expectedSplit: true,
+			expectErr:     false,
 		},
 	}
 	for _, tt := range splitFilesTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(t, tt.dirName)
-			testPackager.maxBytes = tt.maxBytes
-			files, split, err := testPackager.splitFiles(testPackager.DirCfg.Reports.Path, tt.fileList)
-			if tt.expectErr {
-				if err == nil {
-					t.Errorf("Expected an error but received nil")
+			dstTemp := getTempDir(t, 0777, tmpDir, "tmp-dir-*") // use 0777 so we can write file
+			fileList := []os.FileInfo{}
+			for _, file := range tt.files {
+				fileInf, err := Copy(tt.fileMode, filepath.Join("test_files/", file), filepath.Join(dstTemp, file))
+				if err != nil {
+					t.Fatalf("%s failed to create file", tt.name)
 				}
-			} else {
-				// make sure that the expected split matches
-				if split != tt.expectedSplit {
-					t.Errorf("Outcome for test %s:\nneedSplit Received: %v\nneedSPlit Expected: %v", tt.name, split, tt.expectedSplit)
-				}
-				// check the number of files created is more than the original if the split was required
-				if (len(files) <= tt.originalFiles && tt.expectedSplit) || (!tt.expectedSplit && len(files) != tt.originalFiles) {
-					t.Errorf("Outcome for test %s:\nOriginal number of files: %s\nResulting number of files: %s", tt.name, strconv.Itoa(tt.originalFiles), strconv.Itoa(len(files)))
-				}
+				fileList = append(fileList, fileInf)
 			}
+			setPerm(t, tt.dirMode, dstTemp) // now set the expected test permissions
+
+			testPackager.maxBytes = tt.maxBytes
+			files, split, err := testPackager.splitFiles(dstTemp, fileList)
+			fmt.Printf("\n\n%v\n\n", err)
+			if tt.expectErr && err == nil {
+				t.Errorf("%s expected an error but received nil", tt.name)
+			}
+			if !tt.expectErr && err != nil {
+				t.Errorf("%s did not expect error but got: %v", tt.name, err)
+			}
+			// make sure that the expected split matches
+			if split != tt.expectedSplit {
+				t.Errorf("Outcome for test %s:\nneedSplit Received: %v\nneedSPlit Expected: %v", tt.name, split, tt.expectedSplit)
+			}
+			// check the number of files created is more than the original if the split was required
+			if len(files) > 0 && ((len(files) <= len(tt.files) && tt.expectedSplit) || (!tt.expectedSplit && len(files) != len(tt.files))) {
+				t.Errorf("Outcome for test %s:\nOriginal number of files: %d\nResulting number of files: %d", tt.name, len(tt.files), len(files))
+			}
+
+			setPerm(t, 0777, dstTemp) // reset dir permissions for proper cleanup
 		})
 	}
 }
