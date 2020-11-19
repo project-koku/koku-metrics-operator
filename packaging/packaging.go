@@ -334,12 +334,16 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 }
 
 // readUploadDir returns the fileinfo for each file in the upload dir
-func (p *FilePackager) ReadUploadDir() ([]os.FileInfo, error) {
+func (p *FilePackager) ReadUploadDir() ([]string, error) {
 	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
 	if err != nil {
 		return nil, fmt.Errorf("Could not read upload directory: %v", err)
 	}
-	return outFiles, nil
+	fileList := []string{}
+	for _, file := range outFiles {
+		fileList = append(fileList, file.Name())
+	}
+	return fileList, nil
 }
 
 // PackageReports is responsible for packing report files for upload

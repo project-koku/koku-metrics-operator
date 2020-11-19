@@ -96,19 +96,6 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 	return *statusItem, changed
 }
 
-func boolReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *bool, statusItem *bool, defaultVal bool) (bool, bool) {
-	changed := false
-	if statusItem == nil || !reflect.DeepEqual(*specItem, *statusItem) {
-		changed = true
-		if specItem != nil {
-			*statusItem = *specItem
-		} else {
-			*statusItem = *pointer.Bool(defaultVal)
-		}
-	}
-	return *statusItem, changed
-}
-
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costConfig *crhchttp.CostManagementConfig) error {
 	ctx := context.Background()
@@ -178,12 +165,13 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	var sourceNameChanged bool
 	costConfig.SourcesAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
 	costConfig.SourceName, sourceNameChanged = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
-	var createChanged bool
-	costConfig.CreateSource, createChanged = boolReflectSpec(r, cost, cost.Spec.Source.CreateSource, cost.Status.Source.CreateSource, false)
-	// if cost.Spec.Source.CreateSource != nil {
-	// 	costConfig.CreateSource = *cost.Spec.Source.CreateSource
-	// }
-	// cost.Status.Source.CreateSource = &costConfig.CreateSource
+
+	createBefore := *cost.Status.Source.CreateSource
+	if cost.Spec.Source.CreateSource != nil {
+		costConfig.CreateSource = *cost.Spec.Source.CreateSource
+	}
+	cost.Status.Source.CreateSource = &costConfig.CreateSource
+	createChanged := !(createBefore == *cost.Status.Source.CreateSource)
 
 	sourceCycleChange := false
 	if !reflect.DeepEqual(cost.Spec.Source.CheckCycle, cost.Status.Source.CheckCycle) {
@@ -507,11 +495,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 
 		if len(uploadFiles) > 0 {
-			var b strings.Builder
-			for _, f := range uploadFiles {
-				fmt.Fprintf(&b, "%s, ", f.Name())
-			}
-			log.Info("Files ready for upload: ", "files", b.String())
+			log.Info("Files ready for upload: " + strings.Join(uploadFiles, ", "))
 			// Upload to c.rh.com
 			var uploadStatus string
 			var uploadTime metav1.Time
@@ -520,10 +504,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
 
 			for _, file := range uploadFiles {
-				if strings.Contains(file.Name(), "tar.gz") {
-					log.Info(fmt.Sprintf("Uploading file: %s", file.Name()))
+				if strings.Contains(file, "tar.gz") {
+					log.Info(fmt.Sprintf("Uploading file: %s", file))
 					// grab the body and the multipart file header
-					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file.Name()))
+					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 					if err != nil {
 						log.Error(err, "failed to set multipart body and headers")
 						return ctrl.Result{}, err
@@ -544,7 +528,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file.Name())); err != nil {
+							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
 								log.Error(err, "Error removing tar file")
 							}
 						}
