@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	// cost       = &crhchttp.CostManagementConfig{Log: zap.New()}
+	cost       = &crhchttp.CostManagementConfig{Log: testLogger}
 	errSources = errors.New("test error")
-	// log        logr.TestLogger
+	testLogger = logr.NullLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
@@ -49,9 +49,6 @@ func (m MockClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func TestGetSourceTypeID(t *testing.T) {
-	log := logr.TestLogger{T: t}
-	cost := &crhchttp.CostManagementConfig{Log: log}
-
 	getSourceTypeIDTests := []struct {
 		name        string
 		response    *http.Response
@@ -71,10 +68,50 @@ func TestGetSourceTypeID(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name: "400 bad response - malformed url",
+			name:        "request failure",
+			response:    &http.Response{},
+			responseErr: errSources,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
 				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "parse error",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "too many count from response",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"},{\"id\":\"2\",\"name\":\"amazon\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "no count from response",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
