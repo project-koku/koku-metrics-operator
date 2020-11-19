@@ -65,6 +65,7 @@ type testDirConfig struct {
 type testDirMap struct {
 	large           testDirConfig
 	small           testDirConfig
+	badCSV          testDirConfig
 	moving          testDirConfig
 	split           testDirConfig
 	tar             testDirConfig
@@ -153,6 +154,12 @@ func setup() error {
 			fileMode: 0777,
 		},
 		{
+			dirName:  "bad-csv",
+			files:    []string{"bad-csv.csv"},
+			dirMode:  0777,
+			fileMode: 0777,
+		},
+		{
 			dirName:  "moving",
 			files:    testFiles,
 			dirMode:  0777,
@@ -226,6 +233,8 @@ func setup() error {
 				testDirs.large = tmpDirMap
 			case "small":
 				testDirs.small = tmpDirMap
+			case "bad-csv":
+				testDirs.badCSV = tmpDirMap
 			case "moving":
 				testDirs.moving = tmpDirMap
 			case "empty":
@@ -749,6 +758,15 @@ func TestSplitFiles(t *testing.T) {
 			fileList:      testDirs.large.files,
 			maxBytes:      1 * 1024 * 1024,
 			expectedSplit: true,
+			originalFiles: len(testDirs.split.files),
+			expectErr:     true,
+		},
+		{
+			name:          "test bad csv read",
+			dirName:       testDirs.badCSV.directory,
+			fileList:      testDirs.badCSV.files,
+			maxBytes:      512,
+			expectedSplit: false,
 			originalFiles: len(testDirs.split.files),
 			expectErr:     true,
 		},
