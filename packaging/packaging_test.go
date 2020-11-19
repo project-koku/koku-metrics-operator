@@ -76,7 +76,7 @@ type testDirMap struct {
 
 var testDirs testDirMap
 
-func Copy(src, dst string) (os.FileInfo, error) {
+func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
 	if err != nil {
 		return nil, err
@@ -95,6 +95,10 @@ func Copy(src, dst string) (os.FileInfo, error) {
 	}
 	info, err := out.Stat()
 	if err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(out.Name(), mode); err != nil {
 		return nil, err
 	}
 
@@ -179,7 +183,7 @@ func setup() error {
 		},
 		{
 			dirName:  "restricted",
-			files:    []string{},
+			files:    []string{"bad-csv.csv"},
 			dirMode:  0777,
 			fileMode: 0000,
 		},
@@ -211,13 +215,13 @@ func setup() error {
 				return fmt.Errorf("could not create %s directory: %v", reportPath, err)
 			}
 			if directory.dirName != "empty" && directory.dirName != "restrictedEmpty" {
-				if err := os.Mkdir(reportDataPath, directory.fileMode); err != nil {
+				if err := os.Mkdir(reportDataPath, directory.dirMode); err != nil {
 					return fmt.Errorf("could not create %s directory: %v", reportDataPath, err)
 				}
 			}
 			fileList := []os.FileInfo{}
 			for _, reportFile := range directory.files {
-				fileInfo, err := Copy(filepath.Join("test_files/", reportFile), filepath.Join(reportDataPath, reportFile))
+				fileInfo, err := Copy(directory.fileMode, filepath.Join("test_files/", reportFile), filepath.Join(reportDataPath, reportFile))
 				if err != nil {
 					return fmt.Errorf("could not copy %s file: %v", reportFile, err)
 				}
@@ -355,19 +359,12 @@ func TestMoveFiles(t *testing.T) {
 			name:      "test moving dir",
 			dirName:   testDirs.moving.directory,
 			fileUUID:  uuid.New().String(),
-			want:      testDirs.large.files,
+			want:      testDirs.moving.files,
 			expectErr: false,
 		},
 		{
 			name:      "test empty dir",
 			dirName:   testDirs.empty.directory,
-			fileUUID:  uuid.New().String(),
-			want:      nil,
-			expectErr: true,
-		},
-		{
-			name:      "test restricted dir",
-			dirName:   testDirs.restricted.directory,
 			fileUUID:  uuid.New().String(),
 			want:      nil,
 			expectErr: true,
@@ -396,7 +393,10 @@ func TestMoveFiles(t *testing.T) {
 				}
 			}
 			if err != nil && !tt.expectErr {
-				t.Errorf("An unexpected error occurred %v", err)
+				t.Errorf("%s an unexpected error occurred %v", tt.name, err)
+			}
+			if err == nil && tt.expectErr {
+				t.Errorf("%s expected error but got %v", tt.name, err)
 			}
 		})
 	}
@@ -406,42 +406,42 @@ func TestPackagingReports(t *testing.T) {
 	// create the packagingReports tests
 	packagingReportTests := []struct {
 		name          string
-		dirName       string
+		dirCfg        *dirconfig.DirectoryConfig
 		maxSize       int64
 		want          error
 		multipleFiles bool
 	}{
 		{
 			name:          "test large dir",
-			dirName:       testDirs.large.directory,
+			dirCfg:        genDirCfg(t, testDirs.large.directory),
 			maxSize:       1,
 			multipleFiles: true,
 			want:          nil,
 		},
 		{
 			name:          "test small dir",
-			dirName:       testDirs.small.directory,
+			dirCfg:        genDirCfg(t, testDirs.small.directory),
 			maxSize:       100,
 			multipleFiles: false,
 			want:          nil,
 		},
 		{
 			name:          "test empty dir",
-			dirName:       testDirs.empty.directory,
+			dirCfg:        genDirCfg(t, testDirs.empty.directory),
 			maxSize:       100,
 			multipleFiles: false,
-			want:          errors.New("No reports found"),
+			want:          nil,
 		},
 		{
 			name:          "restricted",
-			dirName:       testDirs.restrictedEmpty.directory,
+			dirCfg:        genDirCfg(t, testDirs.restrictedEmpty.directory),
 			maxSize:       100,
 			multipleFiles: false,
 			want:          errors.New("Restricted"),
 		},
 		{
 			name:          "nonexistent",
-			dirName:       filepath.Join(testingDir, uuid.New().String()),
+			dirCfg:        new(dirconfig.DirectoryConfig),
 			maxSize:       100,
 			multipleFiles: false,
 			want:          errors.New("nonexistent"),
@@ -450,27 +450,19 @@ func TestPackagingReports(t *testing.T) {
 	for _, tt := range packagingReportTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(t, tt.dirName)
+			testPackager.DirCfg = tt.dirCfg
 			testPackager.MaxSize = tt.maxSize
 			err := testPackager.PackageReports()
-			if err == nil {
-				outFiles, _ := testPackager.ReadUploadDir()
-				if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
-					t.Errorf("Outcome for test %s:\nReceived: %s\nExpected multpile files: %v", tt.name, strconv.Itoa(len(outFiles)), tt.multipleFiles)
-				}
-			} else {
-				if tt.want == nil {
-					t.Errorf("Expected no error but recieved one")
-				}
-				outFiles, err := testPackager.ReadUploadDir()
-				if len(outFiles) != 0 {
-					t.Errorf("An error occurred, but upload files were still generated.")
-				}
-				if err == nil {
-					t.Errorf("Expected an error but recieved nil.")
-				}
+			if tt.want != nil && err == nil {
+				t.Errorf("%s wanted error got %v", tt.name, err)
 			}
-
+			if tt.want == nil && err != nil {
+				t.Errorf("%s unexpected err: %v", tt.name, err)
+			}
+			outFiles, _ := testPackager.ReadUploadDir()
+			if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
+				t.Errorf("%s expected multpile files: %v, received: %d", tt.name, tt.multipleFiles, len(outFiles))
+			}
 		})
 	}
 }
