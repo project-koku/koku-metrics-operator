@@ -19,7 +19,6 @@ import (
 	"github.com/project-koku/korekuta-operator-go/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const epsilon = 0.00001
@@ -138,7 +137,7 @@ func TestGenerateReports(t *testing.T) {
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        zap.New(),
+		Log:        testLogger,
 	}
 	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
@@ -176,7 +175,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        zap.New(),
+		Log:        testLogger,
 	}
 
 	queryList := []*querys{nodeQueries, podQueries, volQueries}
@@ -240,7 +239,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        zap.New(),
+		Log:        testLogger,
 	}
 	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)

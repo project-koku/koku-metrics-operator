@@ -34,20 +34,20 @@ import (
 	"strings"
 	"testing"
 
+	logr "github.com/go-logr/logr/testing"
 	"github.com/google/uuid"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-var log = zap.New()
+var testLogger = logr.NullLogger{}
 var cost = &costmgmtv1alpha1.CostManagement{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
-	Log:    log,
+	Log:    testLogger,
 	Cost:   cost,
 }
 
@@ -136,7 +136,7 @@ func genDirCfg(t *testing.T, dirName string) *dirconfig.DirectoryConfig {
 		Archive: dirconfig.Directory{Path: filepath.Join(dirName, "archive")},
 	}
 	if err := dirconfig.CheckExistsOrRecreate(
-		zap.New(),
+		testLogger,
 		dirCfg.Upload,
 		dirCfg.Staging,
 		dirCfg.Reports,
@@ -793,7 +793,6 @@ func TestSplitFiles(t *testing.T) {
 
 			testPackager.maxBytes = tt.maxBytes
 			files, split, err := testPackager.splitFiles(dstTemp, fileList)
-			fmt.Printf("\n\n%v\n\n", err)
 			if tt.expectErr && err == nil {
 				t.Errorf("%s expected an error but received nil", tt.name)
 			}
