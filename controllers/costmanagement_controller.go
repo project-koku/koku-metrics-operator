@@ -166,9 +166,10 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costConfig.SourcesAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
 	costConfig.SourceName, sourceNameChanged = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
 
-	createBefore := *cost.Status.Source.CreateSource
+	createBefore := false
 	if cost.Spec.Source.CreateSource != nil {
 		costConfig.CreateSource = *cost.Spec.Source.CreateSource
+		createBefore = *cost.Spec.Source.CreateSource
 	}
 	cost.Status.Source.CreateSource = &costConfig.CreateSource
 	createChanged := !(createBefore == *cost.Status.Source.CreateSource)
