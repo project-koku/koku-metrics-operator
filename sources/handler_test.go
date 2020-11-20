@@ -444,7 +444,7 @@ func TestPostSource(t *testing.T) {
 		{
 			name: "successful response with data",
 			response: &http.Response{
-				StatusCode: 200,
+				StatusCode: 201,
 				Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
@@ -466,7 +466,7 @@ func TestPostSource(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"Invalid parameter - Validation failed: Source type must exist\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -477,8 +477,8 @@ func TestPostSource(t *testing.T) {
 		{
 			name: "parse error",
 			response: &http.Response{
-				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				StatusCode: 201,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -533,8 +533,8 @@ func TestPostApplication(t *testing.T) {
 		{
 			name: "successful response with data",
 			response: &http.Response{
-				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				StatusCode: 201,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -556,7 +556,7 @@ func TestPostApplication(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"OpenAPIParser::InvalidPattern: #/components/schemas/ID pattern ^\\d+$ does not match value: source.ID\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
