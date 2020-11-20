@@ -67,6 +67,14 @@ func escapeQuery(s string) string {
 	return slice[0] + q
 }
 
+func getReqBody(t *testing.T, req *http.Request) []byte {
+	bodyBytes, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	return bodyBytes
+}
+
 func TestGetSourceTypeID(t *testing.T) {
 	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift"
 	getSourceTypeIDTests := []struct {
@@ -421,13 +429,14 @@ func TestGetApplicationTypeID(t *testing.T) {
 }
 
 func TestPostSource(t *testing.T) {
-	// expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/sources"
+	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/sources"
 	postSourceTests := []struct {
 		name         string
 		response     *http.Response
 		responseErr  error
 		sourceTypeID string
-		expected     string
+		expected     *SourceItem
+		expectedBody []byte
 		expectedErr  error
 	}{
 		{
@@ -439,14 +448,15 @@ func TestPostSource(t *testing.T) {
 			},
 			responseErr:  nil,
 			sourceTypeID: "1",
-			expected:     "1",
+			expected:     &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
+			expectedBody: []byte(`{"name":"source_name","source_ref":"clusterId","source_type_id":"1"}`),
 			expectedErr:  nil,
 		},
 		{
 			name:        "request failure",
 			response:    &http.Response{},
 			responseErr: errSources,
-			expected:    "",
+			expected:    nil,
 			expectedErr: errSources,
 		},
 		{
@@ -457,7 +467,7 @@ func TestPostSource(t *testing.T) {
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr: nil,
-			expected:    "",
+			expected:    nil,
 			expectedErr: errSources,
 		},
 		{
@@ -468,51 +478,111 @@ func TestPostSource(t *testing.T) {
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr: nil,
-			expected:    "",
-			expectedErr: errSources,
-		},
-		{
-			name: "too many count from response",
-			response: &http.Response{
-				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
-				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
-			},
-			responseErr: nil,
-			expected:    "",
-			expectedErr: errSources,
-		},
-		{
-			name: "no count from response",
-			response: &http.Response{
-				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
-				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
-			},
-			responseErr: nil,
-			expected:    "",
+			expected:    nil,
 			expectedErr: errSources,
 		},
 	}
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
-			// clt := &MockClient{res: tt.response, err: tt.responseErr}
-			// got, err := SourceCreate(cost, clt)
-			// if tt.expectedErr != nil && err == nil {
-			// 	t.Errorf("%s expected error, got: %v", tt.name, err)
-			// }
-			// if tt.expectedErr == nil && err != nil {
-			// 	t.Errorf("%s got unexpected error: %v", tt.name, err)
-			// }
-			// if got != tt.expected {
-			// 	t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
-			// }
-			// // check that the request query is correctly constructed
-			// got = clt.req.URL.String()
-			// want := escapeQuery(expectedURL)
-			// if got != want {
-			// 	t.Errorf("%s\n\tgot:\n\t\t%+v\n\twant:\n\t\t%s", tt.name, got, want)
-			// }
+			clt := &MockClient{res: tt.response, err: tt.responseErr}
+			got, err := PostSource(cost, clt, tt.sourceTypeID)
+			if tt.expectedErr != nil && err == nil {
+				t.Errorf("%s expected error, got: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if got != nil && !reflect.DeepEqual(*got, *tt.expected) {
+				t.Errorf("%s got %v want %v", tt.name, got, tt.expected)
+			}
+			if got == nil && !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("%s got %v want %v", tt.name, got, tt.expected)
+			}
+			// check that the request url is correctly constructed
+			gotURL := clt.req.URL.String()
+			wantURL := escapeQuery(expectedURL)
+			if gotURL != wantURL {
+				t.Errorf("%s\n\tgot:\n\t\t%+v\n\twant:\n\t\t%s", tt.name, gotURL, wantURL)
+			}
+
+			// check that the request Body is correctly constructed
+			gotBody := getReqBody(t, clt.req)
+			if !reflect.DeepEqual(gotBody, tt.expectedBody) {
+				t.Errorf("%s\n\tgot:\n\t\t%s\n\twant:\n\t\t%s", tt.name, gotBody, tt.expectedBody)
+			}
+		})
+	}
+}
+
+func TestPostApplication(t *testing.T) {
+	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/applications"
+	postSourceTests := []struct {
+		name         string
+		response     *http.Response
+		responseErr  error
+		source       *SourceItem
+		appTypeID    string
+		expectedBody []byte
+		expectedErr  error
+	}{
+		{
+			name: "successful response with data",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr:  nil,
+			source:       &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
+			appTypeID:    "1",
+			expectedBody: []byte(`{"application_type_id":"1","source_id":"11"}`),
+			expectedErr:  nil,
+		},
+		{
+			name:         "request failure",
+			response:     &http.Response{},
+			responseErr:  errSources,
+			source:       &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
+			appTypeID:    "1",
+			expectedBody: []byte(`{"application_type_id":"1","source_id":"11"}`),
+			expectedErr:  errSources,
+		},
+		{
+			name: "400 bad response",
+			response: &http.Response{
+				StatusCode: 400,
+				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr:  nil,
+			source:       &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
+			appTypeID:    "",
+			expectedBody: []byte(`{"application_type_id":"","source_id":"11"}`),
+			expectedErr:  errSources,
+		},
+	}
+	for _, tt := range postSourceTests {
+		t.Run(tt.name, func(t *testing.T) {
+			clt := &MockClient{res: tt.response, err: tt.responseErr}
+			err := PostApplication(cost, clt, tt.source, tt.appTypeID)
+			if tt.expectedErr != nil && err == nil {
+				t.Errorf("%s expected error, got: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			// check that the request url is correctly constructed
+			gotURL := clt.req.URL.String()
+			wantURL := escapeQuery(expectedURL)
+			if gotURL != wantURL {
+				t.Errorf("%s\n\tgot:\n\t\t%+v\n\twant:\n\t\t%s", tt.name, gotURL, wantURL)
+			}
+
+			// check that the request Body is correctly constructed
+			gotBody := getReqBody(t, clt.req)
+			if !reflect.DeepEqual(gotBody, tt.expectedBody) {
+				t.Errorf("%s\n\tgot:\n\t\t%s\n\twant:\n\t\t%s", tt.name, gotBody, tt.expectedBody)
+			}
 		})
 	}
 }
