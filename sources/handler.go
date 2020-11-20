@@ -82,8 +82,8 @@ type SourceTypeResponse struct {
 type SourceItem struct {
 	ID           string
 	Name         string
-	SourceTypeID string
-	SourceRef    string
+	SourceTypeID string `json:"source_type_id"`
+	SourceRef    string `json:"source_ref"`
 }
 
 // SourceResponse A data structure for the paginated source response
@@ -216,14 +216,14 @@ func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, client crhchtt
 		errKey:   "obtaining the OpenShift source",
 	}
 	queries := map[string]string{}
-	if sourceTypeID != "" {
-		queries[SourceTypeIDFilterQueryParam] = sourceTypeID
-	}
 	if name != "" {
 		queries[NameFilterQueryParam] = name
 	}
 	if sourceRef != "" {
 		queries[SourceRefFilterQueryParam] = sourceRef
+	}
+	if sourceTypeID != "" {
+		queries[SourceTypeIDFilterQueryParam] = sourceTypeID
 	}
 	request.queries = queries
 
