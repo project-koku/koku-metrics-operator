@@ -27,18 +27,18 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// TestLogger is a logr.Logger that does nothing.
+// TestLogger is a logr.Logger that only prints the main msg.
 type TestLogger struct{}
 
 var _ logr.Logger = TestLogger{}
-var logger = log.New(os.Stdout, "test logger: ", log.Ltime)
+var logger = log.New(os.Stdout, "test logger: ", log.Lmsgprefix)
 
 func (TestLogger) Info(msg string, args ...interface{}) {
 	str := ""
 	if len(args) > 0 {
-		str += fmt.Sprintf(": args -- %v", args)
+		str += fmt.Sprintf(": %v", args)
 	}
-	logger.Printf("%s"+str, msg)
+	logger.Printf("'%s'"+str, msg)
 }
 
 func (TestLogger) Enabled() bool {
@@ -46,7 +46,7 @@ func (TestLogger) Enabled() bool {
 }
 
 func (log TestLogger) Error(err error, msg string, args ...interface{}) {
-	logger.Printf("%s: %v -- %v", msg, err, args)
+	logger.Printf("'%s': %v -- %v", msg, err, args)
 }
 
 func (log TestLogger) V(level int) logr.InfoLogger {
