@@ -32,23 +32,42 @@ import (
 )
 
 var (
-	cost       = &crhchttp.CostManagementConfig{Log: testLogger}
+	cost = &crhchttp.CostManagementConfig{
+		APIURL:         "https://ci.cloud.redhat.com",
+		SourcesAPIPath: "/api/sources/v1.0/",
+		Log:            testLogger,
+	}
 	errSources = errors.New("test error")
 	testLogger = logr.NullLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
 type MockClient struct {
+	req *http.Request
 	res *http.Response
 	err error
 }
 
 // Do is the mock client's `Do` func
-func (m MockClient) Do(req *http.Request) (*http.Response, error) {
+func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
+	m.req = req
 	return m.res, m.err
 }
 
+func escapeQuery(s string) string {
+	slice := strings.SplitAfterN(s, "?", 2)
+	if len(slice) < 2 {
+		return s
+	}
+	q := slice[1]
+	q = strings.ReplaceAll(q, "[", "%5B")
+	q = strings.ReplaceAll(q, "]", "%5D")
+	q = strings.ReplaceAll(q, "/", "%2F")
+	return slice[0] + q
+}
+
 func TestGetSourceTypeID(t *testing.T) {
+	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift"
 	getSourceTypeIDTests := []struct {
 		name        string
 		response    *http.Response
@@ -121,7 +140,7 @@ func TestGetSourceTypeID(t *testing.T) {
 	}
 	for _, tt := range getSourceTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
-			clt := MockClient{res: tt.response, err: tt.responseErr}
+			clt := &MockClient{res: tt.response, err: tt.responseErr}
 			got, err := GetSourceTypeID(cost, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
@@ -132,11 +151,47 @@ func TestGetSourceTypeID(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
 			}
+			// check that the request query is correctly constructed
+			got = clt.req.URL.String()
+			want := escapeQuery(expectedURL)
+			if got != want {
+				t.Errorf("%s\n\tgot:\n\t\t%+v\n\twant:\n\t\t%s", tt.name, got, want)
+			}
 		})
 	}
 }
 
+func TestCheckSourceExists(t *testing.T) {
+	// checkSourceExistsTests := []struct {
+	// 	name         string
+	// 	sourceTypeID string
+	// 	sourceRef    string
+	// 	response     *http.Response
+	// 	responseErr  error
+	// 	expected     *SourceItem
+	// 	expectedErr  error
+	// }{
+	// 	{},
+	// }
+	// for _, tt := range checkSourceExistsTests {
+	// 	t.Run(tt.name, func(t *testing.T) {
+	// 		clt := &MockClient{res: tt.response, err: tt.responseErr}
+	// 		got, err := CheckSourceExists(cost, clt, tt.sourceTypeID, tt.name, tt.sourceRef)
+	// 		if tt.expectedErr != nil && err == nil {
+	// 			t.Errorf("%s expected error, got: %v", tt.name, err)
+	// 		}
+	// 		if tt.expectedErr == nil && err != nil {
+	// 			t.Errorf("%s got unexpected error: %v", tt.name, err)
+	// 		}
+	// 		if got != tt.expected {
+	// 			t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
+	// 		}
+	// 	})
+	// }
+}
+
 func TestGetApplicationTypeID(t *testing.T) {
+	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management"
 	getApplicationTypeIDTests := []struct {
 		name        string
 		response    *http.Response
@@ -209,7 +264,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 	}
 	for _, tt := range getApplicationTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
-			clt := MockClient{res: tt.response, err: tt.responseErr}
+			clt := &MockClient{res: tt.response, err: tt.responseErr}
 			got, err := GetApplicationTypeID(cost, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
@@ -219,6 +274,12 @@ func TestGetApplicationTypeID(t *testing.T) {
 			}
 			if got != tt.expected {
 				t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
+			}
+			// check that the request query is correctly constructed
+			got = clt.req.URL.String()
+			want := escapeQuery(expectedURL)
+			if got != want {
+				t.Errorf("%s\n\tgot:\n\t\t%+v\n\twant:\n\t\t%s", tt.name, got, want)
 			}
 		})
 	}
