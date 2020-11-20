@@ -355,9 +355,8 @@ func SourceCreate(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTT
 }
 
 // SourceGetOrCreate Check if source exists, if not create the source if specified
-func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.Time, error) {
+func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient) (bool, metav1.Time, error) {
 	log := costConfig.Log.WithValues("costmanagement", "SourceGetOrCreate")
-	client := crhchttp.GetClient(costConfig)
 	currentTime := metav1.Now()
 
 	// Get Source Type ID

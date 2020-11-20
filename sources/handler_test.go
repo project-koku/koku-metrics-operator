@@ -727,3 +727,395 @@ func TestSourceCreate(t *testing.T) {
 		})
 	}
 }
+
+func TestSourceGetOrCreate(t *testing.T) {
+	sourceGetOrCreateTests := []struct {
+		name        string
+		clts        MockClientList
+		create      bool
+		want        bool
+		expectedErr error
+	}{
+		{
+			name: "failed GetSourceTypeID",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			create:      false,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "failed CheckSourceExists - `Check if Source exists already`",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			create:      false,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "successful CheckSourceExists - source already exists",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			create:      false,
+			want:        true,
+			expectedErr: nil,
+		},
+		{
+			name: "successful source_create is false",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			create:      false,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "failed CheckSourceExists - `Check if cluster ID is registered`",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			create:      true,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "successful CheckSourceExists - `cluster ID is already registered`",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			create:      true,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "failed CheckSourceExists - `Check if source name is already in use`",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			create:      true,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "successful CheckSourceExists - `source name is already in use for non-Openshift source`",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"400\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			create:      true,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "successful CheckSourceExists - `source name is already in use for another Openshift source`",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			create:      true,
+			want:        false,
+			expectedErr: errSources,
+		},
+
+		{
+			name: "failed source create",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			create:      true,
+			want:        false,
+			expectedErr: errSources,
+		},
+		{
+			name: "successful source create",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 201,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 201,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			create:      true,
+			want:        true,
+			expectedErr: nil,
+		},
+	}
+	for _, tt := range sourceGetOrCreateTests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := *cost
+			c.CreateSource = tt.create
+			got, _, err := SourceGetOrCreate(&c, &tt.clts)
+			if tt.expectedErr != nil && err == nil {
+				t.Errorf("%s expected error, got: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if tt.want != got {
+				t.Errorf("%s got %v want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
