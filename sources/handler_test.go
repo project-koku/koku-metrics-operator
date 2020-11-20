@@ -21,6 +21,7 @@ package sources
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -53,6 +54,21 @@ type MockClient struct {
 
 // Do is the mock client's `Do` func
 func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
+	m.req = req
+	return m.res, m.err
+}
+
+type MockClientList struct {
+	clients []MockClient
+}
+
+// Do is the mock client's `Do` func
+func (ml *MockClientList) Do(req *http.Request) (*http.Response, error) {
+	if len(ml.clients) <= 0 {
+		return nil, fmt.Errorf("no more clients")
+	}
+	var m MockClient
+	m, ml.clients = ml.clients[0], ml.clients[1:]
 	m.req = req
 	return m.res, m.err
 }
@@ -587,6 +603,126 @@ func TestPostApplication(t *testing.T) {
 			gotBody := getReqBody(t, clt.req)
 			if !reflect.DeepEqual(gotBody, tt.expectedBody) {
 				t.Errorf("%s\n\tgot:\n\t\t%s\n\twant:\n\t\t%s", tt.name, gotBody, tt.expectedBody)
+			}
+		})
+	}
+}
+
+func TestSourceCreate(t *testing.T) {
+	sourceCreateTests := []struct {
+		name         string
+		clts         MockClientList
+		source       *SourceItem
+		sourceTypeID string
+		expectedErr  error
+	}{
+		{
+			name: "GetApplicationTypeID failed",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			source:       nil,
+			sourceTypeID: "1",
+			expectedErr:  errSources,
+		},
+		{
+			name: "PostSource failed",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			source:       nil,
+			sourceTypeID: "1",
+			expectedErr:  errSources,
+		},
+		{
+			name: "PostApplication failed",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 201,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{},
+					err: errSources,
+				},
+			}},
+			source:       &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
+			sourceTypeID: "1",
+			expectedErr:  errSources,
+		},
+		{
+			name: "successful source and application create",
+			clts: MockClientList{clients: []MockClient{
+				{
+					res: &http.Response{
+						StatusCode: 200,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 201,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+				{
+					res: &http.Response{
+						StatusCode: 201,
+						Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
+						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+					},
+					err: nil,
+				},
+			}},
+			source:       &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
+			sourceTypeID: "1",
+			expectedErr:  nil,
+		},
+	}
+	for _, tt := range sourceCreateTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SourceCreate(cost, &tt.clts, tt.sourceTypeID)
+			if tt.expectedErr != nil && err == nil {
+				t.Errorf("%s expected error, got: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if got != nil && !reflect.DeepEqual(*got, *tt.source) {
+				t.Errorf("%s got %v want %v", tt.name, got, tt.source)
+			}
+			if got == nil && !reflect.DeepEqual(got, tt.source) {
+				t.Errorf("%s got %v want %v", tt.name, got, tt.source)
 			}
 		})
 	}
