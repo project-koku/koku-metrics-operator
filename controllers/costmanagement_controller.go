@@ -114,9 +114,9 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costConfig.Authentication = cost.Status.Authentication.AuthType
 
 	// If data is specified in the spec it should be used
-	cost.Status.ValidateCert = cost.Spec.ValidateCert
-	if cost.Status.ValidateCert != nil {
-		costConfig.ValidateCert = *cost.Status.ValidateCert
+	cost.Status.Upload.ValidateCert = cost.Spec.Upload.ValidateCert
+	if cost.Status.Upload.ValidateCert != nil {
+		costConfig.ValidateCert = *cost.Status.Upload.ValidateCert
 	} else {
 		costConfig.ValidateCert = costmgmtv1alpha1.DefaultValidateCert
 	}
@@ -355,24 +355,19 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// Fetch the CostManagement instance
 	cost := &costmgmtv1alpha1.CostManagement{}
-	err := r.Get(ctx, req.NamespacedName, cost)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			log.Info("CostManagement resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get CostManagement")
-		return ctrl.Result{}, err
+	//
+	if err := r.Get(ctx, req.NamespacedName, cost); err != nil {
+		log.Error(err, "unable to fetch CronJob")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	//
 
 	log.Info("Reconciling custom resource", "CostManagement", cost)
 	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
-	err = ReflectSpec(r, cost, costConfig)
+	err := ReflectSpec(r, cost, costConfig)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement status")
 		return ctrl.Result{}, err
