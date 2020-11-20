@@ -31,7 +31,7 @@ import (
 type TestLogger struct{}
 
 var _ logr.Logger = TestLogger{}
-var logger = log.New(os.Stdout, "test logger: ", log.Lmsgprefix)
+var logger = log.New(os.Stdout, "test logger: ", 64) // log.Lmsgprefix == 64
 
 func (TestLogger) Info(msg string, args ...interface{}) {
 	str := ""
