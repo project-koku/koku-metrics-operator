@@ -37,6 +37,8 @@ var (
 		APIURL:         "https://ci.cloud.redhat.com",
 		SourcesAPIPath: "/api/sources/v1.0/",
 		Log:            testLogger,
+		SourceName:     "post-source-name",
+		ClusterID:      "post-cluster-id",
 	}
 	errSources = errors.New("test error")
 	testLogger = logr.NullLogger{}
@@ -449,15 +451,16 @@ func TestPostSource(t *testing.T) {
 			responseErr:  nil,
 			sourceTypeID: "1",
 			expected:     &SourceItem{ID: "11", Name: "testSource01", SourceTypeID: "1", SourceRef: "12345"},
-			expectedBody: []byte(`{"name":"source_name","source_ref":"clusterId","source_type_id":"1"}`),
+			expectedBody: []byte(`{"name":"post-source-name","source_ref":"post-cluster-id","source_type_id":"1"}`),
 			expectedErr:  nil,
 		},
 		{
-			name:        "request failure",
-			response:    &http.Response{},
-			responseErr: errSources,
-			expected:    nil,
-			expectedErr: errSources,
+			name:         "request failure",
+			response:     &http.Response{},
+			responseErr:  errSources,
+			expected:     nil,
+			expectedBody: []byte(`{"name":"post-source-name","source_ref":"post-cluster-id","source_type_id":""}`),
+			expectedErr:  errSources,
 		},
 		{
 			name: "400 bad response",
@@ -466,9 +469,10 @@ func TestPostSource(t *testing.T) {
 				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
-			responseErr: nil,
-			expected:    nil,
-			expectedErr: errSources,
+			responseErr:  nil,
+			expected:     nil,
+			expectedBody: []byte(`{"name":"post-source-name","source_ref":"post-cluster-id","source_type_id":""}`),
+			expectedErr:  errSources,
 		},
 		{
 			name: "parse error",
@@ -477,9 +481,10 @@ func TestPostSource(t *testing.T) {
 				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
-			responseErr: nil,
-			expected:    nil,
-			expectedErr: errSources,
+			responseErr:  nil,
+			expected:     nil,
+			expectedBody: []byte(`{"name":"post-source-name","source_ref":"post-cluster-id","source_type_id":""}`),
+			expectedErr:  errSources,
 		},
 	}
 	for _, tt := range postSourceTests {
