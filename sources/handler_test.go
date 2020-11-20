@@ -28,8 +28,8 @@ import (
 	"strings"
 	"testing"
 
-	logr "github.com/go-logr/logr/testing"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
+	"github.com/project-koku/korekuta-operator-go/testlogr"
 )
 
 var (
@@ -41,7 +41,7 @@ var (
 		ClusterID:      "post-cluster-id",
 	}
 	errSources = errors.New("test error")
-	testLogger = logr.NullLogger{}
+	testLogger = testlogr.TestLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
