@@ -132,7 +132,7 @@ func TestGetSourceTypeID(t *testing.T) {
 			expectedErr: errSources,
 		},
 		{
-			name: "parse error",
+			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 200,
 				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
@@ -285,7 +285,7 @@ func TestCheckSourceExists(t *testing.T) {
 			expectedErr:   errSources,
 		},
 		{
-			name: "parse error",
+			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 200,
 				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
@@ -390,7 +390,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 			expectedErr: errSources,
 		},
 		{
-			name: "parse error",
+			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 200,
 				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
@@ -491,10 +491,10 @@ func TestPostSource(t *testing.T) {
 			expectedErr:  errSources,
 		},
 		{
-			name: "parse error",
+			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 201,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
