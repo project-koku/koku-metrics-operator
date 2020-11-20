@@ -34,7 +34,6 @@ import (
 	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 type mappedMockPromResult map[string]*mockPromResult
@@ -73,7 +72,7 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 func TestGetQueryResultsSuccess(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        zap.New(),
+		Log:        testLogger,
 	}
 	getQueryResultsErrorsTests := []struct {
 		name          string
@@ -200,7 +199,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 func TestGetQueryResultsError(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        zap.New(),
+		Log:        testLogger,
 	}
 	getQueryResultsErrorsTests := []struct {
 		name         string
@@ -278,7 +277,7 @@ func TestGetQueryResultsError(t *testing.T) {
 func TestTestPrometheusConnection(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        zap.New(),
+		Log:        testLogger,
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
@@ -471,7 +470,7 @@ func TestGetPromConn(t *testing.T) {
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
-				Log:      zap.New(),
+				Log:      testLogger,
 			}
 			err := col.GetPromConn(cost)
 			if tt.wantedError == nil && err != nil {
