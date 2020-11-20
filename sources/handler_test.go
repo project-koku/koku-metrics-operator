@@ -419,3 +419,100 @@ func TestGetApplicationTypeID(t *testing.T) {
 		})
 	}
 }
+
+func TestPostSource(t *testing.T) {
+	// expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/sources"
+	postSourceTests := []struct {
+		name         string
+		response     *http.Response
+		responseErr  error
+		sourceTypeID string
+		expected     string
+		expectedErr  error
+	}{
+		{
+			name: "successful response with data",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr:  nil,
+			sourceTypeID: "1",
+			expected:     "1",
+			expectedErr:  nil,
+		},
+		{
+			name:        "request failure",
+			response:    &http.Response{},
+			responseErr: errSources,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "400 bad response",
+			response: &http.Response{
+				StatusCode: 400,
+				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "parse error",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "too many count from response",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+		{
+			name: "no count from response",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    "",
+			expectedErr: errSources,
+		},
+	}
+	for _, tt := range postSourceTests {
+		t.Run(tt.name, func(t *testing.T) {
+			// clt := &MockClient{res: tt.response, err: tt.responseErr}
+			// got, err := SourceCreate(cost, clt)
+			// if tt.expectedErr != nil && err == nil {
+			// 	t.Errorf("%s expected error, got: %v", tt.name, err)
+			// }
+			// if tt.expectedErr == nil && err != nil {
+			// 	t.Errorf("%s got unexpected error: %v", tt.name, err)
+			// }
+			// if got != tt.expected {
+			// 	t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
+			// }
+			// // check that the request query is correctly constructed
+			// got = clt.req.URL.String()
+			// want := escapeQuery(expectedURL)
+			// if got != want {
+			// 	t.Errorf("%s\n\tgot:\n\t\t%+v\n\twant:\n\t\t%s", tt.name, got, want)
+			// }
+		})
+	}
+}
