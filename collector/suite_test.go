@@ -27,9 +27,9 @@ import (
 	"testing"
 	"time"
 
-	logr "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/project-koku/korekuta-operator-go/testlogr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/deprecated/scheme"
@@ -50,7 +50,7 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx = context.Background()
 var testSecretData = "this-is-the-data"
-var testLogger = logr.NullLogger{}
+var testLogger = testlogr.TestLogger{}
 
 func TestCollector(t *testing.T) {
 	RegisterFailHandler(Fail)

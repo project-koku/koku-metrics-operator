@@ -34,16 +34,16 @@ import (
 	"strings"
 	"testing"
 
-	logr "github.com/go-logr/logr/testing"
 	"github.com/google/uuid"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/dirconfig"
+	"github.com/project-koku/korekuta-operator-go/testlogr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-var testLogger = logr.NullLogger{}
+var testLogger = testlogr.TestLogger{}
 var cost = &costmgmtv1alpha1.CostManagement{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
