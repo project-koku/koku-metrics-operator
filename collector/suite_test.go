@@ -21,15 +21,14 @@ package collector
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/project-koku/korekuta-operator-go/testlogr"
+	"github.com/project-koku/korekuta-operator-go/testutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/deprecated/scheme"
@@ -105,7 +104,7 @@ func createNamespace(namespace string) {
 
 func createPullSecret(namespace, prefix, dataKey string, data []byte) string {
 	ctx := context.Background()
-	name := prefix + "-" + randomStringWithCharset(5, charset)
+	name := prefix + "-" + testutils.RandomStringWithCharset(5, charset)
 	secret := &corev1.Secret{
 		Data: map[string][]byte{
 			dataKey: data,
@@ -125,9 +124,9 @@ func createListOfRandomSecrets(num int, namespace string) []corev1.ObjectReferen
 		secrets = append(secrets, corev1.ObjectReference{
 			Name: createPullSecret(
 				namespace,
-				randomStringWithCharset(20, charset),
-				randomStringWithCharset(8, charset),
-				fakeEncodedData(randomStringWithCharset(30, charset))),
+				testutils.RandomStringWithCharset(20, charset),
+				testutils.RandomStringWithCharset(8, charset),
+				fakeEncodedData(testutils.RandomStringWithCharset(30, charset))),
 		})
 	}
 	return secrets
@@ -151,15 +150,6 @@ func addSecretsToSA(secrets []corev1.ObjectReference, sa *corev1.ServiceAccount)
 }
 
 const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-
-func randomStringWithCharset(length int, charset string) string {
-	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
-	}
-	return string(b)
-}
 
 func fakeEncodedData(data string) []byte {
 	d, _ := json.Marshal(data)

@@ -37,6 +37,18 @@ var (
 	// archive      = "archive"
 )
 
+type DirListFunc = func(path string) ([]os.FileInfo, error)
+type RemoveAllFunc = func(path string) error
+type StatFunc = func(path string) (os.FileInfo, error)
+type DirCreateFunc = func(path string) error
+
+type DirectoryFileSystem struct {
+	ListDirectory   DirListFunc
+	RemoveAll       RemoveAllFunc
+	Stat            StatFunc
+	CreateDirectory DirCreateFunc
+}
+
 // DirectoryConfig stores the path for each directory
 type DirectoryConfig struct {
 	Parent  Directory
@@ -44,10 +56,12 @@ type DirectoryConfig struct {
 	Staging Directory
 	Reports Directory
 	Archive Directory
+	*DirectoryFileSystem
 }
 
 type Directory struct {
 	Path string
+	*DirectoryFileSystem
 }
 
 func (dir *Directory) String() string {
@@ -55,12 +69,19 @@ func (dir *Directory) String() string {
 }
 
 func (dir *Directory) RemoveContents() error {
-	fileList, err := ioutil.ReadDir(dir.Path)
+	listDir := ioutil.ReadDir
+	removeAll := os.RemoveAll
+	if dir.DirectoryFileSystem != nil {
+		listDir = dir.DirectoryFileSystem.ListDirectory
+		removeAll = dir.DirectoryFileSystem.RemoveAll
+	}
+
+	fileList, err := listDir(dir.Path)
 	if err != nil {
 		return fmt.Errorf("RemoveContents: could not read directory: %v", err)
 	}
 	for _, file := range fileList {
-		if err := os.RemoveAll(filepath.Join(dir.Path, file.Name())); err != nil {
+		if err := removeAll(filepath.Join(dir.Path, file.Name())); err != nil {
 			return fmt.Errorf("RemoveContents: could not remove file: %v", err)
 		}
 	}
@@ -68,7 +89,11 @@ func (dir *Directory) RemoveContents() error {
 }
 
 func (dir *Directory) Exists() bool {
-	_, err := os.Stat(dir.String())
+	stat := os.Stat
+	if dir.DirectoryFileSystem != nil {
+		stat = dir.DirectoryFileSystem.Stat
+	}
+	_, err := stat(dir.Path)
 	switch {
 	case os.IsNotExist(err):
 		return false
@@ -80,7 +105,13 @@ func (dir *Directory) Exists() bool {
 }
 
 func (dir *Directory) Create() error {
-	if err := os.MkdirAll(dir.String(), os.ModePerm); err != nil {
+	dirCreator := func(path string) error {
+		return os.MkdirAll(path, os.ModePerm)
+	}
+	if dir.DirectoryFileSystem != nil {
+		dirCreator = dir.DirectoryFileSystem.CreateDirectory
+	}
+	if err := dirCreator(dir.String()); err != nil {
 		return fmt.Errorf("Create: %s: %v", dir, err)
 	}
 	return nil
@@ -98,8 +129,8 @@ func CheckExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
 	return nil
 }
 
-func getOrCreatePath(directory string) (*Directory, error) {
-	dir := Directory{Path: directory}
+func getOrCreatePath(directory string, dirFs *DirectoryFileSystem) (*Directory, error) {
+	dir := Directory{Path: directory, DirectoryFileSystem: dirFs}
 	if dir.Exists() {
 		return &dir, nil
 	}
@@ -112,7 +143,7 @@ func getOrCreatePath(directory string) (*Directory, error) {
 func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	var err error
 	dirMap := map[string]*Directory{}
-	dirMap["parent"], err = getOrCreatePath(parentDir)
+	dirMap["parent"], err = getOrCreatePath(parentDir, dirCfg.DirectoryFileSystem)
 	if err != nil {
 		return fmt.Errorf("getDirectoryConfig: %v", err)
 	}
@@ -124,7 +155,7 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	}
 	for name, folder := range folders {
 		d := filepath.Join(parentDir, folder)
-		dirMap[name], err = getOrCreatePath(d)
+		dirMap[name], err = getOrCreatePath(d, dirCfg.DirectoryFileSystem)
 		if err != nil {
 			return fmt.Errorf("getDirectoryConfig: %v", err)
 		}
