@@ -73,11 +73,9 @@ type AuthenticationSpec struct {
 
 	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
 	// Valid values are:
-	// - "basic" : Enables authetication using user and password from authentication secret.
+	// - "basic" : Enables authentication using user and password from authentication secret.
 	// - "token" (default): Uses cluster token for authentication.
-	// +optional
 	// +kubebuilder:default="token"
-	// +kubebuilder:validation:preserveUnknownFields=false
 	AuthType AuthenticationType `json:"type,omitempty"`
 
 	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
@@ -94,8 +92,7 @@ type PackagingSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=100
-	// +kubebuilder:validation:preserveUnknownFields=false
-	MaxSize *int64 `json:"max_size,omitempty"`
+	MaxSize int64 `json:"max_size,omitempty"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the CostManagementSpec.
@@ -105,7 +102,6 @@ type UploadSpec struct {
 	// The default is `/api/ingress/v1/upload`.
 	// +optional
 	// +kubebuilder:default=`/api/ingress/v1/upload`
-	// +kubebuilder:validation:preserveUnknownFields=false
 	IngressAPIPath string `json:"ingress_path,omitempty"`
 
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
@@ -118,20 +114,17 @@ type UploadSpec struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=360
-	// +kubebuilder:validation:preserveUnknownFields=false
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
 	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
 	// The default is true.
 	// +optional
 	// +kubebuilder:default=true
-	// +kubebuilder:validation:preserveUnknownFields=false
 	UploadToggle *bool `json:"upload_toggle,omitempty"`
 
 	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
 	// +optional
 	// +kubebuilder:default=false
-	// +kubebuilder:validation:preserveUnknownFields=false
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 }
 
@@ -146,7 +139,6 @@ type PrometheusSpec struct {
 	// The default is false.
 	// +optional
 	// +kubebuilder:default=false
-	// +kubebuilder:validation:preserveUnknownFields=false
 	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
@@ -157,7 +149,6 @@ type CloudDotRedHatSourceSpec struct {
 	// The default is `/api/sources/v1.0/`.
 	// +optional
 	// +kubebuilder:default=`/api/sources/v1.0/`
-	// +kubebuilder:validation:preserveUnknownFields=false
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
 	// SourceName is a field of CostManagementSpec to represent the source name on cloud.redhat.com.
@@ -167,7 +158,6 @@ type CloudDotRedHatSourceSpec struct {
 	// CreateSource is a field of CostManagementSpec to represent if the source should be created if not found.
 	// +optional
 	// +kubebuilder:default=false
-	// +kubebuilder:validation:preserveUnknownFields=false
 	CreateSource *bool `json:"create_source,omitempty"`
 
 	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
@@ -175,12 +165,12 @@ type CloudDotRedHatSourceSpec struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=1440
-	// +kubebuilder:validation:preserveUnknownFields=false
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
 
 // CostManagementSpec defines the desired state of CostManagement.
 type CostManagementSpec struct {
+	// +kubebuilder:validation:preserveUnknownFields=false
 
 	// ClusterID is a field of CostManagement to represent the cluster UUID.
 	// +optional
@@ -190,27 +180,31 @@ type CostManagementSpec struct {
 	// The default is `https://cloud.redhat.com`.
 	// +optional
 	// +kubebuilder:default=`https://cloud.redhat.com`
-	// +kubebuilder:validation:preserveUnknownFields=false
 	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of CostManagement to represent the authentication object.
 	// +optional
+	// +kubebuilder:default={type: "token"}
 	Authentication AuthenticationSpec `json:"authentication,omitempty"`
 
 	//Packaging is a field of CostManagement to represent the packaging object
 	// +optional
+	// +kubebuilder:default={max_size: 100}
 	Packaging PackagingSpec `json:"packaging,omitempty"`
 
 	// Upload is a field of CostManagement to represent the upload object.
 	// +optional
+	// +kubebuilder:default={ingress_path: `/api/ingress/v1/upload`, upload_cycle: 360, upload_toggle: true, validate_cert: false}
 	Upload UploadSpec `json:"upload,omitempty"`
 
 	// PrometheusConfig is a field of CostManagement to represent the configuration of Prometheus connection.
 	// +optional
+	// +kubebuilder:default={skip_tls_verification: false}
 	PrometheusConfig PrometheusSpec `json:"prometheus_config,omitempty"`
 
 	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
 	// +optional
+	// +kubebuilder:default={create_source: false, sources_path: `/api/sources/v1.0/`, check_cycle: 1440}
 	Source CloudDotRedHatSourceSpec `json:"source,omitempty"`
 }
 

@@ -135,7 +135,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 
 	// set the default max file size for packaging
-	cost.Status.Packaging.MaxSize = cost.Spec.Packaging.MaxSize
+	cost.Status.Packaging.MaxSize = &cost.Spec.Packaging.MaxSize
 	if cost.Status.Packaging.MaxSize != nil {
 		costConfig.MaxSize = *cost.Status.Packaging.MaxSize
 	} else {
@@ -338,54 +338,21 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 }
 
-// +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
-// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
-// +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
-// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
-// +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
-
-// Reconcile Process the CostManagement custom resource based on changes or requeue
-func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	os.Setenv("TZ", "UTC")
-	ctx := context.Background()
-	log := r.Log.WithValues("costmanagement", req.NamespacedName)
-
-	// Fetch the CostManagement instance
-	cost := &costmgmtv1alpha1.CostManagement{}
-	//
-	if err := r.Get(ctx, req.NamespacedName, cost); err != nil {
-		log.Error(err, "unable to fetch CronJob")
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
-		// requeue (we'll need to wait for a new notification), and we can get them
-		// on deleted requests.
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-	//
-
-	log.Info("Reconciling custom resource", "CostManagement", cost)
-	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
-	err := ReflectSpec(r, cost, costConfig)
-	if err != nil {
-		log.Error(err, "Failed to update CostManagement status")
-		return ctrl.Result{}, err
-	}
+func setClusterID(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement) error {
 	if costConfig.ClusterID == "" {
 		r.cvClientBuilder = cv.NewBuilder()
-		err = GetClusterID(r, cost, costConfig)
-		if err != nil {
-			log.Error(err, "Failed to obtain clusterID.")
-			return ctrl.Result{}, err
-		}
+		err := GetClusterID(r, cost, costConfig)
+		return err
 	}
-	log.Info("Using the following inputs", "CostManagementConfig", costConfig)
+	return nil
+}
 
-	// Obtain credentials token/basic
+func setAuthentication(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement, reqNamespace types.NamespacedName) error {
+	log := r.Log.WithValues("costmanagement", "setAuthentication")
+	ctx := context.Background()
 	if costConfig.Authentication == costmgmtv1alpha1.Token {
 		// Get token from pull secret
-		err = GetPullSecretToken(r, costConfig)
+		err := GetPullSecretToken(r, costConfig)
 		if err != nil {
 			log.Error(nil, "Failed to obtain cluster authentication token.")
 			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
@@ -400,9 +367,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		}
+		return err
 	} else if costConfig.AuthenticationSecretName != "" {
 		// Get user and password from auth secret in namespace
-		err = GetAuthSecret(r, costConfig, req.NamespacedName)
+		err := GetAuthSecret(r, costConfig, reqNamespace)
 		if err != nil {
 			log.Error(nil, "Failed to obtain authentication secret credentials.")
 			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
@@ -417,25 +385,26 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				log.Error(err, "Failed to update CostManagement Status")
 			}
 		}
+		return err
 	} else {
 		// No authentication secret name set when using basic auth
 		cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
-		err = r.Status().Update(ctx, cost)
+		err := r.Status().Update(ctx, cost)
 		if err != nil {
 			log.Error(err, "Failed to update CostManagement Status")
 		}
 		err = fmt.Errorf("No authentication secret name set when using basic auth.")
+		return err
 	}
-	// returns if `Obtain credentials token/basic` errors
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+}
 
-	// Grab the Operator git commit and upload the status and input object with it
+func setOperatorCommit(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement) error {
+	log := r.Log.WithValues("costmanagement", "setOperatorCommit")
+	ctx := context.Background()
 	commit, err := ioutil.ReadFile("commit")
 	if err != nil {
 		fmt.Println("File reading error", err)
-		return ctrl.Result{}, err
+		return err
 	}
 	cost.Status.OperatorCommit = strings.Replace(string(commit), "\n", "", -1)
 	costConfig.OperatorCommit = cost.Status.OperatorCommit
@@ -443,8 +412,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
 	}
+	return nil
+}
 
-	// Check if source is defined and should be confirmed/created
+func checkSource(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement) {
+	log := r.Log.WithValues("costmanagement", "checkSource")
+	ctx := context.Background()
 	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
 		cost.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig)
@@ -458,14 +431,11 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			log.Error(err, "Failed to update CostManagement Status")
 		}
 	}
+}
 
-	log.Info("Getting directory configuration.")
-	if dirCfg == nil || !dirCfg.Parent.Exists() {
-		if err := dirCfg.GetDirectoryConfig(); err != nil {
-			log.Error(err, "Failed to get directory configuration.")
-		}
-	}
-
+func packageAndUpload(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
+	log := r.Log.WithValues("costmanagement", "packageAndUpload")
+	ctx := context.Background()
 	// if its time to upload/package
 	if costConfig.UploadToggle && checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload") {
 		// Package and split the payload if necessary
@@ -488,6 +458,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		uploadFiles, err := packager.ReadUploadDir()
 		if err != nil {
 			log.Error(err, "Failed to read upload directory.")
+			return err
 		}
 
 		if len(uploadFiles) > 0 {
@@ -506,13 +477,13 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 					if err != nil {
 						log.Error(err, "failed to set multipart body and headers")
-						return ctrl.Result{}, err
+						return err
 					}
 					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
 					uploadStatus, uploadTime, err = crhchttp.Upload(costConfig, contentType, "POST", ingressURL, body)
 					if err != nil {
 						log.Error(err, "upload failed")
-						return ctrl.Result{}, err
+						return err
 					}
 					if uploadStatus != "" {
 						cost.Status.Upload.LastUploadStatus = uploadStatus
@@ -540,7 +511,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	} else if !costConfig.UploadToggle {
 		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
+	return nil
+}
 
+func collectPromStats(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) {
+	log := r.Log.WithValues("costmanagement", "collectPromStats")
+	ctx := context.Background()
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
 			Client: r.Client,
@@ -578,6 +554,83 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	if err := r.Status().Update(ctx, cost); err != nil {
 		log.Error(err, "failed to update CostManagement Status")
+	}
+}
+
+// +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
+// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
+// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
+// +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
+
+// Reconcile Process the CostManagement custom resource based on changes or requeue
+func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	os.Setenv("TZ", "UTC")
+	ctx := context.Background()
+	log := r.Log.WithValues("costmanagement", req.NamespacedName)
+
+	// fetch the CostManagement instance
+	cost := &costmgmtv1alpha1.CostManagement{}
+
+	if err := r.Get(ctx, req.NamespacedName, cost); err != nil {
+		log.Error(err, "unable to fetch CronJob")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	log.Info("Reconciling custom resource", "CostManagement", cost)
+
+	// create the costConfig and reflect the spec values
+	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
+	err := ReflectSpec(r, cost, costConfig)
+	if err != nil {
+		log.Error(err, "Failed to update CostManagement status")
+		return ctrl.Result{}, err
+	}
+
+	// set the cluster ID & return if there are errors
+	err = setClusterID(r, costConfig, cost)
+	if err != nil {
+		log.Error(err, "Failed to obtain clusterID.")
+		return ctrl.Result{}, err
+	}
+
+	log.Info("Using the following inputs", "CostManagementConfig", costConfig)
+
+	// obtain credentials token/basic & return if there are authentication credential errors
+	err = setAuthentication(r, costConfig, cost, req.NamespacedName)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// set the Operator git commit and reflect it in the upload status & return if there are errors
+	err = setOperatorCommit(r, costConfig, cost)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Check if source is defined and update the status to confirmed/created
+	checkSource(r, costConfig, cost)
+
+	// Get or create the directory configuration
+	log.Info("Getting directory configuration.")
+	if dirCfg == nil || !dirCfg.Parent.Exists() {
+		if err := dirCfg.GetDirectoryConfig(); err != nil {
+			log.Error(err, "Failed to get directory configuration.")
+		}
+	}
+
+	// attempt to collect prometheus stats and create reports
+	collectPromStats(r, costConfig, cost, dirCfg)
+
+	// attempt package and upload, if errors occur return
+	err = packageAndUpload(r, costConfig, cost, dirCfg)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Requeue for processing after 5 minutes
