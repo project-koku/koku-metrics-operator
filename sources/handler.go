@@ -82,8 +82,8 @@ type SourceTypeResponse struct {
 type SourceItem struct {
 	ID           string
 	Name         string
-	SourceTypeID string
-	SourceRef    string
+	SourceTypeID string `json:"source_type_id"`
+	SourceRef    string `json:"source_ref"`
 }
 
 // SourceResponse A data structure for the paginated source response
@@ -216,14 +216,14 @@ func CheckSourceExists(costConfig *crhchttp.CostManagementConfig, client crhchtt
 		errKey:   "obtaining the OpenShift source",
 	}
 	queries := map[string]string{}
-	if sourceTypeID != "" {
-		queries[SourceTypeIDFilterQueryParam] = sourceTypeID
-	}
 	if name != "" {
 		queries[NameFilterQueryParam] = name
 	}
 	if sourceRef != "" {
 		queries[SourceRefFilterQueryParam] = sourceRef
+	}
+	if sourceTypeID != "" {
+		queries[SourceTypeIDFilterQueryParam] = sourceTypeID
 	}
 	request.queries = queries
 
@@ -355,9 +355,8 @@ func SourceCreate(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTT
 }
 
 // SourceGetOrCreate Check if source exists, if not create the source if specified
-func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig) (bool, metav1.Time, error) {
+func SourceGetOrCreate(costConfig *crhchttp.CostManagementConfig, client crhchttp.HTTPClient) (bool, metav1.Time, error) {
 	log := costConfig.Log.WithValues("costmanagement", "SourceGetOrCreate")
-	client := crhchttp.GetClient(costConfig)
 	currentTime := metav1.Now()
 
 	// Get Source Type ID
