@@ -466,12 +466,13 @@ func TestGetPromConn(t *testing.T) {
 			cost := &costmgmtv1alpha1.CostManagement{}
 			cost.Status.Prometheus.ConfigError = tt.cfgErr
 			cost.Status.Prometheus.ConnectionError = tt.conErr
-			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			cost.Spec.PrometheusConfig.SkipTLSVerification = pointer.Bool(true)
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
 				Log:      testLogger,
 			}
+			promSpec = cost.Spec.PrometheusConfig.DeepCopy()
 			err := col.GetPromConn(cost)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
@@ -553,9 +554,10 @@ var _ = Describe("Collector Tests", func() {
 	})
 	Describe("Get Prometheus Config", func() {
 		It("could not find bearer token", func() {
-			cost := &costmgmtv1alpha1.CostManagement{}
-			cost.Status.Prometheus.SvcAddress = "svc-address"
-			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			cost := &costmgmtv1alpha1.PrometheusSpec{
+				SvcAddress:          "svc-address",
+				SkipTLSVerification: pointer.Bool(true),
+			}
 			result, err := getPrometheusConfig(cost, k8sClient)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeNil())
@@ -567,9 +569,10 @@ var _ = Describe("Collector Tests", func() {
 			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
-			cost := &costmgmtv1alpha1.CostManagement{}
-			cost.Status.Prometheus.SvcAddress = "svc-address"
-			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			cost := &costmgmtv1alpha1.PrometheusSpec{
+				SvcAddress:          "svc-address",
+				SkipTLSVerification: pointer.Bool(true),
+			}
 			result, err := getPrometheusConfig(cost, k8sClient)
 
 			Expect(err).ShouldNot(HaveOccurred())
