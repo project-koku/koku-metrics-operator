@@ -419,8 +419,9 @@ func checkSource(r *CostManagementReconciler, costConfig *crhchttp.CostManagemen
 	log := r.Log.WithValues("costmanagement", "checkSource")
 	ctx := context.Background()
 	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
+		client := crhchttp.GetClient(costConfig)
 		cost.Status.Source.SourceError = ""
-		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig)
+		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig, client)
 		if err != nil {
 			cost.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
