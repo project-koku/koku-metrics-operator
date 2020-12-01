@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	tlogr "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
@@ -596,7 +595,7 @@ var _ = Describe("Collector Tests", func() {
 
 			col := PromCollector{
 				Client: k8sClient,
-				Log:    tlogr.NullLogger{},
+				Log:    testLogger,
 			}
 			cost := &costmgmtv1alpha1.CostManagement{
 				Spec: costmgmtv1alpha1.CostManagementSpec{
@@ -622,7 +621,7 @@ var _ = Describe("Collector Tests", func() {
 
 			col := PromCollector{
 				Client: k8sClient,
-				Log:    tlogr.NullLogger{},
+				Log:    testLogger,
 			}
 			cost := &costmgmtv1alpha1.CostManagement{
 				Spec: costmgmtv1alpha1.CostManagementSpec{

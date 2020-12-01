@@ -209,6 +209,7 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	promSpec = cost.Spec.PrometheusConfig.DeepCopy()
 
 	if updated || c.PromCfg == nil || cost.Status.Prometheus.ConfigError != "" {
+		log.Info("getting prometheus configuration")
 		c.PromCfg, err = getPrometheusConfig(&cost.Spec.PrometheusConfig, c.Client)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
@@ -217,6 +218,7 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	}
 
 	if updated || c.PromConn == nil || cost.Status.Prometheus.ConnectionError != "" {
+		log.Info("getting prometheus connection")
 		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
