@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	tlogr "github.com/go-logr/logr/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
@@ -580,6 +581,67 @@ var _ = Describe("Collector Tests", func() {
 			Expect(result.Address).Should(Equal("svc-address"))
 			Expect(result.SkipTLS).Should(BeTrue())
 			Expect(result.CAFile).Should(Equal(certFile))
+		})
+	})
+	Describe("Get Prometheus Connection", func() {
+		BeforeEach(func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets = append(secrets, corev1.ObjectReference{
+				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
+		})
+		It("Prom Spec NOT updated in CR", func() {
+			promSpec = nil
+
+			col := PromCollector{
+				Client: k8sClient,
+				Log:    tlogr.NullLogger{},
+			}
+			cost := &costmgmtv1alpha1.CostManagement{
+				Spec: costmgmtv1alpha1.CostManagementSpec{
+					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+						SvcAddress:          "svc-address",
+						SkipTLSVerification: pointer.Bool(false),
+					}}}
+			err := col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg).ToNot(BeNil())
+			Expect(col.PromCfg.Address).To(Equal("svc-address"))
+			Expect(col.PromConn).ToNot(BeNil())
+			Expect(cost.Status.Prometheus.ConnectionError).ToNot(Equal(""))
+			Expect(cost.Status.Prometheus.PrometheusConnected).To(BeFalse())
+
+			cost.Spec.PrometheusConfig.SvcAddress = "svc-address"
+			err = col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg.Address).To(Equal("svc-address"))
+		})
+		It("Update Prom Spec in CR", func() {
+			promSpec = nil
+
+			col := PromCollector{
+				Client: k8sClient,
+				Log:    tlogr.NullLogger{},
+			}
+			cost := &costmgmtv1alpha1.CostManagement{
+				Spec: costmgmtv1alpha1.CostManagementSpec{
+					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+						SvcAddress:          "svc-address",
+						SkipTLSVerification: pointer.Bool(false),
+					}}}
+			err := col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg).ToNot(BeNil())
+			Expect(col.PromCfg.Address).To(Equal("svc-address"))
+			Expect(col.PromConn).ToNot(BeNil())
+			Expect(cost.Status.Prometheus.ConnectionError).ToNot(Equal(""))
+			Expect(cost.Status.Prometheus.PrometheusConnected).To(BeFalse())
+
+			cost.Spec.PrometheusConfig.SvcAddress = "new-svc-address"
+			err = col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg.Address).To(Equal("new-svc-address"))
 		})
 	})
 })

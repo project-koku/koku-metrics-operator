@@ -202,17 +202,14 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	log := c.Log.WithValues("costmanagement", "GetPromConn")
 	var err error
 
-	updated := false
-	if promSpec == nil {
-		promSpec = cost.Spec.PrometheusConfig.DeepCopy()
-		updated = true
-	}
-	if !updated {
+	updated := true
+	if promSpec != nil {
 		updated = !reflect.DeepEqual(*promSpec, cost.Spec.PrometheusConfig)
 	}
+	promSpec = cost.Spec.PrometheusConfig.DeepCopy()
 
 	if updated || c.PromCfg == nil || cost.Status.Prometheus.ConfigError != "" {
-		c.PromCfg, err = getPrometheusConfig(promSpec, c.Client)
+		c.PromCfg, err = getPrometheusConfig(&cost.Spec.PrometheusConfig, c.Client)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
