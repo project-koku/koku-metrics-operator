@@ -157,7 +157,7 @@ func Upload(costConfig *CostManagementConfig, contentType, method, uri string, b
 	currentTime := metav1.Now()
 	req, err := SetupRequest(costConfig, contentType, method, uri, body)
 	if err != nil {
-		return "", currentTime, err
+		return "", currentTime, fmt.Errorf("could not setup the request: %v", err)
 	}
 
 	client := GetClient(costConfig)
