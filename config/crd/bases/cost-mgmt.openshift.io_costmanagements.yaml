@@ -43,8 +43,6 @@ spec:
                   `https://cloud.redhat.com`.
                 type: string
               authentication:
-                default:
-                  type: token
                 description: Authentication is a field of CostManagement to represent
                   the authentication object.
                 properties:
@@ -64,14 +62,14 @@ spec:
                     - token
                     - basic
                     type: string
+                required:
+                - type
                 type: object
               clusterID:
                 description: ClusterID is a field of CostManagement to represent the
                   cluster UUID.
                 type: string
               packaging:
-                default:
-                  max_size: 100
                 description: Packaging is a field of CostManagement to represent the
                   packaging object
                 properties:
@@ -84,10 +82,10 @@ spec:
                     maximum: 100
                     minimum: 1
                     type: integer
+                required:
+                - max_size
                 type: object
               prometheus_config:
-                default:
-                  skip_tls_verification: false
                 description: PrometheusConfig is a field of CostManagement to represent
                   the configuration of Prometheus connection.
                 properties:
@@ -101,12 +99,10 @@ spec:
                       to represent if the thanos-querier endpoint must be certificate
                       validated. The default is false.
                     type: boolean
+                required:
+                - skip_tls_verification
                 type: object
               source:
-                default:
-                  check_cycle: 1440
-                  create_source: false
-                  sources_path: /api/sources/v1.0/
                 description: Source is a field of CostManagement to represent the
                   desired source on cloud.redhat.com.
                 properties:
@@ -132,13 +128,12 @@ spec:
                     description: SourcesAPIPath is a field of CostManagement to represent
                       the path of the Sources API service. The default is `/api/sources/v1.0/`.
                     type: string
+                required:
+                - check_cycle
+                - create_source
+                - sources_path
                 type: object
               upload:
-                default:
-                  ingress_path: /api/ingress/v1/upload
-                  upload_cycle: 360
-                  upload_toggle: true
-                  validate_cert: false
                 description: Upload is a field of CostManagement to represent the
                   upload object.
                 properties:
@@ -172,7 +167,18 @@ spec:
                     description: ValidateCert is a field of CostManagement to represent
                       if the Ingress endpoint must be certificate validated.
                     type: boolean
+                required:
+                - ingress_path
+                - upload_cycle
+                - upload_toggle
+                - validate_cert
                 type: object
+            required:
+            - authentication
+            - packaging
+            - prometheus_config
+            - source
+            - upload
             type: object
           status:
             description: CostManagementStatus defines the observed state of CostManagement.
@@ -373,6 +379,8 @@ spec:
                     type: boolean
                 type: object
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
