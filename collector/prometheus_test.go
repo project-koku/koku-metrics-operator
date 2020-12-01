@@ -592,6 +592,7 @@ var _ = Describe("Collector Tests", func() {
 		})
 		It("Prom Spec NOT updated in CR", func() {
 			promSpec = nil
+			certFile = ""
 
 			col := PromCollector{
 				Client: k8sClient,
@@ -601,7 +602,7 @@ var _ = Describe("Collector Tests", func() {
 				Spec: costmgmtv1alpha1.CostManagementSpec{
 					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
 						SvcAddress:          "svc-address",
-						SkipTLSVerification: pointer.Bool(false),
+						SkipTLSVerification: pointer.Bool(true),
 					}}}
 			err := col.GetPromConn(cost)
 			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
@@ -618,6 +619,7 @@ var _ = Describe("Collector Tests", func() {
 		})
 		It("Update Prom Spec in CR", func() {
 			promSpec = nil
+			certFile = ""
 
 			col := PromCollector{
 				Client: k8sClient,
@@ -627,7 +629,7 @@ var _ = Describe("Collector Tests", func() {
 				Spec: costmgmtv1alpha1.CostManagementSpec{
 					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
 						SvcAddress:          "svc-address",
-						SkipTLSVerification: pointer.Bool(false),
+						SkipTLSVerification: pointer.Bool(true),
 					}}}
 			err := col.GetPromConn(cost)
 			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
