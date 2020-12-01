@@ -586,15 +586,13 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// create the costConfig and reflect the spec values
 	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
-	err := ReflectSpec(r, cost, costConfig)
-	if err != nil {
+	if err := ReflectSpec(r, cost, costConfig); err != nil {
 		log.Error(err, "Failed to update CostManagement status")
 		return ctrl.Result{}, err
 	}
 
 	// set the cluster ID & return if there are errors
-	err = setClusterID(r, costConfig, cost)
-	if err != nil {
+	if err := setClusterID(r, costConfig, cost); err != nil {
 		log.Error(err, "Failed to obtain clusterID.")
 		return ctrl.Result{}, err
 	}
@@ -602,14 +600,12 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	log.Info("Using the following inputs", "CostManagementConfig", costConfig)
 
 	// obtain credentials token/basic & return if there are authentication credential errors
-	err = setAuthentication(r, costConfig, cost, req.NamespacedName)
-	if err != nil {
+	if err := setAuthentication(r, costConfig, cost, req.NamespacedName); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	err = setOperatorCommit(r, costConfig, cost)
-	if err != nil {
+	if err := setOperatorCommit(r, costConfig, cost); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -628,8 +624,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	collectPromStats(r, costConfig, cost, dirCfg)
 
 	// attempt package and upload, if errors occur return
-	err = packageAndUpload(r, costConfig, cost, dirCfg)
-	if err != nil {
+	if err := packageAndUpload(r, costConfig, cost, dirCfg); err != nil {
 		return ctrl.Result{}, err
 	}
 
