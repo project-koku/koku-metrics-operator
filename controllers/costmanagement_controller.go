@@ -555,13 +555,6 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		// log.Error(err, "Failed to update CostManagement status")
 		// return ctrl.Result{}, err
 	}
-	authConfig := &crhchttp.AuthConfig{
-		Log:            r.Log,
-		ValidateCert:   *cost.Status.Upload.ValidateCert,
-		Authentication: cost.Status.Authentication.AuthType,
-		OperatorCommit: cost.Status.OperatorCommit,
-		ClusterID:      cost.Status.ClusterID,
-	}
 
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, cost); err != nil {
@@ -571,13 +564,21 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	log.Info("Using the following inputs", "CostManagementConfig", cost.Status)
 
-	// obtain credentials token/basic & return if there are authentication credential errors
-	if err := setAuthentication(r, authConfig, cost, req.NamespacedName); err != nil {
+	// set the Operator git commit and reflect it in the upload status & return if there are errors
+	if err := setOperatorCommit(r, cost); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	if err := setOperatorCommit(r, cost); err != nil {
+	authConfig := &crhchttp.AuthConfig{
+		Log:            r.Log,
+		ValidateCert:   *cost.Status.Upload.ValidateCert,
+		Authentication: cost.Status.Authentication.AuthType,
+		OperatorCommit: cost.Status.OperatorCommit,
+		ClusterID:      cost.Status.ClusterID,
+	}
+
+	// obtain credentials token/basic & return if there are authentication credential errors
+	if err := setAuthentication(r, authConfig, cost, req.NamespacedName); err != nil {
 		return ctrl.Result{}, err
 	}
 
