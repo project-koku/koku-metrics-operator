@@ -172,7 +172,7 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 
 	_, err = ProcessResponse(log, resp)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("failed to process the response: %v", err)
+		return uploadStatus, currentTime, fmt.Errorf("failed to process the response: %v", err)
 	}
 
 	return uploadStatus, uploadTime, nil
