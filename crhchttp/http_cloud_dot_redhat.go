@@ -32,6 +32,7 @@ import (
 	"net/http/httputil"
 	"net/textproto"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -45,6 +46,19 @@ var Client HTTPClient
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
+}
+
+func scrubAuthorization(b []byte) string {
+	str := strings.Split(string(b), "\r\n")
+	for i, s := range str {
+		if strings.Contains(s, "Authorization") {
+			slice := strings.Split(s, " ")
+			idx := len(slice) - 1
+			slice[idx] = strings.Repeat("*", len(slice[idx]))
+			str[i] = strings.Join(slice, " ")
+		}
+	}
+	return strings.Join(str, "\r\n")
 }
 
 // GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
@@ -92,6 +106,12 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 		log.Info("Request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
+	}
+
+	// log the request headers
+	byteReq, err := httputil.DumpRequest(req, false)
+	if err == nil { // only log if the dump is successful
+		log.Info(fmt.Sprintf("request:\n%s", scrubAuthorization(byteReq)))
 	}
 
 	return req, nil
