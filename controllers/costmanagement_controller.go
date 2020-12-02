@@ -372,12 +372,18 @@ func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 }
 
 func checkSource(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement) {
+	sSpec := &sources.SourceSpec{
+		APIURL: cost.Status.APIURL,
+		Auth:   authConfig,
+		Spec:   cost.Status.Source,
+		Log:    r.Log,
+	}
 	log := r.Log.WithValues("costmanagement", "checkSource")
 	ctx := context.Background()
 	if authConfig.SourceName != "" && checkCycle(r.Log, authConfig.SourceCheckCycle, authConfig.LastSourceCheckTime, "source check") {
 		client := crhchttp.GetClient(authConfig)
 		cost.Status.Source.SourceError = ""
-		defined, lastCheck, err := sources.SourceGetOrCreate(authConfig, client)
+		defined, lastCheck, err := sources.SourceGetOrCreate(sSpec, client)
 		if err != nil {
 			cost.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
