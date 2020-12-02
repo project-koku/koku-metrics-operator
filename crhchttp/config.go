@@ -33,7 +33,5 @@ type AuthConfig struct {
 	BasicAuthPassword string
 	ValidateCert      bool
 	OperatorCommit    string
-
-	// remove these when we get sources sorted
-	Log logr.Logger
+	Log               logr.Logger
 }

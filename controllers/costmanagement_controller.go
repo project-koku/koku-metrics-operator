@@ -559,6 +559,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		Log:            r.Log,
 		ValidateCert:   *cost.Status.Upload.ValidateCert,
 		Authentication: cost.Status.Authentication.AuthType,
+		OperatorCommit: cost.Status.OperatorCommit,
+		ClusterID:      cost.Status.ClusterID,
 	}
 
 	// set the cluster ID & return if there are errors
