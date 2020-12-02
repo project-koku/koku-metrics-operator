@@ -402,93 +402,86 @@ func checkSource(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, c
 		}
 		cost.Status.Source.SourceDefined = &defined
 		cost.Status.Source.LastSourceCheckTime = lastCheck
-		// if err := r.Status().Update(context.Background(), cost); err != nil {
-		// 	log.Error(err, "Failed to update CostManagement Status")
-		// }
 	}
 }
 
 func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
 	log := r.Log.WithValues("costmanagement", "packageAndUpload")
-	// ctx := context.Background()
-	// if its time to upload/package
-	if *cost.Spec.Upload.UploadToggle && checkCycle(r.Log, *cost.Status.Upload.UploadCycle, cost.Status.Upload.LastSuccessfulUploadTime, "upload") {
-		// Package and split the payload if necessary
-		packager := packaging.FilePackager{
-			Cost:    cost,
-			DirCfg:  dirCfg,
-			Log:     r.Log,
-			MaxSize: *cost.Status.Packaging.MaxSize}
-		if err := packager.PackageReports(); err != nil {
-			log.Error(err, "PackageReports failed.")
-			// update the CR packaging error status
-			cost.Status.Packaging.PackagingError = err.Error()
-			// if err := r.Status().Update(ctx, cost); err != nil {
-			// 	log.Error(err, "Failed to update CostManagement Status")
-			// }
-		} else {
-			cost.Status.Packaging.PackagingError = ""
-		}
 
-		uploadFiles, err := packager.ReadUploadDir()
+	// if its time to upload/package
+	if !*cost.Spec.Upload.UploadToggle {
+		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
+		return nil
+	}
+	if !checkCycle(r.Log, *cost.Status.Upload.UploadCycle, cost.Status.Upload.LastSuccessfulUploadTime, "upload") {
+		return nil
+	}
+
+	// Package and split the payload if necessary
+	packager := packaging.FilePackager{
+		Cost:    cost,
+		DirCfg:  dirCfg,
+		Log:     r.Log,
+		MaxSize: *cost.Status.Packaging.MaxSize,
+	}
+	cost.Status.Packaging.PackagingError = ""
+	if err := packager.PackageReports(); err != nil {
+		log.Error(err, "PackageReports failed.")
+		// update the CR packaging error status
+		cost.Status.Packaging.PackagingError = err.Error()
+	}
+
+	uploadFiles, err := packager.ReadUploadDir()
+	if err != nil {
+		log.Error(err, "Failed to read upload directory.")
+		return err
+	}
+
+	if len(uploadFiles) <= 0 {
+		log.Info("No files to upload.")
+		return nil
+	}
+
+	log.Info("Files ready for upload: " + strings.Join(uploadFiles, ", "))
+	// Upload to c.rh.com
+	var uploadStatus string
+	var uploadTime metav1.Time
+
+	log.Info("Pausing for " + fmt.Sprintf("%d", *cost.Status.Upload.UploadWait) + " seconds before uploading.")
+	time.Sleep(time.Duration(*cost.Status.Upload.UploadWait) * time.Second)
+
+	for _, file := range uploadFiles {
+		if !strings.Contains(file, "tar.gz") {
+			continue
+		}
+		log.Info(fmt.Sprintf("Uploading file: %s", file))
+		// grab the body and the multipart file header
+		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 		if err != nil {
-			log.Error(err, "Failed to read upload directory.")
+			log.Error(err, "failed to set multipart body and headers")
 			return err
 		}
-
-		if len(uploadFiles) > 0 {
-			log.Info("Files ready for upload: " + strings.Join(uploadFiles, ", "))
-			// Upload to c.rh.com
-			var uploadStatus string
-			var uploadTime metav1.Time
-
-			log.Info("Pausing for " + fmt.Sprintf("%d", *cost.Status.Upload.UploadWait) + " seconds before uploading.")
-			time.Sleep(time.Duration(*cost.Status.Upload.UploadWait) * time.Second)
-
-			for _, file := range uploadFiles {
-				if strings.Contains(file, "tar.gz") {
-					log.Info(fmt.Sprintf("Uploading file: %s", file))
-					// grab the body and the multipart file header
-					body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
-					if err != nil {
-						log.Error(err, "failed to set multipart body and headers")
-						return err
-					}
-					ingressURL := cost.Status.APIURL + cost.Status.Upload.IngressAPIPath
-					uploadStatus, uploadTime, err = crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
-					if err != nil {
-						log.Error(err, "upload failed")
-						return err
-					}
-					if uploadStatus != "" {
-						cost.Status.Upload.LastUploadStatus = uploadStatus
-						cost.Status.Upload.LastUploadTime = uploadTime
-						if strings.Contains(uploadStatus, "202") {
-							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
-							// remove the tar.gz after a successful upload
-							log.Info("Removing tar file since upload was successful!")
-							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
-								log.Error(err, "Error removing tar file")
-							}
-						}
-						// if err := r.Status().Update(ctx, cost); err != nil {
-						// 	log.Error(err, "Failed to update CostManagement Status")
-						// }
-					}
-				}
-			}
-		} else {
-			log.Info("No files to upload.")
+		ingressURL := cost.Status.APIURL + cost.Status.Upload.IngressAPIPath
+		uploadStatus, uploadTime, err = crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		if err != nil {
+			log.Error(err, "upload failed")
 		}
-	} else if !*cost.Status.Upload.UploadToggle {
-		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
+		cost.Status.Upload.LastUploadStatus = uploadStatus
+		cost.Status.Upload.LastUploadTime = uploadTime
+		if strings.Contains(uploadStatus, "202") {
+			cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
+			// remove the tar.gz after a successful upload
+			log.Info("Removing tar file since upload was successful!")
+			if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
+				log.Error(err, "Error removing tar file")
+			}
+		}
 	}
 	return nil
 }
 
 func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) {
 	log := r.Log.WithValues("costmanagement", "collectPromStats")
-	// ctx := context.Background()
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
 			Client: r.Client,
@@ -499,34 +492,31 @@ func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostMa
 
 	if err := r.promCollector.GetPromConn(cost); err != nil {
 		log.Error(err, "failed to get prometheus connection")
-	} else {
-		timeUTC := metav1.Now().UTC()
-		t := metav1.Time{Time: timeUTC}
-		timeRange := promv1.Range{
-			Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
-			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
-			Step:  time.Minute,
-		}
-		r.promCollector.TimeSeries = &timeRange
-		if cost.Status.Prometheus.LastQuerySuccessTime.IsZero() || cost.Status.Prometheus.LastQuerySuccessTime.UTC().Hour() != t.Hour() {
-			cost.Status.Prometheus.LastQueryStartTime = t
-			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
-			err = collector.GenerateReports(cost, dirCfg, r.promCollector)
-			if err != nil {
-				cost.Status.Reports.DataCollected = false
-				cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
-				log.Error(err, "failed to generate reports")
-			} else {
-				log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
-				cost.Status.Prometheus.LastQuerySuccessTime = t
-			}
-		} else {
-			log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
-		}
+		return
 	}
-	// if err := r.Status().Update(ctx, cost); err != nil {
-	// 	log.Error(err, "failed to update CostManagement Status")
-	// }
+	timeUTC := metav1.Now().UTC()
+	t := metav1.Time{Time: timeUTC}
+	timeRange := promv1.Range{
+		Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
+		End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
+		Step:  time.Minute,
+	}
+	r.promCollector.TimeSeries = &timeRange
+	if !(cost.Status.Prometheus.LastQuerySuccessTime.IsZero() && cost.Status.Prometheus.LastQuerySuccessTime.UTC().Hour() != t.Hour()) {
+		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
+		return
+	}
+	cost.Status.Prometheus.LastQueryStartTime = t
+	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
+	if err := collector.GenerateReports(cost, dirCfg, r.promCollector); err != nil {
+		cost.Status.Reports.DataCollected = false
+		cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
+		log.Error(err, "failed to generate reports")
+		return
+	}
+	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
+	cost.Status.Prometheus.LastQuerySuccessTime = t
+
 }
 
 // +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
