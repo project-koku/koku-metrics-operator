@@ -432,7 +432,7 @@ func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConf
 			var uploadStatus string
 			var uploadTime metav1.Time
 
-			log.Info("Pausing for " + fmt.Sprintf("%d", cost.Status.Upload.UploadWait) + " seconds before uploading.")
+			log.Info("Pausing for " + fmt.Sprintf("%d", *cost.Status.Upload.UploadWait) + " seconds before uploading.")
 			time.Sleep(time.Duration(*cost.Status.Upload.UploadWait) * time.Second)
 
 			for _, file := range uploadFiles {
