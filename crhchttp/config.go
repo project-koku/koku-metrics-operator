@@ -20,8 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package crhchttp
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/go-logr/logr"
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 )
@@ -37,11 +35,5 @@ type AuthConfig struct {
 	OperatorCommit    string
 
 	// remove these when we get sources sorted
-	Log                 logr.Logger
-	SourceName          string
-	CreateSource        bool
-	SourceCheckCycle    int64
-	LastSourceCheckTime metav1.Time
-	SourcesAPIPath      string
-	APIURL              string
+	Log logr.Logger
 }
