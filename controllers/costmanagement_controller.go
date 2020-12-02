@@ -547,15 +547,16 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	log := r.Log.WithValues("costmanagement", req.NamespacedName)
 
 	// fetch the CostManagement instance
-	cost := &costmgmtv1alpha1.CostManagement{}
+	costOriginal := &costmgmtv1alpha1.CostManagement{}
 
-	if err := r.Get(ctx, req.NamespacedName, cost); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, costOriginal); err != nil {
 		log.Error(err, "unable to fetch CostMgmtCR")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	cost := costOriginal.DeepCopy()
 	log.Info("Reconciling custom resource", "CostManagement", cost)
 
 	// create the authConfig and reflect the spec values
