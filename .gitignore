@@ -36,5 +36,9 @@ commit
 testing/*
 collector/test_files/test_reports/*
 
-# # Mac OSX
+# Mac OSX
 .DS_Store
+
+
+# VSCode
+.vscode
