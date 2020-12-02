@@ -72,8 +72,8 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 }
 
 // SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
-func SetupRequest(costConfig *CostManagementConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
-	log := costConfig.Log.WithValues("costmanagement", "SetupRequest")
+func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
+	log := authConfig.Log.WithValues("costmanagement", "SetupRequest")
 
 	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
 	if err != nil {
@@ -84,23 +84,23 @@ func SetupRequest(costConfig *CostManagementConfig, contentType, method, uri str
 		req.Header.Set("Content-Type", contentType)
 	}
 
-	switch costConfig.Authentication {
+	switch authConfig.Authentication {
 	case "basic":
 		log.Info("Request using basic authentication!")
-		req.SetBasicAuth(costConfig.BasicAuthUser, costConfig.BasicAuthPassword)
+		req.SetBasicAuth(authConfig.BasicAuthUser, authConfig.BasicAuthPassword)
 	default:
 		log.Info("Request using token authentication")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", costConfig.BearerTokenString))
-		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", costConfig.OperatorCommit, costConfig.ClusterID))
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
 	}
 
 	return req, nil
 }
 
 // GetClient Return client with certificate handling based on configuration
-func GetClient(costConfig *CostManagementConfig) HTTPClient {
-	log := costConfig.Log.WithValues("costmanagement", "GetClient")
-	if costConfig.ValidateCert {
+func GetClient(authConfig *AuthConfig) HTTPClient {
+	log := authConfig.Log.WithValues("costmanagement", "GetClient")
+	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
 		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
 		if err != nil {
@@ -152,15 +152,15 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(costConfig *CostManagementConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
-	log := costConfig.Log.WithValues("costmanagement", "Upload")
+func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
+	log := authConfig.Log.WithValues("costmanagement", "Upload")
 	currentTime := metav1.Now()
-	req, err := SetupRequest(costConfig, contentType, method, uri, body)
+	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
 		return "", currentTime, fmt.Errorf("could not setup the request: %v", err)
 	}
 
-	client := GetClient(costConfig)
+	client := GetClient(authConfig)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", currentTime, fmt.Errorf("could not send the request: %v", err)

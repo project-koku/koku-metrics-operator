@@ -97,104 +97,62 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 }
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
-func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costConfig *crhchttp.CostManagementConfig) error {
+func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "ReflectSpec")
-	costConfig.APIURL, _ = StringReflectSpec(r, cost, &cost.Spec.APIURL, &cost.Status.APIURL, costmgmtv1alpha1.DefaultAPIURL)
-	costConfig.AuthenticationSecretName, _ = StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
+	StringReflectSpec(r, cost, &cost.Spec.APIURL, &cost.Status.APIURL, costmgmtv1alpha1.DefaultAPIURL)
+	StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
 
-	if cost.Status.Authentication.AuthType == "" || !reflect.DeepEqual(cost.Spec.Authentication.AuthType, cost.Status.Authentication.AuthType) {
-		// If data is specified in the spec it should be used
-		if cost.Spec.Authentication.AuthType != "" {
-			cost.Status.Authentication.AuthType = cost.Spec.Authentication.AuthType
-		} else {
-			cost.Status.Authentication.AuthType = costmgmtv1alpha1.DefaultAuthenticationType
-		}
+	if !reflect.DeepEqual(cost.Spec.Authentication.AuthType, cost.Status.Authentication.AuthType) {
+		cost.Status.Authentication.AuthType = cost.Spec.Authentication.AuthType
 	}
-	costConfig.Authentication = cost.Status.Authentication.AuthType
-
-	// If data is specified in the spec it should be used
 	cost.Status.Upload.ValidateCert = cost.Spec.Upload.ValidateCert
-	if cost.Status.Upload.ValidateCert != nil {
-		costConfig.ValidateCert = *cost.Status.Upload.ValidateCert
-	} else {
-		costConfig.ValidateCert = costmgmtv1alpha1.DefaultValidateCert
-	}
+	authConfig.ValidateCert = *cost.Status.Upload.ValidateCert
+	authConfig.Authentication = cost.Status.Authentication.AuthType
 
-	costConfig.IngressAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Upload.IngressAPIPath, &cost.Status.Upload.IngressAPIPath, costmgmtv1alpha1.DefaultIngressPath)
+	StringReflectSpec(r, cost, &cost.Spec.Upload.IngressAPIPath, &cost.Status.Upload.IngressAPIPath, costmgmtv1alpha1.DefaultIngressPath)
 	cost.Status.Upload.UploadToggle = cost.Spec.Upload.UploadToggle
-	if cost.Status.Upload.UploadToggle != nil {
-		costConfig.UploadToggle = *cost.Status.Upload.UploadToggle
-	} else {
-		costConfig.UploadToggle = costmgmtv1alpha1.DefaultUploadToggle
-	}
-
-	// set the upload variables to what is in the struct
-	costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
-	costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
-	costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 
 	// set the default max file size for packaging
 	cost.Status.Packaging.MaxSize = &cost.Spec.Packaging.MaxSize
-	if cost.Status.Packaging.MaxSize != nil {
-		costConfig.MaxSize = *cost.Status.Packaging.MaxSize
-	} else {
-		costConfig.MaxSize = costmgmtv1alpha1.DefaultMaxSize
-	}
 
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
 		cost.Status.Upload.UploadWait = cost.Spec.Upload.UploadWait
 	}
-	if cost.Status.Upload.UploadWait != nil {
-		costConfig.UploadWait = *cost.Status.Upload.UploadWait
-	} else {
+	if cost.Status.Upload.UploadWait == nil {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		costConfig.UploadWait = r.Int63() % 35
+		uploadWait := r.Int63() % 35
+		cost.Status.Upload.UploadWait = &uploadWait
 	}
 
 	if !reflect.DeepEqual(cost.Spec.Upload.UploadCycle, cost.Status.Upload.UploadCycle) {
 		cost.Status.Upload.UploadCycle = cost.Spec.Upload.UploadCycle
 	}
-	if cost.Status.Upload.UploadCycle != nil {
-		costConfig.UploadCycle = *cost.Status.Upload.UploadCycle
-	} else {
-		costConfig.UploadCycle = costmgmtv1alpha1.DefaultUploadCycle
-	}
 
-	var sourceNameChanged bool
-	costConfig.SourcesAPIPath, _ = StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
-	costConfig.SourceName, sourceNameChanged = StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
+	// var sourceNameChanged bool
+	StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
+	// _, sourceNameChanged
+	StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
 
-	createBefore := false
-	if cost.Spec.Source.CreateSource != nil {
-		costConfig.CreateSource = *cost.Spec.Source.CreateSource
-		createBefore = *cost.Spec.Source.CreateSource
-	}
-	cost.Status.Source.CreateSource = &costConfig.CreateSource
-	createChanged := !(createBefore == *cost.Status.Source.CreateSource)
+	// createBefore := false
+	// if cost.Spec.Source.CreateSource != nil {
+	// 	createBefore = *cost.Spec.Source.CreateSource
+	// }
+	cost.Status.Source.CreateSource = cost.Spec.Source.CreateSource
+	// createChanged := !(createBefore == *cost.Status.Source.CreateSource)
 
-	sourceCycleChange := false
+	// sourceCycleChange := false
 	if !reflect.DeepEqual(cost.Spec.Source.CheckCycle, cost.Status.Source.CheckCycle) {
 		cost.Status.Source.CheckCycle = cost.Spec.Source.CheckCycle
-		sourceCycleChange = true
+		// sourceCycleChange = true
 	}
-	if cost.Status.Source.CheckCycle != nil {
-		costConfig.SourceCheckCycle = *cost.Status.Source.CheckCycle
-	} else {
-		costConfig.SourceCheckCycle = costmgmtv1alpha1.DefaultSourceCheckCycle
-	}
-	if !sourceNameChanged && !sourceCycleChange && !createChanged {
-		costConfig.LastSourceCheckTime = cost.Status.Source.LastSourceCheckTime
-	}
+	// if !sourceNameChanged && !sourceCycleChange && !createChanged {
+	// 	costConfig.LastSourceCheckTime = cost.Status.Source.LastSourceCheckTime
+	// }
 
-	costConfig.PrometheusSvcAddress, _ = StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
-	costConfig.LastQuerySuccessTime = cost.Status.Prometheus.LastQuerySuccessTime
+	StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
 	cost.Status.Prometheus.SkipTLSVerification = cost.Spec.PrometheusConfig.SkipTLSVerification
-	if cost.Status.Prometheus.SkipTLSVerification == nil {
-		cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(false)
-	}
-
 	err := r.Status().Update(ctx, cost)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
@@ -204,7 +162,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 }
 
 // GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
-func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, costConfig *crhchttp.CostManagementConfig) error {
+func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "GetClusterID")
 	// Get current ClusterVersion
@@ -216,7 +174,6 @@ func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManage
 	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
 	if clusterVersion.Spec.ClusterID != "" {
 		cost.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
-		costConfig.ClusterID = cost.Status.ClusterID
 	}
 	err = r.Status().Update(ctx, cost)
 	if err != nil {
@@ -227,7 +184,7 @@ func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManage
 }
 
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
-func GetPullSecretToken(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig) error {
+func GetPullSecretToken(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "GetPullSecretToken")
 	secret := &corev1.Secret{}
@@ -264,7 +221,7 @@ func GetPullSecretToken(r *CostManagementReconciler, costConfig *crhchttp.CostMa
 		}
 		if len(token) > 0 {
 			log.Info("Found cloud.openshift.com token.")
-			costConfig.BearerTokenString = token
+			authConfig.BearerTokenString = token
 			tokenFound = true
 		} else {
 			return fmt.Errorf("Cluster authorization token is not found.")
@@ -279,7 +236,7 @@ func GetPullSecretToken(r *CostManagementReconciler, costConfig *crhchttp.CostMa
 }
 
 // GetAuthSecret Obtain the username and password from the authentication secret provided in the current namespace
-func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, reqNamespace types.NamespacedName) error {
+func GetAuthSecret(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("costmanagement", "GetAuthSecret")
 
@@ -287,7 +244,7 @@ func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagem
 	secret := &corev1.Secret{}
 	namespace := types.NamespacedName{
 		Namespace: reqNamespace.Namespace,
-		Name:      costConfig.AuthenticationSecretName}
+		Name:      cost.Status.Authentication.AuthenticationSecretName}
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
 		switch {
@@ -302,7 +259,7 @@ func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagem
 	}
 
 	if val, ok := secret.Data[authSecretUserKey]; ok {
-		costConfig.BasicAuthUser = string(val)
+		authConfig.BasicAuthUser = string(val)
 	} else {
 		log.Info("Secret not found with expected user data.")
 		err = fmt.Errorf("Secret not found with expected user data.")
@@ -310,7 +267,7 @@ func GetAuthSecret(r *CostManagementReconciler, costConfig *crhchttp.CostManagem
 	}
 
 	if val, ok := secret.Data[authSecretPasswordKey]; ok {
-		costConfig.BasicAuthPassword = string(val)
+		authConfig.BasicAuthPassword = string(val)
 	} else {
 		log.Info("Secret not found with expected password data.")
 		err = fmt.Errorf("Secret not found with expected password data.")
@@ -338,21 +295,21 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 }
 
-func setClusterID(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement) error {
-	if costConfig.ClusterID == "" {
+func setClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
+	if cost.Status.ClusterID == "" {
 		r.cvClientBuilder = cv.NewBuilder()
-		err := GetClusterID(r, cost, costConfig)
+		err := GetClusterID(r, cost)
 		return err
 	}
 	return nil
 }
 
-func setAuthentication(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement, reqNamespace types.NamespacedName) error {
+func setAuthentication(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement, reqNamespace types.NamespacedName) error {
 	log := r.Log.WithValues("costmanagement", "setAuthentication")
 	ctx := context.Background()
-	if costConfig.Authentication == costmgmtv1alpha1.Token {
+	if cost.Status.Authentication.AuthType == costmgmtv1alpha1.Token {
 		// Get token from pull secret
-		err := GetPullSecretToken(r, costConfig)
+		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
 			log.Error(nil, "Failed to obtain cluster authentication token.")
 			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
@@ -368,9 +325,9 @@ func setAuthentication(r *CostManagementReconciler, costConfig *crhchttp.CostMan
 			}
 		}
 		return err
-	} else if costConfig.AuthenticationSecretName != "" {
+	} else if cost.Spec.Authentication.AuthenticationSecretName != "" {
 		// Get user and password from auth secret in namespace
-		err := GetAuthSecret(r, costConfig, reqNamespace)
+		err := GetAuthSecret(r, cost, authConfig, reqNamespace)
 		if err != nil {
 			log.Error(nil, "Failed to obtain authentication secret credentials.")
 			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
@@ -398,7 +355,7 @@ func setAuthentication(r *CostManagementReconciler, costConfig *crhchttp.CostMan
 	}
 }
 
-func setOperatorCommit(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement) error {
+func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
 	log := r.Log.WithValues("costmanagement", "setOperatorCommit")
 	ctx := context.Background()
 	commit, err := ioutil.ReadFile("commit")
@@ -407,7 +364,6 @@ func setOperatorCommit(r *CostManagementReconciler, costConfig *crhchttp.CostMan
 		return err
 	}
 	cost.Status.OperatorCommit = strings.Replace(string(commit), "\n", "", -1)
-	costConfig.OperatorCommit = cost.Status.OperatorCommit
 	err = r.Status().Update(ctx, cost)
 	if err != nil {
 		log.Error(err, "Failed to update CostManagement Status")
@@ -415,13 +371,13 @@ func setOperatorCommit(r *CostManagementReconciler, costConfig *crhchttp.CostMan
 	return nil
 }
 
-func checkSource(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement) {
+func checkSource(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement) {
 	log := r.Log.WithValues("costmanagement", "checkSource")
 	ctx := context.Background()
-	if costConfig.SourceName != "" && checkCycle(r.Log, costConfig.SourceCheckCycle, costConfig.LastSourceCheckTime, "source check") {
-		client := crhchttp.GetClient(costConfig)
+	if authConfig.SourceName != "" && checkCycle(r.Log, authConfig.SourceCheckCycle, authConfig.LastSourceCheckTime, "source check") {
+		client := crhchttp.GetClient(authConfig)
 		cost.Status.Source.SourceError = ""
-		defined, lastCheck, err := sources.SourceGetOrCreate(costConfig, client)
+		defined, lastCheck, err := sources.SourceGetOrCreate(authConfig, client)
 		if err != nil {
 			cost.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
@@ -434,17 +390,17 @@ func checkSource(r *CostManagementReconciler, costConfig *crhchttp.CostManagemen
 	}
 }
 
-func packageAndUpload(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
+func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
 	log := r.Log.WithValues("costmanagement", "packageAndUpload")
 	ctx := context.Background()
 	// if its time to upload/package
-	if costConfig.UploadToggle && checkCycle(r.Log, costConfig.UploadCycle, costConfig.LastSuccessfulUploadTime, "upload") {
+	if *cost.Spec.Upload.UploadToggle && checkCycle(r.Log, *cost.Status.Upload.UploadCycle, cost.Status.Upload.LastSuccessfulUploadTime, "upload") {
 		// Package and split the payload if necessary
 		packager := packaging.FilePackager{
 			Cost:    cost,
 			DirCfg:  dirCfg,
 			Log:     r.Log,
-			MaxSize: costConfig.MaxSize}
+			MaxSize: *cost.Status.Packaging.MaxSize}
 		if err := packager.PackageReports(); err != nil {
 			log.Error(err, "PackageReports failed.")
 			// update the CR packaging error status
@@ -468,8 +424,8 @@ func packageAndUpload(r *CostManagementReconciler, costConfig *crhchttp.CostMana
 			var uploadStatus string
 			var uploadTime metav1.Time
 
-			log.Info("Pausing for " + fmt.Sprintf("%d", costConfig.UploadWait) + " seconds before uploading.")
-			time.Sleep(time.Duration(costConfig.UploadWait) * time.Second)
+			log.Info("Pausing for " + fmt.Sprintf("%d", cost.Status.Upload.UploadWait) + " seconds before uploading.")
+			time.Sleep(time.Duration(*cost.Status.Upload.UploadWait) * time.Second)
 
 			for _, file := range uploadFiles {
 				if strings.Contains(file, "tar.gz") {
@@ -480,20 +436,17 @@ func packageAndUpload(r *CostManagementReconciler, costConfig *crhchttp.CostMana
 						log.Error(err, "failed to set multipart body and headers")
 						return err
 					}
-					ingressURL := costConfig.APIURL + costConfig.IngressAPIPath
-					uploadStatus, uploadTime, err = crhchttp.Upload(costConfig, contentType, "POST", ingressURL, body)
+					ingressURL := cost.Status.APIURL + cost.Status.Upload.IngressAPIPath
+					uploadStatus, uploadTime, err = crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
 					if err != nil {
 						log.Error(err, "upload failed")
 						return err
 					}
 					if uploadStatus != "" {
 						cost.Status.Upload.LastUploadStatus = uploadStatus
-						costConfig.LastUploadStatus = cost.Status.Upload.LastUploadStatus
 						cost.Status.Upload.LastUploadTime = uploadTime
-						costConfig.LastUploadTime = cost.Status.Upload.LastUploadTime
 						if strings.Contains(uploadStatus, "202") {
 							cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
-							costConfig.LastSuccessfulUploadTime = cost.Status.Upload.LastSuccessfulUploadTime
 							// remove the tar.gz after a successful upload
 							log.Info("Removing tar file since upload was successful!")
 							if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
@@ -509,13 +462,13 @@ func packageAndUpload(r *CostManagementReconciler, costConfig *crhchttp.CostMana
 		} else {
 			log.Info("No files to upload.")
 		}
-	} else if !costConfig.UploadToggle {
+	} else if !*cost.Status.Upload.UploadToggle {
 		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 	}
 	return nil
 }
 
-func collectPromStats(r *CostManagementReconciler, costConfig *crhchttp.CostManagementConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) {
+func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) {
 	log := r.Log.WithValues("costmanagement", "collectPromStats")
 	ctx := context.Background()
 	if r.promCollector == nil {
@@ -537,7 +490,7 @@ func collectPromStats(r *CostManagementReconciler, costConfig *crhchttp.CostMana
 			Step:  time.Minute,
 		}
 		r.promCollector.TimeSeries = &timeRange
-		if costConfig.LastQuerySuccessTime.IsZero() || costConfig.LastQuerySuccessTime.UTC().Hour() != t.Hour() {
+		if cost.Status.Prometheus.LastQuerySuccessTime.IsZero() || cost.Status.Prometheus.LastQuerySuccessTime.UTC().Hour() != t.Hour() {
 			cost.Status.Prometheus.LastQueryStartTime = t
 			log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
 			err = collector.GenerateReports(cost, dirCfg, r.promCollector)
@@ -585,33 +538,33 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	log.Info("Reconciling custom resource", "CostManagement", cost)
 
-	// create the costConfig and reflect the spec values
-	costConfig := &crhchttp.CostManagementConfig{Log: r.Log}
-	if err := ReflectSpec(r, cost, costConfig); err != nil {
+	// create the authConfig and reflect the spec values
+	authConfig := &crhchttp.AuthConfig{Log: r.Log}
+	if err := ReflectSpec(r, cost); err != nil {
 		log.Error(err, "Failed to update CostManagement status")
 		return ctrl.Result{}, err
 	}
 
 	// set the cluster ID & return if there are errors
-	if err := setClusterID(r, costConfig, cost); err != nil {
+	if err := setClusterID(r, cost); err != nil {
 		log.Error(err, "Failed to obtain clusterID.")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Using the following inputs", "CostManagementConfig", costConfig)
+	log.Info("Using the following inputs", "CostManagementConfig", authConfig)
 
 	// obtain credentials token/basic & return if there are authentication credential errors
-	if err := setAuthentication(r, costConfig, cost, req.NamespacedName); err != nil {
+	if err := setAuthentication(r, authConfig, cost, req.NamespacedName); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	if err := setOperatorCommit(r, costConfig, cost); err != nil {
+	if err := setOperatorCommit(r, cost); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Check if source is defined and update the status to confirmed/created
-	checkSource(r, costConfig, cost)
+	checkSource(r, authConfig, cost)
 
 	// Get or create the directory configuration
 	log.Info("Getting directory configuration.")
@@ -622,10 +575,10 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, costConfig, cost, dirCfg)
+	collectPromStats(r, cost, dirCfg)
 
 	// attempt package and upload, if errors occur return
-	if err := packageAndUpload(r, costConfig, cost, dirCfg); err != nil {
+	if err := packageAndUpload(r, authConfig, cost, dirCfg); err != nil {
 		return ctrl.Result{}, err
 	}
 

@@ -26,36 +26,22 @@ import (
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 )
 
-// CostManagementConfig provide the data for procesing the reconcile with defaults
-type CostManagementConfig struct {
-	Log                      logr.Logger
-	ClusterID                string
-	ValidateCert             bool
-	APIURL                   string
-	AuthenticationSecretName string
-	Authentication           costmgmtv1alpha1.AuthenticationType
-	UploadWait               int64
-	UploadToggle             bool
-	UploadCycle              int64
-	IngressAPIPath           string
-	BearerTokenString        string
-	BasicAuthUser            string
-	BasicAuthPassword        string
-	LastUploadStatus         string
-	LastUploadTime           metav1.Time
-	LastSuccessfulUploadTime metav1.Time
-	PrometheusSvcAddress     string
-	SkipTLSVerification      bool
-	PrometheusConnected      bool
-	LastQueryStartTime       metav1.Time
-	LastQuerySuccessTime     metav1.Time
-	LastHourCollected        string
-	ReportMonth              string
-	OperatorCommit           string
-	SourceName               string
-	CreateSource             bool
-	SourceCheckCycle         int64
-	LastSourceCheckTime      metav1.Time
-	SourcesAPIPath           string
-	MaxSize                  int64
+// AuthConfig provides the data for reconciling the CR with defaults
+type AuthConfig struct {
+	ClusterID         string
+	Authentication    costmgmtv1alpha1.AuthenticationType
+	BearerTokenString string
+	BasicAuthUser     string
+	BasicAuthPassword string
+	ValidateCert      bool
+	OperatorCommit    string
+
+	// remove these when we get sources sorted
+	Log                 logr.Logger
+	SourceName          string
+	CreateSource        bool
+	SourceCheckCycle    int64
+	LastSourceCheckTime metav1.Time
+	SourcesAPIPath      string
+	APIURL              string
 }
