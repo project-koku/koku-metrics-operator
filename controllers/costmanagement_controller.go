@@ -107,6 +107,8 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 		cost.Status.Authentication.AuthType = cost.Spec.Authentication.AuthType
 	}
 	cost.Status.Upload.ValidateCert = cost.Spec.Upload.ValidateCert
+
+	// Set the extra auth values in the auth type
 	authConfig.ValidateCert = *cost.Status.Upload.ValidateCert
 	authConfig.Authentication = cost.Status.Authentication.AuthType
 
@@ -546,7 +548,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// create the authConfig and reflect the spec values
 	authConfig := &crhchttp.AuthConfig{Log: r.Log}
-	if err := ReflectSpec(r, cost); err != nil {
+	if err := ReflectSpec(r, cost, authConfig); err != nil {
 		log.Error(err, "Failed to update CostManagement status")
 		return ctrl.Result{}, err
 	}
