@@ -551,6 +551,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if err := r.Get(ctx, req.NamespacedName, costOriginal); err != nil {
 		log.Error(err, "unable to fetch CostMgmtCR")
+		previousCost = nil
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -610,6 +611,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if err := r.Status().Update(ctx, cost); err != nil {
 		log.Error(err, "failed to update CostManagement Status")
+		previousCost = nil
 	}
 
 	// Requeue for processing after 5 minutes
