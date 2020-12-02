@@ -577,7 +577,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Using the following inputs", "CostManagementConfig", authConfig)
+	log.Info("Using the following inputs", "CostManagementConfig", cost.Status)
 
 	// obtain credentials token/basic & return if there are authentication credential errors
 	if err := setAuthentication(r, authConfig, cost, req.NamespacedName); err != nil {
