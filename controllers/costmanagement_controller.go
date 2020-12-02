@@ -61,7 +61,7 @@ var (
 
 	dirCfg       *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec   *costmgmtv1alpha1.CloudDotRedHatSourceSpec
-	previousCost *costmgmtv1alpha1.CostManagement
+	previousCost *costmgmtv1alpha1.CostManagementSpec
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -101,7 +101,7 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
 	log := r.Log.WithValues("costmanagement", "ReflectSpec")
-	if previousCost != nil && !reflect.DeepEqual(previousCost, cost) {
+	if previousCost != nil && reflect.DeepEqual(previousCost, &cost.Spec) {
 		log.Info("Spec is unchanged.")
 		return nil
 	}
@@ -163,7 +163,7 @@ func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagem
 	// 	log.Error(err, "Failed to update CostManagement Status")
 	// 	return err
 	// }
-	previousCost = cost.DeepCopy()
+	previousCost = cost.Spec.DeepCopy()
 	return nil
 }
 
