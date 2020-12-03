@@ -90,6 +90,7 @@ spec:
                   the configuration of Prometheus connection.
                 properties:
                   service_address:
+                    default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: SvcAddress is a field of CostManagement to represent
                       the thanos-querier address.
                     type: string
@@ -100,6 +101,7 @@ spec:
                       validated. The default is false.
                     type: boolean
                 required:
+                - service_address
                 - skip_tls_verification
                 type: object
               source:
