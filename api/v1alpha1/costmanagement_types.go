@@ -232,6 +232,10 @@ type UploadStatus struct {
 	// The default is 360 min (6 hours).
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
+	// UploadError is a field of CostManagementStatus to represent the error encountered uploading reports.
+	// +optional
+	UploadError string `json:"error,omitempty"`
+
 	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 

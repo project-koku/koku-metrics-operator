@@ -337,6 +337,10 @@ spec:
                 description: Upload is a field of CostManagement to represent the
                   upload object.
                 properties:
+                  error:
+                    description: UploadError is a field of CostManagementStatus to
+                      represent the error encountered uploading reports.
+                    type: string
                   ingress_path:
                     description: IngressAPIPath is a field of CostManagement to represent
                       the path of the Ingress API service.

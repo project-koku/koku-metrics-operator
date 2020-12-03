@@ -96,7 +96,7 @@ var _ = Describe("CostmanagementController", func() {
 				}
 
 				Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-				time.Sleep(time.Second * 10)
+				time.Sleep(time.Second * 5)
 
 				fetched := &costmgmtv1alpha1.CostManagement{}
 
@@ -147,7 +147,7 @@ var _ = Describe("CostmanagementController", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 5)
 
 			fetched := &costmgmtv1alpha1.CostManagement{}
 
@@ -163,57 +163,57 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
-		// It("should fail for missing basic auth token for bad basic auth CRD case", func() {
-		// 	badAuth := "bad-auth"
-		// 	instance := costmgmtv1alpha1.CostManagement{
-		// 		ObjectMeta: metav1.ObjectMeta{
-		// 			Name:      namePrefix + "basicbad",
-		// 			Namespace: namespace,
-		// 		},
-		// 		Spec: costmgmtv1alpha1.CostManagementSpec{
-		// 			Authentication: costmgmtv1alpha1.AuthenticationSpec{
-		// 				AuthType:                 costmgmtv1alpha1.Basic,
-		// 				AuthenticationSecretName: badAuth,
-		// 			},
-		// 			Packaging: costmgmtv1alpha1.PackagingSpec{
-		// 				MaxSize: 100,
-		// 			},
-		// 			Upload: costmgmtv1alpha1.UploadSpec{
-		// 				UploadCycle:    &defaultUploadCycle,
-		// 				UploadToggle:   &defaultUploadToggle,
-		// 				IngressAPIPath: "/api/ingress/v1/upload",
-		// 				ValidateCert:   &defaultValidateCert,
-		// 			},
-		// 			Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
-		// 				CreateSource:   &defaultCreateSource,
-		// 				SourcesAPIPath: "/api/sources/v1.0/",
-		// 				CheckCycle:     &defaultCheckCycle,
-		// 			},
-		// 			PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
-		// 				SkipTLSVerification: &defaultSkipTLSVerify,
-		// 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-		// 			},
-		// 			APIURL: "https://cloud.redhat.com",
-		// 		},
-		// 	}
+		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
+			badAuth := "bad-auth"
+			instance := costmgmtv1alpha1.CostManagement{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      namePrefix + "basicbad",
+					Namespace: namespace,
+				},
+				Spec: costmgmtv1alpha1.CostManagementSpec{
+					Authentication: costmgmtv1alpha1.AuthenticationSpec{
+						AuthType:                 costmgmtv1alpha1.Basic,
+						AuthenticationSecretName: badAuth,
+					},
+					Packaging: costmgmtv1alpha1.PackagingSpec{
+						MaxSize: 100,
+					},
+					Upload: costmgmtv1alpha1.UploadSpec{
+						UploadCycle:    &defaultUploadCycle,
+						UploadToggle:   &defaultUploadToggle,
+						IngressAPIPath: "/api/ingress/v1/upload",
+						ValidateCert:   &defaultValidateCert,
+					},
+					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+						CreateSource:   &defaultCreateSource,
+						SourcesAPIPath: "/api/sources/v1.0/",
+						CheckCycle:     &defaultCheckCycle,
+					},
+					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+						SkipTLSVerification: &defaultSkipTLSVerify,
+						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
+					},
+					APIURL: "https://cloud.redhat.com",
+				},
+			}
 
-		// 	Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-		// 	time.Sleep(time.Second * 10)
+			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
+			time.Sleep(time.Second * 5)
 
-		// 	fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &costmgmtv1alpha1.CostManagement{}
 
-		// 	// check the CRD was created ok
-		// 	Eventually(func() bool {
-		// 		err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-		// 		return err == nil
-		// 	}, timeout, interval).Should(BeTrue())
+			// check the CRD was created ok
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
 
-		// 	Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
-		// 	Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
-		// 	Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-		// 	Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
-		// 	Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-		// })
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+		})
 		It("should reflect source name in status for source info CRD case", func() {
 
 			instance := costmgmtv1alpha1.CostManagement{
@@ -249,7 +249,7 @@ var _ = Describe("CostmanagementController", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 5)
 
 			fetched := &costmgmtv1alpha1.CostManagement{}
 

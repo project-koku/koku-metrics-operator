@@ -60,9 +60,8 @@ var (
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
 
-	dirCfg       *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-	sourceSpec   *costmgmtv1alpha1.CloudDotRedHatSourceSpec
-	previousCost *costmgmtv1alpha1.CostManagementSpec
+	dirCfg     *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
+	sourceSpec *costmgmtv1alpha1.CloudDotRedHatSourceSpec
 )
 
 // CostManagementReconciler reconciles a CostManagement object
@@ -101,12 +100,6 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) {
-	log := r.Log.WithValues("costmanagement", "ReflectSpec")
-	if previousCost != nil && reflect.DeepEqual(previousCost, &cost.Spec) {
-		log.Info("Spec is unchanged.")
-		return
-	}
-	previousCost = cost.Spec.DeepCopy()
 
 	StringReflectSpec(r, cost, &cost.Spec.APIURL, &cost.Status.APIURL, costmgmtv1alpha1.DefaultAPIURL)
 	StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
@@ -288,7 +281,6 @@ func setClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManage
 
 func setAuthentication(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement, reqNamespace types.NamespacedName) error {
 	log := r.Log.WithValues("costmanagement", "setAuthentication")
-	// ctx := context.Background()
 	if cost.Status.Authentication.AuthType == costmgmtv1alpha1.Token {
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
@@ -411,8 +403,10 @@ func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConf
 		}
 		ingressURL := cost.Status.APIURL + cost.Status.Upload.IngressAPIPath
 		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		cost.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
+			cost.Status.Upload.UploadError = err.Error()
 		}
 		cost.Status.Upload.LastUploadStatus = uploadStatus
 		cost.Status.Upload.LastUploadTime = uploadTime
@@ -489,7 +483,6 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if err := r.Get(ctx, req.NamespacedName, costOriginal); err != nil {
 		log.Error(err, "unable to fetch CostMgmtCR")
-		previousCost = nil
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -522,6 +515,9 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// obtain credentials token/basic & return if there are authentication credential errors
 	if err := setAuthentication(r, authConfig, cost, req.NamespacedName); err != nil {
+		if err := r.Status().Update(ctx, cost); err != nil {
+			log.Error(err, "failed to update CostManagement Status")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -547,7 +543,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if err := r.Status().Update(ctx, cost); err != nil {
 		log.Error(err, "failed to update CostManagement Status")
-		previousCost = nil
+		result = ctrl.Result{}
+		mainErr = err
 	}
 
 	// Requeue for processing after 5 minutes
