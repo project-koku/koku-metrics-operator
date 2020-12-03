@@ -29,17 +29,21 @@ import (
 	"strings"
 	"testing"
 
+	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
 	"github.com/project-koku/korekuta-operator-go/testlogr"
 )
 
 var (
-	cost = &crhchttp.CostManagementConfig{
-		APIURL:         "https://ci.cloud.redhat.com",
-		SourcesAPIPath: "/api/sources/v1.0/",
-		Log:            testLogger,
-		SourceName:     "post-source-name",
-		ClusterID:      "post-cluster-id",
+	auth = &crhchttp.AuthConfig{ClusterID: "post-cluster-id", Log: testLogger}
+	cost = &SourceSpec{
+		APIURL: "https://ci.cloud.redhat.com",
+		Auth:   auth,
+		Spec: costmgmtv1alpha1.CloudDotRedHatSourceStatus{
+			SourcesAPIPath: "/api/sources/v1.0/",
+			SourceName:     "post-source-name",
+		},
+		Log: testLogger,
 	}
 	errSources = errors.New("test error")
 	testLogger = testlogr.TestLogger{}
@@ -1105,7 +1109,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 	for _, tt := range sourceGetOrCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := *cost
-			c.CreateSource = tt.create
+			c.Spec.CreateSource = &tt.create
 			got, _, err := SourceGetOrCreate(&c, &tt.clts)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)

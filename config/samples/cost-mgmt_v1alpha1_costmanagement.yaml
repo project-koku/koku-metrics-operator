@@ -2,3 +2,9 @@ apiVersion: cost-mgmt.openshift.io/v1alpha1
 kind: CostManagement
 metadata:
   name: costmanagement-sample
+spec:
+  authentication: {}
+  packaging: {}
+  prometheus_config: {}
+  source: {}
+  upload: {}

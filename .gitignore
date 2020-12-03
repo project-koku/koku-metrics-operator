@@ -39,6 +39,5 @@ collector/test_files/test_reports/*
 # Mac OSX
 .DS_Store
 
-
 # VSCode
 .vscode
