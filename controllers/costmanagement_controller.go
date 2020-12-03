@@ -325,7 +325,7 @@ func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 
 func checkSource(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement) {
 	// check if the Source Spec has changed
-	updated := true
+	updated := false
 	if sourceSpec != nil {
 		updated = !reflect.DeepEqual(*sourceSpec, cost.Spec.Source)
 	}
