@@ -23,7 +23,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -52,6 +51,8 @@ import (
 )
 
 var (
+	GitCommit string
+
 	openShiftConfigNamespace = "openshift-config"
 	pullSecretName           = "pull-secret"
 	pullSecretDataKey        = ".dockerconfigjson"
@@ -316,14 +317,17 @@ func setAuthentication(r *CostManagementReconciler, authConfig *crhchttp.AuthCon
 	}
 }
 
-func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
-	commit, err := ioutil.ReadFile("commit")
-	if err != nil {
-		fmt.Println("File reading error", err)
-		return err
+func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) {
+	log := r.Log.WithName("setOperatorCommit")
+	if GitCommit == "" {
+		commit, exists := os.LookupEnv("GIT_COMMIT")
+		if exists {
+			msg := fmt.Sprintf("Using git commit from environment: %s", commit)
+			log.Info(msg)
+			GitCommit = commit
+		}
 	}
-	cost.Status.OperatorCommit = strings.Replace(string(commit), "\n", "", -1)
-	return nil
+	cost.Status.OperatorCommit = GitCommit
 }
 
 func checkSource(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement) {
@@ -506,9 +510,7 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	log.Info("Using the following inputs", "CostManagementConfig", cost.Status)
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	if err := setOperatorCommit(r, cost); err != nil {
-		return ctrl.Result{}, err
-	}
+	setOperatorCommit(r, cost)
 
 	authConfig := &crhchttp.AuthConfig{
 		Log:            r.Log,
