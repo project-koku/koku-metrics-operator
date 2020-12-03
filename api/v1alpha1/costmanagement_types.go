@@ -73,10 +73,10 @@ type AuthenticationSpec struct {
 
 	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
 	// Valid values are:
-	// - "basic" : Enables authetication using user and password from authentication secret.
+	// - "basic" : Enables authentication using user and password from authentication secret.
 	// - "token" (default): Uses cluster token for authentication.
-	// +optional
-	AuthType AuthenticationType `json:"type,omitempty"`
+	// +kubebuilder:default="token"
+	AuthType AuthenticationType `json:"type"`
 
 	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
 	// +optional
@@ -88,19 +88,19 @@ type PackagingSpec struct {
 
 	// MaxSize is a field of CostManagement to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	// The default is 100.
-	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
-	MaxSize *int64 `json:"max_size,omitempty"`
+	// +kubebuilder:default=100
+	MaxSize int64 `json:"max_size"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the CostManagementSpec.
 type UploadSpec struct {
 
 	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
-	// The default is `/api/ingress/v1/upload/`.
-	// +optional
-	IngressAPIPath string `json:"ingress_path,omitempty"`
+	// The default is `/api/ingress/v1/upload`.
+	// +kubebuilder:default=`/api/ingress/v1/upload`
+	IngressAPIPath string `json:"ingress_path"`
 
 	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
 	// +optional
@@ -109,14 +109,18 @@ type UploadSpec struct {
 
 	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule.
 	// The default is 360 min (6 hours).
-	// +optional
 	// +kubebuilder:validation:Minimum=0
-	UploadCycle *int64 `json:"upload_cycle,omitempty"`
+	// +kubebuilder:default=360
+	UploadCycle *int64 `json:"upload_cycle"`
 
 	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
 	// The default is true.
-	// +optional
-	UploadToggle *bool `json:"upload_toggle,omitempty"`
+	// +kubebuilder:default=true
+	UploadToggle *bool `json:"upload_toggle"`
+
+	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
+	// +kubebuilder:default=false
+	ValidateCert *bool `json:"validate_cert"`
 }
 
 // PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec.
@@ -128,8 +132,8 @@ type PrometheusSpec struct {
 
 	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.
-	// +optional
-	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
+	// +kubebuilder:default=false
+	SkipTLSVerification *bool `json:"skip_tls_verification"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec.
@@ -137,59 +141,51 @@ type CloudDotRedHatSourceSpec struct {
 
 	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
 	// The default is `/api/sources/v1.0/`.
-	// +optional
-	SourcesAPIPath string `json:"sources_path,omitempty"`
+	// +kubebuilder:default=`/api/sources/v1.0/`
+	SourcesAPIPath string `json:"sources_path"`
 
 	// SourceName is a field of CostManagementSpec to represent the source name on cloud.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
 	// CreateSource is a field of CostManagementSpec to represent if the source should be created if not found.
-	// +optional
-	CreateSource *bool `json:"create_source,omitempty"`
+	// +kubebuilder:default=false
+	CreateSource *bool `json:"create_source"`
 
 	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
 	// The default is 1440 min (24 hours).
-	// +optional
 	// +kubebuilder:validation:Minimum=0
-	CheckCycle *int64 `json:"check_cycle,omitempty"`
+	// +kubebuilder:default=1440
+	CheckCycle *int64 `json:"check_cycle"`
 }
 
 // CostManagementSpec defines the desired state of CostManagement.
 type CostManagementSpec struct {
+	// +kubebuilder:validation:preserveUnknownFields=false
 
 	// ClusterID is a field of CostManagement to represent the cluster UUID.
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
 
-	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
-	// +optional
-	ValidateCert *bool `json:"validate_cert,omitempty"`
-
 	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
 	// The default is `https://cloud.redhat.com`.
-	// +optional
+	// +kubebuilder:default=`https://cloud.redhat.com`
 	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of CostManagement to represent the authentication object.
-	// +optional
-	Authentication AuthenticationSpec `json:"authentication,omitempty"`
+	Authentication AuthenticationSpec `json:"authentication"`
 
 	//Packaging is a field of CostManagement to represent the packaging object
-	// +optional
-	Packaging PackagingSpec `json:"packaging,omitempty"`
+	Packaging PackagingSpec `json:"packaging"`
 
 	// Upload is a field of CostManagement to represent the upload object.
-	// +optional
-	Upload UploadSpec `json:"upload,omitempty"`
+	Upload UploadSpec `json:"upload"`
 
 	// PrometheusConfig is a field of CostManagement to represent the configuration of Prometheus connection.
-	// +optional
-	PrometheusConfig PrometheusSpec `json:"prometheus_config,omitempty"`
+	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
 	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
-	// +optional
-	Source CloudDotRedHatSourceSpec `json:"source,omitempty"`
+	Source CloudDotRedHatSourceSpec `json:"source"`
 }
 
 // AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus.
@@ -236,6 +232,10 @@ type UploadStatus struct {
 	// The default is 360 min (6 hours).
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
+	// UploadError is a field of CostManagementStatus to represent the error encountered uploading reports.
+	// +optional
+	UploadError string `json:"error,omitempty"`
+
 	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
@@ -246,6 +246,9 @@ type UploadStatus struct {
 	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
+
+	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
+	ValidateCert *bool `json:"validate_cert,omitempty"`
 }
 
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus.
@@ -334,9 +337,6 @@ type CostManagementStatus struct {
 	// ClusterID is a field of CostManagement to represent the cluster UUID.
 	ClusterID string `json:"clusterID,omitempty"`
 
-	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
-	ValidateCert *bool `json:"validate_cert,omitempty"`
-
 	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
 	// +optional
 	APIURL string `json:"api_url,omitempty"`
@@ -372,7 +372,7 @@ type CostManagement struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CostManagementSpec   `json:"spec,omitempty"`
+	Spec   CostManagementSpec   `json:"spec"`
 	Status CostManagementStatus `json:"status,omitempty"`
 }
 

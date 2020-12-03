@@ -21,13 +21,11 @@ COPY packaging/ packaging/
 COPY sources/ sources/
 COPY strset/ strset/
 
+# Copy git to inject the commit during build
+COPY .git .git
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
-
-# Capture commit
-COPY .git /workspace/.git
-RUN git --git-dir=/workspace/.git --work-tree=/workspace/ rev-parse HEAD > /workspace/commit && \
-    cat /workspace/commit
+RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags "-X controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
@@ -38,7 +36,6 @@ FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
-COPY --from=builder /workspace/commit .
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]

@@ -14,11 +14,13 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+# CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
 
 # Use git branch for dev team deployment of pushed branches
 GITBRANCH=$(shell git branch --show-current)
 GITBRANCH_IMG="quay.io/project-koku/korekuta-operator-go:${GITBRANCH}"
+GIT_COMMIT=$(shell git rev-parse HEAD)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -42,13 +44,9 @@ test: generate fmt vet manifests
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
-# save the git commit
-commit:
-	git rev-parse HEAD > commit
-
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests commit
-	go run ./main.go
+run: generate fmt vet manifests
+	GIT_COMMIT=${GIT_COMMIT} go run ./main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize
