@@ -59,6 +59,7 @@ var (
 	pullSecretAuthKey        = "cloud.openshift.com"
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
+	promCompareFormat        = "2006-01-02T15"
 
 	dirCfg     *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec *costmgmtv1alpha1.CloudDotRedHatSourceSpec
@@ -444,7 +445,8 @@ func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostMa
 		Step:  time.Minute,
 	}
 	r.promCollector.TimeSeries = &timeRange
-	if !cost.Status.Prometheus.LastQuerySuccessTime.IsZero() && !(cost.Status.Prometheus.LastQuerySuccessTime.UTC().Hour() != t.Hour()) {
+
+	if cost.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		return
 	}
