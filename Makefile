@@ -31,14 +31,48 @@ endif
 
 EXTERNAL_PROM_ROUTE=https://$(shell oc get routes thanos-querier -n openshift-monitoring -o "jsonpath={.spec.host}")
 
+help:
+	@echo "Please use \`make <target>' where <target> is one of:"
+	@echo "--- Setup Commands ---"
+	@echo "  manager                            build the manager binary"
+	@echo "  docker-build                       build the docker image"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  docker-push                        push the docker image to quay.io"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  deploy                             deploy the latest image you have pushed to your cluster"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  build-and-deploy                   build and deploy the operator image."
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  install                           create and register the CRD"
+	@echo "--- General Commands ---"
+	@echo "  run                               run the operator locally outside of the cluster"
+	@echo "  deploy-cr                         copy and configure the sample CR and deploy it. Will also create auth secret depending on parameters"
+	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
+	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
+	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
+	@echo "  deploy-local-cr                   copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
+	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
+	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
+	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
+	@echo "--- Testing Commands ---"
+	@echo "  test                                run unit tests"
+	@echo "  fmt                                 run go fmt" 
+	@echo "  lint                                run pre-commit"
+
 all: manager
 
-# Run tests
+# Run tests ASHLEY CHANGE THIS BACK WHEN YOU FIX TESTS
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: generate fmt vet manifests
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./controllers -coverprofile cover.out
+
+# Run pre-commit
+lint:
+	pre-commit run --all-files
 
 # Build manager binary
 manager: generate fmt vet
@@ -59,7 +93,7 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	kubectl apply -f config/samples/trusted_ca_certmap.yaml
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/korekuta-operator-go:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -
 	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
@@ -74,14 +108,19 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
+	@sed -i "" '/prometheus_config/d' testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '  prometheus_config:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    skip_tls_verification: true' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
 add-auth:
+	@sed -i "" '/authentication/d' testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '  authentication:'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    type: basic'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+
+add-ci-route:
+	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
 add-spec:
 	@echo 'spec:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
@@ -90,17 +129,18 @@ deploy-cr:
 	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
-	$(MAKE) add-spec
 	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
 endif
+ifeq ($(CI), true)
+	$(MAKE) add-ci-route
+endif
 	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
 deploy-local-cr:
 	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	$(MAKE) add-spec
 	$(MAKE) add-prom-route
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
@@ -108,6 +148,9 @@ ifeq ($(AUTH), basic)
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
+endif
+ifeq ($(CI), true)
+	$(MAKE) add-ci-route
 endif
 	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
@@ -129,11 +172,14 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${IMG}
+	docker build . -t quay.io/${USER}/korekuta-operator-go:v0.0.1
 
 # Push the docker image
 docker-push:
-	docker push ${IMG}
+	docker push quay.io/${USER}/korekuta-operator-go:v0.0.1
+
+# Build, push, and deploy the image
+build-deploy: docker-build docker-push deploy
 
 # find or download controller-gen
 # download controller-gen if necessary
