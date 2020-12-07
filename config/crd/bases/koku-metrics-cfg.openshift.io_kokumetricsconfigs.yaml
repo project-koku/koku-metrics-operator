@@ -256,8 +256,7 @@ spec:
                     type: string
                   prometheus_configured:
                     description: PrometheusConfigured is a field of KokuMetricsConfigStatus
-                      to represent if cost-management is configured to connect to
-                      prometheus.
+                      to represent if the operator is configured to connect to prometheus.
                     type: boolean
                   prometheus_connected:
                     description: PrometheusConnected is a field of KokuMetricsConfigStatus

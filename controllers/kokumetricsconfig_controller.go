@@ -463,8 +463,8 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 
 }
 
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=KokuMetricsConfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=KokuMetricsConfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
