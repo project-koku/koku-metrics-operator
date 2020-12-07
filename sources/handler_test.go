@@ -31,7 +31,7 @@ import (
 
 	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
 	"github.com/project-koku/korekuta-operator-go/crhchttp"
-	"github.com/project-koku/korekuta-operator-go/testlogr"
+	"github.com/project-koku/korekuta-operator-go/testutils"
 )
 
 var (
@@ -46,7 +46,7 @@ var (
 		Log: testLogger,
 	}
 	errSources = errors.New("test error")
-	testLogger = testlogr.TestLogger{}
+	testLogger = testutils.TestLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/

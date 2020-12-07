@@ -27,7 +27,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/project-koku/korekuta-operator-go/testlogr"
 	"github.com/project-koku/korekuta-operator-go/testutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +48,7 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx = context.Background()
 var testSecretData = "this-is-the-data"
-var testLogger = testlogr.TestLogger{}
+var testLogger = testutils.TestLogger{}
 
 func TestCollector(t *testing.T) {
 	RegisterFailHandler(Fail)

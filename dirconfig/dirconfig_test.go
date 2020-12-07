@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/project-koku/korekuta-operator-go/testlogr"
 	"github.com/project-koku/korekuta-operator-go/testutils"
 )
 
@@ -199,7 +198,7 @@ func TestCheckExistsOrRecreate(t *testing.T) {
 		{stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(nil), expected: nil},
 		{stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(fmt.Errorf(":shocked:")), expected: fmt.Errorf("Create: /etc/ocp_cfg: :shocked:")},
 	}
-	lgr := testlogr.TestLogger{}
+	lgr := testutils.TestLogger{}
 
 	for _, tc := range tcs {
 		dir := &Directory{
