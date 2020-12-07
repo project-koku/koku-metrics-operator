@@ -232,7 +232,7 @@ func TestGetDirectoryConfig(t *testing.T) {
 			removeAll: removeAllMock(nil),
 			stat:      statMock(fmt.Errorf("does not exists")),
 			createDir: createDirMock(fmt.Errorf("u shall not pass")),
-			expected:  fmt.Errorf("getDirectoryConfig: Create: /tmp/cost-mgmt-operator-reports/: u shall not pass"),
+			expected:  fmt.Errorf("getDirectoryConfig: Create: /tmp/koku-metrics-operator-reports/: u shall not pass"),
 		},
 		{
 			listDir:   listDirFileMock(nil, nil),
