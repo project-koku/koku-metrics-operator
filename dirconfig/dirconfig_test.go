@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/project-koku/korekuta-operator-go/testutils"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 type MockFileInfo struct {
