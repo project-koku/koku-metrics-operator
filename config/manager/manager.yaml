@@ -42,9 +42,12 @@ spec:
             readOnly: true
           - mountPath: /tmp/cost-mgmt-operator-reports
             name: cost-mgmt-operator-reports
+        terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: trusted-ca-volume
           configMap:
             name: trusted-ca-bundle
         - name: cost-mgmt-operator-reports
+          persistentVolumeClaim:
+            claimName: cost-pv-claim
       terminationGracePeriodSeconds: 10
