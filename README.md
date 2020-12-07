@@ -24,6 +24,12 @@ This project requires Go 1.13 or greater if you plan on running the operator loc
 git clone https://github.com/project-koku/koku-metrics-operator.git
 ```
 
+Run the following command to prevent changes to `config/manager/kustomization.yaml` from being committed to the repo:
+
+```
+git update-index --assume-unchanged config/manager/kustomization.yaml
+```
+
 Next, install the Operator SDK CLI using the following [documentation](https://sdk.operatorframework.io/docs/installation/install-operator-sdk/). The operator is currently being built with the v0.19 release of the operator-sdk.
 
 To build the manager binary you can execute the following make command:
