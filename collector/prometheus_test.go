@@ -466,12 +466,13 @@ func TestGetPromConn(t *testing.T) {
 			cost := &costmgmtv1alpha1.CostManagement{}
 			cost.Status.Prometheus.ConfigError = tt.cfgErr
 			cost.Status.Prometheus.ConnectionError = tt.conErr
-			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			cost.Spec.PrometheusConfig.SkipTLSVerification = pointer.Bool(true)
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
 				Log:      testLogger,
 			}
+			promSpec = cost.Spec.PrometheusConfig.DeepCopy()
 			err := col.GetPromConn(cost)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
@@ -553,9 +554,10 @@ var _ = Describe("Collector Tests", func() {
 	})
 	Describe("Get Prometheus Config", func() {
 		It("could not find bearer token", func() {
-			cost := &costmgmtv1alpha1.CostManagement{}
-			cost.Status.Prometheus.SvcAddress = "svc-address"
-			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			cost := &costmgmtv1alpha1.PrometheusSpec{
+				SvcAddress:          "svc-address",
+				SkipTLSVerification: pointer.Bool(true),
+			}
 			result, err := getPrometheusConfig(cost, k8sClient)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeNil())
@@ -567,9 +569,10 @@ var _ = Describe("Collector Tests", func() {
 			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
-			cost := &costmgmtv1alpha1.CostManagement{}
-			cost.Status.Prometheus.SvcAddress = "svc-address"
-			cost.Status.Prometheus.SkipTLSVerification = pointer.Bool(true)
+			cost := &costmgmtv1alpha1.PrometheusSpec{
+				SvcAddress:          "svc-address",
+				SkipTLSVerification: pointer.Bool(true),
+			}
 			result, err := getPrometheusConfig(cost, k8sClient)
 
 			Expect(err).ShouldNot(HaveOccurred())
@@ -577,6 +580,69 @@ var _ = Describe("Collector Tests", func() {
 			Expect(result.Address).Should(Equal("svc-address"))
 			Expect(result.SkipTLS).Should(BeTrue())
 			Expect(result.CAFile).Should(Equal(certFile))
+		})
+	})
+	Describe("Get Prometheus Connection", func() {
+		BeforeEach(func() {
+			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets = append(secrets, corev1.ObjectReference{
+				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			addSecretsToSA(secrets, sa)
+		})
+		It("Prom Spec NOT updated in CR", func() {
+			promSpec = nil
+			certFile = ""
+
+			col := PromCollector{
+				Client: k8sClient,
+				Log:    testLogger,
+			}
+			cost := &costmgmtv1alpha1.CostManagement{
+				Spec: costmgmtv1alpha1.CostManagementSpec{
+					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+						SvcAddress:          "svc-address",
+						SkipTLSVerification: pointer.Bool(true),
+					}}}
+			err := col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg).ToNot(BeNil())
+			Expect(col.PromCfg.Address).To(Equal("svc-address"))
+			Expect(col.PromConn).ToNot(BeNil())
+			Expect(cost.Status.Prometheus.ConnectionError).ToNot(Equal(""))
+			Expect(cost.Status.Prometheus.PrometheusConnected).To(BeFalse())
+
+			cost.Spec.PrometheusConfig.SvcAddress = "svc-address"
+			err = col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg.Address).To(Equal("svc-address"))
+		})
+		It("Update Prom Spec in CR", func() {
+			promSpec = nil
+			certFile = ""
+
+			col := PromCollector{
+				Client: k8sClient,
+				Log:    testLogger,
+			}
+			cost := &costmgmtv1alpha1.CostManagement{
+				Spec: costmgmtv1alpha1.CostManagementSpec{
+					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+						SvcAddress:          "svc-address",
+						SkipTLSVerification: pointer.Bool(true),
+					}}}
+			err := col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg).ToNot(BeNil())
+			Expect(col.PromCfg.Address).To(Equal("svc-address"))
+			Expect(col.PromConn).ToNot(BeNil())
+			Expect(cost.Status.Prometheus.ConnectionError).ToNot(Equal(""))
+			Expect(cost.Status.Prometheus.PrometheusConnected).To(BeFalse())
+
+			cost.Spec.PrometheusConfig.SvcAddress = "new-svc-address"
+			err = col.GetPromConn(cost)
+			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
+			Expect(col.PromCfg.Address).To(Equal("new-svc-address"))
 		})
 	})
 })
