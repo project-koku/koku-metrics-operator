@@ -22,6 +22,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"time"
 
@@ -41,6 +42,8 @@ import (
 )
 
 var (
+	promSpec *costmgmtv1alpha1.PrometheusSpec
+
 	costMgmtNamespace  = "openshift-cost"
 	secretKey          = "token"
 	serviceAccountName = "default"
@@ -130,11 +133,11 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 
 }
 
-func getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement, clt client.Client) (*PrometheusConfig, error) {
+func getPrometheusConfig(cost *costmgmtv1alpha1.PrometheusSpec, clt client.Client) (*PrometheusConfig, error) {
 	promCfg := &PrometheusConfig{
 		CAFile:  certFile,
-		Address: cost.Status.Prometheus.SvcAddress,
-		SkipTLS: *cost.Status.Prometheus.SkipTLSVerification,
+		Address: cost.SvcAddress,
+		SkipTLS: *cost.SkipTLSVerification,
 	}
 	token, err := getBearerToken(clt)
 	if err != nil {
@@ -199,15 +202,23 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 	log := c.Log.WithValues("costmanagement", "GetPromConn")
 	var err error
 
-	if c.PromCfg == nil || cost.Status.Prometheus.ConfigError != "" {
-		c.PromCfg, err = getPrometheusConfig(cost, c.Client)
+	updated := true
+	if promSpec != nil {
+		updated = !reflect.DeepEqual(*promSpec, cost.Spec.PrometheusConfig)
+	}
+	promSpec = cost.Spec.PrometheusConfig.DeepCopy()
+
+	if updated || c.PromCfg == nil || cost.Status.Prometheus.ConfigError != "" {
+		log.Info("Getting prometheus configuration")
+		c.PromCfg, err = getPrometheusConfig(&cost.Spec.PrometheusConfig, c.Client)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
 		}
 	}
 
-	if c.PromConn == nil || cost.Status.Prometheus.ConnectionError != "" {
+	if updated || c.PromConn == nil || cost.Status.Prometheus.ConnectionError != "" {
+		log.Info("Getting prometheus connection")
 		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
 		statusHelper(cost, "configuration", err)
 		if err != nil {
@@ -215,13 +226,13 @@ func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error
 		}
 	}
 
-	log.Info("testing the ability to query prometheus")
+	log.Info("Testing the ability to query prometheus")
 	err = testPrometheusConnection(c.PromConn)
 	statusHelper(cost, "connection", err)
 	if err != nil {
-		return fmt.Errorf("prometheus test query failed: %v", err)
+		return fmt.Errorf("Prometheus test query failed: %v", err)
 	}
-	log.Info("prometheus test query succeeded")
+	log.Info("Prometheus test query succeeded")
 
 	return nil
 }
