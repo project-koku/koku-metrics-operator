@@ -1,4 +1,4 @@
-# korekuta-operator-go
+# koku-metrics-operator
 
 [![License: AGPL v3](https://img.shields.io/github/license/project-koku/koku.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
@@ -18,10 +18,16 @@ More specific documentation for local development can be found [here](docs/local
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
-This project requires Go 1.13 or greater if you plan on running the operator locally. To get started developing against `korekuta-operator-go` first clone a local copy of the git repository.
+This project requires Go 1.13 or greater if you plan on running the operator locally. To get started developing against `koku-metrics-operator` first clone a local copy of the git repository.
 
 ```
-git clone https://github.com/project-koku/korekuta-operator-go.git
+git clone https://github.com/project-koku/koku-metrics-operator.git
+```
+
+Run the following command to prevent changes to `config/manager/kustomization.yaml` from being committed to the repo:
+
+```
+git update-index --assume-unchanged config/manager/kustomization.yaml
 ```
 
 Next, install the Operator SDK CLI using the following [documentation](https://sdk.operatorframework.io/docs/installation/install-operator-sdk/). The operator is currently being built with the v0.19 release of the operator-sdk.
@@ -54,7 +60,7 @@ make test
 
 ## Deploying the Operator
 
-First, create the `openshift-cost` project. This is where we are going to deploy our Operator.
+First, create the `koku-metrics-operator` project. This is where we are going to deploy our Operator.
 
 Before running the operator, the CRD must be registered with the Kubernetes apiserver:
 
@@ -99,32 +105,32 @@ Build the image:
 ```sh
 $ export USERNAME=<quay-username>
 
-$ make docker-build IMG=quay.io/$USERNAME/korekuta-operator-go:v0.0.1
+$ make docker-build IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
 
 Push the image to a repository and make sure to set the repository to public:
 
 ```sh
-$ make docker-push IMG=quay.io/$USERNAME/korekuta-operator-go:v0.0.1
+$ make docker-push IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
 
 **Note**:
 The name and tag of the image (`IMG=<some-registry>/<project-name>:tag`) in both the commands can also be set in the Makefile. Modify the line which has `IMG ?= controller:latest` to set your desired default image name.
 
-Branches of the repository are built automaticaly [here](https://quay.io/repository/project-koku/korekuta-operator-go).
+Branches of the repository are built automaticaly [here](https://quay.io/repository/project-koku/koku-metrics-operator).
 
 
 #### Deploy the operator
 
 
 ```sh
-$ cd config/default/ && kustomize edit set namespace "openshift-cost" && cd ../..
+$ cd config/default/ && kustomize edit set namespace "koku-metrics-operator" && cd ../..
 ```
 
 Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.
 
 ```sh
-$ make deploy IMG=quay.io/$USERNAME/korekuta-operator-go:v0.0.1
+$ make deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
 
 *NOTE* If you have enabled webhooks in your deployments, you will need to have cert-manager already installed
@@ -135,13 +141,13 @@ If your current branch has been pushed to the origin repository then you can dep
 $ make deploy-branch
 ```
 
-Verify that the korekuta-operator-go is up and running:
+Verify that the koku-metrics-operator is up and running:
 
 ```console
 $ oc get deployment
 ```
 
-## Create a CostManagement CR
+## Create a KokuMetricsConfig CR
 
 Create the CR with the default token authentication:
 
@@ -155,12 +161,12 @@ Create the CR with basic authentication specifying a username and password:
 $ make deploy-cr USER=$YOUR_USERNAME PASS=$YOUR_PASSWORD AUTH=basic
 ```
 
-Review the logs for the Cost Management operator.
+Review the logs for the Koku Metrics operator.
 
 ### Cleanup
 
 ```sh
-$ oc delete -f config/samples/cost-mgmt_v1alpha1_costmanagement.yaml
+$ oc delete -f config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 $ oc delete deployments,service -l control-plane=controller-manager
 $ oc delete role,rolebinding --all
 ```

@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// +kubebuilder:scaffold:imports
@@ -87,7 +87,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = costmgmtv1alpha1.AddToScheme(scheme.Scheme)
+	err = kokumetricscfgv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = configv1.AddToScheme(scheme.Scheme)
@@ -108,9 +108,9 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&CostManagementReconciler{
+		err = (&KokuMetricsConfigReconciler{
 			Client: k8sManager.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("CostManagementReconciler"),
+			Log:    ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
 			Scheme: scheme.Scheme,
 		}).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
@@ -150,9 +150,7 @@ func createClusterVersion(clusterID string) {
 func fakeDockerConfig() []byte {
 	d, _ := json.Marshal(
 		serializedAuthMap{
-			Auths: map[string]serializedAuth{
-				pullSecretAuthKey: serializedAuth{Auth: ".."},
-			},
+			Auths: map[string]serializedAuth{pullSecretAuthKey: {Auth: ".."}},
 		})
 	return d
 }
