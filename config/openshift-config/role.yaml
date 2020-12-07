@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
-  name: korekuta-operator-go-manager-config-role
+  name: koku-metrics-operator-manager-config-role
   namespace: openshift-config
 rules:
 - apiGroups:
@@ -14,4 +14,3 @@ rules:
   - get
   - list
   - watch
-    

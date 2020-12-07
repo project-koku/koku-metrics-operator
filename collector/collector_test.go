@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/dirconfig"
-	"github.com/project-koku/korekuta-operator-go/strset"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/strset"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
@@ -58,7 +58,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeCost   = &costmgmtv1alpha1.CostManagement{}
+	fakeKMCfg  = &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},
@@ -139,7 +139,7 @@ func TestGenerateReports(t *testing.T) {
 		TimeSeries: &fakeTimeRange,
 		Log:        testLogger,
 	}
-	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
+	if err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
 
@@ -190,7 +190,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *namespaceQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(namespaceError)}
 	}
-	err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), namespaceError) {
 		t.Errorf("GenerateReports %s was expected, got %v", namespaceError, err)
 	}
@@ -198,7 +198,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *volQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(storageError)}
 	}
-	err = GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), storageError) {
 		t.Errorf("GenerateReports %s was expected, got %v", storageError, err)
 	}
@@ -206,7 +206,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *podQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(podError)}
 	}
-	err = GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), podError) {
 		t.Errorf("GenerateReports %s was expected, got %v", podError, err)
 	}
@@ -214,7 +214,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *nodeQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(nodeError)}
 	}
-	err = GenerateReports(fakeCost, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), nodeError) {
 		t.Errorf("GenerateReports %s was expected, got %v", nodeError, err)
 	}
@@ -241,12 +241,12 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 		TimeSeries: &fakeTimeRange,
 		Log:        testLogger,
 	}
-	if err := GenerateReports(fakeCost, fakeDirCfg, fakeCollector); err != nil {
+	if err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
 	wanted := "No data to report for the hour queried."
-	if fakeCost.Status.Reports.DataCollectionMessage != wanted {
-		t.Errorf("Status not updated correctly: got %s want %s", fakeCost.Status.Reports.DataCollectionMessage, wanted)
+	if fakeKMCfg.Status.Reports.DataCollectionMessage != wanted {
+		t.Errorf("Status not updated correctly: got %s want %s", fakeKMCfg.Status.Reports.DataCollectionMessage, wanted)
 	}
 	filelist, err := ioutil.ReadDir(filepath.Join("test_files", "test_reports"))
 	if err != nil {

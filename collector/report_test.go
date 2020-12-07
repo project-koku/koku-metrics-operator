@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/project-koku/korekuta-operator-go/strset"
+	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
 var errTest = errors.New("test error")

@@ -1,10 +1,10 @@
 The following shows a complete CR and gives a brief description of each spec field. Every `spec` field is optional.
 
 ```
-apiVersion: cost-mgmt.openshift.io/v1alpha1
-kind: CostManagement
+apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
+kind: KokuMetricsConfig
 metadata:
-  name: costmanagement-sample
+  name: kokumetricsconfig-sample
 spec:
   api_url: string # default=https://cloud.redhat.com, the url of the API endpoint for service interaction
   clusterID: string # The cluster ID -> the reconciler finds this value if not supplied

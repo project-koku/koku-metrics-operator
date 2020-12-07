@@ -19,7 +19,7 @@ CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
 
 # Use git branch for dev team deployment of pushed branches
 GITBRANCH=$(shell git branch --show-current)
-GITBRANCH_IMG="quay.io/project-koku/korekuta-operator-go:${GITBRANCH}"
+GITBRANCH_IMG="quay.io/project-koku/koku-metrics-operator:${GITBRANCH}"
 GIT_COMMIT=$(shell git rev-parse HEAD)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -93,7 +93,7 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	kubectl apply -f config/samples/trusted_ca_certmap.yaml
-	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/korekuta-operator-go:v0.0.1
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -
 	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
@@ -108,25 +108,25 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
-	@sed -i "" '/prometheus_config/d' testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '  prometheus_config:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    skip_tls_verification: true' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-auth:
-	@sed -i "" '/authentication/d' testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '  authentication:'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    type: basic'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-ci-route:
 	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
 add-spec:
-	@echo 'spec:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-cr:
-	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
@@ -137,10 +137,10 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-local-cr:
-	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	$(MAKE) add-prom-route
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
@@ -152,7 +152,7 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -172,11 +172,11 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build . -t quay.io/${USER}/korekuta-operator-go:v0.0.1
+	docker build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
 
 # Push the docker image
 docker-push:
-	docker push quay.io/${USER}/korekuta-operator-go:v0.0.1
+	docker push quay.io/${USER}/koku-metrics-operator:v0.0.1
 
 # Build, push, and deploy the image
 build-deploy: docker-build docker-push deploy

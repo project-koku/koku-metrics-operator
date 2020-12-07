@@ -30,13 +30,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var namespace = "openshift-cost"
+var namespace = "koku-metrics-operator"
 var namePrefix = "cost-test-local-"
 var clusterID = "10e206d7-a11a-403e-b835-6cff14e98b23"
 var sourceName = "cluster-test"
@@ -106,7 +106,7 @@ func setup() error {
 	}
 	// setup the initial testing directory
 	fmt.Println("Setting up for packaging tests")
-	testingDir := "/tmp/cost-mgmt-operator-reports/"
+	testingDir := "/tmp/koku-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			return fmt.Errorf("could not create %s directory: %v", testingDir, err)
@@ -131,10 +131,10 @@ func setup() error {
 
 func shutdown() {
 	fmt.Println("Tearing down for packaging tests")
-	os.RemoveAll("/tmp/cost-mgmt-operator-reports/")
+	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
 }
 
-var _ = Describe("CostmanagementController", func() {
+var _ = Describe("KokuMetricsConfigController", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
@@ -150,34 +150,34 @@ var _ = Describe("CostmanagementController", func() {
 
 	})
 
-	Describe("CostManagement CRD Handling", func() {
+	Describe("KokuMetricsConfig CRD Handling", func() {
 		Context("Process CRD resource", func() {
 			It("should provide defaults for empty CRD case", func() {
 
-				instance := costmgmtv1alpha1.CostManagement{
+				instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      namePrefix + "empty",
 						Namespace: namespace,
 					},
-					Spec: costmgmtv1alpha1.CostManagementSpec{
-						Authentication: costmgmtv1alpha1.AuthenticationSpec{
-							AuthType: costmgmtv1alpha1.Token,
+					Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+						Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+							AuthType: kokumetricscfgv1alpha1.Token,
 						},
-						Packaging: costmgmtv1alpha1.PackagingSpec{
+						Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 							MaxSize: 100,
 						},
-						Upload: costmgmtv1alpha1.UploadSpec{
+						Upload: kokumetricscfgv1alpha1.UploadSpec{
 							UploadCycle:    &defaultUploadCycle,
 							UploadToggle:   &defaultUploadToggle,
 							IngressAPIPath: "/api/ingress/v1/upload",
 							ValidateCert:   &defaultValidateCert,
 						},
-						Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+						Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 							CreateSource:   &defaultCreateSource,
 							SourcesAPIPath: "/api/sources/v1.0/",
 							CheckCycle:     &defaultCheckCycle,
 						},
-						PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+						PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 							SkipTLSVerification: &defaultSkipTLSVerify,
 							SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 						},
@@ -188,7 +188,7 @@ var _ = Describe("CostmanagementController", func() {
 				Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 				time.Sleep(time.Second * 5)
 
-				fetched := &costmgmtv1alpha1.CostManagement{}
+				fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 				// check the CRD was created ok
 				Eventually(func() bool {
@@ -196,38 +196,38 @@ var _ = Describe("CostmanagementController", func() {
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+				Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			})
 		})
 		It("upload set to false case", func() {
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "uploadfalse",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Token,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Token,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &falseUpload,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -238,7 +238,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -246,39 +246,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseUpload))
 		})
 		It("should find basic auth token for good basic auth CRD case", func() {
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "basic",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType:                 costmgmtv1alpha1.Basic,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType:                 kokumetricscfgv1alpha1.Basic,
 						AuthenticationSecretName: authSecretName,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -289,7 +289,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -297,39 +297,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
 			badAuth := "bad-auth"
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "basicbad",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType:                 costmgmtv1alpha1.Basic,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType:                 kokumetricscfgv1alpha1.Basic,
 						AuthenticationSecretName: badAuth,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -340,7 +340,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -348,39 +348,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should reflect source name in status for source info CRD case", func() {
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "sourceinfo",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Token,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Token,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						SourceName:     sourceName,
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -391,7 +391,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -399,39 +399,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 		})
 		It("should fail due to bad basic auth secret", func() {
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "badauth",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType:                 costmgmtv1alpha1.Basic,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType:                 kokumetricscfgv1alpha1.Basic,
 						AuthenticationSecretName: badAuthSecretName,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -442,7 +442,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -450,39 +450,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail due to missing pass in auth secret", func() {
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "badpass",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType:                 costmgmtv1alpha1.Basic,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType:                 kokumetricscfgv1alpha1.Basic,
 						AuthenticationSecretName: badAuthPassSecretName,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -493,7 +493,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -501,38 +501,38 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthPassSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail due to missing auth secret name with basic set", func() {
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "missingname",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Basic,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Basic,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -543,7 +543,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -551,39 +551,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			// Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthPassSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should should fail token secret", func() {
 			deletePullSecret(openShiftConfigNamespace, fakeDockerConfig())
 			// createBadPullSecret(openShiftConfigNamespace)
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "nopull",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Token,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Token,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -594,7 +594,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -602,37 +602,37 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			// Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			// Expect(fetched.Status.Authentication.AuthType).To(Equal( kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			// Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			// Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			// Expect(fetched.Status.APIURL).To(Equal( kokumetricscfgv1alpha1.DefaultAPIURL))
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should should fail token secret wrong data", func() {
 			createBadPullSecret(openShiftConfigNamespace)
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "nopulldata",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Token,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Token,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -643,7 +643,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -651,39 +651,39 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			// Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			// Expect(fetched.Status.Authentication.AuthType).To(Equal( kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			// Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			// Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			// Expect(fetched.Status.APIURL).To(Equal( kokumetricscfgv1alpha1.DefaultAPIURL))
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail bc of missing cluster version", func() {
 			deleteClusterVersion()
 
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "failurecv",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType:                 costmgmtv1alpha1.Basic,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType:                 kokumetricscfgv1alpha1.Basic,
 						AuthenticationSecretName: authSecretName,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -694,7 +694,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -702,41 +702,41 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			// Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.Basic))
+			// Expect(fetched.Status.Authentication.AuthType).To(Equal( kokumetricscfgv1alpha1.Basic))
 			// Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			// Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			// Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			// Expect(fetched.Status.APIURL).To(Equal( kokumetricscfgv1alpha1.DefaultAPIURL))
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should run through more of the flow", func() {
 			setup()
 			createClusterVersion(clusterID)
 			var uploadWait int64 = 0
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "more",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Token,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Token,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						UploadWait:     &uploadWait,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
@@ -747,7 +747,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 10)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -755,47 +755,47 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			// Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			// Expect(fetched.Status.Authentication.AuthType).To(Equal( kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			// Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			// Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			// Expect(fetched.Status.APIURL).To(Equal( kokumetricscfgv1alpha1.DefaultAPIURL))
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should check the status", func() {
 			setup()
 			var uploadWait int64 = 0
 			uploadTime := metav1.Now()
-			instance := costmgmtv1alpha1.CostManagement{
+			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      namePrefix + "status",
 					Namespace: namespace,
 				},
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					Authentication: costmgmtv1alpha1.AuthenticationSpec{
-						AuthType: costmgmtv1alpha1.Token,
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+						AuthType: kokumetricscfgv1alpha1.Token,
 					},
-					Packaging: costmgmtv1alpha1.PackagingSpec{
+					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
 						MaxSize: 100,
 					},
-					Upload: costmgmtv1alpha1.UploadSpec{
+					Upload: kokumetricscfgv1alpha1.UploadSpec{
 						UploadCycle:    &defaultUploadCycle,
 						UploadToggle:   &defaultUploadToggle,
 						UploadWait:     &uploadWait,
 						IngressAPIPath: "/api/ingress/v1/upload",
 						ValidateCert:   &defaultValidateCert,
 					},
-					Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 						CreateSource:   &defaultCreateSource,
 						SourcesAPIPath: "/api/sources/v1.0/",
 						CheckCycle:     &defaultCheckCycle,
 					},
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SkipTLSVerification: &defaultSkipTLSVerify,
 						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 					},
 					APIURL: "https://cloud.redhat.com",
 				},
-				Status: costmgmtv1alpha1.CostManagementStatus{
-					Upload: costmgmtv1alpha1.UploadStatus{
+				Status: kokumetricscfgv1alpha1.KokuMetricsConfigStatus{
+					Upload: kokumetricscfgv1alpha1.UploadStatus{
 						LastSuccessfulUploadTime: uploadTime,
 					},
 				},
@@ -804,7 +804,7 @@ var _ = Describe("CostmanagementController", func() {
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 10)
 
-			fetched := &costmgmtv1alpha1.CostManagement{}
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
@@ -812,47 +812,47 @@ var _ = Describe("CostmanagementController", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			// Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+			// Expect(fetched.Status.Authentication.AuthType).To(Equal( kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			// Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			// Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+			// Expect(fetched.Status.APIURL).To(Equal( kokumetricscfgv1alpha1.DefaultAPIURL))
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		// It("should uploadagain", func() {
 		// 	setup()
 		// 	var uploadWait int64 = 0
 		// 	uploadTime := metav1.Now()
-		// 	instance := costmgmtv1alpha1.CostManagement{
+		// 	instance :=  kokumetricscfgv1alpha1.KokuMetricsConfig{
 		// 		ObjectMeta: metav1.ObjectMeta{
 		// 			Name:      namePrefix + "uploadagain",
 		// 			Namespace: namespace,
 		// 		},
-		// 		Spec: costmgmtv1alpha1.CostManagementSpec{
-		// 			Authentication: costmgmtv1alpha1.AuthenticationSpec{
-		// 				AuthType: costmgmtv1alpha1.Token,
+		// 		Spec:  kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+		// 			Authentication:  kokumetricscfgv1alpha1.AuthenticationSpec{
+		// 				AuthType:  kokumetricscfgv1alpha1.Token,
 		// 			},
-		// 			Packaging: costmgmtv1alpha1.PackagingSpec{
+		// 			Packaging:  kokumetricscfgv1alpha1.PackagingSpec{
 		// 				MaxSize: 100,
 		// 			},
-		// 			Upload: costmgmtv1alpha1.UploadSpec{
+		// 			Upload:  kokumetricscfgv1alpha1.UploadSpec{
 		// 				UploadCycle:    &uploadWait,
 		// 				UploadToggle:   &defaultUploadToggle,
 		// 				UploadWait:     &uploadWait,
 		// 				IngressAPIPath: "/api/ingress/v1/upload",
 		// 				ValidateCert:   &defaultValidateCert,
 		// 			},
-		// 			Source: costmgmtv1alpha1.CloudDotRedHatSourceSpec{
+		// 			Source:  kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
 		// 				CreateSource:   &defaultCreateSource,
 		// 				SourcesAPIPath: "/api/sources/v1.0/",
 		// 				CheckCycle:     &defaultCheckCycle,
 		// 			},
-		// 			PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+		// 			PrometheusConfig:  kokumetricscfgv1alpha1.PrometheusSpec{
 		// 				SkipTLSVerification: &defaultSkipTLSVerify,
 		// 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 		// 			},
 		// 			APIURL: "https://cloud.redhat.com",
 		// 		},
-		// 		Status: costmgmtv1alpha1.CostManagementStatus{
-		// 			Upload: costmgmtv1alpha1.UploadStatus{
+		// 		Status:  kokumetricscfgv1alpha1.KokuMetricsConfigStatus{
+		// 			Upload:  kokumetricscfgv1alpha1.UploadStatus{
 		// 				LastSuccessfulUploadTime: uploadTime,
 		// 			},
 		// 		},
@@ -861,7 +861,7 @@ var _ = Describe("CostmanagementController", func() {
 		// 	Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 		// 	time.Sleep(time.Second * 10)
 
-		// 	fetched := &costmgmtv1alpha1.CostManagement{}
+		// 	fetched := & kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 		// 	// check the CRD was created ok
 		// 	Eventually(func() bool {
@@ -869,9 +869,9 @@ var _ = Describe("CostmanagementController", func() {
 		// 		return err == nil
 		// 	}, timeout, interval).Should(BeTrue())
 
-		// 	// Expect(fetched.Status.Authentication.AuthType).To(Equal(costmgmtv1alpha1.DefaultAuthenticationType))
+		// 	// Expect(fetched.Status.Authentication.AuthType).To(Equal( kokumetricscfgv1alpha1.DefaultAuthenticationType))
 		// 	// Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-		// 	// Expect(fetched.Status.APIURL).To(Equal(costmgmtv1alpha1.DefaultAPIURL))
+		// 	// Expect(fetched.Status.APIURL).To(Equal( kokumetricscfgv1alpha1.DefaultAPIURL))
 		// 	// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		// })
 	})

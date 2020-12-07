@@ -22,6 +22,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"time"
 
@@ -37,14 +38,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 )
 
 var (
-	costMgmtNamespace  = "openshift-cost"
-	secretKey          = "token"
-	serviceAccountName = "default"
-	tokenRegex         = "default-token-*"
+	promSpec *kokumetricscfgv1alpha1.PrometheusSpec
+
+	kokuMetricsCfgNamespace = "koku-metrics-operator"
+	secretKey               = "token"
+	serviceAccountName      = "default"
+	tokenRegex              = "default-token-*"
 
 	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
 )
@@ -92,7 +95,7 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 	ctx := context.Background()
 	sa := &corev1.ServiceAccount{}
 	objKey := client.ObjectKey{
-		Namespace: costMgmtNamespace,
+		Namespace: kokuMetricsCfgNamespace,
 		Name:      serviceAccountName,
 	}
 	if err := getRuntimeObj(ctx, clt, sa, objKey, "service account"); err != nil {
@@ -111,7 +114,7 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 
 		s := &corev1.Secret{}
 		objKey := client.ObjectKey{
-			Namespace: costMgmtNamespace,
+			Namespace: kokuMetricsCfgNamespace,
 			Name:      secret.Name,
 		}
 		if err := getRuntimeObj(ctx, clt, s, objKey, "secret"); err != nil {
@@ -130,11 +133,11 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 
 }
 
-func getPrometheusConfig(cost *costmgmtv1alpha1.CostManagement, clt client.Client) (*PrometheusConfig, error) {
+func getPrometheusConfig(kmCfg *kokumetricscfgv1alpha1.PrometheusSpec, clt client.Client) (*PrometheusConfig, error) {
 	promCfg := &PrometheusConfig{
 		CAFile:  certFile,
-		Address: cost.Status.Prometheus.SvcAddress,
-		SkipTLS: *cost.Status.Prometheus.SkipTLSVerification,
+		Address: kmCfg.SvcAddress,
+		SkipTLS: *kmCfg.SkipTLSVerification,
 	}
 	token, err := getBearerToken(clt)
 	if err != nil {
@@ -163,23 +166,23 @@ func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
 	return promv1.NewAPI(client), nil
 }
 
-func statusHelper(cost *costmgmtv1alpha1.CostManagement, status string, err error) {
+func statusHelper(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, status string, err error) {
 	switch status {
 	case "configuration":
 		if err != nil {
-			cost.Status.Prometheus.PrometheusConfigured = false
-			cost.Status.Prometheus.ConfigError = fmt.Sprintf("%v", err)
+			kmCfg.Status.Prometheus.PrometheusConfigured = false
+			kmCfg.Status.Prometheus.ConfigError = fmt.Sprintf("%v", err)
 		} else {
-			cost.Status.Prometheus.PrometheusConfigured = true
-			cost.Status.Prometheus.ConfigError = ""
+			kmCfg.Status.Prometheus.PrometheusConfigured = true
+			kmCfg.Status.Prometheus.ConfigError = ""
 		}
 	case "connection":
 		if err != nil {
-			cost.Status.Prometheus.PrometheusConnected = false
-			cost.Status.Prometheus.ConnectionError = fmt.Sprintf("%v", err)
+			kmCfg.Status.Prometheus.PrometheusConnected = false
+			kmCfg.Status.Prometheus.ConnectionError = fmt.Sprintf("%v", err)
 		} else {
-			cost.Status.Prometheus.PrometheusConnected = true
-			cost.Status.Prometheus.ConnectionError = ""
+			kmCfg.Status.Prometheus.PrometheusConnected = true
+			kmCfg.Status.Prometheus.ConnectionError = ""
 		}
 	}
 }
@@ -195,39 +198,47 @@ func testPrometheusConnection(promConn prometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PromCollector) GetPromConn(cost *costmgmtv1alpha1.CostManagement) error {
-	log := c.Log.WithValues("costmanagement", "GetPromConn")
+func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) error {
+	log := c.Log.WithValues("kokumetricsconfig", "GetPromConn")
 	var err error
 
-	if c.PromCfg == nil || cost.Status.Prometheus.ConfigError != "" {
-		c.PromCfg, err = getPrometheusConfig(cost, c.Client)
-		statusHelper(cost, "configuration", err)
+	updated := true
+	if promSpec != nil {
+		updated = !reflect.DeepEqual(*promSpec, kmCfg.Spec.PrometheusConfig)
+	}
+	promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
+
+	if updated || c.PromCfg == nil || kmCfg.Status.Prometheus.ConfigError != "" {
+		log.Info("Getting prometheus configuration")
+		c.PromCfg, err = getPrometheusConfig(&kmCfg.Spec.PrometheusConfig, c.Client)
+		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
 		}
 	}
 
-	if c.PromConn == nil || cost.Status.Prometheus.ConnectionError != "" {
+	if updated || c.PromConn == nil || kmCfg.Status.Prometheus.ConnectionError != "" {
+		log.Info("Getting prometheus connection")
 		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
-		statusHelper(cost, "configuration", err)
+		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Info("testing the ability to query prometheus")
+	log.Info("Testing the ability to query prometheus")
 	err = testPrometheusConnection(c.PromConn)
-	statusHelper(cost, "connection", err)
+	statusHelper(kmCfg, "connection", err)
 	if err != nil {
-		return fmt.Errorf("prometheus test query failed: %v", err)
+		return fmt.Errorf("Prometheus test query failed: %v", err)
 	}
-	log.Info("prometheus test query succeeded")
+	log.Info("Prometheus test query succeeded")
 
 	return nil
 }
 
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
-	log := c.Log.WithValues("costmanagement", "getQueryResults")
+	log := c.Log.WithValues("kokumetricsconfig", "getQueryResults")
 	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
