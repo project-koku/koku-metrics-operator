@@ -804,7 +804,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 20)
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
