@@ -31,7 +31,7 @@ import (
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
-	"github.com/project-koku/koku-metrics-operator/testlogr"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
@@ -46,7 +46,7 @@ var (
 		Log: testLogger,
 	}
 	errSources = errors.New("test error")
-	testLogger = testlogr.TestLogger{}
+	testLogger = testutils.TestLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
