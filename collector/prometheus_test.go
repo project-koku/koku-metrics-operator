@@ -27,7 +27,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -316,35 +316,35 @@ func TestTestPrometheusConnection(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		cost   *costmgmtv1alpha1.CostManagement
+		kmCfg  *kokumetricscfgv1alpha1.KokuMetricsConfig
 		status string
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			cost:   &costmgmtv1alpha1.CostManagement{},
+			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
 			status: "configuration",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			cost:   &costmgmtv1alpha1.CostManagement{},
+			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
 			status: "configuration",
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			cost:   &costmgmtv1alpha1.CostManagement{},
+			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
 			status: "connection",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			cost:   &costmgmtv1alpha1.CostManagement{},
+			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
 			status: "connection",
 			want:   false,
 			err:    errTest,
@@ -352,16 +352,16 @@ func TestStatusHelper(t *testing.T) {
 	}
 	for _, tt := range statusHelperTests {
 		t.Run(tt.name, func(t *testing.T) {
-			statusHelper(tt.cost, tt.status, tt.err)
+			statusHelper(tt.kmCfg, tt.status, tt.err)
 			var gotMsg string
 			var gotBool bool
 			switch tt.status {
 			case "configuration":
-				gotMsg = tt.cost.Status.Prometheus.ConfigError
-				gotBool = tt.cost.Status.Prometheus.PrometheusConfigured
+				gotMsg = tt.kmCfg.Status.Prometheus.ConfigError
+				gotBool = tt.kmCfg.Status.Prometheus.PrometheusConfigured
 			case "connection":
-				gotMsg = tt.cost.Status.Prometheus.ConnectionError
-				gotBool = tt.cost.Status.Prometheus.PrometheusConnected
+				gotMsg = tt.kmCfg.Status.Prometheus.ConnectionError
+				gotBool = tt.kmCfg.Status.Prometheus.PrometheusConnected
 			}
 			if tt.err != nil && gotMsg == "" {
 				t.Errorf("%s got '' want %v", tt.name, tt.err)
@@ -463,17 +463,17 @@ func TestGetPromConn(t *testing.T) {
 	}
 	for _, tt := range getPromConnTests {
 		t.Run(tt.name, func(t *testing.T) {
-			cost := &costmgmtv1alpha1.CostManagement{}
-			cost.Status.Prometheus.ConfigError = tt.cfgErr
-			cost.Status.Prometheus.ConnectionError = tt.conErr
-			cost.Spec.PrometheusConfig.SkipTLSVerification = pointer.Bool(true)
+			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
+			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
+			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = pointer.Bool(true)
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
 				Log:      testLogger,
 			}
-			promSpec = cost.Spec.PrometheusConfig.DeepCopy()
-			err := col.GetPromConn(cost)
+			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
+			err := col.GetPromConn(kmCfg)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -489,7 +489,7 @@ var _ = Describe("Collector Tests", func() {
 	BeforeEach(func() {
 		// failed test runs that don't clean up leave resources behind.
 		// &corev1.Pod{}, client.InNamespace("foo")
-		Expect(k8sClient.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(costMgmtNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -499,30 +499,30 @@ var _ = Describe("Collector Tests", func() {
 	Describe("Get Bearer Token", func() {
 
 		It("should not find service account", func() {
-			createNamespace(costMgmtNamespace)
+			createNamespace(kokuMetricsCfgNamespace)
 			result, err := getBearerToken(k8sClient)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeEmpty())
 		})
 		It("should get the service account but not find secret", func() {
-			createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			result, err := getBearerToken(k8sClient)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeEmpty())
 		})
 		It("should find secrets but not the default", func() {
-			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
-			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
+			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 			result, err := getBearerToken(k8sClient)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeEmpty())
 		})
 		It("should get secret but token is not found", func() {
-			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(costMgmtNamespace, "default-token", "wrong-key", []byte{})})
-			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "wrong-key", []byte{})})
+			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
 			result, err := getBearerToken(k8sClient)
@@ -530,10 +530,10 @@ var _ = Describe("Collector Tests", func() {
 			Expect(result).Should(BeEmpty())
 		})
 		It("should successfully find token but token is empty", func() {
-			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(costMgmtNamespace, "default-token", "token", []byte{})})
-			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", []byte{})})
+			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
 			result, err := getBearerToken(k8sClient)
@@ -541,10 +541,10 @@ var _ = Describe("Collector Tests", func() {
 			Expect(result).Should(BeEmpty())
 		})
 		It("should successfully find token", func() {
-			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
-			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
 			result, err := getBearerToken(k8sClient)
@@ -554,26 +554,26 @@ var _ = Describe("Collector Tests", func() {
 	})
 	Describe("Get Prometheus Config", func() {
 		It("could not find bearer token", func() {
-			cost := &costmgmtv1alpha1.PrometheusSpec{
+			kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
 				SvcAddress:          "svc-address",
 				SkipTLSVerification: pointer.Bool(true),
 			}
-			result, err := getPrometheusConfig(cost, k8sClient)
+			result, err := getPrometheusConfig(kmCfg, k8sClient)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeNil())
 		})
 		It("could find bearer token", func() {
-			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
-			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
-			cost := &costmgmtv1alpha1.PrometheusSpec{
+			kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
 				SvcAddress:          "svc-address",
 				SkipTLSVerification: pointer.Bool(true),
 			}
-			result, err := getPrometheusConfig(cost, k8sClient)
+			result, err := getPrometheusConfig(kmCfg, k8sClient)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result.BearerToken).Should(Equal(config.Secret(fakeEncodedData(testSecretData))))
@@ -584,10 +584,10 @@ var _ = Describe("Collector Tests", func() {
 	})
 	Describe("Get Prometheus Connection", func() {
 		BeforeEach(func() {
-			secrets := createListOfRandomSecrets(5, costMgmtNamespace)
+			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(costMgmtNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
-			sa := createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
+				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", fakeEncodedData(testSecretData))})
+			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 		})
 		It("Prom Spec NOT updated in CR", func() {
@@ -598,22 +598,22 @@ var _ = Describe("Collector Tests", func() {
 				Client: k8sClient,
 				Log:    testLogger,
 			}
-			cost := &costmgmtv1alpha1.CostManagement{
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SvcAddress:          "svc-address",
 						SkipTLSVerification: pointer.Bool(true),
 					}}}
-			err := col.GetPromConn(cost)
+			err := col.GetPromConn(kmCfg)
 			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
 			Expect(col.PromCfg).ToNot(BeNil())
 			Expect(col.PromCfg.Address).To(Equal("svc-address"))
 			Expect(col.PromConn).ToNot(BeNil())
-			Expect(cost.Status.Prometheus.ConnectionError).ToNot(Equal(""))
-			Expect(cost.Status.Prometheus.PrometheusConnected).To(BeFalse())
+			Expect(kmCfg.Status.Prometheus.ConnectionError).ToNot(Equal(""))
+			Expect(kmCfg.Status.Prometheus.PrometheusConnected).To(BeFalse())
 
-			cost.Spec.PrometheusConfig.SvcAddress = "svc-address"
-			err = col.GetPromConn(cost)
+			kmCfg.Spec.PrometheusConfig.SvcAddress = "svc-address"
+			err = col.GetPromConn(kmCfg)
 			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
 			Expect(col.PromCfg.Address).To(Equal("svc-address"))
 		})
@@ -625,22 +625,22 @@ var _ = Describe("Collector Tests", func() {
 				Client: k8sClient,
 				Log:    testLogger,
 			}
-			cost := &costmgmtv1alpha1.CostManagement{
-				Spec: costmgmtv1alpha1.CostManagementSpec{
-					PrometheusConfig: costmgmtv1alpha1.PrometheusSpec{
+			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{
+				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
 						SvcAddress:          "svc-address",
 						SkipTLSVerification: pointer.Bool(true),
 					}}}
-			err := col.GetPromConn(cost)
+			err := col.GetPromConn(kmCfg)
 			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
 			Expect(col.PromCfg).ToNot(BeNil())
 			Expect(col.PromCfg.Address).To(Equal("svc-address"))
 			Expect(col.PromConn).ToNot(BeNil())
-			Expect(cost.Status.Prometheus.ConnectionError).ToNot(Equal(""))
-			Expect(cost.Status.Prometheus.PrometheusConnected).To(BeFalse())
+			Expect(kmCfg.Status.Prometheus.ConnectionError).ToNot(Equal(""))
+			Expect(kmCfg.Status.Prometheus.PrometheusConnected).To(BeFalse())
 
-			cost.Spec.PrometheusConfig.SvcAddress = "new-svc-address"
-			err = col.GetPromConn(cost)
+			kmCfg.Spec.PrometheusConfig.SvcAddress = "new-svc-address"
+			err = col.GetPromConn(kmCfg)
 			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
 			Expect(col.PromCfg.Address).To(Equal("new-svc-address"))
 		})

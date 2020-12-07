@@ -40,14 +40,14 @@ spec:
           - mountPath: /var/run/configmaps/trusted-ca-bundle
             name: trusted-ca-volume
             readOnly: true
-          - mountPath: /tmp/cost-mgmt-operator-reports
-            name: cost-mgmt-operator-reports
+          - mountPath: /tmp/koku-metrics-operator-reports
+            name: koku-metrics-operator-reports
         terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: trusted-ca-volume
           configMap:
             name: trusted-ca-bundle
-        - name: cost-mgmt-operator-reports
+        - name: koku-metrics-operator-reports
           persistentVolumeClaim:
-            claimName: cost-pv-claim
+            claimName: koku-metrics-pvc
       terminationGracePeriodSeconds: 10

@@ -29,8 +29,8 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/crhchttp"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/crhchttp"
 )
 
 const (
@@ -124,7 +124,7 @@ type sourcePostReq struct {
 type SourceSpec struct {
 	APIURL string
 	Auth   *crhchttp.AuthConfig
-	Spec   costmgmtv1alpha1.CloudDotRedHatSourceStatus
+	Spec   kokumetricscfgv1alpha1.CloudDotRedHatSourceStatus
 	Log    logr.Logger
 }
 
@@ -182,7 +182,7 @@ func doRequest(log logr.Logger, r *http.Request, client crhchttp.HTTPClient, err
 
 // GetSourceTypeID Request the source type ID for OpenShift
 func GetSourceTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, error) {
-	log := sSpec.Log.WithValues("costmanagement", "GetSourceTypeID")
+	log := sSpec.Log.WithValues("kokumetricsconfig", "GetSourceTypeID")
 	request := &sourceGetReq{
 		client:   client,
 		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
@@ -216,7 +216,7 @@ func GetSourceTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, err
 
 // CheckSourceExists Determine if the source exists with given parameters
 func CheckSourceExists(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID, name, sourceRef string) (*SourceItem, error) {
-	log := sSpec.Log.WithValues("costmanagement", "CheckSourceExists")
+	log := sSpec.Log.WithValues("kokumetricsconfig", "CheckSourceExists")
 	request := &sourceGetReq{
 		client:   client,
 		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
@@ -258,7 +258,7 @@ func CheckSourceExists(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceType
 
 // GetApplicationTypeID Request the application type ID for Cost Management
 func GetApplicationTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, error) {
-	log := sSpec.Log.WithValues("costmanagement", "GetApplicationTypeID")
+	log := sSpec.Log.WithValues("kokumetricsconfig", "GetApplicationTypeID")
 	request := &sourceGetReq{
 		client:   client,
 		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
@@ -292,7 +292,7 @@ func GetApplicationTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string
 
 // PostSource Creates a source with the provided name and cluster ID
 func PostSource(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
-	log := sSpec.Log.WithValues("costmanagement", "PostSource")
+	log := sSpec.Log.WithValues("kokumetricsconfig", "PostSource")
 	request := &sourcePostReq{
 		client:   client,
 		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
@@ -343,7 +343,7 @@ func PostApplication(sSpec *SourceSpec, client crhchttp.HTTPClient, source *Sour
 
 // SourceCreate Creates a source with the provided name and cluster ID
 func SourceCreate(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
-	log := sSpec.Log.WithValues("costmanagement", "SourceGetOrCreate")
+	log := sSpec.Log.WithValues("kokumetricsconfig", "SourceGetOrCreate")
 
 	// Get App Type ID
 	appTypeID, err := GetApplicationTypeID(sSpec, client)
@@ -364,7 +364,7 @@ func SourceCreate(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID st
 
 // SourceGetOrCreate Check if source exists, if not create the source if specified
 func SourceGetOrCreate(sSpec *SourceSpec, client crhchttp.HTTPClient) (bool, metav1.Time, error) {
-	log := sSpec.Log.WithValues("costmanagement", "SourceGetOrCreate")
+	log := sSpec.Log.WithValues("kokumetricsconfig", "SourceGetOrCreate")
 	currentTime := metav1.Now()
 
 	// Get Source Type ID

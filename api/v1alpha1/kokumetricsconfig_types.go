@@ -68,25 +68,25 @@ const (
 	Token AuthenticationType = "token"
 )
 
-// AuthenticationSpec defines the desired state of Authentication object in the CostManagementSpec.
+// AuthenticationSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
 type AuthenticationSpec struct {
 
-	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
 	// Valid values are:
 	// - "basic" : Enables authentication using user and password from authentication secret.
 	// - "token" (default): Uses cluster token for authentication.
 	// +kubebuilder:default="token"
 	AuthType AuthenticationType `json:"type"`
 
-	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
+	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
 }
 
-// PackagingSpec defines the desired state of the Packaging object in the CostManagementSpec.
+// PackagingSpec defines the desired state of the Packaging object in the KokuMetricsConfigSpec.
 type PackagingSpec struct {
 
-	// MaxSize is a field of CostManagement to represent the max file size in megabytes that will be compressed for upload to Ingress.
+	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	// The default is 100.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
@@ -94,191 +94,191 @@ type PackagingSpec struct {
 	MaxSize int64 `json:"max_size"`
 }
 
-// UploadSpec defines the desired state of Authentication object in the CostManagementSpec.
+// UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
 type UploadSpec struct {
 
-	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
+	// IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
 	// The default is `/api/ingress/v1/upload`.
 	// +kubebuilder:default=`/api/ingress/v1/upload`
 	IngressAPIPath string `json:"ingress_path"`
 
-	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
+	// UploadWait is a field of KokuMetricsConfig to represent the time to wait before sending an upload.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule.
+	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
 	// The default is 360 min (6 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=360
 	UploadCycle *int64 `json:"upload_cycle"`
 
-	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
+	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
 	// The default is true.
 	// +kubebuilder:default=true
 	UploadToggle *bool `json:"upload_toggle"`
 
-	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
+	// ValidateCert is a field of KokuMetricsConfig to represent if the Ingress endpoint must be certificate validated.
 	// +kubebuilder:default=false
 	ValidateCert *bool `json:"validate_cert"`
 }
 
-// PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementSpec.
+// PrometheusSpec defines the desired state of PrometheusConfig object in the KokuMetricsConfigSpec.
 type PrometheusSpec struct {
 
-	// SvcAddress is a field of CostManagement to represent the thanos-querier address.
+	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
 	// +kubebuilder:default=`https://thanos-querier.openshift-monitoring.svc:9091`
 	SvcAddress string `json:"service_address"`
 
-	// SkipTLSVerification is a field of CostManagement to represent if the thanos-querier endpoint must be certificate validated.
+	// SkipTLSVerification is a field of KokuMetricsConfig to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.
 	// +kubebuilder:default=false
 	SkipTLSVerification *bool `json:"skip_tls_verification"`
 }
 
-// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementSpec.
+// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the KokuMetricsConfigSpec.
 type CloudDotRedHatSourceSpec struct {
 
-	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
+	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
 	// The default is `/api/sources/v1.0/`.
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// SourceName is a field of CostManagementSpec to represent the source name on cloud.redhat.com.
+	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on cloud.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// CreateSource is a field of CostManagementSpec to represent if the source should be created if not found.
+	// CreateSource is a field of KokuMetricsConfigSpec to represent if the source should be created if not found.
 	// +kubebuilder:default=false
 	CreateSource *bool `json:"create_source"`
 
-	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule
+	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule
 	// The default is 1440 min (24 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=1440
 	CheckCycle *int64 `json:"check_cycle"`
 }
 
-// CostManagementSpec defines the desired state of CostManagement.
-type CostManagementSpec struct {
+// KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
+type KokuMetricsConfigSpec struct {
 	// +kubebuilder:validation:preserveUnknownFields=false
 
-	// ClusterID is a field of CostManagement to represent the cluster UUID.
+	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID.
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
 
-	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
+	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// The default is `https://cloud.redhat.com`.
 	// +kubebuilder:default=`https://cloud.redhat.com`
 	APIURL string `json:"api_url,omitempty"`
 
-	// Authentication is a field of CostManagement to represent the authentication object.
+	// Authentication is a field of KokuMetricsConfig to represent the authentication object.
 	Authentication AuthenticationSpec `json:"authentication"`
 
-	//Packaging is a field of CostManagement to represent the packaging object
+	//Packaging is a field of KokuMetricsConfig to represent the packaging object
 	Packaging PackagingSpec `json:"packaging"`
 
-	// Upload is a field of CostManagement to represent the upload object.
+	// Upload is a field of KokuMetricsConfig to represent the upload object.
 	Upload UploadSpec `json:"upload"`
 
-	// PrometheusConfig is a field of CostManagement to represent the configuration of Prometheus connection.
+	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
 	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
-	// Source is a field of CostManagement to represent the desired source on cloud.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the desired source on cloud.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 }
 
-// AuthenticationStatus defines the desired state of Authentication object in the CostManagementStatus.
+// AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.
 type AuthenticationStatus struct {
 
-	// AuthType is a field of CostManagement to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
 	AuthType AuthenticationType `json:"type,omitempty"`
 
-	// AuthenticationSecretName is a field of CostManagement to represent the secret with the user and password used for uploads.
+	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
 
-	// AuthenticationCredentialsFound is a field of CostManagement to represent if used for uploads were found.
+	// AuthenticationCredentialsFound is a field of KokuMetricsConfig to represent if used for uploads were found.
 	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
 }
 
-// PackagingStatus defines the observed state of the Packing object in the CostManagementStatus.
+// PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.
 type PackagingStatus struct {
 
-	// MaxSize is a field of CostManagement to represent the max file size in megabytes that will be compressed for upload to Ingress.
+	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	// The default is 100.
 	// +optional
 	MaxSize *int64 `json:"max_size,omitempty"`
 
-	// PackagingError is a field of CostManagementStatus to represent the error encountered packaging the reports.
+	// PackagingError is a field of KokuMetricsConfigStatus to represent the error encountered packaging the reports.
 	// +optional
 	PackagingError string `json:"error,omitempty"`
 }
 
-// UploadStatus defines the observed state of Upload object in the CostManagementStatus.
+// UploadStatus defines the observed state of Upload object in the KokuMetricsConfigStatus.
 type UploadStatus struct {
 
-	// IngressAPIPath is a field of CostManagement to represent the path of the Ingress API service.
+	// IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
 	// +optional
 	IngressAPIPath string `json:"ingress_path,omitempty"`
 
-	// UploadToggle is a field of CostManagement to represent if the operator should upload to cloud.redhat.com.
+	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
 	// The default is true
 	UploadToggle *bool `json:"upload,omitempty"`
 
-	// UploadWait is a field of CostManagement to represent the time to wait before sending an upload.
+	// UploadWait is a field of KokuMetricsConfig to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of CostManagement to represent the number of minutes between each upload schedule.
+	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
 	// The default is 360 min (6 hours).
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
-	// UploadError is a field of CostManagementStatus to represent the error encountered uploading reports.
+	// UploadError is a field of KokuMetricsConfigStatus to represent the error encountered uploading reports.
 	// +optional
 	UploadError string `json:"error,omitempty"`
 
-	// LastUploadStatus is a field of CostManagement that shows the http status of the last upload.
+	// LastUploadStatus is a field of KokuMetricsConfig that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
-	// LastUploadTime is a field of CostManagement that shows the time that the last upload was attempted.
+	// LastUploadTime is a field of KokuMetricsConfig that shows the time that the last upload was attempted.
 	// +nullable
 	LastUploadTime metav1.Time `json:"last_upload_time,omitempty"`
 
-	// LastSuccessfulUploadTime is a field of CostManagement that shows the time of the last successful upload.
+	// LastSuccessfulUploadTime is a field of KokuMetricsConfig that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
 
-	// ValidateCert is a field of CostManagement to represent if the Ingress endpoint must be certificate validated.
+	// ValidateCert is a field of KokuMetricsConfig to represent if the Ingress endpoint must be certificate validated.
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 }
 
-// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the CostManagementStatus.
+// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the KokuMetricsConfigStatus.
 type CloudDotRedHatSourceStatus struct {
 
-	// SourcesAPIPath is a field of CostManagement to represent the path of the Sources API service.
+	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// SourceName is a field of CostManagementStatus to represent the source name on cloud.redhat.com.
+	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on cloud.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// SourceDefined is a field of CostManagementStatus to represent if the source exists as defined on cloud.redhat.com.
+	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on cloud.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
-	// CreateSource is a field of CostManagementStatus to represent if the source should be created if not found.
+	// CreateSource is a field of KokuMetricsConfigStatus to represent if the source should be created if not found.
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
 
-	// SourceError is a field of CostManagementStatus to represent the error encountered creating the source.
+	// SourceError is a field of KokuMetricsConfigStatus to represent the error encountered creating the source.
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
-	// LastSourceCheckTime is a field of CostManagement that shows the time that the last check was attempted.
+	// LastSourceCheckTime is a field of KokuMetricsConfig that shows the time that the last check was attempted.
 	// +nullable
 	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
-	// CheckCycle is a field of CostManagement to represent the number of minutes between each source check schedule.
+	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule.
 	// The default is 1440 min (24 hours).
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
@@ -286,71 +286,71 @@ type CloudDotRedHatSourceStatus struct {
 // PrometheusStatus defines the status for querying prometheus.
 type PrometheusStatus struct {
 
-	// PrometheusConfigured is a field of CostManagementStatus to represent if cost-management is configured to connect to prometheus.
+	// PrometheusConfigured is a field of KokuMetricsConfigStatus to represent if the operator is configured to connect to prometheus.
 	PrometheusConfigured bool `json:"prometheus_configured"`
 
-	// ConfigError is a field of CostManagementStatus to represent errors during prometheus configuration.
+	// ConfigError is a field of KokuMetricsConfigStatus to represent errors during prometheus configuration.
 	ConfigError string `json:"configuration_error,omitempty"`
 
-	// PrometheusConnected is a field of CostManagementStatus to represent if prometheus can be queried.
+	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
-	// ConnectionError is a field of CostManagementStatus to represent errors during prometheus test query.
+	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
 	ConnectionError string `json:"prometheus_connection_error,omitempty"`
 
-	// LastQueryStartTime is a field of CostManagementStatus to represent the last time queries were started.
+	// LastQueryStartTime is a field of KokuMetricsConfigStatus to represent the last time queries were started.
 	// +nullable
 	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
 
-	// LastQuerySuccessTime is a field of CostManagementStatus to represent the last time queries were successful.
+	// LastQuerySuccessTime is a field of KokuMetricsConfigStatus to represent the last time queries were successful.
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
 
 	// SvcAddress is the internal thanos-querier address.
 	SvcAddress string `json:"service_address,omitempty"`
 
-	// SkipTLSVerification is a field of CostManagementStatus to represent if the thanos-querier endpoint must be certificate validated.
+	// SkipTLSVerification is a field of KokuMetricsConfigStatus to represent if the thanos-querier endpoint must be certificate validated.
 	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // ReportsStatus defines the status for generating reports.
 type ReportsStatus struct {
 
-	// ReportMonth is a field of CostManagementStatus to represent the month for which reports are being generated.
+	// ReportMonth is a field of KokuMetricsConfigStatus to represent the month for which reports are being generated.
 	ReportMonth string `json:"report_month,omitempty"`
 
-	// LastHourQueried is a field of CostManagementStatus to represent the time range for which metrics were last queried.
+	// LastHourQueried is a field of KokuMetricsConfigStatus to represent the time range for which metrics were last queried.
 	LastHourQueried string `json:"last_hour_queried,omitempty"`
 
-	// DataCollected is a field of CostManagementStatus to represent whether or not data was collected for the last query.
+	// DataCollected is a field of KokuMetricsConfigStatus to represent whether or not data was collected for the last query.
 	DataCollected bool `json:"data_collected,omitempty"`
 
-	// DataCollectionMessage is a field of CostManagementStatus to represent a message associated with the data_collected status.
+	// DataCollectionMessage is a field of KokuMetricsConfigStatus to represent a message associated with the data_collected status.
 	DataCollectionMessage string `json:"data_collection_message,omitempty"`
 }
 
-// CostManagementStatus defines the observed state of CostManagement.
-type CostManagementStatus struct {
+// KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
+type KokuMetricsConfigStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// ClusterID is a field of CostManagement to represent the cluster UUID.
+	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID.
 	ClusterID string `json:"clusterID,omitempty"`
 
-	// APIURL is a field of CostManagement to represent the url of the API endpoint for service interaction.
+	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// +optional
 	APIURL string `json:"api_url,omitempty"`
 
-	// Authentication is a field of CostManagement to represent the authentication status.
+	// Authentication is a field of KokuMetricsConfig to represent the authentication status.
 	Authentication AuthenticationStatus `json:"authentication,omitempty"`
 
-	// Packaging is a field of CostManagement to represent the packaging status
+	// Packaging is a field of KokuMetricsConfig to represent the packaging status
 	Packaging PackagingStatus `json:"packaging,omitempty"`
 
-	// Upload is a field of CostManagement to represent the upload object.
+	// Upload is a field of KokuMetricsConfig to represent the upload object.
 	Upload UploadStatus `json:"upload,omitempty"`
 
-	// OperatorCommit is a field of CostManagement that shows the commit hash of the operator.
+	// OperatorCommit is a field of KokuMetricsConfig that shows the commit hash of the operator.
 	OperatorCommit string `json:"operator_commit,omitempty"`
 
 	// Prometheus represents the status of premetheus queries.
@@ -359,7 +359,7 @@ type CostManagementStatus struct {
 	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
-	// Source is a field of CostManagement to represent the observed state of the source on cloud.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the observed state of the source on cloud.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 }
@@ -367,24 +367,24 @@ type CostManagementStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// CostManagement is the Schema for the costmanagements API
-type CostManagement struct {
+// KokuMetricsConfig is the Schema for the kokumetricsconfig API
+type KokuMetricsConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CostManagementSpec   `json:"spec"`
-	Status CostManagementStatus `json:"status,omitempty"`
+	Spec   KokuMetricsConfigSpec   `json:"spec"`
+	Status KokuMetricsConfigStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// CostManagementList contains a list of CostManagement
-type CostManagementList struct {
+// KokuMetricsConfigList contains a list of KokuMetricsConfig
+type KokuMetricsConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []CostManagement `json:"items"`
+	Items           []KokuMetricsConfig `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&CostManagement{}, &CostManagementList{})
+	SchemeBuilder.Register(&KokuMetricsConfig{}, &KokuMetricsConfigList{})
 }

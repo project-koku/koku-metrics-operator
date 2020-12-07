@@ -2,12 +2,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: korekuta-operator-go-manager-config-rolebinding
+  name: koku-metrics-operator-manager-config-rolebinding
   namespace: openshift-config
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: korekuta-operator-go-manager-config-role
+  name: koku-metrics-operator-manager-config-role
 subjects:
 - kind: ServiceAccount
   name: default

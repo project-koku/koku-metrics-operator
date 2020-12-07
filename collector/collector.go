@@ -27,8 +27,8 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/dirconfig"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
@@ -122,12 +122,12 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
-	log := c.Log.WithValues("costmanagement", "GenerateReports")
+func GenerateReports(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+	log := c.Log.WithValues("kokumetricsconfig", "GenerateReports")
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
-	updateReportStatus(cost, c.TimeSeries)
+	updateReportStatus(kmCfg, c.TimeSeries)
 
 	// ################################################################################################################
 	log.Info("querying for node metrics")
@@ -138,8 +138,8 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 
 	if len(nodeResults) <= 0 {
 		log.Info("no data to report")
-		cost.Status.Reports.DataCollected = false
-		cost.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
+		kmCfg.Status.Reports.DataCollected = false
+		kmCfg.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
@@ -167,7 +167,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			prefix:    emptyNodeRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing node results to file", "filename", nodeReport.file.getName())
+	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing node results to file", "filename", nodeReport.file.getName())
 	if err := nodeReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write node report: %v", err)
 	}
@@ -207,7 +207,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			prefix:    emptyPodRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
+	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
 	if err := podReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write pod report: %v", err)
 	}
@@ -239,7 +239,7 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			prefix:    emptyVolRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
+	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
 	if err := volReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write volume report: %v", err)
 	}
@@ -271,15 +271,15 @@ func GenerateReports(cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.Di
 			prefix:    emptyNameRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("costmanagement", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
+	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
 	if err := namespaceReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write namespace report: %v", err)
 	}
 
 	//################################################################################################################
 
-	cost.Status.Reports.DataCollected = true
-	cost.Status.Reports.DataCollectionMessage = ""
+	kmCfg.Status.Reports.DataCollected = true
+	kmCfg.Status.Reports.DataCollectionMessage = ""
 
 	return nil
 }
@@ -302,7 +302,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(cost *costmgmtv1alpha1.CostManagement, ts *promv1.Range) {
-	cost.Status.Reports.ReportMonth = ts.Start.Format("01")
-	cost.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
+func updateReportStatus(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, ts *promv1.Range) {
+	kmCfg.Status.Reports.ReportMonth = ts.Start.Format("01")
+	kmCfg.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

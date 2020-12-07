@@ -46,9 +46,9 @@ rules:
   - list
   - watch
 - apiGroups:
-  - cost-mgmt.openshift.io
+  - koku-metrics-cfg.openshift.io
   resources:
-  - costmanagements
+  - kokumetricsconfigs
   verbs:
   - create
   - delete
@@ -58,9 +58,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cost-mgmt.openshift.io
+  - koku-metrics-cfg.openshift.io
   resources:
-  - costmanagements/status
+  - kokumetricsconfigs/status
   verbs:
   - get
   - patch

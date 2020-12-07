@@ -36,7 +36,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -87,7 +86,7 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 
 // SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
 func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
-	log := authConfig.Log.WithValues("costmanagement", "SetupRequest")
+	log := authConfig.Log.WithValues("kokumetricsconfig", "SetupRequest")
 
 	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
 	if err != nil {
@@ -105,7 +104,7 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 	default:
 		log.Info("Request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
-		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
+		req.Header.Set("User-Agent", fmt.Sprintf("koku-mertics-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
 	}
 
 	// log the request headers
@@ -119,7 +118,7 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
-	log := authConfig.Log.WithValues("costmanagement", "GetClient")
+	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
 		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
@@ -142,7 +141,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 
 // ProcessResponse Log response for request and return valid
 func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
-	log := logger.WithValues("costmanagement", "ProcessResponse")
+	log := logger.WithValues("kokumetricsconfig", "ProcessResponse")
 	log.Info("request response",
 		"method", resp.Request.Method,
 		"status", resp.StatusCode,
@@ -173,7 +172,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 
 // Upload Send data to cloud.redhat.com
 func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
-	log := authConfig.Log.WithValues("costmanagement", "Upload")
+	log := authConfig.Log.WithValues("kokumetricsconfig", "Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {

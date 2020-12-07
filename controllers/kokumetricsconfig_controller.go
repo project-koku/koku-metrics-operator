@@ -41,13 +41,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	cv "github.com/project-koku/korekuta-operator-go/clusterversion"
-	"github.com/project-koku/korekuta-operator-go/collector"
-	"github.com/project-koku/korekuta-operator-go/crhchttp"
-	"github.com/project-koku/korekuta-operator-go/dirconfig"
-	"github.com/project-koku/korekuta-operator-go/packaging"
-	"github.com/project-koku/korekuta-operator-go/sources"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
+	"github.com/project-koku/koku-metrics-operator/collector"
+	"github.com/project-koku/koku-metrics-operator/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/packaging"
+	"github.com/project-koku/koku-metrics-operator/sources"
 )
 
 var (
@@ -62,11 +62,11 @@ var (
 	promCompareFormat        = "2006-01-02T15"
 
 	dirCfg     *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-	sourceSpec *costmgmtv1alpha1.CloudDotRedHatSourceSpec
+	sourceSpec *kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec
 )
 
-// CostManagementReconciler reconciles a CostManagement object
-type CostManagementReconciler struct {
+// KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
+type KokuMetricsConfigReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
@@ -82,7 +82,7 @@ type serializedAuth struct {
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
-func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, specItem *string, statusItem *string, defaultVal string) (string, bool) {
+func StringReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, specItem *string, statusItem *string, defaultVal string) (string, bool) {
 	// Update statusItem if needed
 	changed := false
 	if *statusItem == "" || !reflect.DeepEqual(*specItem, *statusItem) {
@@ -100,52 +100,52 @@ func StringReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 }
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
-func ReflectSpec(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) {
+func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) {
 
-	StringReflectSpec(r, cost, &cost.Spec.APIURL, &cost.Status.APIURL, costmgmtv1alpha1.DefaultAPIURL)
-	StringReflectSpec(r, cost, &cost.Spec.Authentication.AuthenticationSecretName, &cost.Status.Authentication.AuthenticationSecretName, "")
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.APIURL, &kmCfg.Status.APIURL, kokumetricscfgv1alpha1.DefaultAPIURL)
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Authentication.AuthenticationSecretName, &kmCfg.Status.Authentication.AuthenticationSecretName, "")
 
-	if !reflect.DeepEqual(cost.Spec.Authentication.AuthType, cost.Status.Authentication.AuthType) {
-		cost.Status.Authentication.AuthType = cost.Spec.Authentication.AuthType
+	if !reflect.DeepEqual(kmCfg.Spec.Authentication.AuthType, kmCfg.Status.Authentication.AuthType) {
+		kmCfg.Status.Authentication.AuthType = kmCfg.Spec.Authentication.AuthType
 	}
-	cost.Status.Upload.ValidateCert = cost.Spec.Upload.ValidateCert
+	kmCfg.Status.Upload.ValidateCert = kmCfg.Spec.Upload.ValidateCert
 
-	StringReflectSpec(r, cost, &cost.Spec.Upload.IngressAPIPath, &cost.Status.Upload.IngressAPIPath, costmgmtv1alpha1.DefaultIngressPath)
-	cost.Status.Upload.UploadToggle = cost.Spec.Upload.UploadToggle
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Upload.IngressAPIPath, &kmCfg.Status.Upload.IngressAPIPath, kokumetricscfgv1alpha1.DefaultIngressPath)
+	kmCfg.Status.Upload.UploadToggle = kmCfg.Spec.Upload.UploadToggle
 
 	// set the default max file size for packaging
-	cost.Status.Packaging.MaxSize = &cost.Spec.Packaging.MaxSize
+	kmCfg.Status.Packaging.MaxSize = &kmCfg.Spec.Packaging.MaxSize
 
-	if !reflect.DeepEqual(cost.Spec.Upload.UploadWait, cost.Status.Upload.UploadWait) {
+	if !reflect.DeepEqual(kmCfg.Spec.Upload.UploadWait, kmCfg.Status.Upload.UploadWait) {
 		// If data is specified in the spec it should be used
-		cost.Status.Upload.UploadWait = cost.Spec.Upload.UploadWait
+		kmCfg.Status.Upload.UploadWait = kmCfg.Spec.Upload.UploadWait
 	}
-	if cost.Status.Upload.UploadWait == nil {
+	if kmCfg.Status.Upload.UploadWait == nil {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		uploadWait := r.Int63() % 35
-		cost.Status.Upload.UploadWait = &uploadWait
+		kmCfg.Status.Upload.UploadWait = &uploadWait
 	}
 
-	if !reflect.DeepEqual(cost.Spec.Upload.UploadCycle, cost.Status.Upload.UploadCycle) {
-		cost.Status.Upload.UploadCycle = cost.Spec.Upload.UploadCycle
+	if !reflect.DeepEqual(kmCfg.Spec.Upload.UploadCycle, kmCfg.Status.Upload.UploadCycle) {
+		kmCfg.Status.Upload.UploadCycle = kmCfg.Spec.Upload.UploadCycle
 	}
 
-	StringReflectSpec(r, cost, &cost.Spec.Source.SourcesAPIPath, &cost.Status.Source.SourcesAPIPath, costmgmtv1alpha1.DefaultSourcesPath)
-	StringReflectSpec(r, cost, &cost.Spec.Source.SourceName, &cost.Status.Source.SourceName, "")
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourcesAPIPath, &kmCfg.Status.Source.SourcesAPIPath, kokumetricscfgv1alpha1.DefaultSourcesPath)
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourceName, &kmCfg.Status.Source.SourceName, "")
 
-	cost.Status.Source.CreateSource = cost.Spec.Source.CreateSource
+	kmCfg.Status.Source.CreateSource = kmCfg.Spec.Source.CreateSource
 
-	if !reflect.DeepEqual(cost.Spec.Source.CheckCycle, cost.Status.Source.CheckCycle) {
-		cost.Status.Source.CheckCycle = cost.Spec.Source.CheckCycle
+	if !reflect.DeepEqual(kmCfg.Spec.Source.CheckCycle, kmCfg.Status.Source.CheckCycle) {
+		kmCfg.Status.Source.CheckCycle = kmCfg.Spec.Source.CheckCycle
 	}
 
-	StringReflectSpec(r, cost, &cost.Spec.PrometheusConfig.SvcAddress, &cost.Status.Prometheus.SvcAddress, costmgmtv1alpha1.DefaultPrometheusSvcAddress)
-	cost.Status.Prometheus.SkipTLSVerification = cost.Spec.PrometheusConfig.SkipTLSVerification
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, kokumetricscfgv1alpha1.DefaultPrometheusSvcAddress)
+	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
 }
 
 // GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
-func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
-	log := r.Log.WithValues("costmanagement", "GetClusterID")
+func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) error {
+	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
 	cvClient := r.cvClientBuilder.New(r)
 	clusterVersion, err := cvClient.GetClusterVersion()
@@ -154,15 +154,15 @@ func GetClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManage
 	}
 	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
 	if clusterVersion.Spec.ClusterID != "" {
-		cost.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
+		kmCfg.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
 	}
 	return nil
 }
 
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
-func GetPullSecretToken(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig) error {
+func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
-	log := r.Log.WithValues("costmanagement", "GetPullSecretToken")
+	log := r.Log.WithValues("KokuMetricsConfig", "GetPullSecretToken")
 	secret := &corev1.Secret{}
 	namespace := types.NamespacedName{
 		Namespace: openShiftConfigNamespace,
@@ -212,15 +212,15 @@ func GetPullSecretToken(r *CostManagementReconciler, authConfig *crhchttp.AuthCo
 }
 
 // GetAuthSecret Obtain the username and password from the authentication secret provided in the current namespace
-func GetAuthSecret(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
+func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
 	ctx := context.Background()
-	log := r.Log.WithValues("costmanagement", "GetAuthSecret")
+	log := r.Log.WithValues("KokuMetricsConfig", "GetAuthSecret")
 
 	log.Info("Secret namespace", "namespace", reqNamespace.Namespace)
 	secret := &corev1.Secret{}
 	namespace := types.NamespacedName{
 		Namespace: reqNamespace.Namespace,
-		Name:      cost.Status.Authentication.AuthenticationSecretName}
+		Name:      kmCfg.Status.Authentication.AuthenticationSecretName}
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
 		switch {
@@ -253,7 +253,7 @@ func GetAuthSecret(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManag
 }
 
 func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
-	log := logger.WithValues("costmanagement", "checkCycle")
+	log := logger.WithValues("KokuMetricsConfig", "checkCycle")
 	if lastExecution.IsZero() {
 		log.Info(fmt.Sprintf("There have been no prior successful %ss to cloud.redhat.com.", action))
 		return true
@@ -271,46 +271,46 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 }
 
-func setClusterID(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) error {
-	if cost.Status.ClusterID == "" {
+func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) error {
+	if kmCfg.Status.ClusterID == "" {
 		r.cvClientBuilder = cv.NewBuilder()
-		err := GetClusterID(r, cost)
+		err := GetClusterID(r, kmCfg)
 		return err
 	}
 	return nil
 }
 
-func setAuthentication(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement, reqNamespace types.NamespacedName) error {
-	log := r.Log.WithValues("costmanagement", "setAuthentication")
-	if cost.Status.Authentication.AuthType == costmgmtv1alpha1.Token {
+func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, reqNamespace types.NamespacedName) error {
+	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
+	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1alpha1.Token {
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
 			log.Error(nil, "Failed to obtain cluster authentication token.")
-			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 		} else {
-			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
 		}
 		return err
-	} else if cost.Spec.Authentication.AuthenticationSecretName != "" {
+	} else if kmCfg.Spec.Authentication.AuthenticationSecretName != "" {
 		// Get user and password from auth secret in namespace
-		err := GetAuthSecret(r, cost, authConfig, reqNamespace)
+		err := GetAuthSecret(r, kmCfg, authConfig, reqNamespace)
 		if err != nil {
 			log.Error(nil, "Failed to obtain authentication secret credentials.")
-			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 		} else {
-			cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
 		}
 		return err
 	} else {
 		// No authentication secret name set when using basic auth
-		cost.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
+		kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 		err := fmt.Errorf("No authentication secret name set when using basic auth.")
 		return err
 	}
 }
 
-func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement) {
+func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) {
 	log := r.Log.WithName("setOperatorCommit")
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
@@ -320,61 +320,61 @@ func setOperatorCommit(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostM
 			GitCommit = commit
 		}
 	}
-	cost.Status.OperatorCommit = GitCommit
+	kmCfg.Status.OperatorCommit = GitCommit
 }
 
-func checkSource(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement) {
+func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) {
 	// check if the Source Spec has changed
 	updated := false
 	if sourceSpec != nil {
-		updated = !reflect.DeepEqual(*sourceSpec, cost.Spec.Source)
+		updated = !reflect.DeepEqual(*sourceSpec, kmCfg.Spec.Source)
 	}
-	sourceSpec = cost.Spec.Source.DeepCopy()
+	sourceSpec = kmCfg.Spec.Source.DeepCopy()
 
 	sSpec := &sources.SourceSpec{
-		APIURL: cost.Status.APIURL,
+		APIURL: kmCfg.Status.APIURL,
 		Auth:   authConfig,
-		Spec:   cost.Status.Source,
+		Spec:   kmCfg.Status.Source,
 		Log:    r.Log,
 	}
-	log := r.Log.WithValues("costmanagement", "checkSource")
+	log := r.Log.WithValues("KokuMetricsConfig", "checkSource")
 	if sSpec.Spec.SourceName != "" && (updated || checkCycle(r.Log, *sSpec.Spec.CheckCycle, sSpec.Spec.LastSourceCheckTime, "source check")) {
 		client := crhchttp.GetClient(authConfig)
-		cost.Status.Source.SourceError = ""
+		kmCfg.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(sSpec, client)
 		if err != nil {
-			cost.Status.Source.SourceError = err.Error()
+			kmCfg.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
 		}
-		cost.Status.Source.SourceDefined = &defined
-		cost.Status.Source.LastSourceCheckTime = lastCheck
+		kmCfg.Status.Source.SourceDefined = &defined
+		kmCfg.Status.Source.LastSourceCheckTime = lastCheck
 	}
 }
 
-func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConfig, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) error {
-	log := r.Log.WithValues("costmanagement", "packageAndUpload")
+func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
+	log := r.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
 
 	// if its time to upload/package
-	if !*cost.Spec.Upload.UploadToggle {
+	if !*kmCfg.Spec.Upload.UploadToggle {
 		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
 		return nil
 	}
-	if !checkCycle(r.Log, *cost.Status.Upload.UploadCycle, cost.Status.Upload.LastSuccessfulUploadTime, "upload") {
+	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
 		return nil
 	}
 
 	// Package and split the payload if necessary
 	packager := packaging.FilePackager{
-		Cost:    cost,
+		KMCfg:   kmCfg,
 		DirCfg:  dirCfg,
 		Log:     r.Log,
-		MaxSize: *cost.Status.Packaging.MaxSize,
+		MaxSize: *kmCfg.Status.Packaging.MaxSize,
 	}
-	cost.Status.Packaging.PackagingError = ""
+	kmCfg.Status.Packaging.PackagingError = ""
 	if err := packager.PackageReports(); err != nil {
 		log.Error(err, "PackageReports failed.")
 		// update the CR packaging error status
-		cost.Status.Packaging.PackagingError = err.Error()
+		kmCfg.Status.Packaging.PackagingError = err.Error()
 	}
 
 	uploadFiles, err := packager.ReadUploadDir()
@@ -389,8 +389,8 @@ func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConf
 	}
 
 	log.Info("Files ready for upload: " + strings.Join(uploadFiles, ", "))
-	log.Info("Pausing for " + fmt.Sprintf("%d", *cost.Status.Upload.UploadWait) + " seconds before uploading.")
-	time.Sleep(time.Duration(*cost.Status.Upload.UploadWait) * time.Second)
+	log.Info("Pausing for " + fmt.Sprintf("%d", *kmCfg.Status.Upload.UploadWait) + " seconds before uploading.")
+	time.Sleep(time.Duration(*kmCfg.Status.Upload.UploadWait) * time.Second)
 	for _, file := range uploadFiles {
 		if !strings.Contains(file, "tar.gz") {
 			continue
@@ -402,17 +402,17 @@ func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConf
 			log.Error(err, "failed to set multipart body and headers")
 			return err
 		}
-		ingressURL := cost.Status.APIURL + cost.Status.Upload.IngressAPIPath
+		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
 		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
-		cost.Status.Upload.UploadError = ""
+		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
-			cost.Status.Upload.UploadError = err.Error()
+			kmCfg.Status.Upload.UploadError = err.Error()
 		}
-		cost.Status.Upload.LastUploadStatus = uploadStatus
-		cost.Status.Upload.LastUploadTime = uploadTime
+		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
+		kmCfg.Status.Upload.LastUploadTime = uploadTime
 		if strings.Contains(uploadStatus, "202") {
-			cost.Status.Upload.LastSuccessfulUploadTime = uploadTime
+			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
 			log.Info("Removing tar file since upload was successful!")
 			if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
@@ -423,8 +423,8 @@ func packageAndUpload(r *CostManagementReconciler, authConfig *crhchttp.AuthConf
 	return nil
 }
 
-func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostManagement, dirCfg *dirconfig.DirectoryConfig) {
-	log := r.Log.WithValues("costmanagement", "collectPromStats")
+func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
+	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
 			Client: r.Client,
@@ -433,7 +433,7 @@ func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostMa
 	}
 	r.promCollector.TimeSeries = nil
 
-	if err := r.promCollector.GetPromConn(cost); err != nil {
+	if err := r.promCollector.GetPromConn(kmCfg); err != nil {
 		log.Error(err, "failed to get prometheus connection")
 		return
 	}
@@ -446,25 +446,25 @@ func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostMa
 	}
 	r.promCollector.TimeSeries = &timeRange
 
-	if cost.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
+	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		return
 	}
-	cost.Status.Prometheus.LastQueryStartTime = t
+	kmCfg.Status.Prometheus.LastQueryStartTime = t
 	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
-	if err := collector.GenerateReports(cost, dirCfg, r.promCollector); err != nil {
-		cost.Status.Reports.DataCollected = false
-		cost.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
+	if err := collector.GenerateReports(kmCfg, dirCfg, r.promCollector); err != nil {
+		kmCfg.Status.Reports.DataCollected = false
+		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
 		log.Error(err, "failed to generate reports")
 		return
 	}
 	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
-	cost.Status.Prometheus.LastQuerySuccessTime = t
+	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
 
 }
 
-// +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cost-mgmt.openshift.io,resources=costmanagements/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=KokuMetricsConfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=KokuMetricsConfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
@@ -472,59 +472,59 @@ func collectPromStats(r *CostManagementReconciler, cost *costmgmtv1alpha1.CostMa
 // +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
 // +kubebuilder:rbac:groups=core,namespace=openshift-cost,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
 
-// Reconcile Process the CostManagement custom resource based on changes or requeue
-func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+// Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
+func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
 	var mainErr error
 	os.Setenv("TZ", "UTC")
 	ctx := context.Background()
-	log := r.Log.WithValues("costmanagement", req.NamespacedName)
+	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
 
-	// fetch the CostManagement instance
-	costOriginal := &costmgmtv1alpha1.CostManagement{}
+	// fetch the KokuMetricsConfig instance
+	kmCfgOriginal := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-	if err := r.Get(ctx, req.NamespacedName, costOriginal); err != nil {
-		log.Error(err, "unable to fetch CostMgmtCR")
+	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
+		log.Error(err, "unable to fetch KokuMetricsConfigCR")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	cost := costOriginal.DeepCopy()
-	log.Info("Reconciling custom resource", "CostManagement", cost)
+	kmCfg := kmCfgOriginal.DeepCopy()
+	log.Info("Reconciling custom resource", "KokuMetricsConfig", kmCfg)
 
 	// reflect the spec values into status
-	ReflectSpec(r, cost)
+	ReflectSpec(r, kmCfg)
 
 	// set the cluster ID & return if there are errors
-	if err := setClusterID(r, cost); err != nil {
+	if err := setClusterID(r, kmCfg); err != nil {
 		log.Error(err, "Failed to obtain clusterID.")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Using the following inputs", "CostManagementConfig", cost.Status)
+	log.Info("Using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	setOperatorCommit(r, cost)
+	setOperatorCommit(r, kmCfg)
 
 	authConfig := &crhchttp.AuthConfig{
 		Log:            r.Log,
-		ValidateCert:   *cost.Status.Upload.ValidateCert,
-		Authentication: cost.Status.Authentication.AuthType,
-		OperatorCommit: cost.Status.OperatorCommit,
-		ClusterID:      cost.Status.ClusterID,
+		ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
+		Authentication: kmCfg.Status.Authentication.AuthType,
+		OperatorCommit: kmCfg.Status.OperatorCommit,
+		ClusterID:      kmCfg.Status.ClusterID,
 	}
 
 	// obtain credentials token/basic & return if there are authentication credential errors
-	if err := setAuthentication(r, authConfig, cost, req.NamespacedName); err != nil {
-		if err := r.Status().Update(ctx, cost); err != nil {
-			log.Error(err, "failed to update CostManagement Status")
+	if err := setAuthentication(r, authConfig, kmCfg, req.NamespacedName); err != nil {
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			log.Error(err, "failed to update KokuMetricsConfig Status")
 		}
 		return ctrl.Result{}, err
 	}
 
 	// Check if source is defined and update the status to confirmed/created
-	checkSource(r, authConfig, cost)
+	checkSource(r, authConfig, kmCfg)
 
 	// Get or create the directory configuration
 	log.Info("Getting directory configuration.")
@@ -535,16 +535,16 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, cost, dirCfg)
+	collectPromStats(r, kmCfg, dirCfg)
 
 	// attempt package and upload, if errors occur return
-	if err := packageAndUpload(r, authConfig, cost, dirCfg); err != nil {
+	if err := packageAndUpload(r, authConfig, kmCfg, dirCfg); err != nil {
 		result = ctrl.Result{}
 		mainErr = err
 	}
 
-	if err := r.Status().Update(ctx, cost); err != nil {
-		log.Error(err, "failed to update CostManagement Status")
+	if err := r.Status().Update(ctx, kmCfg); err != nil {
+		log.Error(err, "failed to update KokuMetricsConfig Status")
 		result = ctrl.Result{}
 		mainErr = err
 	}
@@ -554,8 +554,8 @@ func (r *CostManagementReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 }
 
 // SetupWithManager Setup reconciliation with manager object
-func (r *CostManagementReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KokuMetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&costmgmtv1alpha1.CostManagement{}).
+		For(&kokumetricscfgv1alpha1.KokuMetricsConfig{}).
 		Complete(r)
 }

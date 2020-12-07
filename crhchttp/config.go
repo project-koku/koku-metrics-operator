@@ -21,13 +21,13 @@ package crhchttp
 
 import (
 	"github.com/go-logr/logr"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 )
 
 // AuthConfig provides the data for reconciling the CR with defaults
 type AuthConfig struct {
 	ClusterID         string
-	Authentication    costmgmtv1alpha1.AuthenticationType
+	Authentication    kokumetricscfgv1alpha1.AuthenticationType
 	BearerTokenString string
 	BasicAuthUser     string
 	BasicAuthPassword string

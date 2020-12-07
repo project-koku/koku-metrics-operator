@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/controllers"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -42,9 +42,9 @@ var (
 )
 
 func init() {
-	// Adding the costmgmtv1alpha1 scheme
+	// Adding the kokumetricscfgv1alpha1 scheme
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(costmgmtv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	// Adding the configv1 scheme
@@ -76,12 +76,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.CostManagementReconciler{
+	if err = (&controllers.KokuMetricsConfigReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("CostManagement"),
+		Log:    ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CostManagement")
+		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
