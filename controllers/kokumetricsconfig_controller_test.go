@@ -709,7 +709,8 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should run through more of the flow", func() {
-			setup()
+			err := setup()
+			Expect(err, nil)
 			createClusterVersion(clusterID)
 			var uploadWait int64 = 0
 			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
@@ -761,7 +762,8 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			// Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should check the status", func() {
-			setup()
+			err := setup()
+			Expect(err, nil)
 			var uploadWait int64 = 0
 			uploadTime := metav1.Now()
 			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
