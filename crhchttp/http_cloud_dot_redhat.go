@@ -104,7 +104,7 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 	default:
 		log.Info("Request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
-		req.Header.Set("User-Agent", fmt.Sprintf("koku-mertics-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
+		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
 	}
 
 	// log the request headers
