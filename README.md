@@ -60,7 +60,7 @@ make test
 
 ## Deploying the Operator
 
-First, create the `openshift-cost` project. This is where we are going to deploy our Operator.
+First, create the `koku-metrics-operator` project. This is where we are going to deploy our Operator.
 
 Before running the operator, the CRD must be registered with the Kubernetes apiserver:
 
@@ -124,7 +124,7 @@ Branches of the repository are built automaticaly [here](https://quay.io/reposit
 
 
 ```sh
-$ cd config/default/ && kustomize edit set namespace "openshift-cost" && cd ../..
+$ cd config/default/ && kustomize edit set namespace "koku-metrics-operator" && cd ../..
 ```
 
 Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.

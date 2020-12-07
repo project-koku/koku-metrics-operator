@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var namespace = "openshift-cost"
+var namespace = "koku-metrics-operator"
 var namePrefix = "cost-test-local-"
 var clusterID = "10e206d7-a11a-403e-b835-6cff14e98b23"
 var sourceName = "cluster-test"

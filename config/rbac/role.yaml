@@ -72,7 +72,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: manager-role
-  namespace: openshift-cost
+  namespace: koku-metrics-operator
 rules:
 - apiGroups:
   - ""

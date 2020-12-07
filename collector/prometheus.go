@@ -44,7 +44,7 @@ import (
 var (
 	promSpec *kokumetricscfgv1alpha1.PrometheusSpec
 
-	kokuMetricsCfgNamespace = "openshift-cost"
+	kokuMetricsCfgNamespace = "koku-metrics-operator"
 	secretKey               = "token"
 	serviceAccountName      = "default"
 	tokenRegex              = "default-token-*"
