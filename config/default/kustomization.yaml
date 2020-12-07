@@ -41,5 +41,6 @@ kind: Kustomization
 resources:
 - ../crd
 - ../manager
+- ../quota
 - ../rbac
 - ../storage

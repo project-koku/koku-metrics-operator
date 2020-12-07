@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: kokumetricsconfig-limit
+spec:
+  hard:
+    count/kokumetricsconfigs.koku-metrics-cfg.openshift.io: 1
