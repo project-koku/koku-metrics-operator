@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/project-koku/korekuta-operator-go/strset"
+	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
 type dataInterface interface {

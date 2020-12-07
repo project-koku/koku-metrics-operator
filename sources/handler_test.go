@@ -29,17 +29,17 @@ import (
 	"strings"
 	"testing"
 
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/crhchttp"
-	"github.com/project-koku/korekuta-operator-go/testutils"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	auth = &crhchttp.AuthConfig{ClusterID: "post-cluster-id", Log: testLogger}
-	cost = &SourceSpec{
+	auth  = &crhchttp.AuthConfig{ClusterID: "post-cluster-id", Log: testLogger}
+	sSpec = &SourceSpec{
 		APIURL: "https://ci.cloud.redhat.com",
 		Auth:   auth,
-		Spec: costmgmtv1alpha1.CloudDotRedHatSourceStatus{
+		Spec: kokumetricscfgv1alpha1.CloudDotRedHatSourceStatus{
 			SourcesAPIPath: "/api/sources/v1.0/",
 			SourceName:     "post-source-name",
 		},
@@ -172,7 +172,7 @@ func TestGetSourceTypeID(t *testing.T) {
 	for _, tt := range getSourceTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetSourceTypeID(cost, clt)
+			got, err := GetSourceTypeID(sSpec, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -332,7 +332,7 @@ func TestCheckSourceExists(t *testing.T) {
 	for _, tt := range checkSourceExistsTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := CheckSourceExists(cost, clt, tt.sourceTypeID, tt.queryname, tt.sourceRef)
+			got, err := CheckSourceExists(sSpec, clt, tt.sourceTypeID, tt.queryname, tt.sourceRef)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -430,7 +430,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 	for _, tt := range getApplicationTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetApplicationTypeID(cost, clt)
+			got, err := GetApplicationTypeID(sSpec, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -510,7 +510,7 @@ func TestPostSource(t *testing.T) {
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := PostSource(cost, clt, tt.sourceTypeID)
+			got, err := PostSource(sSpec, clt, tt.sourceTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -589,7 +589,7 @@ func TestPostApplication(t *testing.T) {
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			err := PostApplication(cost, clt, tt.source, tt.appTypeID)
+			err := PostApplication(sSpec, clt, tt.source, tt.appTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -715,7 +715,7 @@ func TestSourceCreate(t *testing.T) {
 	}
 	for _, tt := range sourceCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SourceCreate(cost, &tt.clts, tt.sourceTypeID)
+			got, err := SourceCreate(sSpec, &tt.clts, tt.sourceTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -1108,7 +1108,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 	}
 	for _, tt := range sourceGetOrCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := *cost
+			c := *sSpec
 			c.Spec.CreateSource = &tt.create
 			got, _, err := SourceGetOrCreate(&c, &tt.clts)
 			if tt.expectedErr != nil && err == nil {

@@ -35,20 +35,20 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/dirconfig"
-	"github.com/project-koku/korekuta-operator-go/testutils"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var testLogger = testutils.TestLogger{}
-var cost = &costmgmtv1alpha1.CostManagement{}
+var kmCfg = &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
 	Log:    testLogger,
-	Cost:   cost,
+	KMCfg:  kmCfg,
 }
 
 type fakeManifest struct{}
@@ -509,8 +509,8 @@ func TestGetAndRenderManifest(t *testing.T) {
 			manifestDate := metav1.Now()
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
-				ClusterID: testPackager.Cost.Status.ClusterID,
-				Version:   testPackager.Cost.Status.OperatorCommit,
+				ClusterID: testPackager.KMCfg.Status.ClusterID,
+				Version:   testPackager.KMCfg.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
 				Files:     expectedFiles,
 			}

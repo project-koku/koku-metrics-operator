@@ -36,13 +36,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	costmgmtv1alpha1 "github.com/project-koku/korekuta-operator-go/api/v1alpha1"
-	"github.com/project-koku/korekuta-operator-go/dirconfig"
+	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type FilePackager struct {
-	Cost     *costmgmtv1alpha1.CostManagement
+	KMCfg    *kokumetricscfgv1alpha1.KokuMetricsConfig
 	DirCfg   *dirconfig.DirectoryConfig
 	Log      logr.Logger
 	manifest manifestInfo
@@ -121,8 +121,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 	p.manifest = manifestInfo{
 		manifest: manifest{
 			UUID:      p.uid,
-			ClusterID: p.Cost.Status.ClusterID,
-			Version:   p.Cost.Status.OperatorCommit,
+			ClusterID: p.KMCfg.Status.ClusterID,
+			Version:   p.KMCfg.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
 		},
@@ -131,7 +131,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 }
 
 func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error {
-	log := p.Log.WithValues("costmanagement", "addFileToTarWriter")
+	log := p.Log.WithValues("kokumetricsconfig", "addFileToTarWriter")
 	log.Info("Adding file to tar.gz", "file", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -195,7 +195,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 // WritePart writes a portion of a split file into a new file
 func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
-	log := p.Log.WithValues("costmanagement", "WritePart")
+	log := p.Log.WithValues("kokumetricsconfig", "WritePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
 	splitFileName := fileNamePart + strconv.FormatInt(num, 10) + ".csv"
@@ -233,7 +233,7 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 
 // splitFiles breaks larger files into smaller ones
 func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
-	log := p.Log.WithValues("costmanagement", "splitFiles")
+	log := p.Log.WithValues("kokumetricsconfig", "splitFiles")
 	if !p.needSplit(fileList) {
 		log.Info("Files do not require splitting.")
 		return fileList, false, nil
@@ -293,7 +293,7 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 
 // MoveFiles moves files from reportsDirectory to stagingDirectory
 func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := p.Log.WithValues("costmanagement", "MoveFiles")
+	log := p.Log.WithValues("kokumetricsconfig", "MoveFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
@@ -306,7 +306,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	}
 
 	// remove all files from staging directory
-	if p.Cost.Status.Packaging.PackagingError == "" {
+	if p.KMCfg.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("Clearing out staging directory!")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
@@ -348,7 +348,7 @@ func (p *FilePackager) ReadUploadDir() ([]string, error) {
 
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
-	log := p.Log.WithValues("costmanagement", "PackageReports")
+	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
 	p.maxBytes = p.MaxSize * megaByte
 	p.uid = uuid.New().String()
 

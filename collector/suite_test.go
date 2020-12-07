@@ -27,7 +27,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/project-koku/korekuta-operator-go/testutils"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/deprecated/scheme"
@@ -82,9 +82,6 @@ var _ = BeforeSuite(func(done Done) {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
-
-	// createNamespace(costMgmtNamespace)
-	// createServiceAccount(costMgmtNamespace, serviceAccountName, testSecretData)
 
 	close(done)
 }, 60)

@@ -19,7 +19,7 @@ CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
 
 # Use git branch for dev team deployment of pushed branches
 GITBRANCH=$(shell git branch --show-current)
-GITBRANCH_IMG="quay.io/project-koku/korekuta-operator-go:${GITBRANCH}"
+GITBRANCH_IMG="quay.io/project-koku/koku-metrics-operator:${GITBRANCH}"
 GIT_COMMIT=$(shell git rev-parse HEAD)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -74,20 +74,20 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
-	@echo '  prometheus_config:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    skip_tls_verification: true' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-auth:
-	@echo '  authentication:'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    type: basic'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
-	@echo '    secret_name: dev-auth-secret' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-spec:
-	@echo 'spec:' >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-cr:
-	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-spec
@@ -96,10 +96,10 @@ ifeq ($(AUTH), basic)
 else
 	@echo "Using default token auth"
 endif
-	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-local-cr:
-	@cp config/samples/cost-mgmt_v1alpha1_costmanagement.yaml testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	$(MAKE) add-spec
 	$(MAKE) add-prom-route
 ifeq ($(AUTH), basic)
@@ -109,7 +109,7 @@ ifeq ($(AUTH), basic)
 else
 	@echo "Using default token auth"
 endif
-	oc apply -f testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen

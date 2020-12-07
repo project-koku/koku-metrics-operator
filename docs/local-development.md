@@ -3,7 +3,7 @@
 ## Pre-reqs
 
 * Access to a 4.3+ Openshift cluster
-* A clone of [korekuta-go-operator](https://github.com/project-koku/korekuta-operator-go)
+* A clone of [korekuta-go-operator](https://github.com/project-koku/koku-metrics-operator)
 * [Go 1.13 or greater](https://golang.org/doc/install)
 * [Openshift-CLI](https://docs.openshift.com/container-platform/4.5/cli_reference/openshift_cli/getting-started-cli.html) (preferably a version that matches your Openshift cluster version)
 * [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
@@ -14,12 +14,12 @@
 
 ## Running the operator locally
 
-1. Log into your OCP cluster from a terminal, create an `openshift-cost` namespace, and switch to the new namespace:
+1. Log into your OCP cluster from a terminal, create an `koku-metrics-operator` namespace, and switch to the new namespace:
 
     ```
     $ oc login --token=<token> --server=<server>
-    $ oc create namespace openshift-cost
-    $ oc project openshift-cost
+    $ oc create namespace koku-metrics-operator
+    $ oc project koku-metrics-operator
     ```
 
 2. Build the manager binary:
@@ -42,7 +42,7 @@
 
     At this point, you will see the operator spin up in your terminal. After a few seconds, you should see something similar to the following output:
     ```
-    2020-10-21T09:31:37.195-0400    INFO    controller-runtime.controller   Starting workers        {"controller": "costmanagement", "worker count": 1}
+    2020-10-21T09:31:37.195-0400    INFO    controller-runtime.controller   Starting workers        {"controller": "kokumetricsconfig", "worker count": 1}
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
@@ -51,7 +51,7 @@
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
     ```
-    This command uses the CR defined in `config/samples/cost-mgmt_v1alpha1_costmanagement.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/cost-mgmt_v1alpha1_costmanagement.yaml`. The command then deploys this CR to the cluster.
+    This command uses the CR defined in `config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml`. The command then deploys this CR to the cluster.
 
     After this CR has been created in the cluster, reconciliation will begin.
 

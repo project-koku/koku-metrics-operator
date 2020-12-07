@@ -1,4 +1,4 @@
-module github.com/project-koku/korekuta-operator-go
+module github.com/project-koku/koku-metrics-operator
 
 go 1.13
 
