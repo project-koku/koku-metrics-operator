@@ -106,14 +106,16 @@ Build the image:
 ```sh
 $ export USERNAME=<quay-username>
 
-$ make docker-build USER=$USERNAME
+$ make docker-build IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
 
 Push the image to a repository and make sure to set the repository to public:
 
 ```sh
-$ make docker-push USER=$USERNAME
+$ make docker-push IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
+**Note**:	
+The name and tag of the image (`IMG=<some-registry>/<project-name>:tag`) in both the commands can also be set in the Makefile. Modify the line which has `IMG ?= controller:latest` to set your desired default image name.
 
 Branches of the repository are built automaticaly [here](https://quay.io/repository/project-koku/koku-metrics-operator).
 
@@ -128,14 +130,16 @@ $ cd config/default/ && kustomize edit set namespace "koku-metrics-operator" && 
 Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.
 
 ```sh
-$ make deploy USER=$USERNAME
+$ make deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
 
 You can optionally build, push, and deploy the image all at the same time by running:
 
 ```sh
-$ make build-and-deploy USER=$USERNAME
+$ make build-and-deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
+
+You can also optionally substitute the USER arg for the IMG arg above for the build & deploy commands. Run `make help` to see all of the options. 
 
 *NOTE* If you have enabled webhooks in your deployments, you will need to have cert-manager already installed
 in the cluster or `make deploy` will fail when creating the cert-manager resources.

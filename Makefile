@@ -36,12 +36,20 @@ help:
 	@echo "--- Setup Commands ---"
 	@echo "  manager                            build the manager binary"
 	@echo "  docker-build                       build the docker image"
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
 	@echo "  docker-push                        push the docker image to quay.io"
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
 	@echo "  deploy                             deploy the latest image you have pushed to your cluster"
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
 	@echo "  build-and-deploy                   build and deploy the operator image."
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
+	@echo "  docker-build-user                  build the docker image"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  docker-push-user                   push the docker image to quay.io"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  deploy-user                        deploy the latest image you have pushed to your cluster"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  build-and-deploy-user              build and deploy the operator image."
 	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
 	@echo "  install                           create and register the CRD"
 	@echo "--- General Commands ---"
@@ -90,8 +98,17 @@ install: manifests kustomize
 uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
+
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
+	kubectl apply -f config/samples/trusted_ca_certmap.yaml
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cat config/openshift-config/role.yaml | kubectl apply -f -
+	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
+
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
+deploy-user: manifests kustomize
 	kubectl apply -f config/samples/trusted_ca_certmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
@@ -172,14 +189,25 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
+	docker build . -t ${IMG}
 
 # Push the docker image
 docker-push:
-	docker push quay.io/${USER}/koku-metrics-operator:v0.0.1
+	docker push ${IMG}
 
 # Build, push, and deploy the image
 build-deploy: docker-build docker-push deploy
+
+# Build the docker image
+docker-build-user: test
+	docker build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
+
+# Push the docker image
+docker-push-user:
+	docker push quay.io/${USER}/koku-metrics-operator:v0.0.1
+
+# Build, push, and deploy the image
+build-deploy-user: docker-build-user docker-push-user deploy-user
 
 # find or download controller-gen
 # download controller-gen if necessary
