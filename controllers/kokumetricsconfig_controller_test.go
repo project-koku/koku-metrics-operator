@@ -151,7 +151,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 	Describe("KokuMetricsConfig CRD Handling", func() {
 		Context("Process CRD resource", func() {
 			It("should provide defaults for empty CRD case", func() {
-
+				GitCommit = "1234567"
 				instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      namePrefix + "emptycrd",
@@ -198,6 +198,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 				Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
 			})
 		})
