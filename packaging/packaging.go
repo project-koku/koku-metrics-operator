@@ -54,7 +54,7 @@ type FilePackager struct {
 // Define the global variables
 const megaByte int64 = 1024 * 1024
 
-// the csv module doesn't expose the bytes-offset of the
+// the csv module does not expose the bytes-offset of the
 // underlying file object.
 // instead, the script estimates the size of the data as VARIANCE percent larger than a
 // naïve string concatenation of the CSV fields to cover the overhead of quoting

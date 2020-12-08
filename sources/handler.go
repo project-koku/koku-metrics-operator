@@ -395,8 +395,7 @@ func SourceGetOrCreate(sSpec *SourceSpec, client crhchttp.HTTPClient) (bool, met
 		return false, currentTime, err
 	}
 	if source != nil {
-		var errMsg string
-		errMsg = fmt.Sprintf("This cluster may already be registered because an OpenShift source with Cluster ID %s is already registered with a different name.", sSpec.Auth.ClusterID)
+		errMsg := fmt.Sprintf("This cluster may already be registered because an OpenShift source with Cluster ID %s is already registered with a different name.", sSpec.Auth.ClusterID)
 		log.Info(errMsg)
 		return false, metav1.Now(), fmt.Errorf(errMsg)
 	}

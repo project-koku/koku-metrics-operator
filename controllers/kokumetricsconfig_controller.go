@@ -183,7 +183,7 @@ func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Aut
 	tokenFound := false
 	encodedPullSecret := secret.Data[pullSecretDataKey]
 	if len(encodedPullSecret) <= 0 {
-		return fmt.Errorf("cluster authorization secret didn't have data")
+		return fmt.Errorf("cluster authorization secret did not have data")
 	}
 	var pullSecret serializedAuthMap
 	if err := json.Unmarshal(encodedPullSecret, &pullSecret); err != nil {
