@@ -40,6 +40,8 @@ jobs:
           export PATH=$PATH:/usr/local/kubebuilder/bin
 
       - name: Run tests
+        env:
+          GIT_COMMIT: ${GITHUB_SHA}
         run: |
           make generate manifests
           go test ./... -coverprofile cover.out -covermode=atomic
