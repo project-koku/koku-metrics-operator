@@ -54,6 +54,7 @@ var (
 	GitCommit string
 
 	openShiftConfigNamespace = "openshift-config"
+	kokuMetricsNamespace     = "koku-metrics-operator"
 	pullSecretName           = "pull-secret"
 	pullSecretDataKey        = ".dockerconfigjson"
 	pullSecretAuthKey        = "cloud.openshift.com"
@@ -492,6 +493,14 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 	kmCfg := kmCfgOriginal.DeepCopy()
 	log.Info("Reconciling custom resource", "KokuMetricsConfig", kmCfg)
+
+	// delete CR outside of koku-metrics-operator namespace
+	if kmCfg.ObjectMeta.Namespace != kokuMetricsNamespace {
+		msg := fmt.Sprintf("Deleting CR `%s` because it is outside of `%s` namespace", kmCfg.ObjectMeta.Name, kokuMetricsNamespace)
+		log.Info(msg)
+		r.Delete(context.Background(), kmCfg)
+		return ctrl.Result{}, nil
+	}
 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
