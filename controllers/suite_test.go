@@ -82,10 +82,7 @@ var _ = BeforeSuite(func(done Done) {
 		UseExistingCluster: &useCluster,
 		CRDDirectoryPaths:  []string{filepath.Join("..", "config", "crd", "bases")},
 	}
-	// log.Info("\n\n\n\n LOOK HERE!!!! ")
-	// log.Info(testEnv)
 	cfg, err = testEnv.Start()
-	// Expect(err).To(HaveOccurred())
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
