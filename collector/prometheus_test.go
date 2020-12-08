@@ -487,7 +487,7 @@ func TestGetPromConn(t *testing.T) {
 var _ = Describe("Collector Tests", func() {
 
 	BeforeEach(func() {
-		// failed test runs that don't clean up leave resources behind.
+		// failed test runs that do not clean up leave resources behind.
 		// &corev1.Pod{}, client.InNamespace("foo")
 		Expect(k8sClient.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 	})

@@ -485,7 +485,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
 		log.Error(err, "unable to fetch KokuMetricsConfigCR")
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)

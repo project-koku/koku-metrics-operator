@@ -53,7 +53,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 	ctx := context.Background()
 
 	BeforeEach(func() {
-		// failed test runs that don't clean up leave resources behind.
+		// failed test runs that do not clean up leave resources behind.
 	})
 
 	AfterEach(func() {
