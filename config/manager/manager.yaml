@@ -48,6 +48,4 @@ spec:
           configMap:
             name: trusted-ca-bundle
         - name: koku-metrics-operator-reports
-          persistentVolumeClaim:
-            claimName: koku-metrics-pvc
       terminationGracePeriodSeconds: 10
