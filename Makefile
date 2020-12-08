@@ -63,7 +63,7 @@ help:
 
 all: manager
 
-# Run tests ASHLEY CHANGE THIS BACK WHEN YOU FIX TESTS
+# Run tests
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: generate fmt vet manifests
 	mkdir -p ${ENVTEST_ASSETS_DIR}
