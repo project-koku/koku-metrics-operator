@@ -28,6 +28,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -64,12 +65,15 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
+	namespaces := []string{"koku-metrics-operator", "openshift-config"} // List of Namespaces
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "91c624a5.openshift.io",
+		NewCache:           cache.MultiNamespacedCacheBuilder(namespaces),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
