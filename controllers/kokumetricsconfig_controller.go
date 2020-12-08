@@ -496,9 +496,11 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// delete CR outside of koku-metrics-operator namespace
 	if kmCfg.ObjectMeta.Namespace != kokuMetricsNamespace {
-		msg := fmt.Sprintf("Deleting CR `%s` because it is outside of `%s` namespace", kmCfg.ObjectMeta.Name, kokuMetricsNamespace)
+		msg := fmt.Sprintf("deleting CR `%s` because it is outside of `%s` namespace", kmCfg.ObjectMeta.Name, kokuMetricsNamespace)
 		log.Info(msg)
-		r.Delete(context.Background(), kmCfg)
+		if err := r.Delete(context.Background(), kmCfg); err != nil {
+			log.Info(fmt.Sprintf("delete error: %v", err)) // simply log the error, and reconcile again
+		}
 		return ctrl.Result{}, nil
 	}
 
