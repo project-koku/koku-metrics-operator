@@ -112,7 +112,7 @@ func (dir *Directory) Create() error {
 		dirCreator = dir.DirectoryFileSystem.CreateDirectory
 	}
 	if err := dirCreator(dir.String()); err != nil {
-		return fmt.Errorf("Create: %s: %v", dir, err)
+		return fmt.Errorf("create: %s: %v", dir, err)
 	}
 	return nil
 }
@@ -120,7 +120,7 @@ func (dir *Directory) Create() error {
 func CheckExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
 	for _, dir := range dirs {
 		if !dir.Exists() {
-			log.Info(fmt.Sprintf("Recreating %s", dir.Path))
+			log.Info(fmt.Sprintf("recreating %s", dir.Path))
 			if err := dir.Create(); err != nil {
 				return err
 			}
