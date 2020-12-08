@@ -61,8 +61,6 @@ deploy: manifests kustomize
 	kubectl apply -f config/samples/trusted_ca_certmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
-	cat config/openshift-config/role.yaml | kubectl apply -f -
-	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
 
 deploy-branch:
 	IMG=${GITBRANCH_IMG} $(MAKE) deploy
@@ -128,7 +126,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build:
 	docker build . -t ${IMG}
 
 # Push the docker image
@@ -168,10 +166,12 @@ KUSTOMIZE=$(shell which kustomize)
 endif
 
 # Generate bundle manifests and metadata, then validate generated files.
-bundle: manifests
+bundle: manifests kustomize
 	operator-sdk generate kustomize manifests -q
-	kustomize build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
+	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 
 # Build the bundle image.
 bundle-build:
