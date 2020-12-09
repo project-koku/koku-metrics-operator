@@ -49,6 +49,35 @@ var (
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
+	instance                    = kokumetricscfgv1alpha1.KokuMetricsConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+		},
+		Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
+			Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
+				AuthType: kokumetricscfgv1alpha1.Token,
+			},
+			Packaging: kokumetricscfgv1alpha1.PackagingSpec{
+				MaxSize: 100,
+			},
+			Upload: kokumetricscfgv1alpha1.UploadSpec{
+				UploadCycle:    &defaultUploadCycle,
+				UploadToggle:   &trueValue,
+				IngressAPIPath: "/api/ingress/v1/upload",
+				ValidateCert:   &trueValue,
+			},
+			Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
+				CreateSource:   &falseValue,
+				SourcesAPIPath: "/api/sources/v1.0/",
+				CheckCycle:     &defaultCheckCycle,
+			},
+			PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
+				SkipTLSVerification: &trueValue,
+				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
+			},
+			APIURL: "https://cloud.redhat.com",
+		},
+	}
 )
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
@@ -152,46 +181,17 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		Context("Process CRD resource", func() {
 			It("should provide defaults for empty CRD case", func() {
 				GitCommit = "1234567"
-				instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      namePrefix + "emptycrd",
-						Namespace: namespace,
-					},
-					Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-						Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-							AuthType: kokumetricscfgv1alpha1.Token,
-						},
-						Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-							MaxSize: 100,
-						},
-						Upload: kokumetricscfgv1alpha1.UploadSpec{
-							UploadCycle:    &defaultUploadCycle,
-							UploadToggle:   &trueValue,
-							IngressAPIPath: "/api/ingress/v1/upload",
-							ValidateCert:   &trueValue,
-						},
-						Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-							CreateSource:   &falseValue,
-							SourcesAPIPath: "/api/sources/v1.0/",
-							CheckCycle:     &defaultCheckCycle,
-						},
-						PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-							SkipTLSVerification: &trueValue,
-							SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-						},
-						APIURL: "https://cloud.redhat.com",
-					},
-				}
 
-				Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-				time.Sleep(time.Second * 5)
+				instCopy := instance.DeepCopy()
+				instCopy.ObjectMeta.Name = namePrefix + "emptycrd"
+				Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 				fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-				// check the CRD was created ok
+				// wait until the cluster ID is set
 				Eventually(func() bool {
-					err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-					return err == nil
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.ClusterID != ""
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -204,47 +204,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("upload set to false case", func() {
 
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "uploadfalse",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &falseValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "uploadfalse"
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -255,49 +226,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
 		It("should find basic auth creds for good basic auth CRD case", func() {
-
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "basicauthgood",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType:                 kokumetricscfgv1alpha1.Basic,
-						AuthenticationSecretName: authSecretName,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
-
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood"
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
@@ -309,48 +249,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
 			badAuth := "bad-auth"
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "basicauthbad",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType:                 kokumetricscfgv1alpha1.Basic,
-						AuthenticationSecretName: badAuth,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "basicauthbad"
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = badAuth
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
@@ -361,49 +271,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
 		It("should reflect source name in status for source info CRD case", func() {
-
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "sourceinfo",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						SourceName:     sourceName,
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "sourceinfo"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			instCopy.Spec.Source.SourceName = sourceName
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -415,48 +294,19 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("should reflect source error when attempting to create source", func() {
 
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "sourcecreate",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						SourceName:     sourceName,
-						CreateSource:   &trueValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "sourcecreate"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			instCopy.Spec.Source.SourceName = sourceName
+			instCopy.Spec.Source.CreateSource = &trueValue
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -468,49 +318,19 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
 		It("should fail due to bad basic auth secret", func() {
-
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "badauthsecret",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType:                 kokumetricscfgv1alpha1.Basic,
-						AuthenticationSecretName: badAuthSecretName,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "badauthsecret"
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthSecretName
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
@@ -521,49 +341,19 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
 		It("should fail due to missing pass in auth secret", func() {
-
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "badpass",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType:                 kokumetricscfgv1alpha1.Basic,
-						AuthenticationSecretName: badAuthPassSecretName,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "badpass"
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthPassSecretName
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
@@ -575,47 +365,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("should fail due to missing auth secret name with basic set", func() {
 
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "missingname",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Basic,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "missingname"
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
@@ -627,47 +388,17 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("should should fail due to deleted token secret", func() {
 			deletePullSecret(openShiftConfigNamespace, fakeDockerConfig())
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "nopullsecret",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "nopullsecret"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -677,47 +408,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("should should fail token secret wrong data", func() {
 			createBadPullSecret(openShiftConfigNamespace)
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "nopulldata",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
 
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 5)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "nopulldata"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -727,48 +429,19 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		})
 		It("should fail bc of missing cluster version", func() {
 			deleteClusterVersion()
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "missingcvfailure"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "missingcvfailure",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType:                 kokumetricscfgv1alpha1.Basic,
-						AuthenticationSecretName: authSecretName,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
 			time.Sleep(time.Second * 5)
-
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 			// check the CRD was created ok
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
@@ -780,47 +453,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			createClusterVersion(clusterID)
 			deletePullSecret(openShiftConfigNamespace, fakeDockerConfig())
 			createPullSecret(openShiftConfigNamespace, fakeDockerConfig())
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "attemptupload",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-			}
 
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 10)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "attemptupload"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
@@ -832,52 +476,18 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			err := setup()
 			Expect(err, nil)
 			uploadTime := metav1.Now()
-			instance := kokumetricscfgv1alpha1.KokuMetricsConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      namePrefix + "checkuploadstatus",
-					Namespace: namespace,
-				},
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					Authentication: kokumetricscfgv1alpha1.AuthenticationSpec{
-						AuthType: kokumetricscfgv1alpha1.Token,
-					},
-					Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-						MaxSize: 100,
-					},
-					Upload: kokumetricscfgv1alpha1.UploadSpec{
-						UploadCycle:    &defaultUploadCycle,
-						UploadToggle:   &trueValue,
-						UploadWait:     &defaultUploadWait,
-						IngressAPIPath: "/api/ingress/v1/upload",
-						ValidateCert:   &trueValue,
-					},
-					Source: kokumetricscfgv1alpha1.CloudDotRedHatSourceSpec{
-						CreateSource:   &falseValue,
-						SourcesAPIPath: "/api/sources/v1.0/",
-						CheckCycle:     &defaultCheckCycle,
-					},
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SkipTLSVerification: &trueValue,
-						SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-					},
-					APIURL: "https://cloud.redhat.com",
-				},
-				Status: kokumetricscfgv1alpha1.KokuMetricsConfigStatus{
-					Upload: kokumetricscfgv1alpha1.UploadStatus{
-						LastSuccessfulUploadTime: uploadTime,
-					},
-				},
-			}
-
-			Expect(k8sClient.Create(ctx, &instance)).Should(Succeed())
-			time.Sleep(time.Second * 20)
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "checkuploadstatus"
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			instCopy.Status.Upload.LastSuccessfulUploadTime = uploadTime
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// wait until the cluster ID is set
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
