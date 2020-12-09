@@ -209,7 +209,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1alpha1.KokuMetricsCon
 	promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
 
 	if updated || c.PromCfg == nil || kmCfg.Status.Prometheus.ConfigError != "" {
-		log.Info("Getting prometheus configuration")
+		log.Info("getting prometheus configuration")
 		c.PromCfg, err = getPrometheusConfig(&kmCfg.Spec.PrometheusConfig, c.Client)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
@@ -218,7 +218,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1alpha1.KokuMetricsCon
 	}
 
 	if updated || c.PromConn == nil || kmCfg.Status.Prometheus.ConnectionError != "" {
-		log.Info("Getting prometheus connection")
+		log.Info("getting prometheus connection")
 		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
@@ -226,13 +226,13 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1alpha1.KokuMetricsCon
 		}
 	}
 
-	log.Info("Testing the ability to query prometheus")
+	log.Info("testing the ability to query prometheus")
 	err = testPrometheusConnection(c.PromConn)
 	statusHelper(kmCfg, "connection", err)
 	if err != nil {
-		return fmt.Errorf("Prometheus test query failed: %v", err)
+		return fmt.Errorf("prometheus test query failed: %v", err)
 	}
-	log.Info("Prometheus test query succeeded")
+	log.Info("prometheus test query succeeded")
 
 	return nil
 }

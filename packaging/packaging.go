@@ -54,7 +54,7 @@ type FilePackager struct {
 // Define the global variables
 const megaByte int64 = 1024 * 1024
 
-// the csv module doesn't expose the bytes-offset of the
+// the csv module does not expose the bytes-offset of the
 // underlying file object.
 // instead, the script estimates the size of the data as VARIANCE percent larger than a
 // naïve string concatenation of the CSV fields to cover the overhead of quoting
@@ -132,7 +132,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 
 func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error {
 	log := p.Log.WithValues("kokumetricsconfig", "addFileToTarWriter")
-	log.Info("Adding file to tar.gz", "file", filePath)
+	log.Info("adding file to tar.gz", "file", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -168,7 +168,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 	// create the tarfile
 	tarFile, err := os.Create(tarFileName)
 	if err != nil {
-		return fmt.Errorf("WriteTarball: error creating tar file: %v", err)
+		return fmt.Errorf("writeTarball: error creating tar file: %v", err)
 	}
 	defer tarFile.Close()
 
@@ -182,27 +182,27 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 		if strings.HasSuffix(filePath, ".csv") {
 			uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 			if err := p.addFileToTarWriter(uploadName, filePath, tw); err != nil {
-				return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
+				return fmt.Errorf("writeTarball: failed to create tar file: %v", err)
 			}
 		}
 	}
 	if err := p.addFileToTarWriter("manifest.json", manifestFileName, tw); err != nil {
-		return fmt.Errorf("WriteTarball: failed to create tar file: %v", err)
+		return fmt.Errorf("writeTarball: failed to create tar file: %v", err)
 	}
 
 	return tarFile.Sync()
 }
 
-// WritePart writes a portion of a split file into a new file
+// writePart writes a portion of a split file into a new file
 func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "WritePart")
+	log := p.Log.WithValues("kokumetricsconfig", "writePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
 	splitFileName := fileNamePart + strconv.FormatInt(num, 10) + ".csv"
-	log.Info("Creating file ", "file", splitFileName)
+	log.Info("creating file ", "file", splitFileName)
 	splitFile, err := os.Create(splitFileName)
 	if err != nil {
-		return nil, false, fmt.Errorf("WritePart: error creating file: %v", err)
+		return nil, false, fmt.Errorf("writePart: error creating file: %v", err)
 	}
 	// Create the csv writer
 	writer := csv.NewWriter(splitFile)
@@ -235,10 +235,10 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
 	log := p.Log.WithValues("kokumetricsconfig", "splitFiles")
 	if !p.needSplit(fileList) {
-		log.Info("Files do not require splitting.")
+		log.Info("files do not require splitting")
 		return fileList, false, nil
 	}
-	log.Info("Files require splitting.")
+	log.Info("files require splitting")
 	var splitFiles []os.FileInfo
 	for _, file := range fileList {
 		absPath := filepath.Join(filePath, file.Name())
@@ -247,22 +247,22 @@ func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os
 			// open the file
 			csvFile, err := os.Open(absPath)
 			if err != nil {
-				return nil, false, fmt.Errorf("SplitFiles: error opening file: %v", err)
+				return nil, false, fmt.Errorf("splitFiles: error opening file: %v", err)
 			}
 			csvReader := csv.NewReader(csvFile)
 			csvHeader, err := csvReader.Read()
 			if err != nil {
-				return nil, false, fmt.Errorf("SplitFiles: error reading file: %v", err)
+				return nil, false, fmt.Errorf("splitFiles: error reading file: %v", err)
 			}
 			var part int64 = 1
 			for {
 				newFile, eof, err := p.writePart(absPath, csvReader, csvHeader, part)
 				if err != nil {
-					return nil, false, fmt.Errorf("SplitFiles: %v", err)
+					return nil, false, fmt.Errorf("splitFiles: error writing part: %v", err)
 				}
 				info, err := newFile.Stat()
 				if err != nil {
-					return nil, false, fmt.Errorf("SplitFiles: %v", err)
+					return nil, false, fmt.Errorf("splitFiles: error getting file stats: %v", err)
 				}
 				splitFiles = append(splitFiles, info)
 				part++
@@ -291,15 +291,15 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	return false
 }
 
-// MoveFiles moves files from reportsDirectory to stagingDirectory
+// moveFiles moves files from reportsDirectory to stagingDirectory
 func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "MoveFiles")
+	log := p.Log.WithValues("kokumetricsconfig", "moveFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
 	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
 	if err != nil {
-		return nil, fmt.Errorf("MoveFiles: could not read reports directory: %v", err)
+		return nil, fmt.Errorf("moveFiles: could not read reports directory: %v", err)
 	}
 	if len(fileList) <= 0 {
 		return nil, ErrNoReports
@@ -308,13 +308,13 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	// remove all files from staging directory
 	if p.KMCfg.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
-		log.Info("Clearing out staging directory!")
+		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
-			return nil, fmt.Errorf("MoveFiles: could not clear staging: %v", err)
+			return nil, fmt.Errorf("moveFiles: could not clear staging: %v", err)
 		}
 	}
 
-	log.Info("Moving report files to staging directory")
+	log.Info("moving report files to staging directory")
 	for _, file := range fileList {
 		if !strings.HasSuffix(file.Name(), ".csv") {
 			continue
@@ -322,11 +322,11 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
 		if err := os.Rename(from, to); err != nil {
-			return nil, fmt.Errorf("MoveFiles: failed to move files: %v", err)
+			return nil, fmt.Errorf("moveFiles: failed to move files: %v", err)
 		}
 		newFile, err := os.Stat(to)
 		if err != nil {
-			return nil, fmt.Errorf("MoveFiles: failed to get new file stats: %v", err)
+			return nil, fmt.Errorf("moveFiles: failed to get new file stats: %v", err)
 		}
 		movedFiles = append(movedFiles, newFile)
 	}
@@ -337,7 +337,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 func (p *FilePackager) ReadUploadDir() ([]string, error) {
 	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
 	if err != nil {
-		return nil, fmt.Errorf("Could not read upload directory: %v", err)
+		return nil, fmt.Errorf("could not read upload directory: %v", err)
 	}
 	fileList := []string{}
 	for _, file := range outFiles {
@@ -366,14 +366,14 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	// check if the files need to be split
-	log.Info("Checking to see if the report files need to be split")
+	log.Info("checking to see if the report files need to be split")
 	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)
 	if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
 	p.getManifest(fileList, p.DirCfg.Staging.Path)
-	log.Info("Rendering manifest.", "manifest", p.manifest.filename)
+	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
@@ -386,7 +386,7 @@ func (p *FilePackager) PackageReports() error {
 			fileList = map[int]string{idx: fileName}
 			tarFileName := "cost-mgmt-" + p.uid + "-" + strconv.Itoa(idx) + ".tar.gz"
 			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-			log.Info("Generating tar.gz", "tarFile", tarFilePath)
+			log.Info("generating tar.gz", "tarFile", tarFilePath)
 			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
@@ -394,12 +394,12 @@ func (p *FilePackager) PackageReports() error {
 	} else {
 		tarFileName := "cost-mgmt-" + p.uid + ".tar.gz"
 		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-		log.Info("Generating tar.gz", "tarFile", tarFilePath)
+		log.Info("generating tar.gz", "tarFile", tarFilePath)
 		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
 
-	log.Info("File packaging was successful.")
+	log.Info("file packaging was successful")
 	return nil
 }

@@ -171,11 +171,11 @@ func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Aut
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
-			log.Error(err, "Pull-secret does not exist.")
+			log.Error(err, "pull-secret does not exist")
 		case errors.IsForbidden(err):
-			log.Error(err, "Operator does not have permission to check pull-secret.")
+			log.Error(err, "operator does not have permission to check pull-secret")
 		default:
-			log.Error(err, "Could not check pull-secret.")
+			log.Error(err, "could not check pull-secret")
 		}
 		return err
 	}
@@ -183,30 +183,30 @@ func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Aut
 	tokenFound := false
 	encodedPullSecret := secret.Data[pullSecretDataKey]
 	if len(encodedPullSecret) <= 0 {
-		return fmt.Errorf("Cluster authorization secret didn't have data.")
+		return fmt.Errorf("cluster authorization secret did not have data")
 	}
 	var pullSecret serializedAuthMap
 	if err := json.Unmarshal(encodedPullSecret, &pullSecret); err != nil {
-		log.Error(err, "Unable to unmarshal cluster pull-secret.")
+		log.Error(err, "unable to unmarshal cluster pull-secret")
 		return err
 	}
 	if auth, ok := pullSecret.Auths[pullSecretAuthKey]; ok {
 		token := strings.TrimSpace(auth.Auth)
 		if strings.Contains(token, "\n") || strings.Contains(token, "\r") {
-			return fmt.Errorf("Cluster authorization token is not valid: contains newlines.")
+			return fmt.Errorf("cluster authorization token is not valid: contains newlines")
 		}
 		if len(token) > 0 {
-			log.Info("Found cloud.openshift.com token.")
+			log.Info("found cloud.openshift.com token")
 			authConfig.BearerTokenString = token
 			tokenFound = true
 		} else {
-			return fmt.Errorf("Cluster authorization token is not found.")
+			return fmt.Errorf("cluster authorization token is not found")
 		}
 	} else {
-		return fmt.Errorf("Cluster authorization token was not found in secret data.")
+		return fmt.Errorf("cluster authorization token was not found in secret data")
 	}
 	if !tokenFound {
-		return fmt.Errorf("Cluster authorization token is not found.")
+		return fmt.Errorf("cluster authorization token is not found")
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1
 	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", "GetAuthSecret")
 
-	log.Info("Secret namespace", "namespace", reqNamespace.Namespace)
+	log.Info("secret namespace", "namespace", reqNamespace.Namespace)
 	secret := &corev1.Secret{}
 	namespace := types.NamespacedName{
 		Namespace: reqNamespace.Namespace,
@@ -225,11 +225,11 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
-			log.Error(err, "Secret does not exist.")
+			log.Error(err, "secret does not exist")
 		case errors.IsForbidden(err):
-			log.Error(err, "Operator does not have permission to check secret.")
+			log.Error(err, "operator does not have permission to check secret")
 		default:
-			log.Error(err, "Could not check secret.")
+			log.Error(err, "could not check secret")
 		}
 		return err
 	}
@@ -237,16 +237,16 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1
 	if val, ok := secret.Data[authSecretUserKey]; ok {
 		authConfig.BasicAuthUser = string(val)
 	} else {
-		log.Info("Secret not found with expected user data.")
-		err = fmt.Errorf("Secret not found with expected user data.")
+		log.Info("secret not found with expected user data")
+		err = fmt.Errorf("secret not found with expected user data")
 		return err
 	}
 
 	if val, ok := secret.Data[authSecretPasswordKey]; ok {
 		authConfig.BasicAuthPassword = string(val)
 	} else {
-		log.Info("Secret not found with expected password data.")
-		err = fmt.Errorf("Secret not found with expected password data.")
+		log.Info("secret not found with expected password data")
+		err = fmt.Errorf("secret not found with expected password data")
 		return err
 	}
 	return nil
@@ -255,18 +255,18 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1
 func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
 	log := logger.WithValues("KokuMetricsConfig", "checkCycle")
 	if lastExecution.IsZero() {
-		log.Info(fmt.Sprintf("There have been no prior successful %ss to cloud.redhat.com.", action))
+		log.Info(fmt.Sprintf("there have been no prior successful %ss to cloud.redhat.com", action))
 		return true
 	}
 
 	duration := time.Since(lastExecution.Time.UTC())
 	minutes := int64(duration.Minutes())
-	log.Info(fmt.Sprintf("It has been %d minute(s) since the last successful %s.", minutes, action))
+	log.Info(fmt.Sprintf("it has been %d minute(s) since the last successful %s", minutes, action))
 	if minutes >= cycle {
-		log.Info(fmt.Sprintf("Executing %s to cloud.redhat.com.", action))
+		log.Info(fmt.Sprintf("executing %s to cloud.redhat.com", action))
 		return true
 	}
-	log.Info(fmt.Sprintf("Not time to execute the %s.", action))
+	log.Info(fmt.Sprintf("not time to execute the %s", action))
 	return false
 
 }
@@ -286,7 +286,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
-			log.Error(nil, "Failed to obtain cluster authentication token.")
+			log.Error(nil, "failed to obtain cluster authentication token")
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 		} else {
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
@@ -296,7 +296,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 		// Get user and password from auth secret in namespace
 		err := GetAuthSecret(r, kmCfg, authConfig, reqNamespace)
 		if err != nil {
-			log.Error(nil, "Failed to obtain authentication secret credentials.")
+			log.Error(nil, "failed to obtain authentication secret credentials")
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
 		} else {
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
@@ -305,7 +305,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	} else {
 		// No authentication secret name set when using basic auth
 		kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
-		err := fmt.Errorf("No authentication secret name set when using basic auth.")
+		err := fmt.Errorf("no authentication secret name set when using basic auth")
 		return err
 	}
 }
@@ -315,7 +315,7 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1al
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
 		if exists {
-			msg := fmt.Sprintf("Using git commit from environment: %s", commit)
+			msg := fmt.Sprintf("using git commit from environment: %s", commit)
 			log.Info(msg)
 			GitCommit = commit
 		}
@@ -356,7 +356,7 @@ func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthC
 
 	// if its time to upload/package
 	if !*kmCfg.Spec.Upload.UploadToggle {
-		log.Info("Operator is configured to not upload reports to cloud.redhat.com!")
+		log.Info("operator is configured to not upload reports to cloud.redhat.com")
 		return nil
 	}
 	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
@@ -372,30 +372,30 @@ func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthC
 	}
 	kmCfg.Status.Packaging.PackagingError = ""
 	if err := packager.PackageReports(); err != nil {
-		log.Error(err, "PackageReports failed.")
+		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
 		kmCfg.Status.Packaging.PackagingError = err.Error()
 	}
 
 	uploadFiles, err := packager.ReadUploadDir()
 	if err != nil {
-		log.Error(err, "Failed to read upload directory.")
+		log.Error(err, "failed to read upload directory")
 		return err
 	}
 
 	if len(uploadFiles) <= 0 {
-		log.Info("No files to upload.")
+		log.Info("no files to upload")
 		return nil
 	}
 
-	log.Info("Files ready for upload: " + strings.Join(uploadFiles, ", "))
-	log.Info("Pausing for " + fmt.Sprintf("%d", *kmCfg.Status.Upload.UploadWait) + " seconds before uploading.")
+	log.Info("files ready for upload: " + strings.Join(uploadFiles, ", "))
+	log.Info("pausing for " + fmt.Sprintf("%d", *kmCfg.Status.Upload.UploadWait) + " seconds before uploading")
 	time.Sleep(time.Duration(*kmCfg.Status.Upload.UploadWait) * time.Second)
 	for _, file := range uploadFiles {
 		if !strings.Contains(file, "tar.gz") {
 			continue
 		}
-		log.Info(fmt.Sprintf("Uploading file: %s", file))
+		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
 		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 		if err != nil {
@@ -414,9 +414,9 @@ func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthC
 		if strings.Contains(uploadStatus, "202") {
 			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
-			log.Info("Removing tar file since upload was successful!")
+			log.Info("removing tar file since upload was successful")
 			if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
-				log.Error(err, "Error removing tar file")
+				log.Error(err, "error removing tar file")
 			}
 		}
 	}
@@ -454,7 +454,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
 	if err := collector.GenerateReports(kmCfg, dirCfg, r.promCollector); err != nil {
 		kmCfg.Status.Reports.DataCollected = false
-		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("Error: %v", err)
+		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		log.Error(err, "failed to generate reports")
 		return
 	}
@@ -485,27 +485,27 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
 		log.Error(err, "unable to fetch KokuMetricsConfigCR")
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	kmCfg := kmCfgOriginal.DeepCopy()
-	log.Info("Reconciling custom resource", "KokuMetricsConfig", kmCfg)
+	log.Info("reconciling custom resource", "KokuMetricsConfig", kmCfg)
 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
 
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, kmCfg); err != nil {
-		log.Error(err, "Failed to obtain clusterID.")
+		log.Error(err, "failed to obtain clusterID")
 		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig Status")
+			log.Error(err, "failed to update KokuMetricsConfig status")
 		}
 		return ctrl.Result{}, err
 	}
 
-	log.Info("Using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
+	log.Info("using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
 	setOperatorCommit(r, kmCfg)
@@ -521,7 +521,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// obtain credentials token/basic & return if there are authentication credential errors
 	if err := setAuthentication(r, authConfig, kmCfg, req.NamespacedName); err != nil {
 		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig Status")
+			log.Error(err, "failed to update KokuMetricsConfig status")
 		}
 		return ctrl.Result{}, err
 	}
@@ -530,10 +530,11 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	checkSource(r, authConfig, kmCfg)
 
 	// Get or create the directory configuration
-	log.Info("Getting directory configuration.")
+	log.Info("getting directory configuration")
 	if dirCfg == nil || !dirCfg.Parent.Exists() {
 		if err := dirCfg.GetDirectoryConfig(); err != nil {
-			log.Error(err, "Failed to get directory configuration.")
+			log.Error(err, "failed to get directory configuration")
+			return ctrl.Result{}, err // without this directory, it is pointless to continue
 		}
 	}
 
@@ -547,7 +548,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	if err := r.Status().Update(ctx, kmCfg); err != nil {
-		log.Error(err, "failed to update KokuMetricsConfig Status")
+		log.Error(err, "failed to update KokuMetricsConfig status")
 		result = ctrl.Result{}
 		mainErr = err
 	}
