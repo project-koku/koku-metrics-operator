@@ -1,6 +1,7 @@
 package dirconfig
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
+
+var errTest = errors.New("test error")
 
 type MockFileInfo struct {
 	name  string
@@ -162,11 +165,12 @@ func TestDirExists(t *testing.T) {
 func TestDirCreate(t *testing.T) {
 	dirPath := "/etc/cost-management"
 	tcs := []struct {
+		name      string
 		createDir DirCreateFunc
 		expected  error
 	}{
-		{createDirMock(fmt.Errorf("bad dir")), fmt.Errorf("Create: /etc/cost-management: bad dir")},
-		{createDirMock(nil), nil},
+		{"create error", createDirMock(fmt.Errorf("bad dir")), errTest},
+		{"no error", createDirMock(nil), nil},
 	}
 
 	for _, tc := range tcs {
@@ -180,23 +184,25 @@ func TestDirCreate(t *testing.T) {
 			},
 		}
 		err := dir.Create()
-		if tc.expected != nil || err != nil {
-			if (tc.expected.Error() != err.Error()) || (tc.expected != nil && err == nil) || (tc.expected == nil && err != nil) {
-				t.Errorf("expected createDir to return '%v' but got '%v'", tc.expected, err)
-			}
+		if tc.expected != nil && err == nil {
+			t.Errorf("%s expected error but got: %v", tc.name, err)
+		}
+		if tc.expected == nil && err != nil {
+			t.Errorf("%s expected nil error but got: %v", tc.name, err)
 		}
 	}
 }
 
 func TestCheckExistsOrRecreate(t *testing.T) {
 	tcs := []struct {
+		name      string
 		stat      StatFunc
 		createDir DirCreateFunc
 		expected  error
 	}{
-		{stat: statMock(nil), createDir: createDirMock(nil), expected: nil},
-		{stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(nil), expected: nil},
-		{stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(fmt.Errorf(":shocked:")), expected: fmt.Errorf("Create: /etc/ocp_cfg: :shocked:")},
+		{name: "no errors", stat: statMock(nil), createDir: createDirMock(nil), expected: nil},
+		{name: "stat error", stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(nil), expected: nil},
+		{name: "create error", stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(fmt.Errorf(" :shocked: ")), expected: errTest},
 	}
 	lgr := testutils.TestLogger{}
 
@@ -211,16 +217,18 @@ func TestCheckExistsOrRecreate(t *testing.T) {
 			},
 		}
 		err := CheckExistsOrRecreate(lgr, *dir)
-		if tc.expected != nil || err != nil {
-			if (tc.expected.Error() != err.Error()) || (tc.expected != nil && err == nil) || (tc.expected == nil && err != nil) {
-				t.Errorf("Expected CheckExistsOrRecreate to return error: %v but got %v", tc.expected, err)
-			}
+		if tc.expected != nil && err == nil {
+			t.Errorf("%s expected error but got: %v", tc.name, err)
+		}
+		if tc.expected == nil && err != nil {
+			t.Errorf("%s expected nil error but got: %v", tc.name, err)
 		}
 	}
 }
 
 func TestGetDirectoryConfig(t *testing.T) {
 	tcs := []struct {
+		name      string
 		listDir   DirListFunc
 		removeAll RemoveAllFunc
 		stat      StatFunc
@@ -228,13 +236,15 @@ func TestGetDirectoryConfig(t *testing.T) {
 		expected  error
 	}{
 		{
+			name:      "create/stat error",
 			listDir:   listDirFileMock(nil, nil),
 			removeAll: removeAllMock(nil),
 			stat:      statMock(fmt.Errorf("does not exists")),
 			createDir: createDirMock(fmt.Errorf("u shall not pass")),
-			expected:  fmt.Errorf("getDirectoryConfig: Create: /tmp/koku-metrics-operator-reports/: u shall not pass"),
+			expected:  errTest,
 		},
 		{
+			name:      "no errors",
 			listDir:   listDirFileMock(nil, nil),
 			removeAll: removeAllMock(nil),
 			stat:      statMock(nil),
@@ -253,10 +263,11 @@ func TestGetDirectoryConfig(t *testing.T) {
 			},
 		}
 		err := dirCfg.GetDirectoryConfig()
-		if tc.expected != nil || err != nil {
-			if tc.expected != nil && err == nil || tc.expected == nil && err != nil || tc.expected.Error() != err.Error() {
-				t.Errorf("Expected GetDirectoryConfig to return error: %v but got %v", tc.expected, err)
-			}
+		if tc.expected != nil && err == nil {
+			t.Errorf("%s expected error but got: %v", tc.name, err)
+		}
+		if tc.expected == nil && err != nil {
+			t.Errorf("%s expected nil error but got: %v", tc.name, err)
 		}
 	}
 }

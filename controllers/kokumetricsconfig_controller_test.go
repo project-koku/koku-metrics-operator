@@ -134,7 +134,7 @@ func setup() error {
 		},
 	}
 	// setup the initial testing directory
-	testLogger.Info("Setting up for controller tests")
+	testLogger.Info("setting up for controller tests")
 	testingDir := "/tmp/koku-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
@@ -159,7 +159,7 @@ func setup() error {
 }
 
 func shutdown() {
-	testLogger.Info("Tearing down for controller tests")
+	testLogger.Info("tearing down for controller tests")
 	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
 }
 
@@ -170,7 +170,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 	ctx := context.Background()
 
 	BeforeEach(func() {
-		// failed test runs that don't clean up leave resources behind.
+		// failed test runs that do not clean up leave resources behind.
 		shutdown()
 	})
 
