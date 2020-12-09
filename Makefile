@@ -66,7 +66,7 @@ help:
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
 	@echo "--- Testing Commands ---"
 	@echo "  test                                run unit tests"
-	@echo "  fmt                                 run go fmt" 
+	@echo "  fmt                                 run go fmt"
 	@echo "  lint                                run pre-commit"
 
 all: manager
@@ -101,13 +101,13 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	kubectl apply -f config/samples/trusted_ca_certmap.yaml
+	kubectl apply -f config/resources/configmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
 deploy-user: manifests kustomize
-	kubectl apply -f config/samples/trusted_ca_certmap.yaml
+	kubectl apply -f config/resources/configmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -
@@ -240,11 +240,15 @@ KUSTOMIZE=$(shell which kustomize)
 endif
 
 # Generate bundle manifests and metadata, then validate generated files.
+# https://github.com/operator-framework/operator-sdk/issues/3748 -> need to upgrade to operator-sdk v1.1.0+ to resolve validation bug for the resources
+# if we ever upgrade, we should move the `cp config/resources/* ./bundle/manifests` line above the validation
 bundle: manifests kustomize
+	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
+	cp config/resources/* ./bundle/manifests
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 
 # Build the bundle image.
