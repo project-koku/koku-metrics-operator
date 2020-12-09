@@ -43,29 +43,27 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. Copy the following `KokuMetricsConfig` resource template and save it to a file called `KokuMetricsConfig.yaml`:
     ```
     ---
-    "apiVersion": "koku-metrics-cfg.openshift.io/v1alpha1",
-    "kind": "KokuMetricsConfig",
-    "metadata": {
-        "name": "kokumetricscfg-sample"
-    },
-    "spec": {
-        "authentication": {
-            "type": "token"
-        },
-        "packaging": {
-            "max_size_MB": 100
-        },
-        "prometheus_config": {},
-        "source": {
-            "check_cycle": 1440,
-            "create_source": false,
-            "name": "TestSource"
-        },
-        "upload": {
-            "upload_cycle": 360,
-            "upload_toggle": true
+    apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
+    kind: KokuMetricsConfig
+    metadata:
+        name: kokumetricscfg-sample
+    spec:
+        authentication: {
+            type: "token"
         }
-    }
+        packaging: {
+            max_size_MB: 100
+        }
+        prometheus_config: {}
+        source: {
+            check_cycle: 1440,
+            create_source: false,
+            name: "TestSource"
+        }
+        upload: {
+            upload_cycle: 360,
+            upload_toggle: true
+        }
     ```
 2. If you are using `basic` authentication, edit the following values in your `KokuMetricsConfig.yaml` file:
     * Change the authentication type within the spec from `"token"` to `"basic"`. 
