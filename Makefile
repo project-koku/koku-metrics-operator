@@ -118,7 +118,7 @@ deploy-branch:
 
 # replaces the username and password with your base64 encoded username and password and looks up the token value for you
 setup-auth:
-	@cp config/samples/authentication_secret.yaml testing/authentication_secret.yaml
+	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),cloud.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
