@@ -101,7 +101,6 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	kubectl apply -f config/resources/configmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
@@ -110,8 +109,6 @@ deploy-user: manifests kustomize
 	kubectl apply -f config/resources/configmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
-	cat config/openshift-config/role.yaml | kubectl apply -f -
-	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
 
 deploy-branch:
 	IMG=${GITBRANCH_IMG} $(MAKE) deploy
@@ -260,3 +257,20 @@ bundle: manifests kustomize
 # Build the bundle image.
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+# Options for "packagemanifests".
+ifneq ($(origin FROM_VERSION), undefined)
+PKG_FROM_VERSION := --from-version=$(FROM_VERSION)
+endif
+ifneq ($(origin CHANNEL), undefined)
+PKG_CHANNELS := --channel=$(CHANNEL)
+endif
+ifeq ($(IS_CHANNEL_DEFAULT), 1)
+PKG_IS_DEFAULT_CHANNEL := --default-channel
+endif
+PKG_MAN_OPTS ?= $(FROM_VERSION) $(PKG_CHANNELS) $(PKG_IS_DEFAULT_CHANNEL)
+
+# Generate package manifests.
+packagemanifests: manifests
+	operator-sdk generate kustomize manifests -q
+	kustomize build config/manifests | operator-sdk generate packagemanifests -q --version $(VERSION) $(PKG_MAN_OPTS)
