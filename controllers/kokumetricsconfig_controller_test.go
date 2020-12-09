@@ -471,6 +471,8 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
+			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
 		})
 		It("should check the last upload time in the upload status", func() {
 			err := setup()
