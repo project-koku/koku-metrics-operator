@@ -22,6 +22,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"time"
@@ -45,11 +46,12 @@ var (
 	promSpec *kokumetricscfgv1alpha1.PrometheusSpec
 
 	kokuMetricsCfgNamespace = "koku-metrics-operator"
+	certKey                 = "service-ca.crt"
 	secretKey               = "token"
 	serviceAccountName      = "default"
 	tokenRegex              = "default-token-*"
 
-	certFile = "/etc/ssl/certs/ca-certificates.crt"
+	certFile = "/tmp/service-ca.crt"
 )
 
 type PromCollector struct {
@@ -133,17 +135,73 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 
 }
 
+func getCertFile(clt client.Client) error {
+	ctx := context.Background()
+	sa := &corev1.ServiceAccount{}
+	objKey := client.ObjectKey{
+		Namespace: kokuMetricsCfgNamespace,
+		Name:      serviceAccountName,
+	}
+	if err := getRuntimeObj(ctx, clt, sa, objKey, "service account"); err != nil {
+		return err
+	}
+
+	if len(sa.Secrets) <= 0 {
+		return fmt.Errorf("getCertFile: no secrets in service account")
+	}
+
+	for _, secret := range sa.Secrets {
+		matched, _ := regexp.MatchString(tokenRegex, secret.Name)
+		if !matched {
+			continue
+		}
+
+		s := &corev1.Secret{}
+		objKey := client.ObjectKey{
+			Namespace: kokuMetricsCfgNamespace,
+			Name:      secret.Name,
+		}
+		if err := getRuntimeObj(ctx, clt, s, objKey, "secret"); err != nil {
+			return err
+		}
+		cert, ok := s.Data[certKey]
+		if !ok {
+			return fmt.Errorf("getCertFile: cannot find certificate in secret")
+		}
+		return writeCert(cert)
+	}
+	return fmt.Errorf("getCertFile: no certificate found")
+}
+
+func writeCert(cert []byte) error {
+	file, err := os.OpenFile(certFile, os.O_APPEND|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open cert file for writing: %v", err)
+	}
+	_, err = file.Write(cert)
+	if err != nil {
+		return fmt.Errorf("failed to write cert file: %v", err)
+	}
+	return file.Sync()
+}
+
 func getPrometheusConfig(kmCfg *kokumetricscfgv1alpha1.PrometheusSpec, clt client.Client) (*PrometheusConfig, error) {
 	promCfg := &PrometheusConfig{
-		CAFile:  certFile,
 		Address: kmCfg.SvcAddress,
 		SkipTLS: *kmCfg.SkipTLSVerification,
 	}
+
+	if err := getCertFile(clt); err != nil {
+		return nil, err
+	}
+	promCfg.CAFile = certFile
+
 	token, err := getBearerToken(clt)
 	if err != nil {
 		return nil, err
 	}
 	promCfg.BearerToken = token
+
 	return promCfg, nil
 }
 
