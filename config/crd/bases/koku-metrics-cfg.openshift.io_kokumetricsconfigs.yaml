@@ -38,9 +38,9 @@ spec:
             properties:
               api_url:
                 default: https://cloud.redhat.com
-                description: APIURL is a field of KokuMetricsConfig to represent the
-                  url of the API endpoint for service interaction. The default is
-                  `https://cloud.redhat.com`.
+                description: FOR DEVELOPMENT ONLY. APIURL is a field of KokuMetricsConfig
+                  to represent the url of the API endpoint for service interaction.
+                  The default is `https://cloud.redhat.com`.
                 type: string
               authentication:
                 description: Authentication is a field of KokuMetricsConfig to represent
@@ -67,13 +67,14 @@ spec:
                 type: object
               clusterID:
                 description: ClusterID is a field of KokuMetricsConfig to represent
-                  the cluster UUID.
+                  the cluster UUID. Normally this value should not be specified. Only
+                  set this value if the clusterID cannot be obtained from the ClusterVersion.
                 type: string
               packaging:
                 description: Packaging is a field of KokuMetricsConfig to represent
                   the packaging object
                 properties:
-                  max_size:
+                  max_size_MB:
                     default: 100
                     description: MaxSize is a field of KokuMetricsConfig to represent
                       the max file size in megabytes that will be compressed for upload
@@ -83,7 +84,7 @@ spec:
                     minimum: 1
                     type: integer
                 required:
-                - max_size
+                - max_size_MB
                 type: object
               prometheus_config:
                 description: PrometheusConfig is a field of KokuMetricsConfig to represent
@@ -91,14 +92,14 @@ spec:
                 properties:
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
-                    description: SvcAddress is a field of KokuMetricsConfig to represent
-                      the thanos-querier address.
+                    description: FOR DEVELOPMENT ONLY. SvcAddress is a field of KokuMetricsConfig
+                      to represent the thanos-querier address. The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
                     type: string
                   skip_tls_verification:
                     default: false
-                    description: SkipTLSVerification is a field of KokuMetricsConfig
-                      to represent if the thanos-querier endpoint must be certificate
-                      validated. The default is false.
+                    description: FOR DEVELOPMENT ONLY. SkipTLSVerification is a field
+                      of KokuMetricsConfig to represent if the thanos-querier endpoint
+                      must be certificate validated. The default is false.
                     type: boolean
                 required:
                 - service_address
@@ -127,9 +128,9 @@ spec:
                     type: string
                   sources_path:
                     default: /api/sources/v1.0/
-                    description: SourcesAPIPath is a field of KokuMetricsConfig to
-                      represent the path of the Sources API service. The default is
-                      `/api/sources/v1.0/`.
+                    description: FOR DEVELOPMENT ONLY. SourcesAPIPath is a field of
+                      KokuMetricsConfig to represent the path of the Sources API service.
+                      The default is `/api/sources/v1.0/`.
                     type: string
                 required:
                 - check_cycle
@@ -142,9 +143,9 @@ spec:
                 properties:
                   ingress_path:
                     default: /api/ingress/v1/upload
-                    description: IngressAPIPath is a field of KokuMetricsConfig to
-                      represent the path of the Ingress API service. The default is
-                      `/api/ingress/v1/upload`.
+                    description: FOR DEVELOPMENT ONLY. IngressAPIPath is a field of
+                      KokuMetricsConfig to represent the path of the Ingress API service.
+                      The default is `/api/ingress/v1/upload`.
                     type: string
                   upload_cycle:
                     default: 360

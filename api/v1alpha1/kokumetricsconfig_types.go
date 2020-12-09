@@ -54,17 +54,17 @@ const (
 )
 
 // AuthenticationType describes how the upload will be handled.
-// Only one of the following authtication types may be specified.
+// Only one of the following authentication types may be specified.
 // If none of the following types are specified, the default one
 // is Token.
 // +kubebuilder:validation:Enum=token;basic
 type AuthenticationType string
 
 const (
-	// Basic allows upload of data using basic authencation.
+	// Basic allows upload of data using basic authentication.
 	Basic AuthenticationType = "basic"
 
-	// Token allows upload of data using token authencation.
+	// Token allows upload of data using token authentication.
 	Token AuthenticationType = "token"
 )
 
@@ -91,12 +91,13 @@ type PackagingSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=100
-	MaxSize int64 `json:"max_size"`
+	MaxSize int64 `json:"max_size_MB"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
 type UploadSpec struct {
 
+	// FOR DEVELOPMENT ONLY.
 	// IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
 	// The default is `/api/ingress/v1/upload`.
 	// +kubebuilder:default=`/api/ingress/v1/upload`
@@ -126,10 +127,13 @@ type UploadSpec struct {
 // PrometheusSpec defines the desired state of PrometheusConfig object in the KokuMetricsConfigSpec.
 type PrometheusSpec struct {
 
+	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
+	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
 	// +kubebuilder:default=`https://thanos-querier.openshift-monitoring.svc:9091`
 	SvcAddress string `json:"service_address"`
 
+	// FOR DEVELOPMENT ONLY.
 	// SkipTLSVerification is a field of KokuMetricsConfig to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.
 	// +kubebuilder:default=false
@@ -139,6 +143,7 @@ type PrometheusSpec struct {
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the KokuMetricsConfigSpec.
 type CloudDotRedHatSourceSpec struct {
 
+	// FOR DEVELOPMENT ONLY.
 	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
 	// The default is `/api/sources/v1.0/`.
 	// +kubebuilder:default=`/api/sources/v1.0/`
@@ -163,10 +168,12 @@ type CloudDotRedHatSourceSpec struct {
 type KokuMetricsConfigSpec struct {
 	// +kubebuilder:validation:preserveUnknownFields=false
 
-	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID.
+	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID. Normally this value should not be
+	// specified. Only set this value if the clusterID cannot be obtained from the ClusterVersion.
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
 
+	// FOR DEVELOPMENT ONLY.
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// The default is `https://cloud.redhat.com`.
 	// +kubebuilder:default=`https://cloud.redhat.com`
