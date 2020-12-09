@@ -37,4 +37,9 @@ spec:
             cpu: 100m
             memory: 20Mi
         terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /tmp/koku-metrics-operator-reports
+          name: koku-metrics-operator-reports
       terminationGracePeriodSeconds: 10
+      volumes:
+        - name: koku-metrics-operator-reports
