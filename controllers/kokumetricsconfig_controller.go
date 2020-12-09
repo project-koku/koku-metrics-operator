@@ -116,10 +116,10 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.K
 	// set the default max file size for packaging
 	kmCfg.Status.Packaging.MaxSize = &kmCfg.Spec.Packaging.MaxSize
 
-	if !reflect.DeepEqual(kmCfg.Spec.Upload.UploadWait, kmCfg.Status.Upload.UploadWait) {
-		// If data is specified in the spec it should be used
-		kmCfg.Status.Upload.UploadWait = kmCfg.Spec.Upload.UploadWait
-	}
+	// set the upload wait to whatever is in the spec
+	kmCfg.Status.Upload.UploadWait = kmCfg.Spec.Upload.UploadWait
+
+	// if the status is nil, generate an upload wait
 	if kmCfg.Status.Upload.UploadWait == nil {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		uploadWait := r.Int63() % 35
@@ -261,7 +261,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 	duration := time.Since(lastExecution.Time.UTC())
 	minutes := int64(duration.Minutes())
-	log.Info(fmt.Sprintf("It has been %d minutes since the last successful %s.", minutes, action))
+	log.Info(fmt.Sprintf("It has been %d minute(s) since the last successful %s.", minutes, action))
 	if minutes >= cycle {
 		log.Info(fmt.Sprintf("Executing %s to cloud.redhat.com.", action))
 		return true
@@ -499,6 +499,9 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, kmCfg); err != nil {
 		log.Error(err, "Failed to obtain clusterID.")
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			log.Error(err, "failed to update KokuMetricsConfig Status")
+		}
 		return ctrl.Result{}, err
 	}
 

@@ -82,7 +82,6 @@ var _ = BeforeSuite(func(done Done) {
 		UseExistingCluster: &useCluster,
 		CRDDirectoryPaths:  []string{filepath.Join("..", "config", "crd", "bases")},
 	}
-
 	cfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
@@ -167,6 +166,29 @@ func createPullSecret(namespace string, data []byte) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
+func deletePullSecret(namespace string, data []byte) {
+	ctx := context.Background()
+	oldsecret := &corev1.Secret{Data: map[string][]byte{
+		pullSecretDataKey: data,
+	},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pullSecretName,
+			Namespace: namespace,
+		}}
+
+	Expect(k8sClient.Delete(ctx, oldsecret)).Should(Succeed())
+}
+
+func createBadPullSecret(namespace string) {
+	ctx := context.Background()
+	secret := &corev1.Secret{Data: map[string][]byte{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pullSecretName,
+			Namespace: namespace,
+		}}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+}
+
 func createAuthSecret(namespace string) {
 	ctx := context.Background()
 	secret := &corev1.Secret{Data: map[string][]byte{
@@ -180,13 +202,50 @@ func createAuthSecret(namespace string) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
+func createBadAuthSecret(namespace string) {
+	ctx := context.Background()
+	secret := &corev1.Secret{Data: map[string][]byte{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      badAuthSecretName,
+			Namespace: namespace,
+		}}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+}
+
+func createBadAuthPassSecret(namespace string) {
+	ctx := context.Background()
+	secret := &corev1.Secret{Data: map[string][]byte{
+		authSecretUserKey: []byte("user1"),
+	},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      badAuthPassSecretName,
+			Namespace: namespace,
+		}}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+}
+
+func deleteClusterVersion() {
+	ctx := context.Background()
+	instance := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{Name: "version"},
+		Spec: configv1.ClusterVersionSpec{
+			ClusterID: configv1.ClusterID(clusterID),
+		},
+	}
+	Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
+}
+
 func clusterPrep() {
 	if !useCluster {
 		// Create operator namespace
 		createNamespace(namespace)
 
-		// Create auth secert in operator namespace
+		// Create auth secret in operator namespace
 		createAuthSecret(namespace)
+
+		// Create an empty auth secret
+		createBadAuthSecret(namespace)
+		createBadAuthPassSecret(namespace)
 
 		// Create openshift config namespace and secret
 		createNamespace(openShiftConfigNamespace)
