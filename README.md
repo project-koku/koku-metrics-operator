@@ -44,10 +44,11 @@ To build the docker image you can execute the following make command:
 make docker-build
 ```
 
-Linting can be performed with the following make command:
+Linting can be performed with the following make commands:
 
 ```
 make fmt
+make lint
 ```
 
 ## Testing
@@ -113,8 +114,7 @@ Push the image to a repository and make sure to set the repository to public:
 ```sh
 $ make docker-push IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
-
-**Note**:
+**Note**:	
 The name and tag of the image (`IMG=<some-registry>/<project-name>:tag`) in both the commands can also be set in the Makefile. Modify the line which has `IMG ?= controller:latest` to set your desired default image name.
 
 Branches of the repository are built automaticaly [here](https://quay.io/repository/project-koku/koku-metrics-operator).
@@ -132,6 +132,14 @@ Run the following to deploy the operator. This will also install the RBAC manife
 ```sh
 $ make deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
+
+You can optionally build, push, and deploy the image all at the same time by running:
+
+```sh
+$ make build-and-deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
+```
+
+You can also optionally substitute the USER arg for the IMG arg above for the build & deploy commands. Run `make help` to see all of the options. 
 
 *NOTE* If you have enabled webhooks in your deployments, you will need to have cert-manager already installed
 in the cluster or `make deploy` will fail when creating the cert-manager resources.
