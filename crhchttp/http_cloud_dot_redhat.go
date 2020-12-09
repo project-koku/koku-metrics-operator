@@ -43,6 +43,8 @@ import (
 var Client HTTPClient
 var cacerts = "/etc/ssl/certs/ca-certificates.crt"
 
+var osOpen = os.Open
+
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -61,8 +63,9 @@ func scrubAuthorization(b []byte) string {
 	return strings.Join(str, "\r\n")
 }
 
-// GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
-func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) {
+type CreateMultiPartWriterFunc = func(filename string) (*bytes.Buffer, *multipart.Writer, io.Writer, error)
+
+var createMultiPartWriter = func(filename string) (*bytes.Buffer, *multipart.Writer, io.Writer, error) {
 	// set the content and content type
 	buf := new(bytes.Buffer)
 	mw := multipart.NewWriter(buf)
@@ -70,10 +73,17 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
 	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
 	fw, err := mw.CreatePart(h)
+	return buf, mw, fw, err
+}
+
+// GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
+func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) {
+	// set the content and content type
+	buf, mw, fw, err := createMultiPartWriter(filename)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create part: %v", err)
 	}
-	f, err := os.Open(filename)
+	f, err := osOpen(filename)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open file: %v", err)
 	}
@@ -85,11 +95,17 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 	return buf, mw.FormDataContentType(), mw.Close()
 }
 
+type RequestFactory = func(method, uri string, body *bytes.Buffer) (*http.Request, error)
+
+var generateRequest = func(method, uri string, body *bytes.Buffer) (*http.Request, error) {
+	return http.NewRequestWithContext(context.Background(), method, uri, body)
+}
+
 // SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
 func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "SetupRequest")
 
-	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
+	req, err := generateRequest(method, uri, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not create request: %v", err)
 	}
@@ -117,12 +133,18 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 	return req, nil
 }
 
+type ReadCertFileFunc = func() ([]byte, error)
+
+var readCertFile = func() ([]byte, error) {
+	return ioutil.ReadFile(cacerts)
+}
+
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
-		caCert, err := ioutil.ReadFile(cacerts)
+		caCert, err := readCertFile()
 		if err != nil {
 			log.Error(err, "The following error occurred: ") // TODO fix this error handling
 		}
@@ -140,6 +162,10 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 	return &http.Client{Timeout: 30 * time.Second}
 }
 
+type ResponseDumper = func(*http.Response, bool) ([]byte, error)
+
+var responseDump = httputil.DumpResponse
+
 // ProcessResponse Log response for request and return valid
 func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 	log := logger.WithValues("kokumetricsconfig", "ProcessResponse")
@@ -149,7 +175,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 		"URL", resp.Request.URL,
 		"x-rh-insights-request-id", resp.Header.Get("x-rh-insights-request-id"))
 
-	dump, err := httputil.DumpResponse(resp, true)
+	dump, err := responseDump(resp, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dump response body: %v", err)
 	}
@@ -161,14 +187,11 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 	}
 	body := bodySlice[1]
 
-	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode >= 300 || resp.StatusCode < 200 {
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
 		return nil, fmt.Errorf("error response: %s", body)
 	}
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return body, nil
-	}
-	return nil, fmt.Errorf("unexpected response: %d", resp.StatusCode)
+	return body, nil
 }
 
 // Upload Send data to cloud.redhat.com
