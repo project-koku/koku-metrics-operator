@@ -93,7 +93,7 @@ func getRuntimeObj(ctx context.Context, r client.Client, obj runtime.Object, key
 	return nil
 }
 
-func getBearerToken(clt client.Client) (config.Secret, error) {
+func getFromSecret(clt client.Client, item string) ([]byte, error) {
 	ctx := context.Background()
 	sa := &corev1.ServiceAccount{}
 	objKey := client.ObjectKey{
@@ -101,11 +101,11 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 		Name:      serviceAccountName,
 	}
 	if err := getRuntimeObj(ctx, clt, sa, objKey, "service account"); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if len(sa.Secrets) <= 0 {
-		return "", fmt.Errorf("getBearerToken: no secrets in service account")
+		return nil, fmt.Errorf("getFromSecret: no secrets in service account")
 	}
 
 	for _, secret := range sa.Secrets {
@@ -120,61 +120,38 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 			Name:      secret.Name,
 		}
 		if err := getRuntimeObj(ctx, clt, s, objKey, "secret"); err != nil {
-			return "", err
+			return nil, err
 		}
-		encodedSecret, ok := s.Data[secretKey]
+		encodedItem, ok := s.Data[item]
 		if !ok {
-			return "", fmt.Errorf("getBearerToken: cannot find token in secret")
+			return nil, fmt.Errorf("getFromSecret: cannot find item in secret")
 		}
-		if len(encodedSecret) <= 0 {
-			return "", fmt.Errorf("getBearerToken: no data in default secret")
+		if len(encodedItem) <= 0 {
+			return nil, fmt.Errorf("getFromSecret: no data in default secret")
 		}
-		return config.Secret(encodedSecret), nil
+		return encodedItem, nil
 	}
-	return "", fmt.Errorf("getBearerToken: no token found")
+	return nil, fmt.Errorf("getFromSecret: no token found")
+}
 
+func getBearerToken(clt client.Client) (config.Secret, error) {
+	encodedSecret, err := getFromSecret(clt, secretKey)
+	if err != nil {
+		return "", fmt.Errorf("getBearerToken: failed to get token: %v", err)
+	}
+	return config.Secret(encodedSecret), nil
 }
 
 func getCertFile(clt client.Client) error {
-	ctx := context.Background()
-	sa := &corev1.ServiceAccount{}
-	objKey := client.ObjectKey{
-		Namespace: kokuMetricsCfgNamespace,
-		Name:      serviceAccountName,
+	encodedCert, err := getFromSecret(clt, certKey)
+	if err != nil {
+		return fmt.Errorf("getBearerToken: failed to get token: %v", err)
 	}
-	if err := getRuntimeObj(ctx, clt, sa, objKey, "service account"); err != nil {
-		return err
-	}
-
-	if len(sa.Secrets) <= 0 {
-		return fmt.Errorf("getCertFile: no secrets in service account")
-	}
-
-	for _, secret := range sa.Secrets {
-		matched, _ := regexp.MatchString(tokenRegex, secret.Name)
-		if !matched {
-			continue
-		}
-
-		s := &corev1.Secret{}
-		objKey := client.ObjectKey{
-			Namespace: kokuMetricsCfgNamespace,
-			Name:      secret.Name,
-		}
-		if err := getRuntimeObj(ctx, clt, s, objKey, "secret"); err != nil {
-			return err
-		}
-		cert, ok := s.Data[certKey]
-		if !ok {
-			return fmt.Errorf("getCertFile: cannot find certificate in secret")
-		}
-		return writeCert(cert)
-	}
-	return fmt.Errorf("getCertFile: no certificate found")
+	return writeCert(encodedCert)
 }
 
 func writeCert(cert []byte) error {
-	file, err := os.OpenFile(certFile, os.O_APPEND|os.O_RDWR, 0644)
+	file, err := os.OpenFile(certFile, os.O_CREATE|os.O_WRONLY, 0644) // create and write only
 	if err != nil {
 		return fmt.Errorf("failed to open cert file for writing: %v", err)
 	}
