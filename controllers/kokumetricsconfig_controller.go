@@ -261,7 +261,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 	duration := time.Since(lastExecution.Time.UTC())
 	minutes := int64(duration.Minutes())
-  log.Info(fmt.Sprintf("it has been %d minute(s) since the last successful %s", minutes, action))
+	log.Info(fmt.Sprintf("it has been %d minute(s) since the last successful %s", minutes, action))
 	if minutes >= cycle {
 		log.Info(fmt.Sprintf("executing %s to cloud.redhat.com", action))
 		return true
