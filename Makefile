@@ -31,6 +31,44 @@ endif
 
 EXTERNAL_PROM_ROUTE=https://$(shell oc get routes thanos-querier -n openshift-monitoring -o "jsonpath={.spec.host}")
 
+help:
+	@echo "Please use \`make <target>' where <target> is one of:"
+	@echo "--- Setup Commands ---"
+	@echo "  manager                            build the manager binary"
+	@echo "  docker-build                       build the docker image"
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
+	@echo "  docker-push                        push the docker image to quay.io"
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
+	@echo "  deploy                             deploy the latest image you have pushed to your cluster"
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
+	@echo "  build-and-deploy                   build and deploy the operator image."
+	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
+	@echo "  docker-build-user                  build the docker image"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  docker-push-user                   push the docker image to quay.io"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  deploy-user                        deploy the latest image you have pushed to your cluster"
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  build-and-deploy-user              build and deploy the operator image."
+	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
+	@echo "  install                           create and register the CRD"
+	@echo "--- General Commands ---"
+	@echo "  run                               run the operator locally outside of the cluster"
+	@echo "  deploy-cr                         copy and configure the sample CR and deploy it. Will also create auth secret depending on parameters"
+	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
+	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
+	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
+	@echo "  deploy-local-cr                   copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
+	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
+	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
+	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
+	@echo "--- Testing Commands ---"
+	@echo "  test                                run unit tests"
+	@echo "  fmt                                 run go fmt" 
+	@echo "  lint                                run pre-commit"
+
 all: manager
 
 # Run tests
@@ -39,6 +77,10 @@ test: generate fmt vet manifests
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/master/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+
+# Run pre-commit
+lint:
+	pre-commit run --all-files
 
 # Build manager binary
 manager: generate fmt vet
@@ -56,10 +98,19 @@ install: manifests kustomize
 uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
+
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	kubectl apply -f config/samples/trusted_ca_certmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cat config/openshift-config/role.yaml | kubectl apply -f -
+	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
+
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
+deploy-user: manifests kustomize
+	kubectl apply -f config/samples/trusted_ca_certmap.yaml
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -
 	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
@@ -74,14 +125,19 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
+	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-auth:
+	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+
+add-ci-route:
+	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
 add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
@@ -90,17 +146,18 @@ deploy-cr:
 	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
-	$(MAKE) add-spec
 	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
 endif
+ifeq ($(CI), true)
+	$(MAKE) add-ci-route
+endif
 	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-local-cr:
 	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	$(MAKE) add-spec
 	$(MAKE) add-prom-route
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
@@ -108,6 +165,9 @@ ifeq ($(AUTH), basic)
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
+endif
+ifeq ($(CI), true)
+	$(MAKE) add-ci-route
 endif
 	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
@@ -134,6 +194,20 @@ docker-build: test
 # Push the docker image
 docker-push:
 	docker push ${IMG}
+
+# Build, push, and deploy the image
+build-deploy: docker-build docker-push deploy
+
+# Build the docker image
+docker-build-user: test
+	docker build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
+
+# Push the docker image
+docker-push-user:
+	docker push quay.io/${USER}/koku-metrics-operator:v0.0.1
+
+# Build, push, and deploy the image
+build-deploy-user: docker-build-user docker-push-user deploy-user
 
 # find or download controller-gen
 # download controller-gen if necessary
