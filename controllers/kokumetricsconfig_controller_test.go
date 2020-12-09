@@ -31,12 +31,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var (
+	testLogger                  = testutils.TestLogger{}
 	namespace                   = "koku-metrics-operator"
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
@@ -132,7 +134,7 @@ func setup() error {
 		},
 	}
 	// setup the initial testing directory
-	fmt.Println("Setting up for controller tests")
+	testLogger.Info("Setting up for controller tests")
 	testingDir := "/tmp/koku-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
@@ -157,7 +159,7 @@ func setup() error {
 }
 
 func shutdown() {
-	fmt.Println("Tearing down for controller tests")
+	testLogger.Info("Tearing down for controller tests")
 	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
 }
 
