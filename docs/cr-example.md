@@ -8,7 +8,7 @@ metadata:
 spec:
   api_url: string # default=https://cloud.redhat.com, the url of the API endpoint for service interaction
   clusterID: string # The cluster ID -> the reconciler finds this value if not supplied
-  validate_cert: bool # default=false, represent if the Ingress endpoint must be certificate validated
+  validate_cert: bool # default=true, represent if the Ingress endpoint must be certificate validated
   authentication:
     type: choice (basic, token) # default=token
     secret_name: string # secret which contains user/password for basic auth
