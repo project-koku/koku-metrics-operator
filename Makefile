@@ -136,6 +136,11 @@ add-auth:
 	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
+local-validate-cert:
+	@sed -i "" '/upload/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '  upload:'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+
 add-ci-route:
 	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
 
@@ -159,6 +164,7 @@ endif
 deploy-local-cr:
 	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	$(MAKE) add-prom-route
+	$(MAKE) local-validate-cert
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
