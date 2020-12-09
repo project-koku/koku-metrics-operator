@@ -49,7 +49,7 @@ var (
 	serviceAccountName      = "default"
 	tokenRegex              = "default-token-*"
 
-	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
+	certFile = "/etc/ssl/certs/ca-certificates.crt"
 )
 
 type PromCollector struct {
