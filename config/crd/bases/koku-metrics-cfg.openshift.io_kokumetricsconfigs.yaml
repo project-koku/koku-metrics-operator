@@ -167,7 +167,7 @@ spec:
                     minimum: 0
                     type: integer
                   validate_cert:
-                    default: false
+                    default: true
                     description: ValidateCert is a field of KokuMetricsConfig to represent
                       if the Ingress endpoint must be certificate validated.
                     type: boolean
