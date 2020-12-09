@@ -120,7 +120,7 @@ type UploadSpec struct {
 	UploadToggle *bool `json:"upload_toggle"`
 
 	// ValidateCert is a field of KokuMetricsConfig to represent if the Ingress endpoint must be certificate validated.
-	// +kubebuilder:default=false
+	// +kubebuilder:default=true
 	ValidateCert *bool `json:"validate_cert"`
 }
 

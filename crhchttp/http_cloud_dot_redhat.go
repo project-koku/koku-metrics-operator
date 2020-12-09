@@ -70,16 +70,16 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
 	fw, err := mw.CreatePart(h)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to create part: %v", err)
+		return nil, "", fmt.Errorf("failed to create part: %v", err)
 	}
 	f, err := os.Open(filename)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to open file: %v", err)
+		return nil, "", fmt.Errorf("failed to open file: %v", err)
 	}
 	defer f.Close()
 	_, err = io.Copy(fw, f)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to copy file: %v", err)
+		return nil, "", fmt.Errorf("failed to copy file: %v", err)
 	}
 	return buf, mw.FormDataContentType(), mw.Close()
 }
@@ -99,10 +99,10 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 
 	switch authConfig.Authentication {
 	case "basic":
-		log.Info("Request using basic authentication!")
+		log.Info("request using basic authentication")
 		req.SetBasicAuth(authConfig.BasicAuthUser, authConfig.BasicAuthPassword)
 	default:
-		log.Info("Request using token authentication")
+		log.Info("request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
 	}
@@ -134,7 +134,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 			Transport: transport,
 		}
 	}
-	log.Info("Configured to not using the certificate for this request!")
+	log.Info("configured to not using the certificate for this request")
 	// Default the client
 	return &http.Client{Timeout: 30 * time.Second}
 }
@@ -167,7 +167,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return body, nil
 	}
-	return nil, fmt.Errorf("Unexpected Response")
+	return nil, fmt.Errorf("unexpected response: %d", resp.StatusCode)
 }
 
 // Upload Send data to cloud.redhat.com
