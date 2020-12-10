@@ -34,7 +34,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `source` field:
 * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
 * Replace the `create_source` field value with `true`.
-**Note** if the source has already been created, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
+**Note:** if the source has already been created, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
 4. Select `Create`.
 
 #### Configure through the CLI
@@ -64,7 +64,7 @@ password: >-
 ```
 $ oc create -f auth-secret.yaml
 ```
-**NOTE** The name of the secret should match the `spec:  authentication:  secret_name` set in the KokuMetricsConfig that is going to be configured in the next steps.
+**Note:** The name of the secret should match the `spec:  authentication:  secret_name` set in the KokuMetricsConfig that is going to be configured in the next steps.
 
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
