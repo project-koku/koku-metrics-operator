@@ -9,12 +9,23 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 #### Limitations [Potential for metrics data loss]
 * Report storage is not backed by a PersitentVolume. If the operator is redeployed, a gap may be introduced in the usage metrics.
 * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to c.rh.c ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
-## Configure the koku-metrics-operator
-#### Configure through the UI
-##### Create the koku-metrics-operator namespace
+## Installation
+The operator must be installed in the `koku-metrics-operator` namespace. The namespace can be created through either the UI or CLI:
+#### Namespace creation:
+##### UI
 1. On the left navigation pane, select `Administration` -> `Namespaces` -> `Create Namespace`.
 2. Name the namespace `koku-metrics-operator`.
 3. Select `Create`.
+##### CLI
+1. Run the following via the CLI to create and use the `koku-metrics-operator` project:
+```
+oc new-project koku-metrics-operator
+```
+#### Operator installation:
+Ensure that the operator is installed into the `koku-metrics-operator` namespace.
+
+## Configure the koku-metrics-operator
+#### Configure through the UI
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
@@ -38,11 +49,6 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 4. Select `Create`.
 
 #### Configure through the CLI
-##### Create the koku-metrics-operator namespace
-1. Run the following via the CLI to create and use the `koku-metrics-operator` project:
-```
-oc new-project koku-metrics-operator
-```
 ##### Configure authentication
 The default configuration method for the operator to create sources and upload to [cloud.redhat.com](https://cloud.redhat.com/) is `token`. No further steps are required for configuring `token` authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
 1. Copy the following into a file called `auth-secret.yaml`:
