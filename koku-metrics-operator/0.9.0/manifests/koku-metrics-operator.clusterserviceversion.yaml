@@ -31,7 +31,7 @@ metadata:
       ]
     capabilities: Basic Install
     certified: "false"
-    createdAt: "2020-12-10T15:22:36Z"
+    createdAt: "2020-12-10T15:29:20Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operators.operatorframework.io/builder: operator-sdk-v0.19.2
@@ -178,16 +178,10 @@ spec:
                     memory: 20Mi
                 terminationMessagePolicy: FallbackToLogsOnError
                 volumeMounts:
-                - mountPath: /var/run/configmaps/trusted-ca-bundle
-                  name: trusted-ca-volume
-                  readOnly: true
                 - mountPath: /tmp/koku-metrics-operator-reports
                   name: koku-metrics-operator-reports
               terminationGracePeriodSeconds: 10
               volumes:
-              - configMap:
-                  name: trusted-ca-bundle
-                name: trusted-ca-volume
               - name: koku-metrics-operator-reports
       permissions:
       - rules:
