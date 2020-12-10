@@ -6,9 +6,9 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Querying Prometheus to create reports specific to cost management.
 * Packaging these reports as a tarball which is uploaded to cost management through cloud.redhat.com.
 * The operator is also capable of creating a source in cloud.redhat.com. A source is required for cost management to process the upload.
-#### Limitations [Potential for metrics data loss]
+#### Limitations (Potential for metrics data loss)
 * Report storage is not backed by a PersitentVolume. If the operator is redeployed, a gap may be introduced in the usage metrics.
-* A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to c.rh.c ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
+* A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
 ## Installation
 The operator must be installed in the `koku-metrics-operator` namespace. The namespace can be created through either the UI or CLI:
 #### Namespace creation:
@@ -105,7 +105,14 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 
 2. To configure the operator to use `basic` authentication, edit the following values in the `kokumetricsconfig.yaml` file:
     * Replace `authentication: type:` with `basic`.
-    * Add a field called `secret_name` to the authentication field in the spec and set it equal to the name of the authentication secret that was created earlier.
+    * Add a field called `secret_name` to the authentication field in the spec and set it equal to the name of the authentication secret that was created earlier. The authentication spec should look similar to the following:
+
+        ```
+          authentication:
+            secret_name: SECRET-NAME
+            type: basic
+        ```
+        
 3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `kokumetricsconfig.yaml` file:
     * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
     * Replace `create_source` field value with `true`.
