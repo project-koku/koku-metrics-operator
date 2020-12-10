@@ -19,7 +19,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
 2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to cloud.redhat.com credentials.
-Select `Create`.
+3. Select `Create`.
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `Create KokuMetricsConfig`.
@@ -94,8 +94,10 @@ spec:
 3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `kokumetricsconfig.yaml` file:
    * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
    * Change the `create_source` field value from `false` to `true`.
-3. Deploy the `KokuMetricsConfig` resource:
+**Note:** if the source has already been created, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
+4. Deploy the `KokuMetricsConfig` resource:
 ```
 $ oc create -f kokumetricsconfig.yaml
 ```
+
 The koku-metrics-operator will now create, package, and upload OpenShift usage reports to cost management.
