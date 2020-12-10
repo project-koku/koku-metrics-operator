@@ -9,6 +9,7 @@ spec:
     max_size_MB: 100
   prometheus_config: {}
   source:
+    name: INSERT-SOURCE-NAME
     check_cycle: 1440
     create_source: false
   upload:

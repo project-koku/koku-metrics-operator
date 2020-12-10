@@ -20,7 +20,8 @@ metadata:
             "prometheus_config": {},
             "source": {
               "check_cycle": 1440,
-              "create_source": false
+              "create_source": false,
+              "name": "INSERT-SOURCE-NAME"
             },
             "upload": {
               "upload_cycle": 360,
@@ -31,7 +32,7 @@ metadata:
       ]
     capabilities: Basic Install
     certified: "false"
-    createdAt: "2020-12-10T15:29:20Z"
+    createdAt: "2020-12-10T16:42:26Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operators.operatorframework.io/builder: operator-sdk-v0.19.2
