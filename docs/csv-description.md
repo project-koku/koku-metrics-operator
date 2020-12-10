@@ -34,7 +34,7 @@ The default authentication for the operator is `token`. No further steps are req
 3. Select `Create`.
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
-1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `Create KokuMetricsConfig`.
+1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
 2. For `basic` authentication, edit the following values in the spec:
     * Replace `authentication: type:` with `basic`.
     * Add the`secret_name` field under `authentication`, and set it equal to the name of the authentication Secret that was created above. The spec should look similar to the following:
