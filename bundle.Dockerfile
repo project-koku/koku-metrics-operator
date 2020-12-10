@@ -10,5 +10,5 @@ LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v0.19.2
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v2
 
-COPY ./manifests /manifests/
-COPY ./metadata /metadata/
+COPY bundle/manifests /manifests/
+COPY bundle/metadata /metadata/
