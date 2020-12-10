@@ -60,7 +60,7 @@ spec:
     * The operator is also capable of creating a source in cloud.redhat.com. A source is required for cost management to process the upload.
     #### Limitations [Potential for metrics data loss]
     * Report storage is not backed by a PersitentVolume. If the operator is redeployed, a gap may be introduced in the usage metrics.
-    * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to c.rh.c ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
+    * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to c.rh.c Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
     ## Installation
     The operator must be installed in the `koku-metrics-operator` namespace. The namespace can be created through either the UI or CLI:
     #### Namespace creation:
