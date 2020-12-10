@@ -26,6 +26,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
@@ -35,12 +36,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/project-koku/koku-metrics-operator/collector"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Client is an http.Client
 var Client HTTPClient
+var cacerts = "/etc/ssl/certs/ca-certificates.crt"
 
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
@@ -121,8 +122,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
-		caCert, err := collector.GetFromSecret(authConfig.Client, "ca.crt")
-		// caCert, err := ioutil.ReadFile("/etc/ssl/certs/ca-certificates.crt")
+		caCert, err := ioutil.ReadFile(cacerts)
 		if err != nil {
 			log.Error(err, "The following error occurred: ") // TODO fix this error handling
 		}
