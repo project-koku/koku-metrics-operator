@@ -1,4 +1,4 @@
-# Unsupported v1alpha1 operator - the koku-metrics-operator is not a supported operator
+# v0.9.0-alpha Koku Metrics Operator (Unsupported)
 ## Introduction
 The `koku-metrics-operator` is an OpenShift Operator used to obtain OpenShift usage data and upload it to [cost managment](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/getting_started_with_cost_management/assembly_introduction_cost_management). The Operator queries Prometheus to create metric reports, which are then packaged and uploaded to cost management. For more information, reach out to cost-mgmt@redhat.com.
 ## Features and Capabilities
@@ -35,10 +35,11 @@ Decide if you are going to use the default authentication method (token) to crea
     ```
     $ oc create -f auth-secret.yaml
     ```
+    
 **NOTE**
-The name of the secret should match the `authentication_secret_name` set in the KokuMetricsConfig that is going to be configured in the next steps.
----
-### Configuring the koku-metrics-operator
+    The name of the secret should match the `authentication_secret_name` set in the KokuMetricsConfig that is going to be configured in the next steps.
+    ---
+### Creating the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`. 
 1. Copy the following `KokuMetricsConfig` resource template and save it to a file called `KokuMetricsConfig.yaml`:
     ```
@@ -75,4 +76,4 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     ```
     $ oc create -f KokuMetricsConfig.yaml
     ```
-The koku-metrics-operator will now create, package, and upload your OpenShift usage reports to cost management. 
+The koku-metrics-operator will now create, package, and upload your OpenShift usage reports to cost management.
