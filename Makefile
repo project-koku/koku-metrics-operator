@@ -66,7 +66,7 @@ help:
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
 	@echo "--- Testing Commands ---"
 	@echo "  test                                run unit tests"
-	@echo "  fmt                                 run go fmt" 
+	@echo "  fmt                                 run go fmt"
 	@echo "  lint                                run pre-commit"
 
 all: manager
@@ -101,7 +101,6 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	kubectl apply -f config/samples/trusted_ca_certmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -
@@ -109,7 +108,6 @@ deploy: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
 deploy-user: manifests kustomize
-	kubectl apply -f config/samples/trusted_ca_certmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cat config/openshift-config/role.yaml | kubectl apply -f -

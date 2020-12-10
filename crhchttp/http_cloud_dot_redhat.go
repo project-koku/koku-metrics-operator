@@ -41,6 +41,7 @@ import (
 
 // Client is an http.Client
 var Client HTTPClient
+var cacerts = "/etc/ssl/certs/ca-certificates.crt"
 
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
@@ -121,7 +122,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
-		caCert, err := ioutil.ReadFile("/var/run/configmaps/trusted-ca-bundle/ca-bundle.crt")
+		caCert, err := ioutil.ReadFile(cacerts)
 		if err != nil {
 			log.Error(err, "The following error occurred: ") // TODO fix this error handling
 		}
