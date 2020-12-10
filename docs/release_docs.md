@@ -25,6 +25,7 @@ oc new-project koku-metrics-operator
 Ensure that the operator is installed into the `koku-metrics-operator` namespace.
 
 ## Configure the koku-metrics-operator
+The operator can be configured through either the UI or CLI:
 #### Configure through the UI
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
