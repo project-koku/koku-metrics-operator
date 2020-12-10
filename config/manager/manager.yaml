@@ -36,16 +36,10 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
-        volumeMounts:
-          - mountPath: /var/run/configmaps/trusted-ca-bundle
-            name: trusted-ca-volume
-            readOnly: true
-          - mountPath: /tmp/koku-metrics-operator-reports
-            name: koku-metrics-operator-reports
         terminationMessagePolicy: FallbackToLogsOnError
-      volumes:
-        - name: trusted-ca-volume
-          configMap:
-            name: trusted-ca-bundle
-        - name: koku-metrics-operator-reports
+        volumeMounts:
+        - mountPath: /tmp/koku-metrics-operator-reports
+          name: koku-metrics-operator-reports
       terminationGracePeriodSeconds: 10
+      volumes:
+        - name: koku-metrics-operator-reports

@@ -116,8 +116,10 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.K
 	// set the default max file size for packaging
 	kmCfg.Status.Packaging.MaxSize = &kmCfg.Spec.Packaging.MaxSize
 
-	// set the upload wait to whatever is in the spec
-	kmCfg.Status.Upload.UploadWait = kmCfg.Spec.Upload.UploadWait
+	// set the upload wait to whatever is in the spec, if the spec is defined
+	if kmCfg.Spec.Upload.UploadWait != nil {
+		kmCfg.Status.Upload.UploadWait = kmCfg.Spec.Upload.UploadWait
+	}
 
 	// if the status is nil, generate an upload wait
 	if kmCfg.Status.Upload.UploadWait == nil {
@@ -516,6 +518,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		Authentication: kmCfg.Status.Authentication.AuthType,
 		OperatorCommit: kmCfg.Status.OperatorCommit,
 		ClusterID:      kmCfg.Status.ClusterID,
+		Client:         r.Client,
 	}
 
 	// obtain credentials token/basic & return if there are authentication credential errors

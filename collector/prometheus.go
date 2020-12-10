@@ -22,6 +22,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"time"
@@ -45,11 +46,12 @@ var (
 	promSpec *kokumetricscfgv1alpha1.PrometheusSpec
 
 	kokuMetricsCfgNamespace = "koku-metrics-operator"
+	certKey                 = "service-ca.crt"
 	secretKey               = "token"
 	serviceAccountName      = "default"
 	tokenRegex              = "default-token-*"
 
-	certFile = "/var/run/configmaps/trusted-ca-bundle/service-ca.crt"
+	certFile = "/tmp/service-ca.crt"
 )
 
 type PromCollector struct {
@@ -91,7 +93,7 @@ func getRuntimeObj(ctx context.Context, r client.Client, obj runtime.Object, key
 	return nil
 }
 
-func getBearerToken(clt client.Client) (config.Secret, error) {
+func GetFromSecret(clt client.Client, item string) ([]byte, error) {
 	ctx := context.Background()
 	sa := &corev1.ServiceAccount{}
 	objKey := client.ObjectKey{
@@ -99,11 +101,11 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 		Name:      serviceAccountName,
 	}
 	if err := getRuntimeObj(ctx, clt, sa, objKey, "service account"); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if len(sa.Secrets) <= 0 {
-		return "", fmt.Errorf("getBearerToken: no secrets in service account")
+		return nil, fmt.Errorf("getFromSecret: no secrets in service account")
 	}
 
 	for _, secret := range sa.Secrets {
@@ -118,32 +120,65 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 			Name:      secret.Name,
 		}
 		if err := getRuntimeObj(ctx, clt, s, objKey, "secret"); err != nil {
-			return "", err
+			return nil, err
 		}
-		encodedSecret, ok := s.Data[secretKey]
+		encodedItem, ok := s.Data[item]
 		if !ok {
-			return "", fmt.Errorf("getBearerToken: cannot find token in secret")
+			return nil, fmt.Errorf("getFromSecret: cannot find item in secret")
 		}
-		if len(encodedSecret) <= 0 {
-			return "", fmt.Errorf("getBearerToken: no data in default secret")
+		if len(encodedItem) <= 0 {
+			return nil, fmt.Errorf("getFromSecret: no data in default secret")
 		}
-		return config.Secret(encodedSecret), nil
+		return encodedItem, nil
 	}
-	return "", fmt.Errorf("getBearerToken: no token found")
+	return nil, fmt.Errorf("getFromSecret: no token found")
+}
 
+func getBearerToken(clt client.Client) (config.Secret, error) {
+	encodedSecret, err := GetFromSecret(clt, secretKey)
+	if err != nil {
+		return "", fmt.Errorf("getBearerToken: failed to get token: %v", err)
+	}
+	return config.Secret(encodedSecret), nil
+}
+
+func getCertFile(clt client.Client) error {
+	encodedCert, err := GetFromSecret(clt, certKey)
+	if err != nil {
+		return fmt.Errorf("getBearerToken: failed to get token: %v", err)
+	}
+	return writeCert(encodedCert)
+}
+
+func writeCert(cert []byte) error {
+	file, err := os.OpenFile(certFile, os.O_CREATE|os.O_WRONLY, 0644) // create and write only
+	if err != nil {
+		return fmt.Errorf("failed to open cert file for writing: %v", err)
+	}
+	_, err = file.Write(cert)
+	if err != nil {
+		return fmt.Errorf("failed to write cert file: %v", err)
+	}
+	return file.Sync()
 }
 
 func getPrometheusConfig(kmCfg *kokumetricscfgv1alpha1.PrometheusSpec, clt client.Client) (*PrometheusConfig, error) {
 	promCfg := &PrometheusConfig{
-		CAFile:  certFile,
 		Address: kmCfg.SvcAddress,
 		SkipTLS: *kmCfg.SkipTLSVerification,
 	}
+
+	if err := getCertFile(clt); err != nil {
+		return nil, err
+	}
+	promCfg.CAFile = certFile
+
 	token, err := getBearerToken(clt)
 	if err != nil {
 		return nil, err
 	}
 	promCfg.BearerToken = token
+
 	return promCfg, nil
 }
 
