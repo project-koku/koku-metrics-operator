@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= 0.0.1
+VERSION ?= 0.9.0
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -106,7 +106,6 @@ deploy: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
 deploy-user: manifests kustomize
-	kubectl apply -f config/resources/configmap.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
@@ -189,7 +188,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build:
+docker-build: test
 	docker build . -t ${IMG}
 
 # Push the docker image
@@ -243,16 +242,15 @@ KUSTOMIZE=$(shell which kustomize)
 endif
 
 # Generate bundle manifests and metadata, then validate generated files.
-# https://github.com/operator-framework/operator-sdk/issues/3748 -> need to upgrade to operator-sdk v1.1.0+ to resolve validation bug for the resources
-# if we ever upgrade, we should move the `cp config/resources/* ./bundle/manifests` line above the validation
 bundle: manifests kustomize
+	mkdir -p koku-metrics-operator/$(VERSION)/
 	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
-	cp config/resources/* ./bundle/manifests
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
+	@sed -i "" 's/0001-01-01T00:00:00Z/$(shell date -u +'%Y-%m-%dT%TZ')/g' koku-metrics-operator/$(VERSION)/manifests/koku-metrics-operator.clusterserviceversion.yaml
 
 # Build the bundle image.
 bundle-build:
@@ -271,6 +269,7 @@ endif
 PKG_MAN_OPTS ?= $(FROM_VERSION) $(PKG_CHANNELS) $(PKG_IS_DEFAULT_CHANNEL)
 
 # Generate package manifests.
-packagemanifests: manifests
+packagemanifests: manifests kustomize
 	operator-sdk generate kustomize manifests -q
 	kustomize build config/manifests | operator-sdk generate packagemanifests -q --version $(VERSION) $(PKG_MAN_OPTS)
+	@sed -i "" 's/0001-01-01T00:00:00Z/$(shell date -u +'%Y-%m-%dT%TZ')/g' packagemanifests/$(VERSION)/koku-metrics-operator.clusterserviceversion.yaml
