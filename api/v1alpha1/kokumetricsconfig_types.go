@@ -214,7 +214,7 @@ type PackagingStatus struct {
 	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	// The default is 100.
 	// +optional
-	MaxSize *int64 `json:"max_size,omitempty"`
+	MaxSize *int64 `json:"max_size_MB,omitempty"`
 
 	// PackagingError is a field of KokuMetricsConfigStatus to represent the error encountered packaging the reports.
 	// +optional

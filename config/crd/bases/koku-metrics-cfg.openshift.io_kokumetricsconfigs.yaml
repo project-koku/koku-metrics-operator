@@ -229,7 +229,7 @@ spec:
                     description: PackagingError is a field of KokuMetricsConfigStatus
                       to represent the error encountered packaging the reports.
                     type: string
-                  max_size:
+                  max_size_MB:
                     description: MaxSize is a field of KokuMetricsConfig to represent
                       the max file size in megabytes that will be compressed for upload
                       to Ingress. The default is 100.
