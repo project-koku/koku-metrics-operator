@@ -93,7 +93,7 @@ func getRuntimeObj(ctx context.Context, r client.Client, obj runtime.Object, key
 	return nil
 }
 
-func getFromSecret(clt client.Client, item string) ([]byte, error) {
+func GetFromSecret(clt client.Client, item string) ([]byte, error) {
 	ctx := context.Background()
 	sa := &corev1.ServiceAccount{}
 	objKey := client.ObjectKey{
@@ -135,7 +135,7 @@ func getFromSecret(clt client.Client, item string) ([]byte, error) {
 }
 
 func getBearerToken(clt client.Client) (config.Secret, error) {
-	encodedSecret, err := getFromSecret(clt, secretKey)
+	encodedSecret, err := GetFromSecret(clt, secretKey)
 	if err != nil {
 		return "", fmt.Errorf("getBearerToken: failed to get token: %v", err)
 	}
@@ -143,7 +143,7 @@ func getBearerToken(clt client.Client) (config.Secret, error) {
 }
 
 func getCertFile(clt client.Client) error {
-	encodedCert, err := getFromSecret(clt, certKey)
+	encodedCert, err := GetFromSecret(clt, certKey)
 	if err != nil {
 		return fmt.Errorf("getBearerToken: failed to get token: %v", err)
 	}

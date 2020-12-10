@@ -22,10 +22,12 @@ package crhchttp
 import (
 	"github.com/go-logr/logr"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AuthConfig provides the data for reconciling the CR with defaults
 type AuthConfig struct {
+	Client            client.Client
 	ClusterID         string
 	Authentication    kokumetricscfgv1alpha1.AuthenticationType
 	BearerTokenString string
