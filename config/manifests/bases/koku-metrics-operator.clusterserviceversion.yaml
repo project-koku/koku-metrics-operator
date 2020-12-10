@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-    categories: monitoring
+    categories: Monitoring
     certified: "false"
     containerImage: HOST-USERNAME-NAME-TAG
     createdAt: "0001-01-01T00:00:00Z"
