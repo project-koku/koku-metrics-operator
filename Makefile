@@ -12,7 +12,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 # CRD_OPTIONS ?= "crd:trivialVersions=true"
 CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
@@ -246,7 +246,7 @@ bundle: manifests kustomize
 	mkdir -p koku-metrics-operator/$(VERSION)/
 	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/project-koku/koku-metrics-operator:v$(VERSION)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
