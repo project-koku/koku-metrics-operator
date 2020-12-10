@@ -31,7 +31,7 @@ metadata:
       ]
     capabilities: Basic Install
     certified: "false"
-    createdAt: "2020-12-10T02:40:20Z"
+    createdAt: "2020-12-10T15:22:36Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operators.operatorframework.io/builder: operator-sdk-v0.19.2
@@ -167,7 +167,7 @@ spec:
                 - --enable-leader-election
                 command:
                 - /manager
-                image: quay.io/mskarbek/koku-metrics-operator:v0.0.70
+                image: controller:latest
                 name: manager
                 resources:
                   limits:

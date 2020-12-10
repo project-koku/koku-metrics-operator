@@ -1,5 +1,0 @@
-channels:
-- currentCSV: koku-metrics-operator.v0.0.1
-  name: alpha
-defaultChannel: alpha
-packageName: koku-metrics-operator
