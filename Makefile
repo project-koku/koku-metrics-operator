@@ -250,8 +250,11 @@ bundle: manifests kustomize
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
+	cp bundle.Dockerfile koku-metrics-operator/0.9.0/Dockerfile
 	@sed -i "" 's/0001-01-01T00:00:00Z/$(shell date -u +'%Y-%m-%dT%TZ')/g' koku-metrics-operator/$(VERSION)/manifests/koku-metrics-operator.clusterserviceversion.yaml
 	@sed -i "" 's#HOST-USERNAME-NAME-TAG#quay.io/project-koku/koku-metrics-operator:v$(VERSION)#g' koku-metrics-operator/$(VERSION)/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	@sed -i "" 's#bundle/manifests#manifests#g' koku-metrics-operator/$(VERSION)/Dockerfile
+	@sed -i "" 's#bundle/metadata#metadata#g' koku-metrics-operator/$(VERSION)/Dockerfile
 
 # Build the bundle image.
 bundle-build:
