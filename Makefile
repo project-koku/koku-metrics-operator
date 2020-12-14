@@ -1,7 +1,7 @@
 # Current Operator version
 VERSION ?= 0.9.0
 # Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
+BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-controller-bundle:$(VERSION)
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -251,30 +251,8 @@ bundle: manifests kustomize
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/0.9.0/Dockerfile
-	@sed -i "" 's/0001-01-01T00:00:00Z/$(shell date -u +'%Y-%m-%dT%TZ')/g' koku-metrics-operator/$(VERSION)/manifests/koku-metrics-operator.clusterserviceversion.yaml
-	@sed -i "" 's#HOST-USERNAME-NAME-TAG#quay.io/project-koku/koku-metrics-operator:v$(VERSION)#g' koku-metrics-operator/$(VERSION)/manifests/koku-metrics-operator.clusterserviceversion.yaml
-	@sed -i "" 's#bundle/manifests#manifests#g' koku-metrics-operator/$(VERSION)/Dockerfile
-	@sed -i "" 's#bundle/metadata#metadata#g' koku-metrics-operator/$(VERSION)/Dockerfile
+	scripts/txt_replace.py $(VERSION)
 
 # Build the bundle image.
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
-
-# Options for "packagemanifests".
-ifneq ($(origin FROM_VERSION), undefined)
-PKG_FROM_VERSION := --from-version=$(FROM_VERSION)
-endif
-ifneq ($(origin CHANNEL), undefined)
-PKG_CHANNELS := --channel=$(CHANNEL)
-endif
-ifeq ($(IS_CHANNEL_DEFAULT), 1)
-PKG_IS_DEFAULT_CHANNEL := --default-channel
-endif
-PKG_MAN_OPTS ?= $(FROM_VERSION) $(PKG_CHANNELS) $(PKG_IS_DEFAULT_CHANNEL)
-
-# Generate package manifests.
-packagemanifests: manifests kustomize
-	operator-sdk generate kustomize manifests -q
-	kustomize build config/manifests | operator-sdk generate packagemanifests -q --version $(VERSION) $(PKG_MAN_OPTS)
-	@sed -i "" 's/0001-01-01T00:00:00Z/$(shell date -u +'%Y-%m-%dT%TZ')/g' packagemanifests/$(VERSION)/koku-metrics-operator.clusterserviceversion.yaml
-	@sed -i "" 's/HOST-USERNAME-NAME-TAG/"quay.io/project-koku/koku-metrics-operator:v$(VERSION)"/g packagemanifests/$(VERSION)/koku-metrics-operator.clusterserviceversion.yaml
