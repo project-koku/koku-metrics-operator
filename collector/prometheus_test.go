@@ -511,7 +511,7 @@ var _ = Describe("Collector Tests", func() {
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeEmpty())
 		})
-		It("should find secrets but not the default", func() {
+		It("should find secrets but not the koku-metrics-manager-role", func() {
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
@@ -522,7 +522,7 @@ var _ = Describe("Collector Tests", func() {
 		It("should get secret but token is not found", func() {
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "wrong-key", []byte{})})
+				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "wrong-key", []byte{})})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -533,7 +533,7 @@ var _ = Describe("Collector Tests", func() {
 		It("should successfully find token but token is empty", func() {
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", []byte{})})
+				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte{})})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -544,7 +544,7 @@ var _ = Describe("Collector Tests", func() {
 		It("should successfully find token", func() {
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", []byte(testSecretData))})
+				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -559,7 +559,7 @@ var _ = Describe("Collector Tests", func() {
 			defer os.Remove(certFile)
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "not-here-token", []byte(testSecretData))})
+				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "not-here-token", []byte(testSecretData))})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -576,7 +576,7 @@ var _ = Describe("Collector Tests", func() {
 			defer os.Remove(certFile)
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "default-token", "not-here-token", []byte(testSecretData))})
+				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "not-here-token", []byte(testSecretData))})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -593,7 +593,7 @@ var _ = Describe("Collector Tests", func() {
 			defer os.Remove(certFile)
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "default-token", "token", []byte(testSecretData))})
+				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -614,7 +614,7 @@ var _ = Describe("Collector Tests", func() {
 		It("could not get prometheus connection because of missing cert", func() {
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "default-token", "token", []byte(testSecretData))})
+				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 
@@ -644,7 +644,7 @@ var _ = Describe("Collector Tests", func() {
 		BeforeEach(func() {
 			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
 			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "default-token", "token", []byte(testSecretData))})
+				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
 			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
 			addSecretsToSA(secrets, sa)
 		})
