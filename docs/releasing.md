@@ -6,10 +6,9 @@ Create a GitHub release that corresponds with the operator release version. The 
 
 Build and push the operator image to the project-koku quay repository: 
 
-```sh
-$ export VERSION=<release-version>
-docker build . -t quay.io/project-koku/koku-metrics-operator:$VERSION
-docker push quay.io/project-koku/koku-metrics-operator:$VERSION 
+```
+make docker-build
+make docker-push
 ```
 
 ### Edit the bundle csv to point back to the project-koku image
