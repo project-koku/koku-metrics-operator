@@ -95,6 +95,7 @@ manager: generate fmt vet
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
+	kubectl apply -f testing/sa.yaml
 	GIT_COMMIT=${GIT_COMMIT} go run ./main.go
 
 # Install CRDs into a cluster
