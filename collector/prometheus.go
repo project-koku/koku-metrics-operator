@@ -49,7 +49,7 @@ var (
 	certKey                 = "service-ca.crt"
 	secretKey               = "token"
 	serviceAccountName      = "koku-metrics-manager-role"
-	tokenRegex              = "default-token-*"
+	tokenRegex              = "koku-metrics-manager-role-token-*"
 
 	certFile = "/tmp/service-ca.crt"
 )
