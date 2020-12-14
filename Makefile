@@ -140,7 +140,7 @@ local-validate-cert:
 	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-ci-route:
-	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/cost-mgmt_v1alpha1_costmanagement.yaml
+	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
