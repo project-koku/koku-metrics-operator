@@ -191,6 +191,10 @@ generate: controller-gen
 docker-build: test
 	docker build . -t ${IMG}
 
+# Build the docker image
+docker-build-no-test:
+	docker build . -t ${IMG}
+
 # Push the docker image
 docker-push:
 	docker push ${IMG}
