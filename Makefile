@@ -1,7 +1,7 @@
 # Current Operator version
-VERSION ?= 0.0.1
+VERSION ?= 0.9.0
 # Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
+BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-controller-bundle:$(VERSION)
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -12,7 +12,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 # CRD_OPTIONS ?= "crd:trivialVersions=true"
 CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
@@ -33,6 +33,13 @@ EXTERNAL_PROM_ROUTE=https://$(shell oc get routes thanos-querier -n openshift-mo
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of:"
+	@echo "--- Bundle Commands ---"
+	@echo "  bundle                             Generate bundle manifests and metadata, then validate generated files."
+	@echo "      DEFAULT_CHANNEL=<channel>                  @param - Required. The default channel for the bundle."
+	@echo "  bundle-build                       Build the bundle image."
+	@echo "      BUNDLE_IMG=<quay.io image>                 @param - Optional. The quay.io image name."
+	@echo "  bundle-push                        Push the bundle image."
+	@echo "      BUNDLE_IMG=<quay.io image>                 @param - Optional. The quay.io image name."
 	@echo "--- Setup Commands ---"
 	@echo "  manager                            build the manager binary"
 	@echo "  docker-build                       build the docker image"
@@ -41,7 +48,7 @@ help:
 	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
 	@echo "  deploy                             deploy the latest image you have pushed to your cluster"
 	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
-	@echo "  build-deploy                   build and deploy the operator image."
+	@echo "  build-deploy                       build and deploy the operator image."
 	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
 	@echo "  docker-build-user                  build the docker image"
 	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
@@ -49,17 +56,17 @@ help:
 	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
 	@echo "  deploy-user                        deploy the latest image you have pushed to your cluster"
 	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
-	@echo "  build-deploy-user              build and deploy the operator image."
+	@echo "  build-deploy-user                  build and deploy the operator image."
 	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
-	@echo "  install                           create and register the CRD"
+	@echo "  install                            create and register the CRD"
 	@echo "--- General Commands ---"
-	@echo "  run                               run the operator locally outside of the cluster"
-	@echo "  deploy-cr                         copy and configure the sample CR and deploy it. Will also create auth secret depending on parameters"
+	@echo "  run                                run the operator locally outside of the cluster"
+	@echo "  deploy-cr                          copy and configure the sample CR and deploy it. Will also create auth secret depending on parameters"
 	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
 	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
 	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
-	@echo "  deploy-local-cr                   copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
+	@echo "  deploy-local-cr                    copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
 	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
 	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
 	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
@@ -88,6 +95,7 @@ manager: generate fmt vet
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
+	kubectl apply -f testing/sa.yaml
 	GIT_COMMIT=${GIT_COMMIT} go run ./main.go
 
 # Install CRDs into a cluster
@@ -103,22 +111,18 @@ uninstall: manifests kustomize
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
-	cat config/openshift-config/role.yaml | kubectl apply -f -
-	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
 deploy-user: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
-	cat config/openshift-config/role.yaml | kubectl apply -f -
-	cat config/openshift-config/role_binding.yaml | kubectl apply -f -
 
 deploy-branch:
 	IMG=${GITBRANCH_IMG} $(MAKE) deploy
 
 # replaces the username and password with your base64 encoded username and password and looks up the token value for you
 setup-auth:
-	@cp config/samples/authentication_secret.yaml testing/authentication_secret.yaml
+	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),cloud.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
@@ -146,7 +150,7 @@ add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-cr:
-	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
@@ -160,7 +164,7 @@ endif
 	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-local-cr:
-	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
 ifeq ($(AUTH), basic)
@@ -193,6 +197,10 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
+	docker build . -t ${IMG}
+
+# Build the docker image
+docker-build-no-test:
 	docker build . -t ${IMG}
 
 # Push the docker image
@@ -246,11 +254,21 @@ KUSTOMIZE=$(shell which kustomize)
 endif
 
 # Generate bundle manifests and metadata, then validate generated files.
-bundle: manifests
+bundle: manifests kustomize
+	mkdir -p koku-metrics-operator/$(VERSION)/
+	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
 	operator-sdk generate kustomize manifests -q
-	kustomize build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/project-koku/koku-metrics-operator:v$(VERSION)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
+	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
+	cp bundle.Dockerfile koku-metrics-operator/0.9.0/Dockerfile
+	scripts/txt_replace.py $(VERSION)
 
 # Build the bundle image.
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+# Push the bundle image.
+bundle-push:
+	docker push $(BUNDLE_IMG)

@@ -48,8 +48,8 @@ var (
 	kokuMetricsCfgNamespace = "koku-metrics-operator"
 	certKey                 = "service-ca.crt"
 	secretKey               = "token"
-	serviceAccountName      = "default"
-	tokenRegex              = "default-token-*"
+	serviceAccountName      = "koku-metrics-manager-role"
+	tokenRegex              = "koku-metrics-manager-role-token-*"
 
 	certFile = "/tmp/service-ca.crt"
 )
