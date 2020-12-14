@@ -142,7 +142,7 @@ add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-cr:
-	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
@@ -156,7 +156,7 @@ endif
 	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 
 deploy-local-cr:
-	@cp config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
 ifeq ($(AUTH), basic)

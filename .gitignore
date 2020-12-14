@@ -28,7 +28,7 @@ config/manager/kustomization.yaml
 
 # Ignore files for envtest
 testbin/*
-!testing/auth-secret-template.yaml
+!testing/*template.yaml
 
 # Ignore the commit file for running locally
 commit
