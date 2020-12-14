@@ -1,6 +1,6 @@
 ## Releasing a new version of the koku-metrics-operator
 
-Generate and test a release bundle following the [release testing documentation](../release-testing.md). At the end of the documentation, there should be a new <release-version> bundle in a fork of the community operators repo. 
+Generate and test a release bundle following the [release testing documentation](release-testing.md). At the end of the documentation, there should be a new <release-version> bundle in a fork of the community operators repo. 
 
 Create a GitHub release that corresponds with the operator release version. The [previous releases](https://github.com/project-koku/koku-metrics-operator/releases) can be used as a template. 
 
