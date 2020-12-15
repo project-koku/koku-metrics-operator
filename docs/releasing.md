@@ -6,6 +6,13 @@ More specific documentation for generating bundles for a release can be found [h
 ### Create a github release and push the operator image
 Create a GitHub release that corresponds with the operator release version. The [previous releases](https://github.com/project-koku/koku-metrics-operator/releases) can be used as a template. 
 
+Update the release version at the top of the `Makefile` to match the release version of the operator: 
+
+```
+# Current Operator version
+VERSION ?= <release-version>
+```
+
 Build and push the operator image to the project-koku quay repository: 
 
 ```
@@ -14,12 +21,6 @@ make docker-push
 ```
 
 ### Generate the release bundle 
-Update the release version at the top of the `Makefile` to match the release version of the operator: 
-
-```
-# Current Operator version
-VERSION ?= <release-version>
-```
 Run the following command to generate the bundle: 
 
 ```

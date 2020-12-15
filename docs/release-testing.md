@@ -3,7 +3,11 @@
 More specific documentation for generating and testing bundles can be found [here](https://operator-framework.github.io/community-operators/testing-operators/).
 
 ### Pre-requisites 
-Testing the bundle requires `opm`. To install opm, clone the operator-registry repository: 
+
+* Access to a 4.5+ OpenShift cluster
+* opm
+
+To install opm, clone the operator-registry repository: 
 
 ```
 git clone https://github.com/operator-framework/operator-registry
@@ -38,39 +42,14 @@ Search and replace `quay.io/project-koku/koku-metrics-operator:$VERSION` with `q
 
 
 ### Testing the release bundle 
-Once the release bundle has been generated, fork & clone the [community-operators repository](https://github.com/operator-framework/community-operators). Create a branch, and copy the generated bundle to the `community-operators/community-operators/koku-metrics-operator/` directory in your cloned fork. 
+Copy the generated release bundle to the testing directory, build the bundle image and push it to quay.io:
 
-For example, if the bundle was generated for a `1.0.0` release, the directory structure would look like the following: 
-
-```
-koku-metrics-operator/
-├── 0.9.0
-│   ├── manifests
-│   │   ├── koku-metrics-cfg.openshift.io_kokumetricsconfigs.yaml
-│   │   └── koku-metrics-operator.clusterserviceversion.yaml
-│   ├── metadata
-│   │   └── annotations.yaml
-│   └── Dockerfile
-├── 1.0.0
-│   ├── manifests
-│   │   ├── koku-metrics-cfg.v1.0.0.openshift.io_kokumetricsconfigs.yaml
-│   │   └── koku-metrics-operator.v1.0.0.clusterserviceversion.yaml
-│   ├── metadata
-│   │   └── annotations.yaml
-│   └── Dockerfile
-```
-
-Build the bundle image inside of the version directory:
 ```sh
 $ export USERNAME=<quay-username>
 $ export VERSION=<release-version>
-cd community-operators/koku-metrics-operator/$VERSION
+$ cp -r koku-metrics-operator/<release-version> testing
+$ cd testing/<release-version>
 $ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:$VERSION
-```
-
-Push the image to a repository and set the repository to public:
-
-```sh
 $ docker push quay.io/$USERNAME/koku-metrics-operator-bundle:$VERSION
 ```
 
