@@ -56,4 +56,5 @@ Commit, sign, and push the branch to the fork of the community-operators repo. O
 git commit -s -m "<commit-message>"
 git push origin branch
 ```
-The generated release bundle should also be committed to the `koku-metrics-operator` repo.
+
+After completing the above steps, bump the version in the Makefile (e.g. `VERSION ?= <release-version>+1`). This will prevent accidental builds and pushes for a version that has already been released. The generated release bundle and the bumped Makefile version should be committed to the `koku-metrics-operator` repo.
