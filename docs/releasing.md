@@ -21,7 +21,7 @@ make docker-push
 ```
 
 ### Generate the release bundle 
-Run the following command to generate the bundle: 
+Run the following command to generate the release bundle: 
 
 ```
 make bundle DEFAULT_CHANNEL=alpha
@@ -57,3 +57,4 @@ Commit, sign, and push the branch to the fork of the community-operators repo. O
 git commit -s -m "<commit-message>"
 git push origin branch
 ```
+The generated release bundle should also be committed to the `koku-metrics-operator` repo. 
