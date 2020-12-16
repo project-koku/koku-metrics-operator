@@ -13,7 +13,7 @@ Update the release version at the top of the `Makefile` to match the release ver
 VERSION ?= <release-version>
 ```
 
-> Creating the GitHub release *should* start a [GitHub-Action](../.github/workflows/release.yaml) responsible for building and pushing the image to Quay. If that action fails, the following needs to be run to build and push the image:
+> After creating the GitHub release/tag, a Quay hook should pull the image. Check the [quay repo](https://quay.io/repository/project-koku/koku-metrics-operator?tab=tags) and ensure the new tag was pulled. If the tag does not exist, the following should be run to build and push the image:
 > ```
 > make docker-build
 > make docker-push
