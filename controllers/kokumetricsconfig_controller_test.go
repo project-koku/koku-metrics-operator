@@ -77,7 +77,7 @@ var (
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
-			APIURL: "https://cloud.redhat.com",
+			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
 )
