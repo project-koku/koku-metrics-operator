@@ -51,6 +51,7 @@ var (
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
+	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
 	instance                    = kokumetricscfgv1alpha1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -77,7 +78,7 @@ var (
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
-			APIURL: "https://cloud.redhat.com",
+			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
 )
@@ -198,7 +199,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 				Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
@@ -222,7 +223,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -245,7 +246,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
@@ -268,7 +269,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
@@ -289,7 +290,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -313,7 +314,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 			Expect(fetched.Status.Source.SourceError).NotTo(BeNil())
@@ -338,7 +339,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
@@ -361,7 +362,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthPassSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
@@ -384,7 +385,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(""))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
@@ -405,7 +406,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should should fail token secret wrong data", func() {
@@ -426,7 +427,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail bc of missing cluster version", func() {
@@ -471,7 +472,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
 			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
@@ -496,7 +497,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(kokumetricscfgv1alpha1.DefaultAPIURL))
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 	})

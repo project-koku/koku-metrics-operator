@@ -1,7 +1,8 @@
 # koku-metrics-operator
 
 [![License: AGPL v3](https://img.shields.io/github/license/project-koku/koku.svg)](https://www.gnu.org/licenses/agpl-3.0)
-
+[![Docker Repository on Quay](https://quay.io/repository/project-koku/koku-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-koku/koku-metrics-operator)
+[![Unit Tests](https://github.com/project-koku/koku-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-koku/koku-metrics-operator/actions?query=branch%3Amaster+workflow%3A%22Unit+Tests%22)
 
 ## About
 
@@ -114,7 +115,7 @@ Push the image to a repository and make sure to set the repository to public:
 ```sh
 $ make docker-push IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
-**Note**:	
+**Note**:
 The name and tag of the image (`IMG=<some-registry>/<project-name>:tag`) in both the commands can also be set in the Makefile. Modify the line which has `IMG ?= controller:latest` to set your desired default image name.
 
 Branches of the repository are built automaticaly [here](https://quay.io/repository/project-koku/koku-metrics-operator).
@@ -139,7 +140,7 @@ You can optionally build, push, and deploy the image all at the same time by run
 $ make build-and-deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
 ```
 
-You can also optionally substitute the USER arg for the IMG arg above for the build & deploy commands. Run `make help` to see all of the options. 
+You can also optionally substitute the USER arg for the IMG arg above for the build & deploy commands. Run `make help` to see all of the options.
 
 *NOTE* If you have enabled webhooks in your deployments, you will need to have cert-manager already installed
 in the cluster or `make deploy` will fail when creating the cert-manager resources.
