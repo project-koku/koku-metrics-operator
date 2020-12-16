@@ -1,6 +1,6 @@
 ## Releasing a new version of the koku-metrics-operator
 
-More specific documentation for generating bundles for a release can be found [here](https://operator-framework.github.io/community-operators/testing-operators/).
+Before releasing a new version of the operator, testing should be performed as described [here](release-testing.md).
 
 
 ### Create a github release and push the operator image

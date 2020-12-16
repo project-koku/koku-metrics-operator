@@ -1,6 +1,6 @@
 ## Generating and testing release bundles 
 
-More specific documentation for generating and testing bundles can be found [here](https://operator-framework.github.io/community-operators/testing-operators/).
+A full overview of community operator testing can be found [here](https://operator-framework.github.io/community-operators/testing-operators/). The following steps were parsed from the testing document and are specific to testing the `koku-metrics` operator.
 
 ### Pre-requisites 
 
@@ -47,8 +47,8 @@ Copy the generated release bundle to the testing directory, build the bundle ima
 ```sh
 $ export USERNAME=<quay-username>
 $ export VERSION=<release-version>
-$ cp -r koku-metrics-operator/<release-version> testing
-$ cd testing/<release-version>
+$ cp -r koku-metrics-operator/$VERSION testing
+$ cd testing/$VERSION
 $ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:$VERSION
 $ docker push quay.io/$USERNAME/koku-metrics-operator-bundle:$VERSION
 ```
