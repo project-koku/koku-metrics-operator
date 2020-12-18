@@ -86,13 +86,13 @@ var (
 	volQueries = &querys{
 		query{
 			Name:        "persistentvolume_pod_info",
-			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
 			MetricKey:   staticFields{"namespace": "namespace", "pod": "pod"},
 			RowKey:      "volumename",
 		},
 		query{
 			Name:        "persistentvolumeclaim-capacity-bytes",
-			QueryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
 				Method:          "max",
@@ -103,7 +103,7 @@ var (
 		},
 		query{
 			Name:        "persistentvolumeclaim-request-bytes",
-			QueryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
 				Method:          "max",
@@ -114,7 +114,7 @@ var (
 		},
 		query{
 			Name:        "persistentvolumeclaim-usage-bytes",
-			QueryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-usage-bytes",
 				Method:          "sum",
@@ -125,14 +125,14 @@ var (
 		},
 		query{
 			Name:           "persistentvolume-labels",
-			QueryString:    "kube_persistentvolume_labels * on(persistentvolume) group_left(storageclass) kube_persistentvolume_info",
+			QueryString:    "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass) kube_persistentvolume_info",
 			MetricKey:      staticFields{"storageclass": "storageclass", "persistentvolume": "persistentvolume"},
 			MetricKeyRegex: regexFields{"persistentvolume_labels": "label_*"},
 			RowKey:         "persistentvolume",
 		},
 		query{
 			Name:           "persistentvolumeclaim-labels",
-			QueryString:    "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString:    "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
 			MetricKey:      staticFields{"namespace": "namespace", "persistentvolumeclaim": "persistentvolumeclaim"},
 			MetricKeyRegex: regexFields{"persistentvolumeclaim_labels": "label_"},
 			RowKey:         "volumename",
