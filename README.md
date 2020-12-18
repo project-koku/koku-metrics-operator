@@ -31,6 +31,12 @@ Run the following command to prevent changes to `config/manager/kustomization.ya
 git update-index --assume-unchanged config/manager/kustomization.yaml
 ```
 
+Now install and configure pre-commit. You can choose your installation steps for pre-commit by using the [pre-commit installation instructions](https://pre-commit.com/#installation). Configure pre-commit for the local repository with the following command:
+
+```
+pre-commit install
+```
+
 Next, install the Operator SDK CLI using the following [documentation](https://sdk.operatorframework.io/docs/installation/install-operator-sdk/). The operator is currently being built with the v0.19 release of the operator-sdk.
 
 To build the manager binary you can execute the following make command:
