@@ -43,6 +43,8 @@ import (
 var Client HTTPClient
 var cacerts = "/etc/ssl/certs/ca-certificates.crt"
 
+var osOpen = os.Open
+
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -69,12 +71,11 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
 	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
-	h.Set("Via", "Koku")
 	fw, err := mw.CreatePart(h)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create part: %v", err)
 	}
-	f, err := os.Open(filename)
+	f, err := osOpen(filename)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open file: %v", err)
 	}
@@ -118,12 +119,18 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 	return req, nil
 }
 
+type ReadCertFileFunc = func() ([]byte, error)
+
+var readCertFile = func() ([]byte, error) {
+	return ioutil.ReadFile(cacerts)
+}
+
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
-		caCert, err := ioutil.ReadFile(cacerts)
+		caCert, err := readCertFile()
 		if err != nil {
 			log.Error(err, "The following error occurred: ") // TODO fix this error handling
 		}
@@ -162,7 +169,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 	}
 	body := bodySlice[1]
 
-	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode >= 300 || resp.StatusCode < 200 {
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
 		return nil, fmt.Errorf("error response: %s", body)
 	}
 
