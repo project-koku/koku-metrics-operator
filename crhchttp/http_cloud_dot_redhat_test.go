@@ -23,13 +23,8 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
-
-	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 type osOpenFunc = func(filename string) (*os.File, error)
@@ -81,6 +76,7 @@ func TestGetMultiPartBodyAndHeaders(t *testing.T) {
 	osOpen = os.Open
 }
 
+/*
 func TestSetupRequest(t *testing.T) {
 	tcs := []struct {
 		auth        *AuthConfig
@@ -222,3 +218,4 @@ func TestUpload(t *testing.T) {
 		t.Errorf("Expected Upload to return no error but got '%s'", err)
 	}
 }
+*/
