@@ -69,6 +69,7 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
 	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
+	h.Set("Via", "Koku")
 	fw, err := mw.CreatePart(h)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create part: %v", err)
