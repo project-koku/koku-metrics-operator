@@ -19,10 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package crhchttp
 
-import (
-	"os"
-)
-
+/*
 type osOpenFunc = func(filename string) (*os.File, error)
 
 func mockOsOpen(file *os.File, err error) osOpenFunc {
@@ -31,7 +28,6 @@ func mockOsOpen(file *os.File, err error) osOpenFunc {
 	}
 }
 
-/*
 func TestGetMultiPartBodyAndHeaders(t *testing.T) {
 	tempFile, err := ioutil.TempFile("/tmp", "bla.bla.txt")
 	if err != nil {
