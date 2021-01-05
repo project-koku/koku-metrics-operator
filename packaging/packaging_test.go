@@ -33,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
@@ -65,6 +66,7 @@ type testDirConfig struct {
 type testDirMap struct {
 	large           testDirConfig
 	small           testDirConfig
+	manifest        testDirConfig
 	moving          testDirConfig
 	tar             testDirConfig
 	restricted      testDirConfig
@@ -169,6 +171,12 @@ func setup() error {
 			fileMode: 0777,
 		},
 		{
+			dirName:  "manifest",
+			files:    testFiles,
+			dirMode:  0777,
+			fileMode: 0777,
+		},
+		{
 			dirName:  "moving",
 			files:    testFiles,
 			dirMode:  0777,
@@ -236,6 +244,8 @@ func setup() error {
 				testDirs.large = tmpDirMap
 			case "small":
 				testDirs.small = tmpDirMap
+			case "manifest":
+				testDirs.manifest = tmpDirMap
 			case "moving":
 				testDirs.moving = tmpDirMap
 			case "empty":
@@ -465,26 +475,41 @@ func TestPackagingReports(t *testing.T) {
 func TestGetAndRenderManifest(t *testing.T) {
 	// set up the tests to check the manifest contents
 	getAndRenderManifestTests := []struct {
-		name     string
-		dirName  string
-		fileList []os.FileInfo
+		name          string
+		dirCfg        string
+		dirName       string
+		fileList      []os.FileInfo
+		podReportName string
+		expectErr     bool
 	}{
 		{
-			name:     "test regular dir",
-			dirName:  filepath.Join(testDirs.large.directory, "staging"),
-			fileList: testDirs.large.files,
+			name:          "test regular dir",
+			dirCfg:        testDirs.manifest.directory,
+			dirName:       filepath.Join(testDirs.manifest.directory, "data"),
+			fileList:      testDirs.large.files,
+			podReportName: "ocp_pod_label.csv",
+			expectErr:     false,
 		},
 		{
-			name:     "test empty dir",
-			dirName:  filepath.Join(testDirs.empty.directory, "staging"),
-			fileList: testDirs.empty.files,
+			name:          "test empty dir",
+			dirCfg:        testDirs.empty.directory,
+			dirName:       filepath.Join(testDirs.empty.directory, "staging"),
+			fileList:      testDirs.empty.files,
+			podReportName: "ocp_pod_label.csv",
+			expectErr:     true,
 		},
 	}
 	for _, tt := range getAndRenderManifestTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
-			testPackager.DirCfg = genDirCfg(t, tt.dirName)
+			testPackager.DirCfg = genDirCfg(t, tt.dirCfg)
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
+			if err := testPackager.getStartEnd(filepath.Join(testPackager.DirCfg.Reports.Path, tt.podReportName)); err != nil {
+				if !tt.expectErr {
+					testLogger.Info("This error occurred %v", err)
+					t.Fatal("could not set start/end times")
+				}
+			}
 			testPackager.getManifest(csvFileNames, tt.dirName)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
@@ -507,12 +532,18 @@ func TestGetAndRenderManifest(t *testing.T) {
 				expectedFiles = append(expectedFiles, uploadName)
 			}
 			manifestDate := metav1.Now()
+
+			// getting the start and end time from the ocp_pod_label test csv
+			startTime, _ := time.Parse("2006-01-02 15:04:05", strings.Split("2021-01-05 18:00:00", " +")[0])
+			endTime, _ := time.Parse("2006-01-02 15:04:05", strings.Split("2021-01-07 18:59:59", " +")[0])
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
 				ClusterID: testPackager.KMCfg.Status.ClusterID,
 				Version:   testPackager.KMCfg.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
 				Files:     expectedFiles,
+				Start:     startTime.UTC(),
+				End:       endTime.UTC(),
 			}
 			// Compare the found manifest to the expected manifest
 			errorMsg := "Manifest does not match. Expected %s, recieved %s"
@@ -524,6 +555,12 @@ func TestGetAndRenderManifest(t *testing.T) {
 			}
 			if foundManifest.Version != expectedManifest.Version {
 				t.Errorf(errorMsg, expectedManifest.Version, foundManifest.Version)
+			}
+			if foundManifest.Start != expectedManifest.Start {
+				t.Errorf(errorMsg, expectedManifest.Start, foundManifest.Start)
+			}
+			if foundManifest.End != expectedManifest.End {
+				t.Errorf(errorMsg, expectedManifest.End, foundManifest.End)
 			}
 			for _, file := range expectedFiles {
 				found := false
