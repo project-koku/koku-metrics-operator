@@ -67,6 +67,7 @@ type testDirMap struct {
 	large           testDirConfig
 	small           testDirConfig
 	manifest        testDirConfig
+	manifestBad     testDirConfig
 	moving          testDirConfig
 	tar             testDirConfig
 	restricted      testDirConfig
@@ -177,6 +178,12 @@ func setup() error {
 			fileMode: 0777,
 		},
 		{
+			dirName:  "manifestBad",
+			files:    []string{"ocp_pod_bad.csv"},
+			dirMode:  0777,
+			fileMode: 0777,
+		},
+		{
 			dirName:  "moving",
 			files:    testFiles,
 			dirMode:  0777,
@@ -246,6 +253,8 @@ func setup() error {
 				testDirs.small = tmpDirMap
 			case "manifest":
 				testDirs.manifest = tmpDirMap
+			case "manifestBad":
+				testDirs.manifestBad = tmpDirMap
 			case "moving":
 				testDirs.moving = tmpDirMap
 			case "empty":
@@ -489,6 +498,14 @@ func TestGetAndRenderManifest(t *testing.T) {
 			fileList:      testDirs.large.files,
 			podReportName: "ocp_pod_label.csv",
 			expectErr:     false,
+		},
+		{
+			name:          "test bad ocp report",
+			dirCfg:        testDirs.manifestBad.directory,
+			dirName:       filepath.Join(testDirs.manifestBad.directory, "data"),
+			fileList:      testDirs.large.files,
+			podReportName: "ocp_pod_bad.csv",
+			expectErr:     true,
 		},
 		{
 			name:          "test empty dir",
