@@ -75,6 +75,15 @@ metadata:
   namespace: koku-metrics-operator
 rules:
 - apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
   - ""
   resources:
   - configmaps

@@ -12,6 +12,7 @@ RUN /usr/local/go/bin/go mod download
 # Copy the go source
 COPY main.go main.go
 COPY api/ api/
+COPY archive/ archive/
 COPY clusterversion/ clusterversion/
 COPY collector/ collector/
 COPY controllers/ controllers/
@@ -30,10 +31,10 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+# FROM gcr.io/distroless/static:nonroot
 
 # For terminal access, use this image:
-# FROM gcr.io/distroless/base:debug
+FROM gcr.io/distroless/base:debug
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

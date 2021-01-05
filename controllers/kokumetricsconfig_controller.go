@@ -33,6 +33,7 @@ import (
 	"github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/xorcare/pointer"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/archive"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
 	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
@@ -353,15 +355,11 @@ func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	}
 }
 
-func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
-	log := r.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
+func packageFiles(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) *packaging.FilePackager {
+	log := r.Log.WithValues("KokuMetricsConfig", "packageFiles")
 
 	// if its time to upload/package
-	if !*kmCfg.Spec.Upload.UploadToggle {
-		log.Info("operator is configured to not upload reports to cloud.redhat.com")
-		return nil
-	}
-	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
+	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "package") {
 		return nil
 	}
 
@@ -377,6 +375,20 @@ func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthC
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
 		kmCfg.Status.Packaging.PackagingError = err.Error()
+	}
+	return &packager
+}
+
+func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
+	log := r.Log.WithValues("KokuMetricsConfig", "uploadFiles")
+
+	// if its time to upload/package
+	if !*kmCfg.Spec.Upload.UploadToggle {
+		log.Info("operator is configured to not upload reports to cloud.redhat.com")
+		return nil
+	}
+	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
+		return nil
 	}
 
 	uploadFiles, err := packager.ReadUploadDir()
@@ -465,6 +477,84 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 
 }
 
+func getOrCreateVolume(r *KokuMetricsConfigReconciler, template kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) error {
+	ctx := context.Background()
+	pvc := archive.MakeVolumeClaimTemplate(template)
+	namespace := types.NamespacedName{
+		Namespace: "koku-metrics-operator",
+		Name:      pvc.Name}
+	if err := r.Get(ctx, namespace, pvc); err == nil {
+		return nil
+	}
+	return r.Client.Create(ctx, pvc)
+}
+
+func getVolume(vols []corev1.Volume, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (int, *corev1.Volume, error) {
+	for i, v := range vols {
+		if v.Name == "koku-metrics-operator-reports" {
+			if v.EmptyDir != nil {
+				kmCfg.Status.Storage.VolumeType = v.EmptyDir.String()
+			}
+			if v.PersistentVolumeClaim != nil {
+				kmCfg.Status.Storage.VolumeType = v.PersistentVolumeClaim.String()
+			}
+			return i, &v, nil
+		}
+	}
+	return -1, nil, fmt.Errorf("volume not found")
+}
+
+func isMounted(vol corev1.Volume) bool {
+	return vol.PersistentVolumeClaim != nil
+}
+
+func mountVolume(r *KokuMetricsConfigReconciler, dep *appsv1.Deployment, volIndex int, vol corev1.Volume, claimName string) (bool, error) {
+	ctx := context.Background()
+	vol.EmptyDir = nil
+	vol.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
+		ClaimName: claimName,
+	}
+	patch := client.MergeFrom(dep.DeepCopy())
+	dep.Spec.Template.Spec.Volumes[volIndex] = vol
+
+	if err := r.Patch(ctx, dep, patch); err != nil {
+		return false, fmt.Errorf("failed to Patch deployment: %v", err)
+	}
+	return true, nil
+}
+
+func convertPVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, pvcTemplate *kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) (bool, error) {
+	ctx := context.Background()
+
+	deployment := &appsv1.Deployment{}
+	namespace := types.NamespacedName{
+		Namespace: "koku-metrics-operator",
+		Name:      "koku-metrics-controller-manager"}
+	if err := r.Get(ctx, namespace, deployment); err != nil {
+		return false, fmt.Errorf("unable to get deployment: %v", err)
+	}
+	deployCp := deployment.DeepCopy()
+
+	i, vol, err := getVolume(deployCp.Spec.Template.Spec.Volumes, kmCfg)
+	if err != nil {
+		return false, err
+	}
+
+	if isMounted(*vol) {
+		if vol.PersistentVolumeClaim.ClaimName == pvcTemplate.Name {
+			kmCfg.Status.Storage.VolumeMounted = true
+			return false, nil
+		}
+		return mountVolume(r, deployCp, i, *vol, pvcTemplate.Name)
+	}
+
+	if err := getOrCreateVolume(r, *pvcTemplate); err != nil {
+		return false, fmt.Errorf("failed to get or create PVC: %v", err)
+	}
+
+	return mountVolume(r, deployCp, i, *vol, pvcTemplate.Name)
+}
+
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
@@ -473,11 +563,10 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
 func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
-	var mainErr error
 	os.Setenv("TZ", "UTC")
 	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
@@ -486,7 +575,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	kmCfgOriginal := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
-		log.Error(err, "unable to fetch KokuMetricsConfigCR")
+		log.Info(fmt.Sprintf("unable to fetch KokuMetricsConfigCR: %v", err))
 		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -497,6 +586,29 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
+
+	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
+	if pvcTemplate == nil {
+		pvcTemplate = &archive.DefaultPVC
+	}
+
+	mountEst, err := convertPVC(r, kmCfg, pvcTemplate)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
+	}
+	if mountEst {
+		return ctrl.Result{}, nil
+	}
+
+	kmCfg.Status.Storage.VolumeClaimTemplate = pvcTemplate
+
+	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
+		kmCfg.Status.Storage.VolumeMounted = false
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			log.Error(err, "failed to update KokuMetricsConfig status")
+		}
+		return ctrl.Result{}, fmt.Errorf("PVC not mounted")
+	}
 
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, kmCfg); err != nil {
@@ -541,23 +653,28 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 	}
 
+	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
+	var errors []error
+
 	// attempt to collect prometheus stats and create reports
 	collectPromStats(r, kmCfg, dirCfg)
 
+	packager := packageFiles(r, kmCfg, dirCfg)
+
 	// attempt package and upload, if errors occur return
-	if err := packageAndUpload(r, authConfig, kmCfg, dirCfg); err != nil {
+	if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
 		result = ctrl.Result{}
-		mainErr = err
+		errors = append(errors, err)
 	}
 
 	if err := r.Status().Update(ctx, kmCfg); err != nil {
 		log.Error(err, "failed to update KokuMetricsConfig status")
 		result = ctrl.Result{}
-		mainErr = err
+		errors = append(errors, err)
 	}
 
 	// Requeue for processing after 5 minutes
-	return result, mainErr
+	return result, concatErrs(errors...)
 }
 
 // SetupWithManager Setup reconciliation with manager object
@@ -565,4 +682,17 @@ func (r *KokuMetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kokumetricscfgv1alpha1.KokuMetricsConfig{}).
 		Complete(r)
+}
+
+// concatErrs combines all the errors into one error
+func concatErrs(errors ...error) error {
+	var err error
+	var errstrings []string
+	for _, e := range errors {
+		errstrings = append(errstrings, e.Error())
+	}
+	if len(errstrings) > 0 {
+		err = fmt.Errorf(strings.Join(errstrings, "\n"))
+	}
+	return err
 }

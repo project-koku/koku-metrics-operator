@@ -42,14 +42,17 @@ import (
 )
 
 type FilePackager struct {
-	KMCfg    *kokumetricscfgv1alpha1.KokuMetricsConfig
-	DirCfg   *dirconfig.DirectoryConfig
-	Log      logr.Logger
-	manifest manifestInfo
-	uid      string
-	MaxSize  int64
-	maxBytes int64
+	KMCfg            *kokumetricscfgv1alpha1.KokuMetricsConfig
+	DirCfg           *dirconfig.DirectoryConfig
+	Log              logr.Logger
+	manifest         manifestInfo
+	uid              string
+	createdTimestamp string
+	MaxSize          int64
+	maxBytes         int64
 }
+
+const timestampFormat = "20060102T150405"
 
 // Define the global variables
 const megaByte int64 = 1024 * 1024
@@ -351,6 +354,7 @@ func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
 	p.maxBytes = p.MaxSize * megaByte
 	p.uid = uuid.New().String()
+	p.createdTimestamp = time.Now().Format(timestampFormat)
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
@@ -378,13 +382,15 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 
+	filenameBase := p.createdTimestamp + "-cost-mgmt"
+
 	if split {
 		for idx, fileName := range fileList {
 			if !strings.HasSuffix(fileName, ".csv") {
 				continue
 			}
 			fileList = map[int]string{idx: fileName}
-			tarFileName := "cost-mgmt-" + p.uid + "-" + strconv.Itoa(idx) + ".tar.gz"
+			tarFileName := filenameBase + "-" + strconv.Itoa(idx) + ".tar.gz"
 			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
 			log.Info("generating tar.gz", "tarFile", tarFilePath)
 			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
@@ -392,7 +398,7 @@ func (p *FilePackager) PackageReports() error {
 			}
 		}
 	} else {
-		tarFileName := "cost-mgmt-" + p.uid + ".tar.gz"
+		tarFileName := filenameBase + ".tar.gz"
 		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
 		log.Info("generating tar.gz", "tarFile", tarFilePath)
 		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
