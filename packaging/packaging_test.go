@@ -154,7 +154,7 @@ func setup() error {
 		dirMode  os.FileMode
 		fileMode os.FileMode
 	}
-	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt"}
+	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt", "ocp_pod_label.csv"}
 	dirInfoList := []dirInfo{
 		{
 			dirName:  "large",
@@ -671,8 +671,8 @@ func TestWriteTarball(t *testing.T) {
 				}
 				// the only testcases that should generate tars are the normal use case
 				// and the empty use case
-				// if the regular test case, there should be a manifest and 1 csv file
-				numFiles := 2
+				// if the regular test case, there should be a manifest and 2 csv files
+				numFiles := 3
 				if strings.Contains(tt.name, "empty") {
 					// if the test case is the empty dir, there should only be a manifest
 					numFiles = 1
