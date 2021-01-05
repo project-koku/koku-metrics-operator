@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -176,13 +176,7 @@ type EmbeddedPersistentVolumeClaim struct {
 	// Spec defines the desired characteristics of a volume requested by a pod author.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
 	// +optional
-	Spec v1.PersistentVolumeClaimSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-
-	// Status represents the current information/status of a persistent volume claim.
-	// Read-only.
-	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
-	// +optional
-	Status v1.PersistentVolumeClaimStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Spec corev1.PersistentVolumeClaimSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // EmbeddedObjectMetadata contains a subset of the fields included in k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta
@@ -392,9 +386,9 @@ type StorageStatus struct {
 	// VolumeType is the string representation of the volume type.
 	VolumeType string `json:"volume_type,omitempty"`
 	// VolumeMounted is a bool to indicate if storage volume was mounted.
-	VolumeMounted bool `json:"VolumeMounted,omitempty"`
-	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
-	VolumeClaimTemplate *EmbeddedPersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
+	VolumeMounted bool `json:"volume_mounted,omitempty"`
+	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
+	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"PersistentVolumeClaim,omitempty"`
 }
 
 // KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.

@@ -477,9 +477,8 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 
 }
 
-func getOrCreateVolume(r *KokuMetricsConfigReconciler, template kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) error {
+func getOrCreateVolume(r *KokuMetricsConfigReconciler, pvc *corev1.PersistentVolumeClaim) error {
 	ctx := context.Background()
-	pvc := archive.MakeVolumeClaimTemplate(template)
 	namespace := types.NamespacedName{
 		Namespace: "koku-metrics-operator",
 		Name:      pvc.Name}
@@ -523,7 +522,7 @@ func mountVolume(r *KokuMetricsConfigReconciler, dep *appsv1.Deployment, volInde
 	return true, nil
 }
 
-func convertPVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, pvcTemplate *kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) (bool, error) {
+func convertPVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, pvc *corev1.PersistentVolumeClaim) (bool, error) {
 	ctx := context.Background()
 
 	deployment := &appsv1.Deployment{}
@@ -540,19 +539,16 @@ func convertPVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.Ko
 		return false, err
 	}
 
-	if isMounted(*vol) {
-		if vol.PersistentVolumeClaim.ClaimName == pvcTemplate.Name {
-			kmCfg.Status.Storage.VolumeMounted = true
-			return false, nil
-		}
-		return mountVolume(r, deployCp, i, *vol, pvcTemplate.Name)
+	if isMounted(*vol) && vol.PersistentVolumeClaim.ClaimName == pvc.Name {
+		kmCfg.Status.Storage.VolumeMounted = true
+		return false, nil
 	}
 
-	if err := getOrCreateVolume(r, *pvcTemplate); err != nil {
+	if err := getOrCreateVolume(r, pvc); err != nil {
 		return false, fmt.Errorf("failed to get or create PVC: %v", err)
 	}
 
-	return mountVolume(r, deployCp, i, *vol, pvcTemplate.Name)
+	return mountVolume(r, deployCp, i, *vol, pvc.Name)
 }
 
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -591,16 +587,16 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	if pvcTemplate == nil {
 		pvcTemplate = &archive.DefaultPVC
 	}
-
-	mountEst, err := convertPVC(r, kmCfg, pvcTemplate)
+	pvc := archive.MakeVolumeClaimTemplate(*pvcTemplate)
+	mountEstablished, err := convertPVC(r, kmCfg, pvc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
 	}
-	if mountEst {
+	if mountEstablished {
 		return ctrl.Result{}, nil
 	}
 
-	kmCfg.Status.Storage.VolumeClaimTemplate = pvcTemplate
+	kmCfg.Status.Storage.PersistentVolumeClaim = pvcTemplate
 
 	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
 		kmCfg.Status.Storage.VolumeMounted = false

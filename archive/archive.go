@@ -32,20 +32,17 @@ var (
 
 // MakeVolumeClaimTemplate produces a template to create the PVC
 func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) *corev1.PersistentVolumeClaim {
-	pvc := corev1.PersistentVolumeClaim{
+	return &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: e.APIVersion,
 			Kind:       e.Kind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              e.Name,
-			Namespace:         "koku-metrics-operator",
-			Labels:            e.Labels,
-			Annotations:       e.Annotations,
-			CreationTimestamp: metav1.Time{},
+			Name:        e.Name,
+			Namespace:   "koku-metrics-operator",
+			Labels:      e.Labels,
+			Annotations: e.Annotations,
 		},
-		Spec:   e.Spec,
-		Status: e.Status,
+		Spec: e.Spec,
 	}
-	return &pvc
 }
