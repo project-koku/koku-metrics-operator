@@ -41,6 +41,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// FilePackager struct for defining the packaging vars
 type FilePackager struct {
 	KMCfg            *kokumetricscfgv1alpha1.KokuMetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
@@ -50,6 +51,8 @@ type FilePackager struct {
 	createdTimestamp string
 	MaxSize          int64
 	maxBytes         int64
+	start            time.Time
+	end              time.Time
 }
 
 const timestampFormat = "20060102T150405"
@@ -81,6 +84,8 @@ type manifest struct {
 	Version   string    `json:"version"`
 	Date      time.Time `json:"date"`
 	Files     []string  `json:"files"`
+	Start     time.Time `json:"start"`
+	End       time.Time `json:"end"`
 }
 
 type manifestInfo struct {
@@ -128,6 +133,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 			Version:   p.KMCfg.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
+			Start:     p.start.UTC(),
+			End:       p.end.UTC(),
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
@@ -232,6 +239,54 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 			return splitFile, false, nil
 		}
 	}
+}
+
+// getIndex returns the index of an element in an array
+func getIndex(array []string, val string) (int, error) {
+	for index, value := range array {
+		if value == val {
+			return index, nil
+		}
+	}
+	err := errors.New("could not index the interval time")
+	return -1, err
+}
+
+// getStartEnd grabs the start and end interval from the csvFile
+func (p *FilePackager) getStartEnd(filePath string) error {
+	csvFile, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("getStartEnd: error opening file: %v", err)
+	}
+	csvReader := csv.NewReader(csvFile)
+	csvHeader, err := csvReader.Read()
+	if err != nil {
+		return fmt.Errorf("getStartEnd: error reading file: %v", err)
+	}
+	startIndex, err := getIndex(csvHeader, "interval_start")
+	if err != nil {
+		return fmt.Errorf("getStartEnd: error getting the start index: %v", err)
+	}
+	endIndex, err := getIndex(csvHeader, "interval_end")
+	if err != nil {
+		return fmt.Errorf("getStartEnd: error getting the end index: %v", err)
+	}
+	// grab the first line to get the initial interval start
+	firstLine, err := csvReader.Read()
+	if err != nil {
+		return fmt.Errorf("getStartEnd: error reading file: %v", err)
+	}
+	startInterval := firstLine[startIndex]
+	p.start, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", startInterval)
+	// need to grab the last line in the file to get the last interval end
+	allLines, err := csvReader.ReadAll()
+	if err != nil {
+		return fmt.Errorf("getStartEnd: error reading file: %v", err)
+	}
+	lastLine := allLines[len(allLines)-1]
+	endInterval := lastLine[endIndex]
+	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
+	return nil
 }
 
 // splitFiles breaks larger files into smaller ones
@@ -368,7 +423,16 @@ func (p *FilePackager) PackageReports() error {
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
-
+	// get the start and end dates from the report
+	log.Info("getting the start and end intervals for the manifest")
+	for _, file := range filesToPackage {
+		if strings.Contains(file.Name(), "pod") {
+			absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+			if err := p.getStartEnd(absPath); err != nil {
+				return fmt.Errorf("PackageReports: %v", err)
+			}
+		}
+	}
 	// check if the files need to be split
 	log.Info("checking to see if the report files need to be split")
 	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)
