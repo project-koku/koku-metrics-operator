@@ -262,7 +262,7 @@ bundle: manifests kustomize
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile koku-metrics-operator/0.9.0/Dockerfile
+	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
 	scripts/txt_replace.py $(VERSION)
 
 # Build the bundle image.
