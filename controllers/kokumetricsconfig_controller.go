@@ -583,27 +583,29 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
 
-	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
-	if pvcTemplate == nil {
-		pvcTemplate = &archive.DefaultPVC
-	}
-	pvc := archive.MakeVolumeClaimTemplate(*pvcTemplate)
-	mountEstablished, err := convertPVC(r, kmCfg, pvc)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
-	}
-	if mountEstablished {
-		return ctrl.Result{}, nil
-	}
-
-	kmCfg.Status.Storage.PersistentVolumeClaim = pvcTemplate
-
-	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
-		kmCfg.Status.Storage.VolumeMounted = false
-		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
+	if os.Getenv("LOCAL_DEV") != "true" {
+		pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
+		if pvcTemplate == nil {
+			pvcTemplate = &archive.DefaultPVC
 		}
-		return ctrl.Result{}, fmt.Errorf("PVC not mounted")
+		pvc := archive.MakeVolumeClaimTemplate(*pvcTemplate)
+		mountEstablished, err := convertPVC(r, kmCfg, pvc)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
+		}
+		if mountEstablished {
+			return ctrl.Result{}, nil
+		}
+
+		kmCfg.Status.Storage.PersistentVolumeClaim = pvcTemplate
+
+		if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
+			kmCfg.Status.Storage.VolumeMounted = false
+			if err := r.Status().Update(ctx, kmCfg); err != nil {
+				log.Error(err, "failed to update KokuMetricsConfig status")
+			}
+			return ctrl.Result{}, fmt.Errorf("PVC not mounted")
+		}
 	}
 
 	// set the cluster ID & return if there are errors
