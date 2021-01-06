@@ -7,13 +7,6 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - authorization.k8s.io
-  resources:
-  - subjectaccessreviews
-  - tokenreviews
-  verbs:
-  - create
-- apiGroups:
   - config.openshift.io
   resources:
   - clusterversions
@@ -21,14 +14,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - config.openshift.io
-  resources:
-  - networks
-  - proxies
-  verbs:
-  - get
-  - list
 - apiGroups:
   - ""
   resources:
@@ -44,6 +29,43 @@ rules:
   - serviceaccounts
   verbs:
   - list
+  - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: manager-role
+  namespace: koku-metrics-operator
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - events
+  - persistentvolumeclaims
+  - pods
+  - secrets
+  - services
+  - services/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - koku-metrics-cfg.openshift.io
@@ -65,31 +87,3 @@ rules:
   - get
   - patch
   - update
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  creationTimestamp: null
-  name: manager-role
-  namespace: koku-metrics-operator
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - endpoints
-  - events
-  - persistentvolumeclaims
-  - pods
-  - secrets
-  - services
-  - services/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch

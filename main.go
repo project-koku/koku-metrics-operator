@@ -42,14 +42,13 @@ var (
 )
 
 func init() {
-	// Adding the kokumetricscfgv1alpha1 scheme
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
 
 	// Adding the configv1 scheme
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1.AddToScheme(scheme))
+	// Adding the kokumetricscfgv1alpha1 scheme
+	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
+
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -70,6 +69,7 @@ func main() {
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "91c624a5.openshift.io",
+		Namespace:          "koku-metrics-operator",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
