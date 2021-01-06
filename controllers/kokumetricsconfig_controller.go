@@ -551,9 +551,11 @@ func convertPVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.Ko
 	return mountVolume(r, deployCp, i, *vol, pvc.Name)
 }
 
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=config.openshift.io,namespace=openshift-config,resources=clusterversions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
+// +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch

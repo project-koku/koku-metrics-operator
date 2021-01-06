@@ -69,7 +69,6 @@ func main() {
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "91c624a5.openshift.io",
-		Namespace:          "koku-metrics-operator",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
