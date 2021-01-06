@@ -179,7 +179,7 @@ func setup() error {
 		},
 		{
 			dirName:  "manifestBad",
-			files:    []string{"ocp_pod_bad.csv"},
+			files:    []string{"ocp_pod_missing_header.csv", "ocp_pod_missing_end.csv", "ocp_pod_missing_start.csv"},
 			dirMode:  0777,
 			fileMode: 0777,
 		},
@@ -500,11 +500,27 @@ func TestGetAndRenderManifest(t *testing.T) {
 			expectErr:     false,
 		},
 		{
-			name:          "test bad ocp report",
+			name:          "test missing header",
 			dirCfg:        testDirs.manifestBad.directory,
 			dirName:       filepath.Join(testDirs.manifestBad.directory, "data"),
 			fileList:      testDirs.large.files,
-			podReportName: "ocp_pod_bad.csv",
+			podReportName: "ocp_pod_missing_header.csv",
+			expectErr:     true,
+		},
+		{
+			name:          "test missing start interval",
+			dirCfg:        testDirs.manifestBad.directory,
+			dirName:       filepath.Join(testDirs.manifestBad.directory, "data"),
+			fileList:      testDirs.large.files,
+			podReportName: "ocp_pod_missing_start.csv",
+			expectErr:     true,
+		},
+		{
+			name:          "test missing end interval",
+			dirCfg:        testDirs.manifestBad.directory,
+			dirName:       filepath.Join(testDirs.manifestBad.directory, "data"),
+			fileList:      testDirs.large.files,
+			podReportName: "ocp_pod_missing_end.csv",
 			expectErr:     true,
 		},
 		{
