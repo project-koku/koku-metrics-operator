@@ -179,7 +179,7 @@ func setup() error {
 		},
 		{
 			dirName:  "manifestBad",
-			files:    []string{"ocp_pod_missing_header.csv", "ocp_pod_missing_end.csv", "ocp_pod_missing_start.csv"},
+			files:    []string{"ocp_pod_missing_header.csv", "ocp_pod_missing_end.csv", "ocp_pod_missing_start.csv", "nonCSV.txt"},
 			dirMode:  0777,
 			fileMode: 0777,
 		},
@@ -521,6 +521,14 @@ func TestGetAndRenderManifest(t *testing.T) {
 			dirName:       filepath.Join(testDirs.manifestBad.directory, "data"),
 			fileList:      testDirs.large.files,
 			podReportName: "ocp_pod_missing_end.csv",
+			expectErr:     true,
+		},
+		{
+			name:          "test empty file",
+			dirCfg:        testDirs.manifestBad.directory,
+			dirName:       filepath.Join(testDirs.manifestBad.directory, "data"),
+			fileList:      testDirs.large.files,
+			podReportName: "nonCSV.txt",
 			expectErr:     true,
 		},
 		{

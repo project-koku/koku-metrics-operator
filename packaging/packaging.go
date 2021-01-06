@@ -274,7 +274,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 		return fmt.Errorf("getStartEnd: error reading file: %v", err)
 	}
 	startInterval := firstLine[startIndex]
-	p.Start, _ = time.Parse("2006-01-02 15:04:05", strings.Split(startInterval, " +")[0])
+	p.Start, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", startInterval)
 	// need to grab the last line in the file to get the last interval end
 	allLines, err := csvReader.ReadAll()
 	if err != nil {
@@ -282,7 +282,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	}
 	lastLine := allLines[len(allLines)-1]
 	endInterval := lastLine[endIndex]
-	p.End, _ = time.Parse("2006-01-02 15:04:05", strings.Split(endInterval, " +")[0])
+	p.End, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
 	return nil
 }
 
