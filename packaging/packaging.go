@@ -422,8 +422,8 @@ func (p *FilePackager) PackageReports() error {
 	// get the start and end dates from the report
 	log.Info("getting the start and end intervals for the manifest")
 	for _, file := range filesToPackage {
-		absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
-		if strings.Contains(absPath, "pod") {
+		if strings.Contains(file.Name(), "pod") {
+			absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
 			if err := p.getStartEnd(absPath); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
