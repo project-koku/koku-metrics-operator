@@ -50,8 +50,8 @@ type FilePackager struct {
 	uid      string
 	MaxSize  int64
 	maxBytes int64
-	Start    time.Time
-	End      time.Time
+	start    time.Time
+	end      time.Time
 }
 
 // Define the global variables
@@ -130,8 +130,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 			Version:   p.KMCfg.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
-			Start:     p.Start.UTC(),
-			End:       p.End.UTC(),
+			Start:     p.start.UTC(),
+			End:       p.end.UTC(),
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
@@ -274,7 +274,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 		return fmt.Errorf("getStartEnd: error reading file: %v", err)
 	}
 	startInterval := firstLine[startIndex]
-	p.Start, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", startInterval)
+	p.start, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", startInterval)
 	// need to grab the last line in the file to get the last interval end
 	allLines, err := csvReader.ReadAll()
 	if err != nil {
@@ -282,7 +282,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	}
 	lastLine := allLines[len(allLines)-1]
 	endInterval := lastLine[endIndex]
-	p.End, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
+	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
 	return nil
 }
 
