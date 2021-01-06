@@ -33,7 +33,6 @@ import (
 	"github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/xorcare/pointer"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,13 +42,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
-	"github.com/project-koku/koku-metrics-operator/archive"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
 	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/packaging"
 	"github.com/project-koku/koku-metrics-operator/sources"
+	"github.com/project-koku/koku-metrics-operator/storage"
 )
 
 var (
@@ -477,80 +476,6 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 
 }
 
-func getOrCreateVolume(r *KokuMetricsConfigReconciler, pvc *corev1.PersistentVolumeClaim) error {
-	ctx := context.Background()
-	namespace := types.NamespacedName{
-		Namespace: "koku-metrics-operator",
-		Name:      pvc.Name}
-	if err := r.Get(ctx, namespace, pvc); err == nil {
-		return nil
-	}
-	return r.Client.Create(ctx, pvc)
-}
-
-func getVolume(vols []corev1.Volume, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (int, *corev1.Volume, error) {
-	for i, v := range vols {
-		if v.Name == "koku-metrics-operator-reports" {
-			if v.EmptyDir != nil {
-				kmCfg.Status.Storage.VolumeType = v.EmptyDir.String()
-			}
-			if v.PersistentVolumeClaim != nil {
-				kmCfg.Status.Storage.VolumeType = v.PersistentVolumeClaim.String()
-			}
-			return i, &v, nil
-		}
-	}
-	return -1, nil, fmt.Errorf("volume not found")
-}
-
-func isMounted(vol corev1.Volume) bool {
-	return vol.PersistentVolumeClaim != nil
-}
-
-func mountVolume(r *KokuMetricsConfigReconciler, dep *appsv1.Deployment, volIndex int, vol corev1.Volume, claimName string) (bool, error) {
-	ctx := context.Background()
-	vol.EmptyDir = nil
-	vol.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
-		ClaimName: claimName,
-	}
-	patch := client.MergeFrom(dep.DeepCopy())
-	dep.Spec.Template.Spec.Volumes[volIndex] = vol
-
-	if err := r.Patch(ctx, dep, patch); err != nil {
-		return false, fmt.Errorf("failed to Patch deployment: %v", err)
-	}
-	return true, nil
-}
-
-func convertPVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, pvc *corev1.PersistentVolumeClaim) (bool, error) {
-	ctx := context.Background()
-
-	deployment := &appsv1.Deployment{}
-	namespace := types.NamespacedName{
-		Namespace: "koku-metrics-operator",
-		Name:      "koku-metrics-controller-manager"}
-	if err := r.Get(ctx, namespace, deployment); err != nil {
-		return false, fmt.Errorf("unable to get deployment: %v", err)
-	}
-	deployCp := deployment.DeepCopy()
-
-	i, vol, err := getVolume(deployCp.Spec.Template.Spec.Volumes, kmCfg)
-	if err != nil {
-		return false, err
-	}
-
-	if isMounted(*vol) && vol.PersistentVolumeClaim.ClaimName == pvc.Name {
-		kmCfg.Status.Storage.VolumeMounted = true
-		return false, nil
-	}
-
-	if err := getOrCreateVolume(r, pvc); err != nil {
-		return false, fmt.Errorf("failed to get or create PVC: %v", err)
-	}
-
-	return mountVolume(r, deployCp, i, *vol, pvc.Name)
-}
-
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
@@ -586,10 +511,16 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	if os.Getenv("LOCAL_DEV") != "true" {
 		pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
 		if pvcTemplate == nil {
-			pvcTemplate = &archive.DefaultPVC
+			pvcTemplate = &storage.DefaultPVC
 		}
-		pvc := archive.MakeVolumeClaimTemplate(*pvcTemplate)
-		mountEstablished, err := convertPVC(r, kmCfg, pvc)
+		pvc := storage.MakeVolumeClaimTemplate(*pvcTemplate)
+
+		stor := &storage.Storage{
+			PVC:    pvc,
+			Client: r.Client,
+		}
+
+		mountEstablished, err := storage.ConvertPVC(stor, kmCfg)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
 		}
