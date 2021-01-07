@@ -63,6 +63,11 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
+	inCluster := false
+	if value, ok := os.LookupEnv("IN_CLUSTER"); ok {
+		inCluster = value == "true"
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
@@ -76,9 +81,10 @@ func main() {
 	}
 
 	if err = (&controllers.KokuMetricsConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
+		Scheme:    mgr.GetScheme(),
+		InCluster: inCluster,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
 		os.Exit(1)

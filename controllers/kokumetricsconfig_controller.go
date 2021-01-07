@@ -71,6 +71,7 @@ type KokuMetricsConfigReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
+	InCluster       bool
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
 }
@@ -508,7 +509,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
 
-	if os.Getenv("LOCAL_DEV") != "true" {
+	if r.InCluster {
 		pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
 		if pvcTemplate == nil {
 			pvcTemplate = &storage.DefaultPVC
