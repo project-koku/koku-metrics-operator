@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -74,6 +73,8 @@ type KokuMetricsConfigReconciler struct {
 	Scheme          *runtime.Scheme
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
+	Clientset       *kubernetes.Clientset
+	InCluster       bool
 }
 
 type serializedAuthMap struct {
@@ -167,17 +168,8 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", "GetPullSecretToken")
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		panic(err.Error())
-	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
-	secret, err := clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 
+	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
