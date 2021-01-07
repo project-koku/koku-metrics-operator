@@ -485,7 +485,8 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
-// +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
+// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=create;get;list;patch;watch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
 func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
