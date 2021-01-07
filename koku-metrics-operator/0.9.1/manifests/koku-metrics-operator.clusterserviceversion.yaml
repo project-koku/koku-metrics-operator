@@ -30,11 +30,11 @@ metadata:
           }
         }
       ]
-    capabilities: Basic Install
+    capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator:v0.9.1
-    createdAt: "2021-01-06T19:07:04Z"
+    createdAt: "2021-01-07T20:21:02Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
