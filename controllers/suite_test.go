@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,6 +53,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var cfg *rest.Config
+var clientset *kubernetes.Clientset
 var k8sClient client.Client
 var k8sManager ctrl.Manager
 var testEnv *envtest.Environment
@@ -106,11 +108,15 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	clientset, err = kubernetes.NewForConfig(cfg)
+	Expect(err).ToNot(HaveOccurred())
+
 	if !useCluster {
 		err = (&KokuMetricsConfigReconciler{
-			Client: k8sManager.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
-			Scheme: scheme.Scheme,
+			Client:    k8sManager.GetClient(),
+			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
+			Scheme:    scheme.Scheme,
+			Clientset: clientset,
 		}).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
 	}
