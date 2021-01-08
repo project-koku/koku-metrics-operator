@@ -21,10 +21,12 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -110,6 +112,44 @@ func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	}
 
 	return info, out.Close()
+}
+
+func TestGetClientset(t *testing.T) {
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working dir: %v", err)
+	}
+
+	fmt.Printf("CURRENT DIR: %s\n", dir)
+
+	ErrClientset := errors.New("test error")
+	getClientsetTests := []struct {
+		name        string
+		config      string
+		expectedErr error
+	}{
+		{name: "no config file", config: "", expectedErr: ErrClientset},
+		{name: "fake config file", config: "test_files/kubeconfig", expectedErr: nil},
+		// {name: "no decimal", input: 1234567890, want: "1234567890.000000"},
+	}
+	for _, tt := range getClientsetTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Setenv("KUBECONFIG", filepath.Join(dir, tt.config)); err != nil {
+				t.Fatal("failed to set KUBECONFIG variable")
+			}
+			defer func() { os.Unsetenv("KUBECONFIG") }()
+			got, err := GetClientset()
+			if err == nil && tt.expectedErr != nil {
+				t.Errorf("%s expected error but got %v", tt.name, err)
+			}
+			if err != nil && tt.expectedErr == nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && got == nil {
+				t.Errorf("%s result is unexpectedly nil", tt.name)
+			}
+		})
+	}
 }
 
 func setup() error {
