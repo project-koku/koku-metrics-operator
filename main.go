@@ -42,14 +42,13 @@ var (
 )
 
 func init() {
-	// Adding the kokumetricscfgv1alpha1 scheme
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
 
 	// Adding the configv1 scheme
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1.AddToScheme(scheme))
+	// Adding the kokumetricscfgv1alpha1 scheme
+	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
+
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -70,16 +69,24 @@ func main() {
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "91c624a5.openshift.io",
+		Namespace:          "koku-metrics-operator",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
+	clientset, err := controllers.GetClientset()
+	if err != nil {
+		setupLog.Error(err, "unable to get clientset")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.KokuMetricsConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
+		Scheme:    mgr.GetScheme(),
+		Clientset: clientset,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
 		os.Exit(1)
