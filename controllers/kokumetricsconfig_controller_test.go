@@ -119,9 +119,6 @@ func TestGetClientset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get working dir: %v", err)
 	}
-
-	fmt.Printf("CURRENT DIR: %s\n", dir)
-
 	ErrClientset := errors.New("test error")
 	getClientsetTests := []struct {
 		name        string
@@ -130,7 +127,6 @@ func TestGetClientset(t *testing.T) {
 	}{
 		{name: "no config file", config: "", expectedErr: ErrClientset},
 		{name: "fake config file", config: "test_files/kubeconfig", expectedErr: nil},
-		// {name: "no decimal", input: 1234567890, want: "1234567890.000000"},
 	}
 	for _, tt := range getClientsetTests {
 		t.Run(tt.name, func(t *testing.T) {
