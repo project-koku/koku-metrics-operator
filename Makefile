@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.0
-VERSION ?= 0.9.1
+PREVIOUS_VERSION ?= 0.9.1
+VERSION ?= 0.9.2
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-controller-bundle:$(VERSION)
 # Options for 'bundle-build'
