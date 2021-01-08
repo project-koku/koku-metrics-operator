@@ -139,4 +139,4 @@ $ docker push quay.io/$USERNAME/test-catalog:latest
 7. Check that the test-catalog in OCP contains the new version.
 8. Observe the installed operator, and ensure it upgrades automatically.
 
-Now the upgraded operator should be tested.
+Once the operator has upgraded, run through manual tests as normal. 
