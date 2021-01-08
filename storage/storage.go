@@ -1,3 +1,22 @@
+/*
+
+
+Copyright 2021 Red Hat, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package storage
 
 import (
@@ -11,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/go-logr/logr"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 )
 
@@ -36,15 +56,22 @@ var (
 	}
 )
 
-type Storage struct {
-	PVC    *corev1.PersistentVolumeClaim
-	Client client.Client
-	vol    *volume
-}
-
 type volume struct {
 	index  int
 	volume *corev1.Volume
+}
+
+func (v *volume) isMounted() bool {
+	return v.volume.PersistentVolumeClaim != nil
+}
+
+// Storage is a struct containing volume information
+type Storage struct {
+	Client client.Client
+	Log    logr.Logger
+	PVC    *corev1.PersistentVolumeClaim
+
+	vol *volume
 }
 
 func (s *Storage) getOrCreateVolume() error {
@@ -74,10 +101,6 @@ func (s *Storage) getVolume(vols []corev1.Volume, kmCfg *kokumetricscfgv1alpha1.
 	return fmt.Errorf("volume not found")
 }
 
-func (v *volume) isMounted() bool {
-	return v.volume.PersistentVolumeClaim != nil
-}
-
 func (s *Storage) mountVolume(dep *appsv1.Deployment) (bool, error) {
 	ctx := context.Background()
 	s.vol.volume.EmptyDir = nil
@@ -93,9 +116,12 @@ func (s *Storage) mountVolume(dep *appsv1.Deployment) (bool, error) {
 	return true, nil
 }
 
+// ConvertPVC converts the volume in deployment to PVC
 func ConvertPVC(s *Storage, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (bool, error) {
 	ctx := context.Background()
+	log := s.Log.WithValues("kokumetricsconfig", "ConvertPVC")
 
+	log.Info("getting deployment")
 	deployment := &appsv1.Deployment{}
 	namespace := types.NamespacedName{
 		Namespace: "koku-metrics-operator",
@@ -105,19 +131,23 @@ func ConvertPVC(s *Storage, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (bo
 	}
 	deployCp := deployment.DeepCopy()
 
+	log.Info("getting deployment volumes")
 	if err := s.getVolume(deployCp.Spec.Template.Spec.Volumes, kmCfg); err != nil {
 		return false, err
 	}
 
 	if s.vol.isMounted() && s.vol.volume.PersistentVolumeClaim.ClaimName == s.PVC.Name {
+		log.Info(fmt.Sprintf("deployment volume is mounted to PVC name: %s", s.PVC.Name))
 		kmCfg.Status.Storage.VolumeMounted = true
 		return false, nil
 	}
 
+	log.Info("attempting to get or create PVC")
 	if err := s.getOrCreateVolume(); err != nil {
 		return false, fmt.Errorf("failed to get or create PVC: %v", err)
 	}
 
+	log.Info(fmt.Sprintf("attempting to mount deployment onto PVC name: %s", s.PVC.Name))
 	return s.mountVolume(deployCp)
 }
 

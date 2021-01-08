@@ -527,18 +527,19 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		if pvcTemplate == nil {
 			pvcTemplate = &storage.DefaultPVC
 		}
-		pvc := storage.MakeVolumeClaimTemplate(*pvcTemplate)
 
 		stor := &storage.Storage{
-			PVC:    pvc,
 			Client: r.Client,
+			Log:    r.Log,
+			PVC:    storage.MakeVolumeClaimTemplate(*pvcTemplate),
 		}
 
 		mountEstablished, err := storage.ConvertPVC(stor, kmCfg)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
 		}
-		if mountEstablished {
+		if mountEstablished { // this bool confirms that the deployment volume mount was updated. This bool does _not_ confirm that the deployment is mounted to the spec PVC.
+			log.Info(fmt.Sprintf("deployment was successfully mounted onto PVC name: %s", stor.PVC.Name))
 			return ctrl.Result{}, nil
 		}
 

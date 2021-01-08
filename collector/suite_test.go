@@ -67,7 +67,7 @@ func TestCollector(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
+		"Collector Suite",
 		[]Reporter{printer.NewlineReporter{}})
 }
 
