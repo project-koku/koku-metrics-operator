@@ -44,10 +44,10 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	// Adding the kokumetricscfgv1alpha1 scheme
-	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
 	// Adding the configv1 scheme
 	utilruntime.Must(configv1.AddToScheme(scheme))
+	// Adding the kokumetricscfgv1alpha1 scheme
+	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
 
 	// +kubebuilder:scaffold:scheme
 }
