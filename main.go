@@ -74,9 +74,16 @@ func main() {
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "91c624a5.openshift.io",
+		Namespace:          "koku-metrics-operator",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	clientset, err := controllers.GetClientset()
+	if err != nil {
+		setupLog.Error(err, "unable to get clientset")
 		os.Exit(1)
 	}
 
@@ -85,6 +92,7 @@ func main() {
 		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
 		InCluster: inCluster,
+		Clientset: clientset,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
 		os.Exit(1)

@@ -38,8 +38,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
@@ -69,9 +71,11 @@ var (
 // KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
 type KokuMetricsConfigReconciler struct {
 	client.Client
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	InCluster       bool
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	InCluster bool
+	Clientset *kubernetes.Clientset
+
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
 }
@@ -147,6 +151,20 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.K
 	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
 }
 
+// GetClientset returns a clientset based on rest.config
+func GetClientset() (*kubernetes.Clientset, error) {
+	config, err := config.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
+
 // GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
 func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
@@ -167,11 +185,8 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", "GetPullSecretToken")
-	secret := &corev1.Secret{}
-	namespace := types.NamespacedName{
-		Namespace: openShiftConfigNamespace,
-		Name:      pullSecretName}
-	err := r.Get(ctx, namespace, secret)
+
+	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
@@ -477,16 +492,13 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 
 }
 
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,resources=kokumetricsconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=config.openshift.io,resources=proxies;networks,verbs=get;list
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
-// +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;tokenreviews,verbs=create
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=secrets;serviceaccounts,verbs=list;watch
-// +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=create;delete;get;list;patch;update;watch
-// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=create;get;list;patch;watch
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;patch;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
+// +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
 func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
