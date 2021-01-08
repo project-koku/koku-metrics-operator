@@ -43,7 +43,7 @@ $ cd testing/$PREVIOUS_VERSION
 Build the bundle and push to quay:
 
 ```sh
-$ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION; docker push quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION
+$ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:v$PREVIOUS_VERSION; docker push quay.io/$USERNAME/koku-metrics-operator-bundle:v$PREVIOUS_VERSION
 ```
 
 Use `opm` to build a catalog image with the koku-metrics-operator and then push the image:
@@ -139,4 +139,4 @@ $ docker push quay.io/$USERNAME/test-catalog:latest
 7. Check that the test-catalog in OCP contains the new version.
 8. Observe the installed operator, and ensure it upgrades automatically.
 
-Now the upgraded operator should be tested.
+Once the operator has upgraded, run through manual tests as normal. 
