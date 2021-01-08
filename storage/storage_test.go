@@ -44,8 +44,10 @@ var (
 		Name: "koku-metrics-operator-reports",
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}
-	// persistVCfake = &corev1.Volume{VolumeSource: corev1.VolumeSource{
-	// 	PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "not-the-right-one"}}}
+	persistVCfake = &corev1.Volume{
+		Name: "koku-metrics-operator-reports",
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "not-the-right-one"}}}
 	volMount = &corev1.VolumeMount{
 		Name:      "koku-metrics-operator-reports",
 		MountPath: "/tmp/koku-metrics-operator-reports",
@@ -54,6 +56,8 @@ var (
 		Name:      "wrong-mount",
 		MountPath: "/tmp/koku-metrics-operator-reports",
 	}
+	// For the following deployments, the only things of importance are the ObjectMeta, Volumes, VolumeMounts.
+	// All the other definitions are boilerplate so that the deployment will be created successfully.
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "koku-metrics-controller-manager",
@@ -163,8 +167,8 @@ var _ = Describe("Storage Tests", func() {
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -239,7 +243,6 @@ var _ = Describe("Storage Tests", func() {
 			Expect(mountEst).To(BeFalse())
 		})
 		It("volume is already mounted", func() {
-			// replace the correct vol mount with an incorrect one
 			depCp := deployment.DeepCopy()
 			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVC}
 			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
@@ -255,6 +258,26 @@ var _ = Describe("Storage Tests", func() {
 			mountEst, err := ConvertPVC(s, kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeFalse())
+		})
+		It("volume is already mounted but does not match spec", func() {
+			pvcCp := MakeVolumeClaimTemplate(DefaultPVC)
+			pvcCp.Name = "not-the-right-one"
+			Expect(k8sClient.Create(ctx, pvcCp)).Should(Succeed())
+			depCp := deployment.DeepCopy()
+			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVCfake}
+			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+
+			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			pvc := MakeVolumeClaimTemplate(DefaultPVC)
+			s := &Storage{
+				Client: k8sClient,
+				Log:    testLogger,
+				PVC:    pvc,
+			}
+
+			mountEst, err := ConvertPVC(s, kmCfg)
+			Expect(err).To(BeNil())
+			Expect(mountEst).To(BeTrue())
 		})
 	})
 })

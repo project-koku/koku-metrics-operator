@@ -76,12 +76,15 @@ type Storage struct {
 
 func (s *Storage) getOrCreateVolume() error {
 	ctx := context.Background()
+	log := s.Log.WithValues("kokumetricsconfig", "getOrCreateVolume")
 	namespace := types.NamespacedName{
 		Namespace: "koku-metrics-operator",
 		Name:      s.PVC.Name}
 	if err := s.Client.Get(ctx, namespace, s.PVC); err == nil {
+		log.Info(fmt.Sprintf("PVC name %s already exists", s.PVC.Name))
 		return nil
 	}
+	log.Info(fmt.Sprintf("attempting to create PVC name: %s", s.PVC.Name))
 	return s.Client.Create(ctx, s.PVC)
 }
 
