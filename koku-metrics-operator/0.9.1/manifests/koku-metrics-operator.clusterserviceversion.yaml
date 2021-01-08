@@ -34,7 +34,7 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator:v0.9.1
-    createdAt: "2021-01-07T22:39:26Z"
+    createdAt: "2021-01-08T15:08:27Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
@@ -188,13 +188,6 @@ spec:
       clusterPermissions:
       - rules:
         - apiGroups:
-          - authorization.k8s.io
-          resources:
-          - subjectaccessreviews
-          - tokenreviews
-          verbs:
-          - create
-        - apiGroups:
           - config.openshift.io
           resources:
           - clusterversions
@@ -202,14 +195,6 @@ spec:
           - get
           - list
           - watch
-        - apiGroups:
-          - config.openshift.io
-          resources:
-          - networks
-          - proxies
-          verbs:
-          - get
-          - list
         - apiGroups:
           - ""
           resources:
@@ -222,30 +207,8 @@ spec:
           - ""
           resources:
           - secrets
-          - serviceaccounts
-          verbs:
-          - list
-          - watch
-        - apiGroups:
-          - koku-metrics-cfg.openshift.io
-          resources:
-          - kokumetricsconfigs
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - koku-metrics-cfg.openshift.io
-          resources:
-          - kokumetricsconfigs/status
           verbs:
           - get
-          - patch
-          - update
         serviceAccountName: koku-metrics-manager-role
       deployments:
       - name: koku-metrics-controller-manager
@@ -326,6 +289,15 @@ spec:
         serviceAccountName: koku-metrics-leader-election-role
       - rules:
         - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - get
+          - list
+          - patch
+          - watch
+        - apiGroups:
           - ""
           resources:
           - configmaps
@@ -334,6 +306,7 @@ spec:
           - persistentvolumeclaims
           - pods
           - secrets
+          - serviceaccounts
           - services
           - services/finalizers
           verbs:
@@ -344,6 +317,26 @@ spec:
           - patch
           - update
           - watch
+        - apiGroups:
+          - koku-metrics-cfg.openshift.io
+          resources:
+          - kokumetricsconfigs
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - koku-metrics-cfg.openshift.io
+          resources:
+          - kokumetricsconfigs/status
+          verbs:
+          - get
+          - patch
+          - update
         serviceAccountName: koku-metrics-manager-role
     strategy: deployment
   installModes:
