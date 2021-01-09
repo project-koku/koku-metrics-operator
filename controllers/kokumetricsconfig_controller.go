@@ -50,6 +50,7 @@ import (
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/packaging"
 	"github.com/project-koku/koku-metrics-operator/sources"
+	"github.com/project-koku/koku-metrics-operator/storage"
 )
 
 var (
@@ -70,12 +71,13 @@ var (
 // KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
 type KokuMetricsConfigReconciler struct {
 	client.Client
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	Clientset *kubernetes.Clientset
+	InCluster bool
+
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
-	Clientset       *kubernetes.Clientset
-	InCluster       bool
 }
 
 type serializedAuthMap struct {
@@ -477,7 +479,41 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 	}
 	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
+}
 
+func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
+	ctx := context.Background()
+	log := r.Log.WithValues("kokumetricsconfig", configurePVC)
+	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
+	if pvcTemplate == nil {
+		pvcTemplate = &storage.DefaultPVC
+	}
+
+	stor := &storage.Storage{
+		Client: r.Client,
+		Log:    r.Log,
+		PVC:    storage.MakeVolumeClaimTemplate(*pvcTemplate),
+	}
+
+	mountEstablished, err := storage.ConvertVolume(stor, kmCfg)
+	if err != nil {
+		return &ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
+	}
+	if mountEstablished { // this bool confirms that the deployment volume mount was updated. This bool does _not_ confirm that the deployment is mounted to the spec PVC.
+		log.Info(fmt.Sprintf("deployment was successfully mounted onto PVC name: %s", stor.PVC.Name))
+		return &ctrl.Result{}, nil
+	}
+
+	kmCfg.Status.Storage.PersistentVolumeClaim = pvcTemplate
+
+	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
+		kmCfg.Status.Storage.VolumeMounted = false
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			log.Error(err, "failed to update KokuMetricsConfig status")
+		}
+		return &ctrl.Result{}, fmt.Errorf("PVC not mounted")
+	}
+	return nil, nil
 }
 
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -511,6 +547,13 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
+
+	if r.InCluster {
+		res, err := configurePVC(r, kmCfg)
+		if err != nil || res != nil {
+			return *res, err
+		}
+	}
 
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, kmCfg); err != nil {
