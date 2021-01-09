@@ -98,7 +98,7 @@ type PackagingSpec struct {
 	// The default is 360 min (6 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=360
-	PackagingCycle *int64 `json:"packaging_cycle,omitempty"`
+	PackagingCycle *int64 `json:"packaging_cycle"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.

@@ -391,19 +391,6 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
-// ReadUploadDir returns the fileinfo for each file in the upload dir
-func (p *FilePackager) ReadUploadDir() ([]string, error) {
-	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
-	if err != nil {
-		return nil, fmt.Errorf("could not read upload directory: %v", err)
-	}
-	fileList := []string{}
-	for _, file := range outFiles {
-		fileList = append(fileList, file.Name())
-	}
-	return fileList, nil
-}
-
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
