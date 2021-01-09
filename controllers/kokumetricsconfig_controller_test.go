@@ -54,7 +54,8 @@ var (
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
-	instance                    = kokumetricscfgv1alpha1.KokuMetricsConfig{
+
+	instance = kokumetricscfgv1alpha1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 		},
@@ -253,7 +254,6 @@ var _ = Describe("KokuMetricsConfigController", func() {
 
 	AfterEach(func() {
 		shutdown()
-
 	})
 
 	Describe("KokuMetricsConfig CRD Handling", func() {
@@ -466,7 +466,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 		})
 		It("should should fail due to deleted token secret", func() {
-			deletePullSecret(openShiftConfigNamespace, fakeDockerConfig())
+			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "nopullsecret"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -486,7 +486,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should should fail token secret wrong data", func() {
-			createBadPullSecret(openShiftConfigNamespace)
+			createBadPullSecret(ctx, openShiftConfigNamespace)
 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "nopulldata"
@@ -507,7 +507,7 @@ var _ = Describe("KokuMetricsConfigController", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 		})
 		It("should fail bc of missing cluster version", func() {
-			deleteClusterVersion()
+			deleteClusterVersion(ctx)
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "missingcvfailure"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -529,9 +529,9 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		It("should attempt upload due to tar.gz being present", func() {
 			err := setup()
 			Expect(err, nil)
-			createClusterVersion(clusterID)
-			deletePullSecret(openShiftConfigNamespace, fakeDockerConfig())
-			createPullSecret(openShiftConfigNamespace, fakeDockerConfig())
+			createClusterVersion(ctx, clusterID)
+			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
+			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "attemptupload"

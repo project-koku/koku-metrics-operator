@@ -79,15 +79,8 @@ var (
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "web",
-							Image: "nginx:1.12",
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									Protocol:      corev1.ProtocolTCP,
-									ContainerPort: 80,
-								},
-							},
+							Name:         "web",
+							Image:        "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{*volMount},
 						},
 					},
@@ -119,13 +112,6 @@ var (
 						{
 							Name:  "web",
 							Image: "nginx:1.12",
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									Protocol:      corev1.ProtocolTCP,
-									ContainerPort: 80,
-								},
-							},
 						},
 					},
 				},
