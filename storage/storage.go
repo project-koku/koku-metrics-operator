@@ -119,10 +119,10 @@ func (s *Storage) mountVolume(dep *appsv1.Deployment) (bool, error) {
 	return true, nil
 }
 
-// ConvertPVC converts the volume in deployment to PVC
-func ConvertPVC(s *Storage, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (bool, error) {
+// ConvertVolume converts the EmptyDir volume in deployment to PVC
+func ConvertVolume(s *Storage, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (bool, error) {
 	ctx := context.Background()
-	log := s.Log.WithValues("kokumetricsconfig", "ConvertPVC")
+	log := s.Log.WithValues("kokumetricsconfig", "ConvertVolume")
 
 	log.Info("getting deployment")
 	deployment := &appsv1.Deployment{}

@@ -35,6 +35,7 @@ import (
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -241,11 +242,12 @@ func shutdown() {
 	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
 }
 
-var _ = Describe("KokuMetricsConfigController", func() {
+var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
 	ctx := context.Background()
+	GitCommit = "1234567"
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
@@ -256,30 +258,70 @@ var _ = Describe("KokuMetricsConfigController", func() {
 		shutdown()
 	})
 
-	Describe("KokuMetricsConfig CRD Handling", func() {
-		Context("Process CRD resource", func() {
-			It("should provide defaults for empty CRD case", func() {
-				GitCommit = "1234567"
+	Context("Process CRD resource - prior PVC mount", func() {
+		// All tests within this Context are only checking the funcationaliy of mounting the PVC
+		// All other reconciler tests, post PVC mount, are performed in the following Context
+		BeforeEach(func() {
+		})
+		AfterEach(func() {
+		})
+		It("should create and mount PVC for CR without PVC spec", func() {
+			createDeployment(ctx, emptyDirDeployment)
 
-				instCopy := instance.DeepCopy()
-				instCopy.ObjectMeta.Name = namePrefix + "emptycrd"
-				Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-1"
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-				fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			// wait until the deployment vol has changed
+			Eventually(func() bool {
+				fetched := &appsv1.Deployment{}
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDirDeployment.Name, Namespace: namespace}, fetched)
+				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil
+			}, timeout, interval).Should(BeTrue())
+		})
+		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
+			// reuse the old deployment
 
-				// wait until the cluster ID is set
-				Eventually(func() bool {
-					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-					return fetched.Status.ClusterID != ""
-				}, timeout, interval).Should(BeTrue())
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-2"
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
-				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
-				Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
-			})
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+
+			// wait until the deployment vol has changed
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+
+			deleteDeployment(ctx, emptyDirDeployment)
+		})
+
+	})
+	Context("Process CRD resource - post PVC mount", func() {
+		It("should provide defaults for empty CRD case", func() {
+			createDeployment(ctx, pvcDeployment)
+
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "emptycrd"
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+
+			// wait until the cluster ID is set
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
 		})
 		It("upload set to false case", func() {
 

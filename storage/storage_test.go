@@ -171,7 +171,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertPVC(s, kmCfg)
+			mountEst, err := ConvertVolume(s, kmCfg)
 			Expect(err).ToNot(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -188,7 +188,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertPVC(s, kmCfg)
+			mountEst, err := ConvertVolume(s, kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeTrue())
 		})
@@ -207,7 +207,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertPVC(s, kmCfg)
+			mountEst, err := ConvertVolume(s, kmCfg)
 			Expect(err).ToNot(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -224,7 +224,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertPVC(s, kmCfg)
+			mountEst, err := ConvertVolume(s, kmCfg)
 			Expect(err).ToNot(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -241,7 +241,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertPVC(s, kmCfg)
+			mountEst, err := ConvertVolume(s, kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -261,7 +261,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertPVC(s, kmCfg)
+			mountEst, err := ConvertVolume(s, kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeTrue())
 		})

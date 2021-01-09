@@ -93,6 +93,12 @@ type PackagingSpec struct {
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=100
 	MaxSize int64 `json:"max_size_MB"`
+
+	// PackagingCycle is a field of KokuMetricsConfig to represent the number of minutes between each packaging cycle.
+	// The default is 360 min (6 hours).
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=360
+	PackagingCycle *int64 `json:"packaging_cycle,omitempty"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
@@ -109,7 +115,7 @@ type UploadSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
+	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload cycle.
 	// The default is 360 min (6 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=360
@@ -158,7 +164,7 @@ type CloudDotRedHatSourceSpec struct {
 	// +kubebuilder:default=false
 	CreateSource *bool `json:"create_source"`
 
-	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule
+	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check cycle
 	// The default is 1440 min (24 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=1440
@@ -261,6 +267,14 @@ type PackagingStatus struct {
 	// +optional
 	MaxSize *int64 `json:"max_size_MB,omitempty"`
 
+	// LastSuccessfulPackagingTime is a field of KokuMetricsConfig that shows the time of the last successful file packaging.
+	// +nullable
+	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_upload_time,omitempty"`
+
+	// PackagingCycle is a field of KokuMetricsConfig to represent the number of minutes between each packaging cycle.
+	// The default is 360 min (6 hours).
+	PackagingCycle *int64 `json:"packaging_cycle,omitempty"`
+
 	// PackagingError is a field of KokuMetricsConfigStatus to represent the error encountered packaging the reports.
 	// +optional
 	PackagingError string `json:"error,omitempty"`
@@ -280,7 +294,7 @@ type UploadStatus struct {
 	// UploadWait is a field of KokuMetricsConfig to represent the time to wait before sending an upload.
 	UploadWait *int64 `json:"upload_wait,omitempty"`
 
-	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
+	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload cycle.
 	// The default is 360 min (6 hours).
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
@@ -330,7 +344,7 @@ type CloudDotRedHatSourceStatus struct {
 	// +nullable
 	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
-	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule.
+	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check cycle.
 	// The default is 1440 min (24 hours).
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }

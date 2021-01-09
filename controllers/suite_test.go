@@ -46,7 +46,6 @@ import (
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// +kubebuilder:scaffold:imports
 )
@@ -55,13 +54,51 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg               *rest.Config
-	clientset         *kubernetes.Clientset
-	k8sClient         client.Client
-	k8sManager        ctrl.Manager
-	testEnv           *envtest.Environment
-	useCluster        bool
-	defaultDeployment = &appsv1.Deployment{
+	cfg                *rest.Config
+	clientset          *kubernetes.Clientset
+	k8sClient          client.Client
+	k8sManager         ctrl.Manager
+	testEnv            *envtest.Environment
+	useCluster         bool
+	emptyDirDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "koku-metrics-controller-manager",
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "demo",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "demo",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "web",
+							Image: "nginx:1.12",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "koku-metrics-operator-reports",
+									MountPath: "/tmp/koku-metrics-operator-reports",
+								}},
+						},
+					},
+					Volumes: []corev1.Volume{{
+						Name: "koku-metrics-operator-reports",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
+				},
+			},
+		},
+	}
+	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "koku-metrics-controller-manager",
 			Namespace: namespace,
@@ -99,24 +136,24 @@ var (
 			},
 		},
 	}
-	defaultPVC = &corev1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "PersistentVolumeClaim",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator-data",
-			Namespace: "koku-metrics-operator",
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
-				},
-			},
-		},
-	}
+	// defaultPVC = &corev1.PersistentVolumeClaim{
+	// 	TypeMeta: metav1.TypeMeta{
+	// 		APIVersion: "v1",
+	// 		Kind:       "PersistentVolumeClaim",
+	// 	},
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name:      "koku-metrics-operator-data",
+	// 		Namespace: "koku-metrics-operator",
+	// 	},
+	// 	Spec: corev1.PersistentVolumeClaimSpec{
+	// 		AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+	// 		Resources: corev1.ResourceRequirements{
+	// 			Requests: corev1.ResourceList{
+	// 				corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
+	// 			},
+	// 		},
+	// 	},
+	// }
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -300,9 +337,13 @@ func createDeployment(ctx context.Context, deployment *appsv1.Deployment) {
 	Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
 }
 
-func createPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim) {
-	Expect(k8sClient.Create(ctx, pvc)).Should(Succeed())
+func deleteDeployment(ctx context.Context, deployment *appsv1.Deployment) {
+	Expect(k8sClient.Delete(ctx, deployment)).Should(Succeed())
 }
+
+// func createPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim) {
+// 	Expect(k8sClient.Create(ctx, pvc)).Should(Succeed())
+// }
 
 func clusterPrep(ctx context.Context) {
 	if !useCluster {
@@ -323,8 +364,7 @@ func clusterPrep(ctx context.Context) {
 		// Create cluster version
 		createClusterVersion(ctx, clusterID)
 
-		createDeployment(ctx, defaultDeployment)
-		createPVC(ctx, defaultPVC)
+		// createPVC(ctx, defaultPVC)
 	}
 }
 

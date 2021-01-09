@@ -471,5 +471,6 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("file packaging was successful")
+	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
