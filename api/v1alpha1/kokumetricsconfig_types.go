@@ -269,7 +269,7 @@ type PackagingStatus struct {
 
 	// LastSuccessfulPackagingTime is a field of KokuMetricsConfig that shows the time of the last successful file packaging.
 	// +nullable
-	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_upload_time,omitempty"`
+	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_packaging_time,omitempty"`
 
 	// PackagingCycle is a field of KokuMetricsConfig to represent the number of minutes between each packaging cycle.
 	// The default is 360 min (6 hours).
