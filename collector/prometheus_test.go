@@ -22,19 +22,16 @@ package collector
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/xorcare/pointer"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type mappedMockPromResult map[string]*mockPromResult
@@ -418,12 +415,13 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 
 func TestGetPromConn(t *testing.T) {
 	getPromConnTests := []struct {
-		name        string
-		cfg         *PrometheusConfig
-		cfgErr      string
-		con         prometheusConnection
-		conErr      string
-		wantedError error
+		name         string
+		cfg          *PrometheusConfig
+		createTokCrt bool
+		cfgErr       string
+		con          prometheusConnection
+		conErr       string
+		wantedError  error
 	}{
 		{
 			name:        "nil promconn: return getConn error",
@@ -432,6 +430,25 @@ func TestGetPromConn(t *testing.T) {
 			con:         nil,
 			conErr:      "",
 			wantedError: errTest,
+		},
+		{
+			name:        "not empty ConfigError: return getConn error",
+			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
+			cfgErr:      "error",
+			con:         nil,
+			conErr:      "",
+			wantedError: errTest,
+		},
+		{
+			name:         "not empty ConfigError: reconfig and succeed",
+			cfg:          &PrometheusConfig{Address: "%gh&%ij"},
+			createTokCrt: true,
+			cfgErr:       "error",
+			con: &mockPrometheusConnection{
+				singleResult: &mockPromResult{err: nil},
+			},
+			conErr:      "",
+			wantedError: nil,
 		},
 		{
 			name:        "not empty ConnectionError: return getConn error",
@@ -464,6 +481,17 @@ func TestGetPromConn(t *testing.T) {
 	}
 	for _, tt := range getPromConnTests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.createTokCrt {
+				tmpBase := serviceaccountPath
+				serviceaccountPath = "./test_files/test_secrets"
+				cert := createCertificate(serviceaccountPath, certKey)
+				toke := createToken(serviceaccountPath, tokenKey)
+				defer func() {
+					serviceaccountPath = tmpBase
+					os.Remove(cert)
+					os.Remove(toke)
+				}()
+			}
 			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
@@ -485,224 +513,73 @@ func TestGetPromConn(t *testing.T) {
 	}
 }
 
-var _ = Describe("Collector Tests", func() {
-
-	BeforeEach(func() {
-		// failed test runs that do not clean up leave resources behind.
-		// &corev1.Pod{}, client.InNamespace("foo")
-		Expect(k8sClient.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
-	})
-
-	AfterEach(func() {
-
-	})
-
-	Describe("Get Bearer Token", func() {
-
-		It("should not find service account", func() {
-			createNamespace(kokuMetricsCfgNamespace)
-			result, err := getBearerToken(k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeEmpty())
-		})
-		It("should get the service account but not find secret", func() {
-			createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			result, err := getBearerToken(k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeEmpty())
-		})
-		It("should find secrets but not the koku-metrics-manager-role", func() {
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-			result, err := getBearerToken(k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeEmpty())
-		})
-		It("should get secret but token is not found", func() {
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "wrong-key", []byte{})})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			result, err := getBearerToken(k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeEmpty())
-		})
-		It("should successfully find token but token is empty", func() {
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte{})})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			result, err := getBearerToken(k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeEmpty())
-		})
-		It("should successfully find token", func() {
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			result, err := getBearerToken(k8sClient)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(result).Should(Equal(config.Secret([]byte(testSecretData))))
-		})
-	})
-	Describe("Get Prometheus Config", func() {
-		It("could not find certificate", func() {
-			certFile = "./test_files/service-ca.crt"
-			defer os.Remove(certFile)
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "not-here-token", []byte(testSecretData))})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
-				SvcAddress:          "svc-address",
-				SkipTLSVerification: pointer.Bool(true),
+func TestGetPrometheusConfig(t *testing.T) {
+	trueDef := true
+	kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
+		SvcAddress:          "svc-address",
+		SkipTLSVerification: &trueDef,
+	}
+	secretsPath := "./test_files/test_secrets"
+	getPromCfgTests := []struct {
+		name        string
+		basePath    string
+		certKey     string
+		tokenKey    string
+		want        *PrometheusConfig
+		wantedError error
+	}{
+		{
+			name:     "successful config",
+			basePath: secretsPath,
+			certKey:  createCertificate(secretsPath, certKey),
+			tokenKey: createToken(secretsPath, tokenKey),
+			want: &PrometheusConfig{
+				Address:     "svc-address",
+				SkipTLS:     true,
+				BearerToken: config.Secret([]byte("this-is-token-data")),
+				CAFile:      filepath.Join(secretsPath, certKey),
+			},
+			wantedError: nil,
+		},
+		{
+			name:        "missing token",
+			basePath:    secretsPath,
+			certKey:     createCertificate(secretsPath, certKey),
+			tokenKey:    "missing-token",
+			want:        nil,
+			wantedError: errTest,
+		},
+		{
+			name:        "missing service-cert",
+			basePath:    secretsPath,
+			certKey:     "missing-cert",
+			tokenKey:    createToken(secretsPath, tokenKey),
+			want:        nil,
+			wantedError: errTest,
+		},
+	}
+	for _, tt := range getPromCfgTests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpBase := serviceaccountPath
+			serviceaccountPath = tt.basePath
+			defer func() {
+				serviceaccountPath = tmpBase
+				os.Remove(tt.certKey)
+				os.Remove(tt.tokenKey)
+			}()
+			got, err := getPrometheusConfig(kmCfg)
+			if tt.wantedError == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
-			result, err := getPrometheusConfig(kmCfg, k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeNil())
-		})
-		It("could not find bearer token", func() {
-			certFile = "./test_files/service-ca.crt"
-			defer os.Remove(certFile)
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "not-here-token", []byte(testSecretData))})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
-				SvcAddress:          "svc-address",
-				SkipTLSVerification: pointer.Bool(true),
+			if tt.wantedError != nil && err == nil {
+				t.Errorf("%s expected error, got %v", tt.name, err)
 			}
-			result, err := getPrometheusConfig(kmCfg, k8sClient)
-			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeNil())
-		})
-		It("could find bearer token", func() {
-			certFile = "./test_files/service-ca.crt"
-			defer os.Remove(certFile)
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
-				SvcAddress:          "svc-address",
-				SkipTLSVerification: pointer.Bool(true),
+			if got != nil && !reflect.DeepEqual(*got, *tt.want) {
+				t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)
 			}
-			result, err := getPrometheusConfig(kmCfg, k8sClient)
-
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(result.BearerToken).Should(Equal(config.Secret([]byte(testSecretData))))
-			Expect(result.Address).Should(Equal("svc-address"))
-			Expect(result.SkipTLS).Should(BeTrue())
-			Expect(result.CAFile).Should(Equal(certFile))
-		})
-	})
-	Describe("Get Prometheus Connection - without cert", func() {
-		It("could not get prometheus connection because of missing cert", func() {
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecret(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-
-			promSpec = nil
-			certFile = "./test_files/service-ca.crt"
-			defer os.Remove(certFile)
-
-			col := PromCollector{
-				Client: k8sClient,
-				Log:    testLogger,
+			if got == nil && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)
 			}
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SvcAddress:          "svc-address",
-						SkipTLSVerification: pointer.Bool(true),
-					}}}
-			err := col.GetPromConn(kmCfg)
-			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
-			Expect(col.PromCfg).To(BeNil())
-			Expect(kmCfg.Status.Prometheus.ConfigError).ToNot(Equal(""))
-			Expect(kmCfg.Status.Prometheus.PrometheusConfigured).To(BeFalse())
-
 		})
-	})
-	Describe("Get Prometheus Connection - with cert", func() {
-		BeforeEach(func() {
-			secrets := createListOfRandomSecrets(5, kokuMetricsCfgNamespace)
-			secrets = append(secrets, corev1.ObjectReference{
-				Name: createPullSecretWithCert(kokuMetricsCfgNamespace, "koku-metrics-manager-role-token", "token", []byte(testSecretData))})
-			sa := createServiceAccount(kokuMetricsCfgNamespace, serviceAccountName, testSecretData)
-			addSecretsToSA(secrets, sa)
-		})
-		It("Prom Spec NOT updated in CR", func() {
-			promSpec = nil
-			certFile = "./test_files/service-ca.crt"
-			defer os.Remove(certFile)
-
-			col := PromCollector{
-				Client: k8sClient,
-				Log:    testLogger,
-			}
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SvcAddress:          "svc-address",
-						SkipTLSVerification: pointer.Bool(true),
-					}}}
-			err := col.GetPromConn(kmCfg)
-			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
-			Expect(col.PromCfg).ToNot(BeNil())
-			Expect(col.PromCfg.Address).To(Equal("svc-address"))
-			Expect(col.PromConn).ToNot(BeNil())
-			Expect(kmCfg.Status.Prometheus.ConnectionError).ToNot(Equal(""))
-			Expect(kmCfg.Status.Prometheus.PrometheusConnected).To(BeFalse())
-
-			kmCfg.Spec.PrometheusConfig.SvcAddress = "svc-address"
-			err = col.GetPromConn(kmCfg)
-			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
-			Expect(col.PromCfg.Address).To(Equal("svc-address"))
-		})
-		It("Update Prom Spec in CR", func() {
-			promSpec = nil
-			certFile = "./test_files/service-ca.crt"
-			defer os.Remove(certFile)
-
-			col := PromCollector{
-				Client: k8sClient,
-				Log:    testLogger,
-			}
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{
-				Spec: kokumetricscfgv1alpha1.KokuMetricsConfigSpec{
-					PrometheusConfig: kokumetricscfgv1alpha1.PrometheusSpec{
-						SvcAddress:          "svc-address",
-						SkipTLSVerification: pointer.Bool(true),
-					}}}
-			err := col.GetPromConn(kmCfg)
-			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
-			Expect(col.PromCfg).ToNot(BeNil())
-			Expect(col.PromCfg.Address).To(Equal("svc-address"))
-			Expect(col.PromConn).ToNot(BeNil())
-			Expect(kmCfg.Status.Prometheus.ConnectionError).ToNot(Equal(""))
-			Expect(kmCfg.Status.Prometheus.PrometheusConnected).To(BeFalse())
-
-			kmCfg.Spec.PrometheusConfig.SvcAddress = "new-svc-address"
-			err = col.GetPromConn(kmCfg)
-			Expect(err).Should(HaveOccurred()) // error occurs because test connection fails
-			Expect(col.PromCfg.Address).To(Equal("new-svc-address"))
-		})
-	})
-})
+	}
+}
