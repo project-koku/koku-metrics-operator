@@ -389,10 +389,13 @@ type ReportsStatus struct {
 
 // StorageStatus defines the status for storage.
 type StorageStatus struct {
+
 	// VolumeType is the string representation of the volume type.
 	VolumeType string `json:"volume_type,omitempty"`
+
 	// VolumeMounted is a bool to indicate if storage volume was mounted.
 	VolumeMounted bool `json:"volume_mounted,omitempty"`
+
 	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
 	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"PersistentVolumeClaim,omitempty"`
 }
