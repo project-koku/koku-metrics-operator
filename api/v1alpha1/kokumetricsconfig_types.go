@@ -206,6 +206,12 @@ type CloudDotRedHatSourceSpec struct {
 	CheckCycle *int64 `json:"check_cycle"`
 }
 
+// StorageSpec defines the desired state of Storage object in the KokuMetricsConfigSpec.
+type StorageSpec struct {
+	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
+	VolumeClaimTemplate *EmbeddedPersistentVolumeClaim `json:"volume_claim_template,omitempty"`
+}
+
 // KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
 type KokuMetricsConfigSpec struct {
 	// +kubebuilder:validation:preserveUnknownFields=false
@@ -236,8 +242,8 @@ type KokuMetricsConfigSpec struct {
 	// Source is a field of KokuMetricsConfig to represent the desired source on cloud.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
-	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
-	VolumeClaimTemplate *EmbeddedPersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
+	// Storage is a field of KokuMetricsConfig to represent the desired storage configuration.
+	Storage StorageSpec `json:"storage,omitempty"`
 }
 
 // AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.

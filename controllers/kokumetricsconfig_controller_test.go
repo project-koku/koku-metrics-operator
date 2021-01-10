@@ -290,7 +290,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-3"
-			instCopy.Spec.VolumeClaimTemplate = differentPVC
+			instCopy.Spec.Storage.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			// wait until the deployment vol has changed
@@ -307,7 +307,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-4"
-			instCopy.Spec.VolumeClaimTemplate = differentPVC
+			instCopy.Spec.Storage.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			// wait until the deployment vol has changed
@@ -322,7 +322,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-5"
-			instCopy.Spec.VolumeClaimTemplate = differentPVC
+			instCopy.Spec.Storage.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
