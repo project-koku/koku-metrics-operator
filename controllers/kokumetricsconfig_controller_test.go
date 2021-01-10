@@ -599,13 +599,12 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			time.Sleep(time.Second * 5)
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// check the CR was created ok
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Storage.VolumeMounted
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(""))
