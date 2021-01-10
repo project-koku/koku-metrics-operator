@@ -523,7 +523,7 @@ spec:
               storage:
                 description: Storage is a field
                 properties:
-                  PersistentVolumeClaim:
+                  persistent_volume_claim:
                     description: PersistentVolumeClaim is a field of KokuMetricsConfig
                       to represent a PVC.
                     properties:

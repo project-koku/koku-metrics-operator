@@ -397,7 +397,7 @@ type StorageStatus struct {
 	VolumeMounted bool `json:"volume_mounted,omitempty"`
 
 	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
-	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"PersistentVolumeClaim,omitempty"`
+	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
 // KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
