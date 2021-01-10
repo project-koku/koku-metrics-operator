@@ -28,6 +28,7 @@ import (
 	"time"
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -484,8 +485,8 @@ func TestGetPromConn(t *testing.T) {
 			if tt.createTokCrt {
 				tmpBase := serviceaccountPath
 				serviceaccountPath = "./test_files/test_secrets"
-				cert := createCertificate(serviceaccountPath, certKey)
-				toke := createToken(serviceaccountPath, tokenKey)
+				cert := testutils.CreateCertificate(serviceaccountPath, certKey)
+				toke := testutils.CreateToken(serviceaccountPath, tokenKey)
 				defer func() {
 					serviceaccountPath = tmpBase
 					os.Remove(cert)
@@ -531,8 +532,8 @@ func TestGetPrometheusConfig(t *testing.T) {
 		{
 			name:     "successful config",
 			basePath: secretsPath,
-			certKey:  createCertificate(secretsPath, certKey),
-			tokenKey: createToken(secretsPath, tokenKey),
+			certKey:  testutils.CreateCertificate(secretsPath, certKey),
+			tokenKey: testutils.CreateToken(secretsPath, tokenKey),
 			want: &PrometheusConfig{
 				Address:     "svc-address",
 				SkipTLS:     true,
@@ -544,7 +545,7 @@ func TestGetPrometheusConfig(t *testing.T) {
 		{
 			name:        "missing token",
 			basePath:    secretsPath,
-			certKey:     createCertificate(secretsPath, certKey),
+			certKey:     testutils.CreateCertificate(secretsPath, certKey),
 			tokenKey:    "missing-token",
 			want:        nil,
 			wantedError: errTest,
@@ -553,7 +554,7 @@ func TestGetPrometheusConfig(t *testing.T) {
 			name:        "missing service-cert",
 			basePath:    secretsPath,
 			certKey:     "missing-cert",
-			tokenKey:    createToken(secretsPath, tokenKey),
+			tokenKey:    testutils.CreateToken(secretsPath, tokenKey),
 			want:        nil,
 			wantedError: errTest,
 		},

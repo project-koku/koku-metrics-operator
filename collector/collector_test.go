@@ -17,9 +17,12 @@ import (
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
+
+var testLogger = testutils.TestLogger{}
 
 const epsilon = 0.00001
 

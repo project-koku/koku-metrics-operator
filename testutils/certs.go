@@ -1,22 +1,4 @@
-/*
-
-
-Copyright 2020 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-package collector
+package testutils
 
 import (
 	"crypto/ecdsa"
@@ -32,17 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/project-koku/koku-metrics-operator/testutils"
-	// +kubebuilder:scaffold:imports
 )
 
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-
-var testLogger = testutils.TestLogger{}
-
-func createToken(basePath, filename string) string {
+func CreateToken(basePath, filename string) string {
 	tokenOut, err := os.Create(filepath.Join(basePath, filename))
 	if err != nil {
 		log.Fatalf("Failed to open token for writing: %v", err)
@@ -57,7 +31,7 @@ func createToken(basePath, filename string) string {
 	return tokenOut.Name()
 }
 
-func createCertificate(basePath, filename string) string {
+func CreateCertificate(basePath, filename string) string {
 	notBefore := time.Now()
 	notAfter := notBefore.Add(365 * 24 * time.Hour)
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
