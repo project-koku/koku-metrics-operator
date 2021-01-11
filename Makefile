@@ -1,5 +1,6 @@
 # Current Operator version
-VERSION ?= 0.9.1
+PREVIOUS_VERSION ?= 0.9.1
+VERSION ?= 0.9.2
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -263,7 +264,7 @@ bundle: manifests kustomize
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	scripts/txt_replace.py $(VERSION)
+	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION)
 
 # Build the bundle image.
 bundle-build:
