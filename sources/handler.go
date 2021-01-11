@@ -411,7 +411,7 @@ func SourceGetOrCreate(sSpec *SourceSpec, client crhchttp.HTTPClient) (bool, met
 			errMsg = fmt.Sprintf("A non-OpenShift source with name %s is already registered. Source names must be unique.", sSpec.Spec.SourceName)
 		} else {
 			errMsg = fmt.Sprintf("An OpenShift source with name %s is registered with a different cluster identifier of %s."+
-				" Another cluster may already be registered with a this name. Source names must be unique.",
+				" Another cluster may already be registered with this name. Source names must be unique.",
 				sSpec.Spec.SourceName, source.SourceRef)
 		}
 		log.Info(errMsg)
