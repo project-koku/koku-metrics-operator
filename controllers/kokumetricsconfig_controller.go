@@ -484,7 +484,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("kokumetricsconfig", configurePVC)
-	pvcTemplate := kmCfg.Spec.Storage.VolumeClaimTemplate
+	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
 	if pvcTemplate == nil {
 		pvcTemplate = &storage.DefaultPVC
 	}
