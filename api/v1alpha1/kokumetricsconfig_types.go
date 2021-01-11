@@ -373,6 +373,7 @@ type KokuMetricsConfigStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Namespaced
 
 // KokuMetricsConfig is the Schema for the kokumetricsconfig API
 type KokuMetricsConfig struct {
