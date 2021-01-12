@@ -55,6 +55,8 @@ var (
 	falseValue            bool  = false
 	trueValue             bool  = true
 	defaultUploadCycle    int64 = 360
+	defaultPackagingCycle int64 = 360
+	defaultMaxSize        int64 = 100
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
@@ -68,8 +70,8 @@ var (
 				AuthType: kokumetricscfgv1alpha1.Token,
 			},
 			Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-				MaxSize:        100,
-				PackagingCycle: &defaultUploadCycle,
+				MaxSize:        defaultMaxSize,
+				PackagingCycle: &defaultPackagingCycle,
 			},
 			Upload: kokumetricscfgv1alpha1.UploadSpec{
 				UploadCycle:    &defaultUploadCycle,
