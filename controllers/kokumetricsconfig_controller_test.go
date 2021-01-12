@@ -33,9 +33,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/storage"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -84,6 +87,23 @@ var (
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
 			APIURL: "https://not-the-real-cloud.redhat.com",
+		},
+	}
+	differentPVC = &kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "PersistentVolumeClaim",
+		},
+		EmbeddedObjectMetadata: kokumetricscfgv1alpha1.EmbeddedObjectMetadata{
+			Name: "a-different-pvc",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
+				},
+			},
 		},
 	}
 )
@@ -248,6 +268,9 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
 	ctx := context.Background()
+	emptyDep1 := emptyDirDeployment.DeepCopy()
+	emptyDep2 := emptyDirDeployment.DeepCopy()
+
 	GitCommit = "1234567"
 
 	BeforeEach(func() {
@@ -260,14 +283,18 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("Process CRD resource - prior PVC mount", func() {
-		// All tests within this Context are only checking the funcationaliy of mounting the PVC
-		// All other reconciler tests, post PVC mount, are performed in the following Context
-		BeforeEach(func() {
-		})
-		AfterEach(func() {
-		})
+		/*
+			All tests within this Context are only checking the functionality of mounting the PVC
+			All other reconciler tests, post PVC mount, are performed in the following Context
+
+				1. test default CR -> will create and mount deployment. Reconciler returns without changing anything, so test checks that the PVC exists in the deployment
+				2. re-use deployment, create new CR to mimic a pod reboot. Check storage status
+				3. re-use deployment, create new CR with specked PVC. Reconciler returns without changing anything. Test checks that PVC for deployment changed
+				4. new deployment, create new CR with specked PVC. Reconciler returns without changing anything. Test checks that PVC for deployment matches specked claim
+				5. repeat of 2 -> again, Check storage status
+		*/
 		It("should create and mount PVC for CR without PVC spec", func() {
-			createDeployment(ctx, emptyDirDeployment)
+			createDeployment(ctx, emptyDep1)
 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-1"
@@ -276,13 +303,13 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the deployment vol has changed
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDirDeployment.Name, Namespace: namespace}, fetched)
-				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
+				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
+					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "koku-metrics-operator-data"
 			}, timeout, interval).Should(BeTrue())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
-
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-2"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -296,11 +323,67 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-
-			deleteDeployment(ctx, emptyDirDeployment)
+			Expect(fetched.Status.Storage).ToNot(BeNil())
+			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
+			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
+			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
 		})
+		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
+			// reuse the old deployment
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-3"
+			instCopy.Spec.VolumeClaimTemplate = differentPVC
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
+			// wait until the deployment vol has changed
+			Eventually(func() bool {
+				fetched := &appsv1.Deployment{}
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
+				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != "koku-metrics-operator-data"
+			}, timeout, interval).Should(BeTrue())
+
+			deleteDeployment(ctx, emptyDep1)
+		})
+		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
+			createDeployment(ctx, emptyDep2)
+			// reuse the old deployment
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-4"
+			instCopy.Spec.VolumeClaimTemplate = differentPVC
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			// wait until the deployment vol has changed
+			Eventually(func() bool {
+				fetched := &appsv1.Deployment{}
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep2.Name, Namespace: namespace}, fetched)
+				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
+					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "a-different-pvc"
+			}, timeout, interval).Should(BeTrue())
+		})
+		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
+			// reuse the old deployment
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-5"
+			instCopy.Spec.VolumeClaimTemplate = differentPVC
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+
+			// wait until the deployment vol has changed
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.Storage).ToNot(BeNil())
+			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
+			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
+
+			deleteDeployment(ctx, emptyDep2)
+		})
 	})
+
 	Context("Process CRD resource - post PVC mount", func() {
 		It("should provide defaults for empty CRD case", func() {
 			createDeployment(ctx, pvcDeployment)
@@ -559,13 +642,12 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			time.Sleep(time.Second * 5)
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
-			// check the CRD was created ok
+			// check the CR was created ok
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return err == nil
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Storage.VolumeMounted
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(""))

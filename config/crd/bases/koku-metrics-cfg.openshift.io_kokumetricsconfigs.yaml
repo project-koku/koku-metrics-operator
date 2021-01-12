@@ -72,7 +72,7 @@ spec:
                 type: string
               packaging:
                 description: Packaging is a field of KokuMetricsConfig to represent
-                  the packaging object
+                  the packaging object.
                 properties:
                   max_size_MB:
                     default: 100
@@ -187,7 +187,7 @@ spec:
                 - upload_toggle
                 - validate_cert
                 type: object
-              volumeClaimTemplate:
+              volume_claim_template:
                 description: VolumeClaimTemplate is a field of KokuMetricsConfig to
                   represent a PVC template.
                 properties:
@@ -536,7 +536,7 @@ spec:
               storage:
                 description: Storage is a field
                 properties:
-                  PersistentVolumeClaim:
+                  persistent_volume_claim:
                     description: PersistentVolumeClaim is a field of KokuMetricsConfig
                       to represent a PVC.
                     properties:

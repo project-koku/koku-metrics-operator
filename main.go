@@ -91,8 +91,8 @@ func main() {
 		Client:    mgr.GetClient(),
 		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
-		InCluster: inCluster,
 		Clientset: clientset,
+		InCluster: inCluster,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
 		os.Exit(1)

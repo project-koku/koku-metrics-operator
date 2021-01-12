@@ -136,24 +136,6 @@ var (
 			},
 		},
 	}
-	// defaultPVC = &corev1.PersistentVolumeClaim{
-	// 	TypeMeta: metav1.TypeMeta{
-	// 		APIVersion: "v1",
-	// 		Kind:       "PersistentVolumeClaim",
-	// 	},
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name:      "koku-metrics-operator-data",
-	// 		Namespace: "koku-metrics-operator",
-	// 	},
-	// 	Spec: corev1.PersistentVolumeClaimSpec{
-	// 		AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-	// 		Resources: corev1.ResourceRequirements{
-	// 			Requests: corev1.ResourceList{
-	// 				corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
-	// 			},
-	// 		},
-	// 	},
-	// }
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -341,10 +323,6 @@ func deleteDeployment(ctx context.Context, deployment *appsv1.Deployment) {
 	Expect(k8sClient.Delete(ctx, deployment)).Should(Succeed())
 }
 
-// func createPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim) {
-// 	Expect(k8sClient.Create(ctx, pvc)).Should(Succeed())
-// }
-
 func clusterPrep(ctx context.Context) {
 	if !useCluster {
 		// Create operator namespace
@@ -363,8 +341,6 @@ func clusterPrep(ctx context.Context) {
 
 		// Create cluster version
 		createClusterVersion(ctx, clusterID)
-
-		// createPVC(ctx, defaultPVC)
 	}
 }
 

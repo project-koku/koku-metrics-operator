@@ -73,8 +73,8 @@ type KokuMetricsConfigReconciler struct {
 	client.Client
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
-	InCluster bool
 	Clientset *kubernetes.Clientset
+	InCluster bool
 
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
@@ -495,7 +495,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 
 func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("kokumetricsconfig", configurePVC)
+	log := r.Log.WithValues("kokumetricsconfig", "configurePVC")
 	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
 	if pvcTemplate == nil {
 		pvcTemplate = &storage.DefaultPVC
@@ -506,8 +506,7 @@ func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 		Log:    r.Log,
 		PVC:    storage.MakeVolumeClaimTemplate(*pvcTemplate),
 	}
-
-	mountEstablished, err := storage.ConvertVolume(stor, kmCfg)
+	mountEstablished, err := stor.ConvertVolume(kmCfg)
 	if err != nil {
 		return &ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
 	}

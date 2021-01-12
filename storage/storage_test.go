@@ -16,6 +16,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 package storage
 
 import (
@@ -171,7 +172,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertVolume(s, kmCfg)
+			mountEst, err := s.ConvertVolume(kmCfg)
 			Expect(err).ToNot(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -188,7 +189,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertVolume(s, kmCfg)
+			mountEst, err := s.ConvertVolume(kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeTrue())
 		})
@@ -207,7 +208,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertVolume(s, kmCfg)
+			mountEst, err := s.ConvertVolume(kmCfg)
 			Expect(err).ToNot(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -224,7 +225,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertVolume(s, kmCfg)
+			mountEst, err := s.ConvertVolume(kmCfg)
 			Expect(err).ToNot(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -241,7 +242,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertVolume(s, kmCfg)
+			mountEst, err := s.ConvertVolume(kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeFalse())
 		})
@@ -261,7 +262,7 @@ var _ = Describe("Storage Tests", func() {
 				PVC:    pvc,
 			}
 
-			mountEst, err := ConvertVolume(s, kmCfg)
+			mountEst, err := s.ConvertVolume(kmCfg)
 			Expect(err).To(BeNil())
 			Expect(mountEst).To(BeTrue())
 		})
