@@ -18,8 +18,7 @@
 
     ```
     $ oc login --token=<token> --server=<server>
-    $ oc create namespace koku-metrics-operator
-    $ oc project koku-metrics-operator
+    $ oc new-project koku-metrics-operator
     ```
 
 2. Build the manager binary:
@@ -34,10 +33,22 @@
     $ make install
     ```
 
-4. Deploy the operator
+4. Deploy the ServiceAccount:
 
     ```
-    make run ENABLE_WEBHOOKS=false
+    $ oc apply -f testing/sa.yaml
+    ```
+
+5. The `token` and `service-ca.crt` need to be copied from one of the created `koku-metrics-manager-role-token-*` secrets.
+Log into the cluster console, and find one of the `koku-metrics-manager-role-token-*` secrets within the `koku-metrics-operator`
+namespace (there should be 2 of these; either one will work). Create a local directory to save your secrets (e.g. testing/secrets).
+Create 2 files in that directory: `token` and `service-ca.crt`. Copy the values for `token` and `service-ca.crt` from the
+`koku-metrics-manager-role-token-*` secret, and paste into the newly created files.
+
+6. Deploy the operator
+
+    ```
+    make run ENABLE_WEBHOOKS=false SECRET_ABSPATH=/absolute/path/to/local/secrets
     ```
 
     At this point, you will see the operator spin up in your terminal. After a few seconds, you should see something similar to the following output:
@@ -46,7 +57,7 @@
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
-5. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
+7. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
 
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
@@ -57,4 +68,4 @@
 
     Running `make deploy-local-cr` as-is will create the external prometheus route, disable TLS verification for prometheus, and use token authentication for cloud.redhat.com.
 
-6. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.
+8. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.
