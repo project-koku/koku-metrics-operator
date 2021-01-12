@@ -19,6 +19,7 @@ COPY crhchttp/ crhchttp/
 COPY dirconfig/ dirconfig/
 COPY packaging/ packaging/
 COPY sources/ sources/
+COPY storage/ storage/
 COPY strset/ strset/
 
 # Copy git to inject the commit during build

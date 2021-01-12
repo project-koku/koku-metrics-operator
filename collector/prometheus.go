@@ -201,7 +201,7 @@ func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults)
 
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
 		if err != nil {
-			return fmt.Errorf("error querying prometheus: %v", err)
+			return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
 		}
 		if len(warnings) > 0 {
 			log.Info("query warnings", "Warnings", warnings)

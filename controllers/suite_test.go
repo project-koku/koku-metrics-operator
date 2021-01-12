@@ -44,6 +44,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// +kubebuilder:scaffold:imports
@@ -52,14 +53,94 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var clientset *kubernetes.Clientset
-var k8sClient client.Client
-var k8sManager ctrl.Manager
-var testEnv *envtest.Environment
-var useCluster bool
+var (
+	cfg                *rest.Config
+	clientset          *kubernetes.Clientset
+	k8sClient          client.Client
+	k8sManager         ctrl.Manager
+	testEnv            *envtest.Environment
+	useCluster         bool
+	emptyDirDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "koku-metrics-controller-manager",
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "demo",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "demo",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "web",
+							Image: "nginx:1.12",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "koku-metrics-operator-reports",
+									MountPath: "/tmp/koku-metrics-operator-reports",
+								}},
+						},
+					},
+					Volumes: []corev1.Volume{{
+						Name: "koku-metrics-operator-reports",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
+				},
+			},
+		},
+	}
+	pvcDeployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "koku-metrics-controller-manager",
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "demo",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "demo",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "web",
+							Image: "nginx:1.12",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "koku-metrics-operator-reports",
+									MountPath: "/tmp/koku-metrics-operator-reports",
+								}},
+						},
+					},
+					Volumes: []corev1.Volume{{
+						Name: "koku-metrics-operator-reports",
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}},
+				},
+			},
+		},
+	}
+)
 
-func TestAPIs(t *testing.T) {
+func int32Ptr(i int32) *int32 { return &i }
+
+func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
@@ -69,6 +150,7 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	ctx := context.Background()
 
 	// Default to run locally
 	var useClusterEnv string
@@ -117,6 +199,7 @@ var _ = BeforeSuite(func(done Done) {
 			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
 			Scheme:    scheme.Scheme,
 			Clientset: clientset,
+			InCluster: true,
 		}).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
 	}
@@ -130,19 +213,17 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
-	clusterPrep()
+	clusterPrep(ctx)
 
 	close(done)
 }, 60)
 
-func createNamespace(namespace string) {
-	ctx := context.Background()
+func createNamespace(ctx context.Context, namespace string) {
 	instance := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 }
 
-func createClusterVersion(clusterID string) {
-	ctx := context.Background()
+func createClusterVersion(ctx context.Context, clusterID string) {
 	instance := &configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Spec: configv1.ClusterVersionSpec{
@@ -160,8 +241,7 @@ func fakeDockerConfig() []byte {
 	return d
 }
 
-func createPullSecret(namespace string, data []byte) {
-	ctx := context.Background()
+func createPullSecret(ctx context.Context, namespace string, data []byte) {
 	secret := &corev1.Secret{Data: map[string][]byte{
 		pullSecretDataKey: data,
 	},
@@ -172,8 +252,7 @@ func createPullSecret(namespace string, data []byte) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
-func deletePullSecret(namespace string, data []byte) {
-	ctx := context.Background()
+func deletePullSecret(ctx context.Context, namespace string, data []byte) {
 	oldsecret := &corev1.Secret{Data: map[string][]byte{
 		pullSecretDataKey: data,
 	},
@@ -185,8 +264,7 @@ func deletePullSecret(namespace string, data []byte) {
 	Expect(k8sClient.Delete(ctx, oldsecret)).Should(Succeed())
 }
 
-func createBadPullSecret(namespace string) {
-	ctx := context.Background()
+func createBadPullSecret(ctx context.Context, namespace string) {
 	secret := &corev1.Secret{Data: map[string][]byte{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pullSecretName,
@@ -195,8 +273,7 @@ func createBadPullSecret(namespace string) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
-func createAuthSecret(namespace string) {
-	ctx := context.Background()
+func createAuthSecret(ctx context.Context, namespace string) {
 	secret := &corev1.Secret{Data: map[string][]byte{
 		authSecretUserKey:     []byte("user1"),
 		authSecretPasswordKey: []byte("password1"),
@@ -208,8 +285,7 @@ func createAuthSecret(namespace string) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
-func createBadAuthSecret(namespace string) {
-	ctx := context.Background()
+func createBadAuthSecret(ctx context.Context, namespace string) {
 	secret := &corev1.Secret{Data: map[string][]byte{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      badAuthSecretName,
@@ -218,8 +294,7 @@ func createBadAuthSecret(namespace string) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
-func createBadAuthPassSecret(namespace string) {
-	ctx := context.Background()
+func createBadAuthPassSecret(ctx context.Context, namespace string) {
 	secret := &corev1.Secret{Data: map[string][]byte{
 		authSecretUserKey: []byte("user1"),
 	},
@@ -230,8 +305,7 @@ func createBadAuthPassSecret(namespace string) {
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
 
-func deleteClusterVersion() {
-	ctx := context.Background()
+func deleteClusterVersion(ctx context.Context) {
 	instance := &configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Spec: configv1.ClusterVersionSpec{
@@ -241,24 +315,32 @@ func deleteClusterVersion() {
 	Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
 }
 
-func clusterPrep() {
+func createDeployment(ctx context.Context, deployment *appsv1.Deployment) {
+	Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
+}
+
+func deleteDeployment(ctx context.Context, deployment *appsv1.Deployment) {
+	Expect(k8sClient.Delete(ctx, deployment)).Should(Succeed())
+}
+
+func clusterPrep(ctx context.Context) {
 	if !useCluster {
 		// Create operator namespace
-		createNamespace(namespace)
+		createNamespace(ctx, namespace)
 
 		// Create auth secret in operator namespace
-		createAuthSecret(namespace)
+		createAuthSecret(ctx, namespace)
 
 		// Create an empty auth secret
-		createBadAuthSecret(namespace)
-		createBadAuthPassSecret(namespace)
+		createBadAuthSecret(ctx, namespace)
+		createBadAuthPassSecret(ctx, namespace)
 
 		// Create openshift config namespace and secret
-		createNamespace(openShiftConfigNamespace)
-		createPullSecret(openShiftConfigNamespace, fakeDockerConfig())
+		createNamespace(ctx, openShiftConfigNamespace)
+		createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
 		// Create cluster version
-		createClusterVersion(clusterID)
+		createClusterVersion(ctx, clusterID)
 	}
 }
 

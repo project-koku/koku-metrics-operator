@@ -29,6 +29,9 @@ spec:
         - --enable-leader-election
         image: controller:latest
         name: manager
+        env:
+        - name: IN_CLUSTER
+          value: "true"
         resources:
           limits:
             cpu: 500m
