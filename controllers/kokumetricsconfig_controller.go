@@ -458,8 +458,8 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 	log := r.Log.WithValues("kokumetricsconfig", "collectPromStats")
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
-			Client: r.Client,
-			Log:    r.Log,
+			Log:       r.Log,
+			InCluster: r.InCluster,
 		}
 	}
 	r.promCollector.TimeSeries = nil
