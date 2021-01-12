@@ -53,6 +53,10 @@ func (mfi MockFileInfo) Sys() interface{} {
 }
 
 func TestGetFiles(t *testing.T) {
+	if err := os.Mkdir("empty-dir", 0644); err != nil {
+		t.Fatalf("failed to create empty-dir: %v", err)
+	}
+	defer os.RemoveAll("empty-dir")
 	getFilesTests := []struct {
 		name string
 		path string
@@ -62,12 +66,12 @@ func TestGetFiles(t *testing.T) {
 		{
 			name: "path exists with files",
 			path: "./test_files",
-			want: []string{"nested", "test_file"},
+			want: []string{"test_file"},
 			err:  nil,
 		},
 		{
 			name: "path exists with no files",
-			path: "./test_files/nested",
+			path: "./empty-dir",
 			want: []string{},
 			err:  nil,
 		},
