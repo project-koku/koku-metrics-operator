@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -51,6 +52,7 @@ type PromCollector struct {
 	PromCfg    *PrometheusConfig
 	TimeSeries *promv1.Range
 	Log        logr.Logger
+	InCluster  bool
 }
 
 type prometheusConnection interface {
@@ -78,7 +80,13 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func getPrometheusConfig(kmCfg *kokumetricscfgv1alpha1.PrometheusSpec) (*PrometheusConfig, error) {
+func getPrometheusConfig(kmCfg *kokumetricscfgv1alpha1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
+	if !inCluster {
+		val, ok := os.LookupEnv("SECRET_ABSPATH")
+		if ok {
+			serviceaccountPath = val
+		}
+	}
 	promCfg := &PrometheusConfig{
 		Address: kmCfg.SvcAddress,
 		CAFile:  filepath.Join(serviceaccountPath, certKey),
@@ -158,7 +166,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1alpha1.KokuMetricsCon
 
 	if updated || c.PromCfg == nil || kmCfg.Status.Prometheus.ConfigError != "" {
 		log.Info("getting prometheus configuration")
-		c.PromCfg, err = getPrometheusConfig(&kmCfg.Spec.PrometheusConfig)
+		c.PromCfg, err = getPrometheusConfig(&kmCfg.Spec.PrometheusConfig, c.InCluster)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)

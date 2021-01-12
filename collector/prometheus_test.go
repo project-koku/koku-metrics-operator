@@ -515,6 +515,10 @@ func TestGetPromConn(t *testing.T) {
 }
 
 func TestGetPrometheusConfig(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working dir: %v", err)
+	}
 	trueDef := true
 	kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
 		SvcAddress:          "svc-address",
@@ -523,17 +527,19 @@ func TestGetPrometheusConfig(t *testing.T) {
 	secretsPath := "./test_files/test_secrets"
 	getPromCfgTests := []struct {
 		name        string
+		inCluster   bool
 		basePath    string
-		certKey     string
-		tokenKey    string
+		certKey     bool
+		tokenKey    bool
 		want        *PrometheusConfig
 		wantedError error
 	}{
 		{
-			name:     "successful config",
-			basePath: secretsPath,
-			certKey:  testutils.CreateCertificate(secretsPath, certKey),
-			tokenKey: testutils.CreateToken(secretsPath, tokenKey),
+			name:      "successful config - in cluster",
+			inCluster: true,
+			basePath:  secretsPath,
+			certKey:   true,
+			tokenKey:  true,
 			want: &PrometheusConfig{
 				Address:     "svc-address",
 				SkipTLS:     true,
@@ -543,32 +549,69 @@ func TestGetPrometheusConfig(t *testing.T) {
 			wantedError: nil,
 		},
 		{
-			name:        "missing token",
+			name:        "missing token - in cluster",
+			inCluster:   true,
 			basePath:    secretsPath,
-			certKey:     testutils.CreateCertificate(secretsPath, certKey),
-			tokenKey:    "missing-token",
+			certKey:     true,
+			tokenKey:    false,
 			want:        nil,
 			wantedError: errTest,
 		},
 		{
-			name:        "missing service-cert",
+			name:      "successful config - local",
+			inCluster: false,
+			basePath:  secretsPath,
+			certKey:   true,
+			tokenKey:  true,
+			want: &PrometheusConfig{
+				Address:     "svc-address",
+				SkipTLS:     true,
+				BearerToken: config.Secret([]byte("this-is-token-data")),
+				CAFile:      filepath.Join(cwd, secretsPath, certKey),
+			},
+			wantedError: nil,
+		},
+		{
+			name:        "missing token - local",
+			inCluster:   false,
 			basePath:    secretsPath,
-			certKey:     "missing-cert",
-			tokenKey:    testutils.CreateToken(secretsPath, tokenKey),
+			certKey:     true,
+			tokenKey:    false,
+			want:        nil,
+			wantedError: errTest,
+		},
+		{
+			name:        "local - no path to secrets",
+			inCluster:   false,
+			basePath:    "",
+			tokenKey:    false,
 			want:        nil,
 			wantedError: errTest,
 		},
 	}
 	for _, tt := range getPromCfgTests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.certKey {
+				testutils.CreateCertificate(secretsPath, certKey)
+			}
+			if tt.tokenKey {
+				testutils.CreateToken(secretsPath, tokenKey)
+			}
 			tmpBase := serviceaccountPath
-			serviceaccountPath = tt.basePath
+			if tt.inCluster {
+				serviceaccountPath = tt.basePath
+			} else {
+				if err := os.Setenv("SECRET_ABSPATH", filepath.Join(cwd, tt.basePath)); err != nil {
+					t.Fatalf("failed to set SECRET_ABSPATH variable")
+				}
+			}
 			defer func() {
 				serviceaccountPath = tmpBase
-				os.Remove(tt.certKey)
-				os.Remove(tt.tokenKey)
+				os.Unsetenv("SECRET_ABSPATH")
+				os.Remove(filepath.Join(tt.basePath, "token"))
+				os.Remove(filepath.Join(tt.basePath, "service-ca.crt"))
 			}()
-			got, err := getPrometheusConfig(kmCfg)
+			got, err := getPrometheusConfig(kmCfg, tt.inCluster)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
