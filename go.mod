@@ -14,6 +14,7 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/openshift/api v0.0.0-20200117162508-e7ccdda6ba67
+	github.com/operator-framework/api v0.2.0
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.14.0
 	github.com/xorcare/pointer v1.1.0

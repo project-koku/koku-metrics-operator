@@ -23,6 +23,7 @@ import (
 	"flag"
 	"os"
 
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -50,6 +51,8 @@ func init() {
 	utilruntime.Must(configv1.AddToScheme(scheme))
 	// Adding the kokumetricscfgv1alpha1 scheme
 	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
+	// Adding the operatorsv1alpha1 scheme
+	utilruntime.Must(operatorsv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(kokumetricscfgv1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
