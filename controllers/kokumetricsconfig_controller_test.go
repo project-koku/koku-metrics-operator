@@ -55,11 +55,11 @@ var (
 	falseValue            bool  = false
 	trueValue             bool  = true
 	defaultUploadCycle    int64 = 360
-	defaultPackagingCycle int64 = 360
-	defaultMaxSize        int64 = 100
-	defaultCheckCycle     int64 = 1440
-	defaultUploadWait     int64 = 0
-	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
+	// defaultPackagingCycle int64 = 360
+	defaultMaxSize    int64 = 100
+	defaultCheckCycle int64 = 1440
+	defaultUploadWait int64 = 0
+	defaultAPIURL           = "https://not-the-real-cloud.redhat.com"
 
 	instance = kokumetricscfgv1alpha1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -70,8 +70,8 @@ var (
 				AuthType: kokumetricscfgv1alpha1.Token,
 			},
 			Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-				MaxSize:        defaultMaxSize,
-				PackagingCycle: &defaultPackagingCycle,
+				MaxSize: defaultMaxSize,
+				// PackagingCycle: &defaultPackagingCycle,
 			},
 			Upload: kokumetricscfgv1alpha1.UploadSpec{
 				UploadCycle:    &defaultUploadCycle,
@@ -638,7 +638,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			deleteClusterVersion(ctx)
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "missingcvfailure"
-			instCopy.Spec.Packaging.PackagingCycle = &defaultUploadWait
+			// instCopy.Spec.Packaging.PackagingCycle = &defaultUploadWait
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1alpha1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -663,7 +663,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "attemptupload"
-			instCopy.Spec.Packaging.PackagingCycle = &defaultUploadWait
+			// instCopy.Spec.Packaging.PackagingCycle = &defaultUploadWait
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -688,7 +688,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			uploadTime := metav1.Now()
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "checkuploadstatus"
-			instCopy.Spec.Packaging.PackagingCycle = &defaultUploadWait
+			// instCopy.Spec.Packaging.PackagingCycle = &defaultUploadWait
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			instCopy.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())

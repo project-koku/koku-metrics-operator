@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
 	"github.com/project-koku/koku-metrics-operator/testutils"
@@ -61,7 +61,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeKMCfg  = &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+	fakeKMCfg  = &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},

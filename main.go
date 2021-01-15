@@ -31,7 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
+
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 	"github.com/project-koku/koku-metrics-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -49,6 +51,7 @@ func init() {
 	// Adding the kokumetricscfgv1alpha1 scheme
 	utilruntime.Must(kokumetricscfgv1alpha1.AddToScheme(scheme))
 
+	utilruntime.Must(kokumetricscfgv1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -95,6 +98,10 @@ func main() {
 		InCluster: inCluster,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
+		os.Exit(1)
+	}
+	if err = (&kokumetricscfgv1alpha2.KokuMetricsConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "KokuMetricsConfig")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

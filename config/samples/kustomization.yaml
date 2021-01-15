@@ -1,3 +1,4 @@
 ## This file is auto-generated, do not modify ##
 resources:
 - koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+- koku-metrics-cfg_v1alpha2_kokumetricsconfig.yaml

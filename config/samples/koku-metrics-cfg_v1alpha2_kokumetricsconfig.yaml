@@ -1,0 +1,17 @@
+apiVersion: koku-metrics-cfg.openshift.io/v1alpha2
+kind: KokuMetricsConfig
+metadata:
+  name: kokumetricscfg-sample
+spec:
+  authentication:
+    type: token
+  packaging:
+    maxSizeMB: 100
+  prometheusConfig: {}
+  reportingCycle: 360
+  source:
+    name: INSERT-SOURCE-NAME
+    checkCycle: 1440
+    createSource: false
+  upload:
+    upload_toggle: false

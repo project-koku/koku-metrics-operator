@@ -31,18 +31,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 )
 
 var (
 	tenGi = *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI)
 	// DefaultPVC is a basic PVC
-	DefaultPVC = kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim{
+	DefaultPVC = kokumetricscfgv1alpha2.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "PersistentVolumeClaim",
 		},
-		EmbeddedObjectMetadata: kokumetricscfgv1alpha1.EmbeddedObjectMetadata{
+		EmbeddedObjectMetadata: kokumetricscfgv1alpha2.EmbeddedObjectMetadata{
 			Name: "koku-metrics-operator-data",
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -88,7 +88,7 @@ func (s *Storage) getOrCreateVolume() error {
 	return s.Client.Create(ctx, s.PVC)
 }
 
-func (s *Storage) getVolume(vols []corev1.Volume, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) error {
+func (s *Storage) getVolume(vols []corev1.Volume, kmCfg *kokumetricscfgv1alpha2.KokuMetricsConfig) error {
 	for i, v := range vols {
 		if v.Name == "koku-metrics-operator-reports" {
 			s.vol = &volume{index: i, volume: &v}
@@ -120,7 +120,7 @@ func (s *Storage) mountVolume(dep *appsv1.Deployment) (bool, error) {
 }
 
 // ConvertVolume converts the EmptyDir volume in deployment to PVC
-func (s *Storage) ConvertVolume(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (bool, error) {
+func (s *Storage) ConvertVolume(kmCfg *kokumetricscfgv1alpha2.KokuMetricsConfig) (bool, error) {
 	ctx := context.Background()
 	log := s.Log.WithValues("kokumetricsconfig", "ConvertVolume")
 
@@ -155,7 +155,7 @@ func (s *Storage) ConvertVolume(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig)
 }
 
 // MakeVolumeClaimTemplate produces a template to create the PVC
-func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) *corev1.PersistentVolumeClaim {
+func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha2.EmbeddedPersistentVolumeClaim) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: e.APIVersion,

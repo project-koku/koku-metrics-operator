@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -122,7 +122,7 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+func GenerateReports(kmCfg *kokumetricscfgv1alpha2.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
 	log := c.Log.WithValues("kokumetricsconfig", "GenerateReports")
 
 	// yearMonth is used in filenames
@@ -302,7 +302,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, ts *promv1.Range) {
+func updateReportStatus(kmCfg *kokumetricscfgv1alpha2.KokuMetricsConfig, ts *promv1.Range) {
 	kmCfg.Status.Reports.ReportMonth = ts.Start.Format("01")
 	kmCfg.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

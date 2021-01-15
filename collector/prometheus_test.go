@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
@@ -315,35 +315,35 @@ func TestTestPrometheusConnection(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		kmCfg  *kokumetricscfgv1alpha1.KokuMetricsConfig
+		kmCfg  *kokumetricscfgv1alpha2.KokuMetricsConfig
 		status string
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1alpha2.KokuMetricsConfig{},
 			status: "configuration",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1alpha2.KokuMetricsConfig{},
 			status: "configuration",
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1alpha2.KokuMetricsConfig{},
 			status: "connection",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			kmCfg:  &kokumetricscfgv1alpha1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1alpha2.KokuMetricsConfig{},
 			status: "connection",
 			want:   false,
 			err:    errTest,
@@ -493,7 +493,7 @@ func TestGetPromConn(t *testing.T) {
 					os.Remove(toke)
 				}()
 			}
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
 			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = pointer.Bool(true)
@@ -520,7 +520,7 @@ func TestGetPrometheusConfig(t *testing.T) {
 		t.Fatalf("failed to get working dir: %v", err)
 	}
 	trueDef := true
-	kmCfg := &kokumetricscfgv1alpha1.PrometheusSpec{
+	kmCfg := &kokumetricscfgv1alpha2.PrometheusSpec{
 		SvcAddress:          "svc-address",
 		SkipTLSVerification: &trueDef,
 	}

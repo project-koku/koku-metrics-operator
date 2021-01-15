@@ -24,7 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -164,7 +164,7 @@ var _ = Describe("Storage Tests", func() {
 
 	Describe("deployment does not exist", func() {
 		It("cannot find the deployment", func() {
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			pvc := MakeVolumeClaimTemplate(DefaultPVC)
 			s := &Storage{
 				Client: k8sClient,
@@ -181,7 +181,7 @@ var _ = Describe("Storage Tests", func() {
 		It("successfully establishes the mount", func() {
 			depCp := deployment.DeepCopy()
 			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			pvc := MakeVolumeClaimTemplate(DefaultPVC)
 			s := &Storage{
 				Client: k8sClient,
@@ -200,7 +200,7 @@ var _ = Describe("Storage Tests", func() {
 			depCp.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{*volMountWrong}
 			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			pvc := MakeVolumeClaimTemplate(DefaultPVC)
 			s := &Storage{
 				Client: k8sClient,
@@ -217,7 +217,7 @@ var _ = Describe("Storage Tests", func() {
 			depCp := deploymentNoVolume.DeepCopy()
 			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			pvc := MakeVolumeClaimTemplate(DefaultPVC)
 			s := &Storage{
 				Client: k8sClient,
@@ -234,7 +234,7 @@ var _ = Describe("Storage Tests", func() {
 			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVC}
 			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			pvc := MakeVolumeClaimTemplate(DefaultPVC)
 			s := &Storage{
 				Client: k8sClient,
@@ -254,7 +254,7 @@ var _ = Describe("Storage Tests", func() {
 			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVCfake}
 			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 			pvc := MakeVolumeClaimTemplate(DefaultPVC)
 			s := &Storage{
 				Client: k8sClient,

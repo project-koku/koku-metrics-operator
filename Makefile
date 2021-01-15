@@ -14,9 +14,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-# CRD_OPTIONS ?= "crd:trivialVersions=true"
-CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
+
+CRD_OPTIONS ?= "crd:crdVersions={v1}"
 
 # Use git branch for dev team deployment of pushed branches
 GITBRANCH=$(shell git branch --show-current)
@@ -196,6 +195,9 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+conversion: conversion-gen
+	$(CONVERSION_GEN) --go-header-file "./hack/boilerplate.go.txt" --input-dirs "./api/v1alpha1" --output-base "." --output-file-base="zz_generated.conversion" --skip-unsafe=true --v 5
+
 # Build the docker image
 docker-build: test
 	docker build . -t ${IMG}
@@ -239,6 +241,23 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
+# find or download conversion-gen
+# download conversion-gen if necessary
+conversion-gen:
+ifeq (, $(shell which conversion-gen))
+	@{ \
+	set -e ;\
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$CONTROLLER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/controller-tools/cmd/conversion-gen@v0.20.2 ;\
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	}
+CONVERSION_GEN=$(GOBIN)/conversion-gen
+else
+CONVERSION_GEN=$(shell which conversion-gen)
+endif
+
 kustomize:
 ifeq (, $(shell which kustomize))
 	@{ \
@@ -260,7 +279,7 @@ bundle: manifests kustomize
 	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/project-koku/koku-metrics-operator:v$(VERSION)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile

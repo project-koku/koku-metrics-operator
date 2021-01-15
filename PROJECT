@@ -4,7 +4,7 @@ repo: github.com/project-koku/koku-metrics-operator
 resources:
 - group: koku-metrics-cfg
   kind: KokuMetricsConfig
-  version: v1alpha1
+  version: v1alpha2
 version: 3-alpha
 plugins:
   go.operator-sdk.io/v2-alpha: {}

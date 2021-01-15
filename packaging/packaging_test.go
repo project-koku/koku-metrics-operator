@@ -36,7 +36,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1alpha2 "github.com/project-koku/koku-metrics-operator/api/v1alpha2"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ import (
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var testLogger = testutils.TestLogger{}
-var kmCfg = &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+var kmCfg = &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
 	Log:    testLogger,
