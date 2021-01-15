@@ -11,7 +11,7 @@ metadata:
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
-    operators.operatorframework.io/builder: operator-sdk-v0.19.2
+    operators.operatorframework.io/builder: operator-sdk-v0.19.4
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Managment
