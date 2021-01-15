@@ -122,7 +122,7 @@ var (
 	}
 	csv = &operatorsv1alpha1.ClusterServiceVersion{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator.v0.9.0",
+			Name:      "test-csv",
 			Namespace: kokuMetricsCfgNamespace,
 		},
 		Spec: operatorsv1alpha1.ClusterServiceVersionSpec{
@@ -133,12 +133,18 @@ var (
 					DeploymentSpecs: []operatorsv1alpha1.StrategyDeploymentSpec{
 						{
 							Name: "test-deployment",
-							Spec: deploymentNoVolume.Spec,
+							Spec: deployment.Spec,
 						},
 					},
 				},
 			},
 		},
+	}
+	owner = metav1.OwnerReference{
+		APIVersion: "operators.coreos.com/v1alpha1",
+		Kind:       "ClusterServiceVersion",
+		Name:       "test-csv",
+		UID:        "1c5738c0-2691-4e60-b2fd-6e056327ac89",
 	}
 )
 
@@ -177,7 +183,7 @@ var _ = Describe("Storage Tests", func() {
 		// failed test runs that do not clean up leave resources behind.
 		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
-		// Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -185,9 +191,13 @@ var _ = Describe("Storage Tests", func() {
 	})
 	Context("Deployment owned by CSV", func() {
 		Describe("deployment does exist", func() {
-			It("can find the deployment", func() {
-				csvCp := csv.DeepCopy()
-				Expect(k8sClient.Create(ctx, csvCp)).Should(Succeed())
+			It("can find the deployment but CSV is missing", func() {
+				// csvCp := csv.DeepCopy()
+				// Expect(k8sClient.Create(ctx, csvCp)).Should(Succeed())
+
+				depCp := deployment.DeepCopy()
+				depCp.OwnerReferences = []metav1.OwnerReference{owner}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
@@ -200,6 +210,26 @@ var _ = Describe("Storage Tests", func() {
 				mountEst, err := s.ConvertVolume(kmCfg)
 				Expect(err).ToNot(BeNil())
 				Expect(mountEst).To(BeFalse())
+			})
+			It("can find the deployment and CSV exists", func() {
+				csvCp := csv.DeepCopy()
+				Expect(k8sClient.Create(ctx, csvCp)).Should(Succeed())
+
+				depCp := deployment.DeepCopy()
+				depCp.OwnerReferences = []metav1.OwnerReference{owner}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
+
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).To(BeNil())
+				Expect(mountEst).To(BeTrue())
 			})
 		})
 	})
