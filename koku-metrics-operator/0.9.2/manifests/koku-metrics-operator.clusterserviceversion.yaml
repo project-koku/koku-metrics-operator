@@ -50,7 +50,7 @@ metadata:
               "name": "INSERT-SOURCE-NAME"
             },
             "upload": {
-              "upload_toggle": true
+              "uploadToggle": true
             }
           }
         }

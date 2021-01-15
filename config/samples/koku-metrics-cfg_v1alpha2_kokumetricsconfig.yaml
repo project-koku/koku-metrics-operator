@@ -14,4 +14,4 @@ spec:
     checkCycle: 1440
     createSource: false
   upload:
-    upload_toggle: false
+    uploadToggle: true
