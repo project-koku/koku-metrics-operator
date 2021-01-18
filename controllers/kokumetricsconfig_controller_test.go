@@ -343,11 +343,11 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("Process CRD resource - post PVC mount", func() {
-		It("should provide defaults for empty CRD case", func() {
+		It("default CR works fine", func() {
 			createDeployment(ctx, pvcDeployment)
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "emptycrd"
+			instCopy.ObjectMeta.Name = namePrefix + "default-cr"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
