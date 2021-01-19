@@ -4,6 +4,9 @@ repo: github.com/project-koku/koku-metrics-operator
 resources:
 - group: koku-metrics-cfg
   kind: KokuMetricsConfig
+  version: v1alpha1
+- group: koku-metrics-cfg
+  kind: KokuMetricsConfig
   version: v1alpha2
 version: 3-alpha
 plugins:
