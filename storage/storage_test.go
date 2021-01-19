@@ -254,6 +254,7 @@ var _ = Describe("Storage Tests", func() {
 			It("successfully establishes the mount", func() {
 				depCp := deployment.DeepCopy()
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+
 				kmCfg := &kokumetricscfgv1alpha2.KokuMetricsConfig{}
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
