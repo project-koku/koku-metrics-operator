@@ -153,7 +153,6 @@ type StorageSpec struct {
 	ExpansionThreshold int64 `json:"expansion_threshold"`
 
 	// MaxClaimStorage is a field of KokuMetricsConfig to represent the maximum size of the expanded PVC.
-	// +kubebuilder:default=100Gi
 	MaxClaimStorage resource.Quantity `json:"max_claim_storage"`
 }
 

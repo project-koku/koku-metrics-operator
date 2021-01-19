@@ -394,6 +394,8 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 }
 
 func (p *FilePackager) trimPackages() error {
+	log := p.Log.WithValues("kokumetricsconfig", "trimPackages")
+
 	packages, err := p.DirCfg.Upload.GetFiles()
 	if err != nil {
 		return fmt.Errorf("failed to read upload dir: %v", err)
@@ -401,12 +403,20 @@ func (p *FilePackager) trimPackages() error {
 
 	datetimesSet := strset.NewSet()
 	for _, f := range packages {
-		datetimesSet.Add(strings.Split(f, "-")[0])
+		if strings.HasSuffix(f, "tar.gz") {
+			datetimesSet.Add(strings.Split(f, "-")[0])
+		}
 	}
 
-	if datetimesSet.Len() <= int(p.KMCfg.Spec.Packaging.MaxReports) {
+	reportCount := int64(datetimesSet.Len())
+	p.KMCfg.Status.Packaging.ReportCount = &reportCount
+
+	if reportCount <= p.KMCfg.Spec.Packaging.MaxReports {
+		log.Info("number of stored reports within limit")
 		return nil
 	}
+
+	log.Info("max report count reached: removing oldest reports")
 
 	datetimes := []string{}
 	for d := range datetimesSet.Range() {
@@ -414,6 +424,20 @@ func (p *FilePackager) trimPackages() error {
 	}
 
 	sort.Strings(datetimes)
+	ind := len(datetimes) - int(p.KMCfg.Spec.Packaging.MaxReports)
+	filesToExclude := datetimes[0:ind]
+
+	for _, pre := range filesToExclude {
+		for _, file := range packages {
+			if !strings.HasPrefix(file, pre) {
+				continue
+			}
+			log.Info(fmt.Sprintf("removing report: %s", file))
+			if err := os.Remove(filepath.Join(p.DirCfg.Upload.Path, file)); err != nil {
+				return fmt.Errorf("failed to remove %s: %v", file, err)
+			}
+		}
+	}
 
 	return nil
 }
@@ -433,7 +457,7 @@ func (p *FilePackager) PackageReports() error {
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveFiles()
 	if err == ErrNoReports {
-		return nil
+		return p.trimPackages()
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
@@ -486,5 +510,5 @@ func (p *FilePackager) PackageReports() error {
 
 	log.Info("file packaging was successful")
 	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
-	return nil
+	return p.trimPackages()
 }

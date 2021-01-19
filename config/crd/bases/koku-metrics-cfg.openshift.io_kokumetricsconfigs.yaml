@@ -74,6 +74,12 @@ spec:
                 description: Packaging is a field of KokuMetricsConfig to represent
                   the packaging object.
                 properties:
+                  max_reports_to_keep:
+                    default: 10
+                    description: MaxReports is a field of KokuMetricsConfig to represent
+                      the maximum number of reports to store.
+                    format: int64
+                    type: integer
                   max_size_MB:
                     default: 100
                     description: MaxSize is a field of KokuMetricsConfig to represent
@@ -84,6 +90,7 @@ spec:
                     minimum: 1
                     type: integer
                 required:
+                - max_reports_to_keep
                 - max_size_MB
                 type: object
               prometheus_config:
@@ -401,8 +408,8 @@ spec:
                   the packaging status
                 properties:
                   error:
-                    description: PackagingError is a field of KokuMetricsConfigStatus
-                      to represent the error encountered packaging the reports.
+                    description: PackagingError is a field of KokuMetricsConfig to
+                      represent the error encountered packaging the reports.
                     type: string
                   last_successful_packaging_time:
                     description: LastSuccessfulPackagingTime is a field of KokuMetricsConfig
@@ -410,10 +417,20 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
+                  max_reports_to_keep:
+                    description: MaxReports is a field of KokuMetricsConfig to represent
+                      the maximum number of reports to store.
+                    format: int64
+                    type: integer
                   max_size_MB:
                     description: MaxSize is a field of KokuMetricsConfig to represent
                       the max file size in megabytes that will be compressed for upload
                       to Ingress.
+                    format: int64
+                    type: integer
+                  number_reports_stored:
+                    description: ReportCount is a field of KokuMetricsConfig to represent
+                      the number of reports in storage.
                     format: int64
                     type: integer
                   packaged_files:
