@@ -88,7 +88,7 @@ spec:
                 of available updates in status, and setting values outside that
                 range may cause the upgrade to fail. You may specify the version
                 field without setting image if an update exists with that
-                version in the availableUpdates or history. 
+                version in the availableUpdates or history.
                  If an upgrade fails the operator will halt and report status about the failing component. Setting the desired update value back to the previous version will cause a rollback to be attempted. Not all rollbacks will succeed.
               type: object
               properties:
@@ -102,7 +102,7 @@ spec:
                     band because the provided image will run with full
                     administrative access to the cluster. Do not use this flag
                     with images that comes from unknown or potentially malicious
-                    sources. 
+                    sources.
                      This flag does not override other forms of consistency checking that are required before a new update is deployed.
                   type: boolean
                 image:
@@ -195,7 +195,7 @@ spec:
                       verified out of band because the provided image will run
                       with full administrative access to the cluster. Do not use
                       this flag with images that comes from unknown or
-                      potentially malicious sources. 
+                      potentially malicious sources.
                        This flag does not override other forms of consistency checking that are required before a new update is deployed.
                     type: boolean
                   image:
@@ -245,7 +245,7 @@ spec:
                     type: string
                   reason:
                     description: >-
-                      reason is the reason for the condition's last transition. 
+                      reason is the reason for the condition's last transition.
                       Reasons are CamelCase
                     type: string
                   status:
@@ -273,7 +273,7 @@ spec:
                     band because the provided image will run with full
                     administrative access to the cluster. Do not use this flag
                     with images that comes from unknown or potentially malicious
-                    sources. 
+                    sources.
                      This flag does not override other forms of consistency checking that are required before a new update is deployed.
                   type: boolean
                 image:

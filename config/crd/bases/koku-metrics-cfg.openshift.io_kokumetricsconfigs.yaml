@@ -404,6 +404,12 @@ spec:
                     description: PackagingError is a field of KokuMetricsConfigStatus
                       to represent the error encountered packaging the reports.
                     type: string
+                  last_successful_packaging_time:
+                    description: LastSuccessfulPackagingTime is a field of KokuMetricsConfig
+                      that shows the time of the last successful file packaging.
+                    format: date-time
+                    nullable: true
+                    type: string
                   max_size_MB:
                     description: MaxSize is a field of KokuMetricsConfig to represent
                       the max file size in megabytes that will be compressed for upload

@@ -88,6 +88,18 @@ func (dir *Directory) RemoveContents() error {
 	return nil
 }
 
+func (dir *Directory) GetFiles() ([]string, error) {
+	outFiles, err := ioutil.ReadDir(dir.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not read upload directory: %v", err)
+	}
+	fileList := []string{}
+	for _, file := range outFiles {
+		fileList = append(fileList, file.Name())
+	}
+	return fileList, nil
+}
+
 func (dir *Directory) Exists() bool {
 	stat := os.Stat
 	if dir.DirectoryFileSystem != nil {

@@ -169,6 +169,46 @@ func TestGetClientset(t *testing.T) {
 	}
 }
 
+func TestConcatErrors(t *testing.T) {
+	concatErrorsTests := []struct {
+		name   string
+		errors []error
+		want   string
+	}{
+		{
+			name:   "0 errors",
+			errors: nil,
+			want:   "",
+		},
+		{
+			name:   "1 error",
+			errors: []error{errors.New("error1")},
+			want:   "error1",
+		},
+		{
+			name:   "2 errors",
+			errors: []error{errors.New("error1"), errors.New("error2")},
+			want:   "error1\nerror2",
+		},
+		{
+			name:   "3 errors",
+			errors: []error{errors.New("error1"), errors.New("error2"), errors.New("error3")},
+			want:   "error1\nerror2\nerror3",
+		},
+	}
+	for _, tt := range concatErrorsTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := concatErrs(tt.errors...)
+			if got != nil && got.Error() != tt.want {
+				t.Errorf("%s\ngot: %v\nwant: %v\n", tt.name, got.Error(), tt.want)
+			}
+			if got == nil && tt.want != "" {
+				t.Errorf("%s expected nil error, got: %T", tt.name, got)
+			}
+		})
+	}
+}
+
 func setup() error {
 	type dirInfo struct {
 		dirName  string

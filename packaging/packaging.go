@@ -43,16 +43,19 @@ import (
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg    *kokumetricscfgv1alpha1.KokuMetricsConfig
-	DirCfg   *dirconfig.DirectoryConfig
-	Log      logr.Logger
-	manifest manifestInfo
-	uid      string
-	MaxSize  int64
-	maxBytes int64
-	start    time.Time
-	end      time.Time
+	KMCfg            *kokumetricscfgv1alpha1.KokuMetricsConfig
+	DirCfg           *dirconfig.DirectoryConfig
+	Log              logr.Logger
+	manifest         manifestInfo
+	uid              string
+	createdTimestamp string
+	MaxSize          int64
+	maxBytes         int64
+	start            time.Time
+	end              time.Time
 }
+
+const timestampFormat = "20060102T150405"
 
 // Define the global variables
 const megaByte int64 = 1024 * 1024
@@ -388,24 +391,12 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
-// ReadUploadDir returns the fileinfo for each file in the upload dir
-func (p *FilePackager) ReadUploadDir() ([]string, error) {
-	outFiles, err := ioutil.ReadDir(p.DirCfg.Upload.Path)
-	if err != nil {
-		return nil, fmt.Errorf("could not read upload directory: %v", err)
-	}
-	fileList := []string{}
-	for _, file := range outFiles {
-		fileList = append(fileList, file.Name())
-	}
-	return fileList, nil
-}
-
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
 	p.maxBytes = p.MaxSize * megaByte
 	p.uid = uuid.New().String()
+	p.createdTimestamp = time.Now().Format(timestampFormat)
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
@@ -442,13 +433,15 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 
+	filenameBase := p.createdTimestamp + "-cost-mgmt"
+
 	if split {
 		for idx, fileName := range fileList {
 			if !strings.HasSuffix(fileName, ".csv") {
 				continue
 			}
 			fileList = map[int]string{idx: fileName}
-			tarFileName := "cost-mgmt-" + p.uid + "-" + strconv.Itoa(idx) + ".tar.gz"
+			tarFileName := filenameBase + "-" + strconv.Itoa(idx) + ".tar.gz"
 			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
 			log.Info("generating tar.gz", "tarFile", tarFilePath)
 			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
@@ -456,7 +449,7 @@ func (p *FilePackager) PackageReports() error {
 			}
 		}
 	} else {
-		tarFileName := "cost-mgmt-" + p.uid + ".tar.gz"
+		tarFileName := filenameBase + ".tar.gz"
 		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
 		log.Info("generating tar.gz", "tarFile", tarFilePath)
 		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
@@ -465,5 +458,6 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("file packaging was successful")
+	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
