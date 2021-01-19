@@ -27,10 +27,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 )
 
@@ -104,17 +106,28 @@ func (s *Storage) getVolume(vols []corev1.Volume, kmCfg *kokumetricscfgv1alpha1.
 	return fmt.Errorf("volume not found")
 }
 
-func (s *Storage) mountVolume(dep *appsv1.Deployment) (bool, error) {
+func (s *Storage) mountVolume(dep *appsv1.Deployment, depSpec *appsv1.DeploymentSpec, csv *operatorsv1alpha1.ClusterServiceVersion) (bool, error) {
 	ctx := context.Background()
 	s.vol.volume.EmptyDir = nil
 	s.vol.volume.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
 		ClaimName: s.PVC.Name,
 	}
-	patch := client.MergeFrom(dep.DeepCopy())
-	dep.Spec.Template.Spec.Volumes[s.vol.index] = *s.vol.volume
 
-	if err := s.Client.Patch(ctx, dep, patch); err != nil {
-		return false, fmt.Errorf("failed to Patch deployment: %v", err)
+	depSpec.Template.Spec.Volumes[s.vol.index] = *s.vol.volume
+	var patch client.Patch
+	var obj runtime.Object
+	if csv != nil {
+		obj = csv
+		patch = client.MergeFrom(csv.DeepCopy())
+		csv.Spec.InstallStrategy.StrategySpec.DeploymentSpecs[0].Spec = *depSpec
+	} else {
+		obj = dep
+		patch = client.MergeFrom(dep.DeepCopy())
+		dep.Spec = *depSpec
+	}
+
+	if err := s.Client.Patch(ctx, obj, patch); err != nil {
+		return false, fmt.Errorf("failed to Patch %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, err)
 	}
 	return true, nil
 }
@@ -130,9 +143,24 @@ func (s *Storage) ConvertVolume(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig)
 		Namespace: "koku-metrics-operator",
 		Name:      "koku-metrics-controller-manager"}
 	if err := s.Client.Get(ctx, namespace, deployment); err != nil {
-		return false, fmt.Errorf("unable to get deployment: %v", err)
+		return false, fmt.Errorf("unable to get Deployment: %v", err)
 	}
 	deployCp := deployment.DeepCopy()
+	depSpec := deployCp.Spec.DeepCopy()
+
+	var csv *operatorsv1alpha1.ClusterServiceVersion
+	if len(deployCp.OwnerReferences) > 0 {
+		owner := deployCp.OwnerReferences[0]
+		log.Info(fmt.Sprintf("deployment is owned by: %s", owner.Name))
+		csv = &operatorsv1alpha1.ClusterServiceVersion{}
+		namespace := types.NamespacedName{
+			Namespace: "koku-metrics-operator",
+			Name:      owner.Name}
+		if err := s.Client.Get(ctx, namespace, csv); err != nil {
+			return false, fmt.Errorf("unable to get ClusterServiceVersion: %v", err)
+		}
+		depSpec = csv.Spec.InstallStrategy.StrategySpec.DeploymentSpecs[0].Spec.DeepCopy()
+	}
 
 	log.Info("getting deployment volumes")
 	if err := s.getVolume(deployCp.Spec.Template.Spec.Volumes, kmCfg); err != nil {
@@ -151,7 +179,7 @@ func (s *Storage) ConvertVolume(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig)
 	}
 
 	log.Info(fmt.Sprintf("attempting to mount deployment onto PVC name: %s", s.PVC.Name))
-	return s.mountVolume(deployCp)
+	return s.mountVolume(deployCp, depSpec, csv)
 }
 
 // MakeVolumeClaimTemplate produces a template to create the PVC

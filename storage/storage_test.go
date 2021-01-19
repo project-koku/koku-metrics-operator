@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -119,6 +120,32 @@ var (
 			},
 		},
 	}
+	csv = &operatorsv1alpha1.ClusterServiceVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-csv",
+			Namespace: kokuMetricsCfgNamespace,
+		},
+		Spec: operatorsv1alpha1.ClusterServiceVersionSpec{
+			DisplayName: "test-csv",
+			InstallStrategy: operatorsv1alpha1.NamedInstallStrategy{
+				StrategyName: "test-strategy",
+				StrategySpec: operatorsv1alpha1.StrategyDetailsDeployment{
+					DeploymentSpecs: []operatorsv1alpha1.StrategyDeploymentSpec{
+						{
+							Name: "test-deployment",
+							Spec: deployment.Spec,
+						},
+					},
+				},
+			},
+		},
+	}
+	owner = metav1.OwnerReference{
+		APIVersion: "operators.coreos.com/v1alpha1",
+		Kind:       "ClusterServiceVersion",
+		Name:       "test-csv",
+		UID:        "1c5738c0-2691-4e60-b2fd-6e056327ac89",
+	}
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -156,115 +183,162 @@ var _ = Describe("Storage Tests", func() {
 		// failed test runs that do not clean up leave resources behind.
 		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
 	})
 
 	AfterEach(func() {
 
 	})
+	Context("Deployment owned by CSV", func() {
+		Describe("deployment does exist", func() {
+			It("can find the deployment but CSV is missing", func() {
+				// csvCp := csv.DeepCopy()
+				// Expect(k8sClient.Create(ctx, csvCp)).Should(Succeed())
 
-	Describe("deployment does not exist", func() {
-		It("cannot find the deployment", func() {
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-			pvc := MakeVolumeClaimTemplate(DefaultPVC)
-			s := &Storage{
-				Client: k8sClient,
-				Log:    testLogger,
-				PVC:    pvc,
-			}
+				depCp := deployment.DeepCopy()
+				depCp.OwnerReferences = []metav1.OwnerReference{owner}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			mountEst, err := s.ConvertVolume(kmCfg)
-			Expect(err).ToNot(BeNil())
-			Expect(mountEst).To(BeFalse())
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
+
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).ToNot(BeNil())
+				Expect(mountEst).To(BeFalse())
+			})
+			It("can find the deployment and CSV exists", func() {
+				csvCp := csv.DeepCopy()
+				Expect(k8sClient.Create(ctx, csvCp)).Should(Succeed())
+
+				depCp := deployment.DeepCopy()
+				depCp.OwnerReferences = []metav1.OwnerReference{owner}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
+
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).To(BeNil())
+				Expect(mountEst).To(BeTrue())
+			})
 		})
 	})
-	Describe("deployment does exist", func() {
-		It("successfully establishes the mount", func() {
-			depCp := deployment.DeepCopy()
-			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-			pvc := MakeVolumeClaimTemplate(DefaultPVC)
-			s := &Storage{
-				Client: k8sClient,
-				Log:    testLogger,
-				PVC:    pvc,
-			}
 
-			mountEst, err := s.ConvertVolume(kmCfg)
-			Expect(err).To(BeNil())
-			Expect(mountEst).To(BeTrue())
+	Context("Deployment not owned by CSV", func() {
+		Describe("deployment does not exist", func() {
+			It("cannot find the deployment", func() {
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
+
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).ToNot(BeNil())
+				Expect(mountEst).To(BeFalse())
+			})
 		})
-		It("connot find the volume", func() {
-			// replace the correct vol mount with an incorrect one
-			depCp := deployment.DeepCopy()
-			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*emptyDirWrong}
-			depCp.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{*volMountWrong}
-			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+		Describe("deployment does exist", func() {
+			It("successfully establishes the mount", func() {
+				depCp := deployment.DeepCopy()
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-			pvc := MakeVolumeClaimTemplate(DefaultPVC)
-			s := &Storage{
-				Client: k8sClient,
-				Log:    testLogger,
-				PVC:    pvc,
-			}
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).To(BeNil())
+				Expect(mountEst).To(BeTrue())
+			})
+			It("connot find the volume", func() {
+				// replace the correct vol mount with an incorrect one
+				depCp := deployment.DeepCopy()
+				depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*emptyDirWrong}
+				depCp.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{*volMountWrong}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			mountEst, err := s.ConvertVolume(kmCfg)
-			Expect(err).ToNot(BeNil())
-			Expect(mountEst).To(BeFalse())
-		})
-		It("deployment has no volumes at all", func() {
-			// replace the correct vol mount with an incorrect one
-			depCp := deploymentNoVolume.DeepCopy()
-			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-			pvc := MakeVolumeClaimTemplate(DefaultPVC)
-			s := &Storage{
-				Client: k8sClient,
-				Log:    testLogger,
-				PVC:    pvc,
-			}
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).ToNot(BeNil())
+				Expect(mountEst).To(BeFalse())
+			})
+			It("deployment has no volumes at all", func() {
+				// replace the correct vol mount with an incorrect one
+				depCp := deploymentNoVolume.DeepCopy()
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			mountEst, err := s.ConvertVolume(kmCfg)
-			Expect(err).ToNot(BeNil())
-			Expect(mountEst).To(BeFalse())
-		})
-		It("volume is already mounted", func() {
-			depCp := deployment.DeepCopy()
-			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVC}
-			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-			pvc := MakeVolumeClaimTemplate(DefaultPVC)
-			s := &Storage{
-				Client: k8sClient,
-				Log:    testLogger,
-				PVC:    pvc,
-			}
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).ToNot(BeNil())
+				Expect(mountEst).To(BeFalse())
+			})
+			It("volume is already mounted", func() {
+				depCp := deployment.DeepCopy()
+				depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVC}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			mountEst, err := s.ConvertVolume(kmCfg)
-			Expect(err).To(BeNil())
-			Expect(mountEst).To(BeFalse())
-		})
-		It("volume is already mounted but does not match spec", func() {
-			pvcCp := MakeVolumeClaimTemplate(DefaultPVC)
-			pvcCp.Name = "not-the-right-one"
-			Expect(k8sClient.Create(ctx, pvcCp)).Should(Succeed())
-			depCp := deployment.DeepCopy()
-			depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVCfake}
-			Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
 
-			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
-			pvc := MakeVolumeClaimTemplate(DefaultPVC)
-			s := &Storage{
-				Client: k8sClient,
-				Log:    testLogger,
-				PVC:    pvc,
-			}
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).To(BeNil())
+				Expect(mountEst).To(BeFalse())
+			})
+			It("volume is already mounted but does not match spec", func() {
+				pvcCp := MakeVolumeClaimTemplate(DefaultPVC)
+				pvcCp.Name = "not-the-right-one"
+				Expect(k8sClient.Create(ctx, pvcCp)).Should(Succeed())
+				depCp := deployment.DeepCopy()
+				depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVCfake}
+				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-			mountEst, err := s.ConvertVolume(kmCfg)
-			Expect(err).To(BeNil())
-			Expect(mountEst).To(BeTrue())
+				kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC)
+				s := &Storage{
+					Client: k8sClient,
+					Log:    testLogger,
+					PVC:    pvc,
+				}
+
+				mountEst, err := s.ConvertVolume(kmCfg)
+				Expect(err).To(BeNil())
+				Expect(mountEst).To(BeTrue())
+			})
 		})
 	})
 })
