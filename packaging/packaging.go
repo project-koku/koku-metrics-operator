@@ -415,6 +415,7 @@ func (p *FilePackager) trimPackages() error {
 
 	sort.Strings(datetimes)
 
+	return nil
 }
 
 // PackageReports is responsible for packing report files for upload
