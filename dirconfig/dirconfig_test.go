@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -49,6 +50,51 @@ func (mfi MockFileInfo) IsDir() bool {
 
 func (mfi MockFileInfo) Sys() interface{} {
 	return nil
+}
+
+func TestGetFiles(t *testing.T) {
+	if err := os.Mkdir("empty-dir", 0644); err != nil {
+		t.Fatalf("failed to create empty-dir: %v", err)
+	}
+	defer os.RemoveAll("empty-dir")
+	getFilesTests := []struct {
+		name string
+		path string
+		want []string
+		err  error
+	}{
+		{
+			name: "path exists with files",
+			path: "./test_files",
+			want: []string{"test_file"},
+			err:  nil,
+		},
+		{
+			name: "path exists with no files",
+			path: "./empty-dir",
+			want: []string{},
+			err:  nil,
+		},
+		{
+			name: "path does not exist",
+			path: "./not_real",
+			want: nil,
+			err:  errTest,
+		},
+	}
+	for _, tt := range getFilesTests {
+		dir := &Directory{Path: tt.path}
+		got, err := dir.GetFiles()
+		if err == nil && tt.err != nil {
+			t.Errorf("%s expected error got: %v", tt.name, err)
+		}
+		if err != nil && tt.err == nil {
+			t.Errorf("%s expected nil error got: %v", tt.name, err)
+		}
+		if !reflect.DeepEqual(tt.want, got) {
+			t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)
+		}
+	}
 }
 
 func TestDirString(t *testing.T) {

@@ -473,7 +473,7 @@ func TestPackagingReports(t *testing.T) {
 			if tt.want == nil && err != nil {
 				t.Errorf("%s unexpected err: %v", tt.name, err)
 			}
-			outFiles, _ := testPackager.ReadUploadDir()
+			outFiles, _ := tt.dirCfg.Upload.GetFiles()
 			if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
 				t.Errorf("%s expected multpile files: %v, received: %d", tt.name, tt.multipleFiles, len(outFiles))
 			}

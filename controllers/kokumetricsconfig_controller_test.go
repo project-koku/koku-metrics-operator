@@ -169,6 +169,46 @@ func TestGetClientset(t *testing.T) {
 	}
 }
 
+func TestConcatErrors(t *testing.T) {
+	concatErrorsTests := []struct {
+		name   string
+		errors []error
+		want   string
+	}{
+		{
+			name:   "0 errors",
+			errors: nil,
+			want:   "",
+		},
+		{
+			name:   "1 error",
+			errors: []error{errors.New("error1")},
+			want:   "error1",
+		},
+		{
+			name:   "2 errors",
+			errors: []error{errors.New("error1"), errors.New("error2")},
+			want:   "error1\nerror2",
+		},
+		{
+			name:   "3 errors",
+			errors: []error{errors.New("error1"), errors.New("error2"), errors.New("error3")},
+			want:   "error1\nerror2\nerror3",
+		},
+	}
+	for _, tt := range concatErrorsTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := concatErrs(tt.errors...)
+			if got != nil && got.Error() != tt.want {
+				t.Errorf("%s\ngot: %v\nwant: %v\n", tt.name, got.Error(), tt.want)
+			}
+			if got == nil && tt.want != "" {
+				t.Errorf("%s expected nil error, got: %T", tt.name, got)
+			}
+		})
+	}
+}
+
 func setup() error {
 	type dirInfo struct {
 		dirName  string
@@ -265,6 +305,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
 					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "koku-metrics-operator-data"
 			}, timeout, interval).Should(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
@@ -285,6 +327,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
@@ -301,6 +345,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			deleteDeployment(ctx, emptyDep1)
+			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
 			createDeployment(ctx, emptyDep2)
@@ -317,6 +362,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
 					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "a-different-pvc"
 			}, timeout, interval).Should(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
@@ -339,6 +386,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
 
 			deleteDeployment(ctx, emptyDep2)
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 	})
 
@@ -364,6 +412,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("upload set to false case", func() {
 
@@ -387,6 +437,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should find basic auth creds for good basic auth CRD case", func() {
 			instCopy := instance.DeepCopy()
@@ -409,6 +461,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
 			badAuth := "bad-auth"
@@ -432,6 +486,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should reflect source name in status for source info CRD case", func() {
 			instCopy := instance.DeepCopy()
@@ -454,6 +510,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should reflect source error when attempting to create source", func() {
 
@@ -479,6 +537,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 			Expect(fetched.Status.Source.SourceError).NotTo(BeNil())
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should fail due to bad basic auth secret", func() {
 			instCopy := instance.DeepCopy()
@@ -502,6 +562,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should fail due to missing pass in auth secret", func() {
 			instCopy := instance.DeepCopy()
@@ -525,6 +587,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should fail due to missing auth secret name with basic set", func() {
 
@@ -548,6 +612,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should should fail due to deleted token secret", func() {
 			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
@@ -568,6 +634,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should should fail token secret wrong data", func() {
 			createBadPullSecret(ctx, openShiftConfigNamespace)
@@ -589,6 +657,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should fail bc of missing cluster version", func() {
 			deleteClusterVersion(ctx)
@@ -608,6 +678,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(""))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should attempt upload due to tar.gz being present", func() {
 			err := setup()
@@ -635,6 +707,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
 			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should check the last upload time in the upload status", func() {
 			err := setup()
@@ -643,7 +717,6 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "checkuploadstatus"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			instCopy.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
@@ -654,10 +727,18 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
+			fetched.Status.Upload.LastSuccessfulUploadTime = uploadTime
+			Eventually(func() bool {
+				_ = k8sClient.Status().Update(ctx, fetched)
+				return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
+			}, timeout, interval).ShouldNot(BeTrue())
+
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1alpha1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 	})
 })

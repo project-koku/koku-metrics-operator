@@ -256,13 +256,17 @@ type AuthenticationStatus struct {
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.
 type PackagingStatus struct {
 
+	// LastSuccessfulPackagingTime is a field of KokuMetricsConfig that shows the time of the last successful file packaging.
+	// +nullable
+	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_packaging_time,omitempty"`
+
 	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
-	// The default is 100.
-	// +optional
 	MaxSize *int64 `json:"max_size_MB,omitempty"`
 
+	// PackagedFiles is a field of KokuMetricsConfig to represent the list of file packages in storage.
+	PackagedFiles []string `json:"packaged_files,omitempty"`
+
 	// PackagingError is a field of KokuMetricsConfigStatus to represent the error encountered packaging the reports.
-	// +optional
 	PackagingError string `json:"error,omitempty"`
 }
 

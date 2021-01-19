@@ -274,7 +274,7 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1
 func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
 	log := logger.WithValues("KokuMetricsConfig", "checkCycle")
 	if lastExecution.IsZero() {
-		log.Info(fmt.Sprintf("there have been no prior successful %ss to cloud.redhat.com", action))
+		log.Info(fmt.Sprintf("there have been no prior successful %ss", action))
 		return true
 	}
 
@@ -282,7 +282,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 	minutes := int64(duration.Minutes())
 	log.Info(fmt.Sprintf("it has been %d minute(s) since the last successful %s", minutes, action))
 	if minutes >= cycle {
-		log.Info(fmt.Sprintf("executing %s to cloud.redhat.com", action))
+		log.Info(fmt.Sprintf("executing %s", action))
 		return true
 	}
 	log.Info(fmt.Sprintf("not time to execute the %s", action))
@@ -370,16 +370,12 @@ func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	}
 }
 
-func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
+func packageFiles(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
 	log := r.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
 
-	// if its time to upload/package
-	if !*kmCfg.Spec.Upload.UploadToggle {
-		log.Info("operator is configured to not upload reports to cloud.redhat.com")
-		return nil
-	}
-	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
-		return nil
+	// if its time to package
+	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+		return
 	}
 
 	// Package and split the payload if necessary
@@ -395,8 +391,21 @@ func packageAndUpload(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthC
 		// update the CR packaging error status
 		kmCfg.Status.Packaging.PackagingError = err.Error()
 	}
+}
 
-	uploadFiles, err := packager.ReadUploadDir()
+func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
+	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
+
+	// if its time to upload/package
+	if !*kmCfg.Spec.Upload.UploadToggle {
+		log.Info("operator is configured to not upload reports")
+		return nil
+	}
+	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
+		return nil
+	}
+
+	uploadFiles, err := dirCfg.Upload.GetFiles()
 	if err != nil {
 		log.Error(err, "failed to read upload directory")
 		return err
@@ -526,8 +535,6 @@ func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
 func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
-	var mainErr error
 	os.Setenv("TZ", "UTC")
 	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
@@ -536,7 +543,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	kmCfgOriginal := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
 
 	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
-		log.Error(err, "unable to fetch KokuMetricsConfigCR")
+		log.Info(fmt.Sprintf("unable to fetch KokuMetricsConfigCR: %v", err))
 		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -601,20 +608,35 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// attempt to collect prometheus stats and create reports
 	collectPromStats(r, kmCfg, dirCfg)
 
-	// attempt package and upload, if errors occur return
-	if err := packageAndUpload(r, authConfig, kmCfg, dirCfg); err != nil {
+	// package report files
+	packageFiles(r, kmCfg, dirCfg)
+
+	// Initial returned result -> requeue reconcile after 5 min.
+	// This result is replaced if upload or status update results in error.
+	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
+	var errors []error
+
+	// attempt upload
+	if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
 		result = ctrl.Result{}
-		mainErr = err
+		errors = append(errors, err)
 	}
+
+	uploadFiles, err := dirCfg.Upload.GetFiles()
+	if err != nil {
+		result = ctrl.Result{}
+		errors = append(errors, err)
+	}
+	kmCfg.Status.Packaging.PackagedFiles = uploadFiles
 
 	if err := r.Status().Update(ctx, kmCfg); err != nil {
 		log.Error(err, "failed to update KokuMetricsConfig status")
 		result = ctrl.Result{}
-		mainErr = err
+		errors = append(errors, err)
 	}
 
 	// Requeue for processing after 5 minutes
-	return result, mainErr
+	return result, concatErrs(errors...)
 }
 
 // SetupWithManager Setup reconciliation with manager object
@@ -622,4 +644,17 @@ func (r *KokuMetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kokumetricscfgv1alpha1.KokuMetricsConfig{}).
 		Complete(r)
+}
+
+// concatErrs combines all the errors into one error
+func concatErrs(errors ...error) error {
+	var err error
+	var errstrings []string
+	for _, e := range errors {
+		errstrings = append(errstrings, e.Error())
+	}
+	if len(errstrings) > 0 {
+		err = fmt.Errorf(strings.Join(errstrings, "\n"))
+	}
+	return err
 }
