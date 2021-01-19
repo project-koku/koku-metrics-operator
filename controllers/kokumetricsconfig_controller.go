@@ -282,10 +282,10 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 	minutes := int64(duration.Minutes())
 	log.Info(fmt.Sprintf("it has been %d minute(s) since the last successful %s", minutes, action))
 	if minutes >= cycle {
-		log.Info(fmt.Sprintf("executing %s to cloud.redhat.com", action))
+		log.Info(fmt.Sprintf("executing %s", action))
 		return true
 	}
-	log.Info(fmt.Sprintf("executing %s", action))
+	log.Info(fmt.Sprintf("not time to execute the %s", action))
 	return false
 
 }
@@ -391,13 +391,6 @@ func packageFiles(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 		// update the CR packaging error status
 		kmCfg.Status.Packaging.PackagingError = err.Error()
 	}
-
-	uploadFiles, err := dirCfg.Upload.GetFiles()
-	if err != nil {
-		log.Error(err, "failed to read upload directory")
-	}
-	fmt.Printf("FILES TO UPLOAD: %+v\n", uploadFiles)
-
 }
 
 func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
@@ -628,6 +621,13 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
+
+	uploadFiles, err := dirCfg.Upload.GetFiles()
+	if err != nil {
+		result = ctrl.Result{}
+		errors = append(errors, err)
+	}
+	kmCfg.Status.Packaging.PackagedFiles = uploadFiles
 
 	if err := r.Status().Update(ctx, kmCfg); err != nil {
 		log.Error(err, "failed to update KokuMetricsConfig status")

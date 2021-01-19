@@ -413,9 +413,15 @@ spec:
                   max_size_MB:
                     description: MaxSize is a field of KokuMetricsConfig to represent
                       the max file size in megabytes that will be compressed for upload
-                      to Ingress. The default is 100.
+                      to Ingress.
                     format: int64
                     type: integer
+                  packaged_files:
+                    description: PackagedFiles is a field of KokuMetricsConfig to
+                      represent the list of file packages in storage.
+                    items:
+                      type: string
+                    type: array
                 type: object
               prometheus:
                 description: Prometheus represents the status of premetheus queries.
