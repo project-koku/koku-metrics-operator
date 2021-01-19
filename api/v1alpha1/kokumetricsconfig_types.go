@@ -294,7 +294,7 @@ type PackagingStatus struct {
 	PackagingError string `json:"error,omitempty"`
 
 	// ReportCount is a field of KokuMetricsConfig to represent the number of reports in storage.
-	ReportCount *int64
+	ReportCount *int64 `json:"number_reports_stored,omitempty"`
 }
 
 // UploadStatus defines the observed state of Upload object in the KokuMetricsConfigStatus.

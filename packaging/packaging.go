@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ import (
 	"github.com/google/uuid"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/strset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -389,6 +391,30 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 		movedFiles = append(movedFiles, newFile)
 	}
 	return movedFiles, nil
+}
+
+func (p *FilePackager) trimPackages() error {
+	packages, err := p.DirCfg.Upload.GetFiles()
+	if err != nil {
+		return fmt.Errorf("failed to read upload dir: %v", err)
+	}
+
+	datetimesSet := strset.NewSet()
+	for _, f := range packages {
+		datetimesSet.Add(strings.Split(f, "-")[0])
+	}
+
+	if datetimesSet.Len() <= int(p.KMCfg.Spec.Packaging.MaxReports) {
+		return nil
+	}
+
+	datetimes := []string{}
+	for d := range datetimesSet.Range() {
+		datetimes = append(datetimes, d)
+	}
+
+	sort.Strings(datetimes)
+
 }
 
 // PackageReports is responsible for packing report files for upload

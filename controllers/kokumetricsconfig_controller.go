@@ -121,6 +121,7 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.K
 
 	// set the default max file size for packaging
 	kmCfg.Status.Packaging.MaxSize = &kmCfg.Spec.Packaging.MaxSize
+	kmCfg.Status.Packaging.MaxReports = &kmCfg.Spec.Packaging.MaxReports
 
 	// set the upload wait to whatever is in the spec, if the spec is defined
 	if kmCfg.Spec.Upload.UploadWait != nil {
