@@ -137,14 +137,12 @@ func genDirCfg(t *testing.T, dirName string) *dirconfig.DirectoryConfig {
 		Upload:  dirconfig.Directory{Path: filepath.Join(dirName, "upload")},
 		Staging: dirconfig.Directory{Path: filepath.Join(dirName, "staging")},
 		Reports: dirconfig.Directory{Path: filepath.Join(dirName, "data")},
-		Archive: dirconfig.Directory{Path: filepath.Join(dirName, "archive")},
 	}
 	if err := dirconfig.CheckExistsOrRecreate(
 		testLogger,
 		dirCfg.Upload,
 		dirCfg.Staging,
 		dirCfg.Reports,
-		dirCfg.Archive,
 	); err != nil {
 		t.Logf("failed to create dirCfg: %v", err)
 	}

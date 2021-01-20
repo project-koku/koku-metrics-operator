@@ -31,10 +31,10 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-# FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot
 
 # For terminal access, use this image:
-FROM gcr.io/distroless/base:debug
+# FROM gcr.io/distroless/base:debug-nonroot
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

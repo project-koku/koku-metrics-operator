@@ -34,7 +34,6 @@ var (
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
-	// archive      = "archive"
 )
 
 type DirListFunc = func(path string) ([]os.FileInfo, error)
@@ -55,7 +54,6 @@ type DirectoryConfig struct {
 	Upload  Directory
 	Staging Directory
 	Reports Directory
-	Archive Directory
 	*DirectoryFileSystem
 }
 
@@ -186,4 +184,12 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	}
 
 	return mapstructure.Decode(dirMap, &dirCfg)
+}
+
+func (dirCfg *DirectoryConfig) CheckConfig() bool {
+	// quite verbose, but iterating through struct fields is hard
+	if !dirCfg.Parent.Exists() || !dirCfg.Upload.Exists() || !dirCfg.Staging.Exists() || !dirCfg.Reports.Exists() {
+		return false
+	}
+	return true
 }

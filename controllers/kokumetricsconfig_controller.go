@@ -601,7 +601,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
-	if dirCfg == nil || !dirCfg.Parent.Exists() {
+	if dirCfg == nil || !dirCfg.CheckConfig() {
 		if err := dirCfg.GetDirectoryConfig(); err != nil {
 			log.Error(err, "failed to get directory configuration")
 			return ctrl.Result{}, err // without this directory, it is pointless to continue
