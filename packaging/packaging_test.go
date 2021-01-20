@@ -479,7 +479,7 @@ func TestPackagingReports(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = tt.dirCfg
 			testPackager.KMCfg.Spec.Packaging.MaxReports = tt.maxReports
-			testPackager.MaxSize = tt.maxSize
+			testPackager.KMCfg.Status.Packaging.MaxSize = &tt.maxSize
 			err := testPackager.PackageReports()
 			if tt.want != nil && err == nil {
 				t.Errorf("%s wanted error got %v", tt.name, err)

@@ -51,7 +51,6 @@ type FilePackager struct {
 	manifest         manifestInfo
 	uid              string
 	createdTimestamp string
-	MaxSize          int64
 	maxBytes         int64
 	start            time.Time
 	end              time.Time
@@ -446,7 +445,7 @@ func (p *FilePackager) TrimPackages() error {
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
-	p.maxBytes = p.MaxSize * megaByte
+	p.maxBytes = *p.KMCfg.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
 	p.createdTimestamp = time.Now().Format(timestampFormat)
 

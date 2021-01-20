@@ -605,10 +605,9 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// package report files
 	packager := &packaging.FilePackager{
-		KMCfg:   kmCfg,
-		DirCfg:  dirCfg,
-		Log:     r.Log,
-		MaxSize: *kmCfg.Status.Packaging.MaxSize,
+		KMCfg:  kmCfg,
+		DirCfg: dirCfg,
+		Log:    r.Log,
 	}
 	packageFiles(packager)
 
