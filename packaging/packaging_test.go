@@ -1013,7 +1013,7 @@ func TestTrimPackages(t *testing.T) {
 				Log:    testLogger,
 				KMCfg:  kmCfg,
 			}
-			got := testPackager.trimPackages()
+			got := testPackager.TrimPackages()
 			if tt.want == nil && got != nil {
 				t.Errorf("%s did not expect error but got: %v", tt.name, got)
 			}

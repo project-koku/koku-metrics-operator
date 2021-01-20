@@ -393,7 +393,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
-func (p *FilePackager) trimPackages() error {
+func (p *FilePackager) TrimPackages() error {
 	log := p.Log.WithValues("kokumetricsconfig", "trimPackages")
 
 	packages, err := p.DirCfg.Upload.GetFiles()
@@ -458,7 +458,7 @@ func (p *FilePackager) PackageReports() error {
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveFiles()
 	if err == ErrNoReports {
-		return p.trimPackages()
+		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
@@ -511,5 +511,5 @@ func (p *FilePackager) PackageReports() error {
 
 	log.Info("file packaging was successful")
 	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
-	return p.trimPackages()
+	return nil
 }

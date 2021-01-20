@@ -371,26 +371,20 @@ func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	}
 }
 
-func packageFiles(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
-	log := r.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
+func packageFiles(p *packaging.FilePackager) {
+	log := p.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
 
 	// if its time to package
-	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+	if !checkCycle(p.Log, *p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
 		return
 	}
 
 	// Package and split the payload if necessary
-	packager := packaging.FilePackager{
-		KMCfg:   kmCfg,
-		DirCfg:  dirCfg,
-		Log:     r.Log,
-		MaxSize: *kmCfg.Status.Packaging.MaxSize,
-	}
-	kmCfg.Status.Packaging.PackagingError = ""
-	if err := packager.PackageReports(); err != nil {
+	p.KMCfg.Status.Packaging.PackagingError = ""
+	if err := p.PackageReports(); err != nil {
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
-		kmCfg.Status.Packaging.PackagingError = err.Error()
+		p.KMCfg.Status.Packaging.PackagingError = err.Error()
 	}
 }
 
@@ -610,7 +604,13 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	collectPromStats(r, kmCfg, dirCfg)
 
 	// package report files
-	packageFiles(r, kmCfg, dirCfg)
+	packager := &packaging.FilePackager{
+		KMCfg:   kmCfg,
+		DirCfg:  dirCfg,
+		Log:     r.Log,
+		MaxSize: *kmCfg.Status.Packaging.MaxSize,
+	}
+	packageFiles(packager)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
@@ -619,6 +619,12 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// attempt upload
 	if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
+		result = ctrl.Result{}
+		errors = append(errors, err)
+	}
+
+	// remove old reports if maximum report count has been exceeded
+	if err := packager.TrimPackages(); err != nil {
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
