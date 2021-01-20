@@ -46,6 +46,9 @@ var (
 		},
 		EmbeddedObjectMetadata: kokumetricscfgv1alpha1.EmbeddedObjectMetadata{
 			Name: "koku-metrics-operator-data",
+			Labels: map[string]string{
+				"application": "koku-metrics-operator",
+			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},

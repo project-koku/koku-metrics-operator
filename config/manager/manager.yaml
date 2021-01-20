@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
+    application: koku-metrics-operator
     control-plane: controller-manager
   name: operator
 ---
@@ -11,6 +12,7 @@ metadata:
   name: controller-manager
   namespace: operator
   labels:
+    application: koku-metrics-operator
     control-plane: controller-manager
 spec:
   selector:
@@ -20,6 +22,7 @@ spec:
   template:
     metadata:
       labels:
+        application: koku-metrics-operator
         control-plane: controller-manager
     spec:
       containers:
