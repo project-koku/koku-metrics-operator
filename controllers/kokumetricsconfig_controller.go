@@ -495,10 +495,11 @@ func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 
 	stor := &storage.Storage{
 		Client: r.Client,
+		KMCfg:  kmCfg,
 		Log:    r.Log,
 		PVC:    storage.MakeVolumeClaimTemplate(*pvcTemplate),
 	}
-	mountEstablished, err := stor.ConvertVolume(kmCfg)
+	mountEstablished, err := stor.ConvertVolume()
 	if err != nil {
 		return &ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
 	}

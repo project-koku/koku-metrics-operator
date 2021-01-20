@@ -203,11 +203,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).ToNot(BeNil())
 				Expect(mountEst).To(BeFalse())
 			})
@@ -223,11 +224,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).To(BeNil())
 				Expect(mountEst).To(BeTrue())
 			})
@@ -241,11 +243,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).ToNot(BeNil())
 				Expect(mountEst).To(BeFalse())
 			})
@@ -258,11 +261,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).To(BeNil())
 				Expect(mountEst).To(BeTrue())
 			})
@@ -277,11 +281,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).ToNot(BeNil())
 				Expect(mountEst).To(BeFalse())
 			})
@@ -294,11 +299,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).ToNot(BeNil())
 				Expect(mountEst).To(BeFalse())
 			})
@@ -311,11 +317,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).To(BeNil())
 				Expect(mountEst).To(BeFalse())
 			})
@@ -331,11 +338,12 @@ var _ = Describe("Storage Tests", func() {
 				pvc := MakeVolumeClaimTemplate(DefaultPVC)
 				s := &Storage{
 					Client: k8sClient,
+					KMCfg:  kmCfg,
 					Log:    testLogger,
 					PVC:    pvc,
 				}
 
-				mountEst, err := s.ConvertVolume(kmCfg)
+				mountEst, err := s.ConvertVolume()
 				Expect(err).To(BeNil())
 				Expect(mountEst).To(BeTrue())
 			})
