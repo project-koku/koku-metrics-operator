@@ -21,7 +21,6 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -139,21 +138,6 @@ type PackagingSpec struct {
 	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
 	// +kubebuilder:default=10
 	MaxReports int64 `json:"max_reports_to_keep"`
-}
-
-// StorageSpec defines the desired state of Storage object in the KokuMetricsConfigSpec.
-type StorageSpec struct {
-
-	// AutoExpandPVC is a field of KokuMetricsConfig to represent if the operator should automatically expand the PVC size.
-	// +kubebuilder:default=true
-	AutoExpandPVC *bool `json:"auto_expand_pvc"`
-
-	// ExpansionThreshold is a field of KokuMetricsConfig to represent the % space remaining in the PVC before re-sizing.
-	// +kubebuilder:default=10
-	ExpansionThreshold int64 `json:"expansion_threshold"`
-
-	// MaxClaimStorage is a field of KokuMetricsConfig to represent the maximum size of the expanded PVC.
-	MaxClaimStorage resource.Quantity `json:"max_claim_storage"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
