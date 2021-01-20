@@ -2,7 +2,8 @@
 PREVIOUS_VERSION ?= 0.9.1
 VERSION ?= 0.9.2
 # Default bundle image tag
-BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:$(VERSION)
+BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
+CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -271,3 +272,11 @@ bundle-build:
 # Push the bundle image.
 bundle-push:
 	docker push $(BUNDLE_IMG)
+
+# Build a test-catalog
+test-catalog:
+	opm index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
+
+# Push the test-catalog
+test-catalog-push:
+	docker push ${CATALOG_IMG}
