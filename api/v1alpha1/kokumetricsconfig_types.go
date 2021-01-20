@@ -136,8 +136,9 @@ type PackagingSpec struct {
 	MaxSize int64 `json:"max_size_MB"`
 
 	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
-	// +kubebuilder:default=10
-	MaxReports int64 `json:"max_reports_to_keep"`
+	// The default is 12 reports which corresponds to 3 days worth of data given the other default values.
+	// +kubebuilder:default=12
+	MaxReports int64 `json:"max_reports_to_store"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
@@ -265,7 +266,7 @@ type PackagingStatus struct {
 	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_packaging_time,omitempty"`
 
 	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
-	MaxReports *int64 `json:"max_reports_to_keep,omitempty"`
+	MaxReports *int64 `json:"max_reports_to_store,omitempty"`
 
 	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	MaxSize *int64 `json:"max_size_MB,omitempty"`

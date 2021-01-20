@@ -74,10 +74,12 @@ spec:
                 description: Packaging is a field of KokuMetricsConfig to represent
                   the packaging object.
                 properties:
-                  max_reports_to_keep:
-                    default: 10
+                  max_reports_to_store:
+                    default: 12
                     description: MaxReports is a field of KokuMetricsConfig to represent
-                      the maximum number of reports to store.
+                      the maximum number of reports to store. The default is 12 reports
+                      which corresponds to 3 days worth of data given the other default
+                      values.
                     format: int64
                     type: integer
                   max_size_MB:
@@ -90,7 +92,7 @@ spec:
                     minimum: 1
                     type: integer
                 required:
-                - max_reports_to_keep
+                - max_reports_to_store
                 - max_size_MB
                 type: object
               prometheus_config:
@@ -417,7 +419,7 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
-                  max_reports_to_keep:
+                  max_reports_to_store:
                     description: MaxReports is a field of KokuMetricsConfig to represent
                       the maximum number of reports to store.
                     format: int64
