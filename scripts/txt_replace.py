@@ -8,7 +8,7 @@ from os import fdopen, name, path, remove
 
 
 def check_version(v_tup):
-    new, old = v_tup
+    new, old, _ = v_tup
     if new == old:
         print("expect new and previous versions to differ:\n\tnew version: %s\n\told version:" % new, old)
         exit()
@@ -34,7 +34,7 @@ def replace(file_path, pattern, subst):
     move(abs_path, file_path)
 
 def fix_csv(version_tuple):
-    version, previous = version_tuple
+    version, previous, sha = version_tuple
     # get the operator description from docs
     docs = open("docs/csv-description.md")
     description = "    ".join(docs.readlines())
@@ -45,6 +45,7 @@ def fix_csv(version_tuple):
         "INSERT-CONTAINER-IMAGE": f"quay.io/project-koku/koku-metrics-operator:v{version}",
         "INSERT-DESCRIPTION": "|-\n    " + description,
         "name: Red Hat": f"name: Red Hat\n  replaces: koku-metrics-operator.v{previous}",
+        "type: AllNamespaces": f"type: AllNamespaces\n  relatedImages:\n    - name: koku-metrics-operator\n      image: {sha}"
     }
 
     filename = f"koku-metrics-operator/{version}/manifests/koku-metrics-operator.clusterserviceversion.yaml"
@@ -52,7 +53,7 @@ def fix_csv(version_tuple):
         replace(filename, k, v)
 
 def fix_dockerfile(version_tuple):
-    version, _ = version_tuple
+    version, *_ = version_tuple
     replacements = {
         "bundle/manifests": "manifests",
         "bundle/metadata": "metadata",
@@ -64,8 +65,8 @@ def fix_dockerfile(version_tuple):
 
 if __name__ == "__main__":
     nargs = len(sys.argv)
-    if nargs != 3:
-        print("usage: %s VERSION PREVIOUS_VERSION" % path.basename(sys.argv[0]))
+    if nargs != 4:
+        print("usage: %s VERSION PREVIOUS_VERSION IMAGE_SHA" % path.basename(sys.argv[0]))
         exit()
 
     version_tuple = sys.argv[1:]
