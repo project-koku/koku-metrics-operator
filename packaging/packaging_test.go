@@ -51,6 +51,7 @@ var testPackager = FilePackager{
 	Log:    testLogger,
 	KMCfg:  kmCfg,
 }
+var errTest = errors.New("test error")
 
 type fakeManifest struct{}
 
@@ -421,50 +422,63 @@ func TestPackagingReports(t *testing.T) {
 	packagingReportTests := []struct {
 		name          string
 		dirCfg        *dirconfig.DirectoryConfig
+		maxReports    int64
 		maxSize       int64
-		want          error
 		multipleFiles bool
+		want          error
+		expectFiles   bool
 	}{
 		{
 			name:          "test large dir",
 			dirCfg:        genDirCfg(t, testDirs.large.directory),
+			maxReports:    10,
 			maxSize:       1,
 			multipleFiles: true,
 			want:          nil,
+			expectFiles:   true,
 		},
 		{
 			name:          "test small dir",
 			dirCfg:        genDirCfg(t, testDirs.small.directory),
+			maxReports:    10,
 			maxSize:       100,
 			multipleFiles: false,
 			want:          nil,
+			expectFiles:   true,
 		},
 		{
 			name:          "test empty dir",
 			dirCfg:        genDirCfg(t, testDirs.empty.directory),
+			maxReports:    10,
 			maxSize:       100,
 			multipleFiles: false,
 			want:          nil,
+			expectFiles:   false,
 		},
 		{
 			name:          "restricted",
 			dirCfg:        genDirCfg(t, testDirs.restrictedEmpty.directory),
+			maxReports:    10,
 			maxSize:       100,
 			multipleFiles: false,
 			want:          errors.New("Restricted"),
+			expectFiles:   false,
 		},
 		{
 			name:          "nonexistent",
 			dirCfg:        new(dirconfig.DirectoryConfig),
+			maxReports:    10,
 			maxSize:       100,
 			multipleFiles: false,
 			want:          errors.New("nonexistent"),
+			expectFiles:   false,
 		},
 	}
 	for _, tt := range packagingReportTests {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = tt.dirCfg
+			testPackager.KMCfg.Spec.Packaging.MaxReports = tt.maxReports
 			testPackager.MaxSize = tt.maxSize
 			err := testPackager.PackageReports()
 			if tt.want != nil && err == nil {
@@ -476,6 +490,9 @@ func TestPackagingReports(t *testing.T) {
 			outFiles, _ := tt.dirCfg.Upload.GetFiles()
 			if tt.multipleFiles && len(outFiles) <= 1 || (!tt.multipleFiles && len(outFiles) > 1) {
 				t.Errorf("%s expected multpile files: %v, received: %d", tt.name, tt.multipleFiles, len(outFiles))
+			}
+			if tt.expectFiles && len(outFiles) < 1 {
+				t.Errorf("%s expected files to exist", tt.name)
 			}
 		})
 	}
@@ -889,4 +906,134 @@ func TestSplitFiles(t *testing.T) {
 			setPerm(t, 0777, dstTemp) // reset dir permissions for proper cleanup
 		})
 	}
+}
+
+func TestTrimPackages(t *testing.T) {
+	tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
+	defer os.RemoveAll(tmpDir)
+	trimPackagesTests := []struct {
+		name               string
+		tmpFilePattern     string
+		numFiles           int64
+		maxReports         int64
+		duplicateReports   bool
+		numFilesExpected   int
+		numReportsExpected int
+		noPermDir          bool
+		want               error
+	}{
+		{
+			name:               "no reports in dir",
+			tmpFilePattern:     "%d-*.csv",
+			numFiles:           2,
+			maxReports:         2,
+			duplicateReports:   false,
+			numFilesExpected:   2,
+			numReportsExpected: 0,
+			want:               nil,
+		},
+		{
+			name:      "no permissions in dir",
+			noPermDir: true,
+			want:      errTest,
+		},
+		{
+			name:               "no trimming needed",
+			tmpFilePattern:     "%d-*.tar.gz",
+			numFiles:           2,
+			maxReports:         2,
+			duplicateReports:   false,
+			numFilesExpected:   2,
+			numReportsExpected: 2,
+			want:               nil,
+		},
+		{
+			name:               "trimming needed",
+			tmpFilePattern:     "%d-*.tar.gz",
+			numFiles:           2,
+			maxReports:         1,
+			duplicateReports:   false,
+			numFilesExpected:   1,
+			numReportsExpected: 1,
+			want:               nil,
+		},
+		{
+			name:               "no trimming needed - split reports",
+			tmpFilePattern:     "%d-*.tar.gz",
+			numFiles:           2,
+			maxReports:         2,
+			duplicateReports:   true,
+			numFilesExpected:   4,
+			numReportsExpected: 2,
+			want:               nil,
+		},
+		{
+			name:               "trimming needed - split reports",
+			tmpFilePattern:     "%d-*.tar.gz",
+			numFiles:           2,
+			maxReports:         1,
+			duplicateReports:   true,
+			numFilesExpected:   2,
+			numReportsExpected: 1,
+			want:               nil,
+		},
+	}
+
+	for _, tt := range trimPackagesTests {
+		t.Run(tt.name, func(t *testing.T) {
+			var tmpDir2 string
+			perms := os.FileMode(0777)
+
+			if tt.noPermDir {
+				tmpDir2 = getTempDir(t, 0200, tmpDir, "tmp-*")
+			} else {
+				tmpDir2 = getTempDir(t, perms, tmpDir, "tmp-*")
+				for i := 0; i < int(tt.numFiles); i++ {
+					_, err := ioutil.TempFile(tmpDir2, fmt.Sprintf(tt.tmpFilePattern, i))
+					if err != nil {
+						t.Fatalf("failed to create temp file: %v", err)
+					}
+					if tt.duplicateReports {
+						_, err := ioutil.TempFile(tmpDir2, fmt.Sprintf(tt.tmpFilePattern, i))
+						if err != nil {
+							t.Fatalf("failed to create temp file: %v", err)
+						}
+					}
+				}
+			}
+			defer os.RemoveAll(tmpDir2)
+
+			dirCfg := &dirconfig.DirectoryConfig{
+				Upload: dirconfig.Directory{Path: tmpDir2},
+			}
+			kmCfg := &kokumetricscfgv1alpha1.KokuMetricsConfig{}
+			kmCfg.Spec.Packaging.MaxReports = tt.maxReports
+			testPackager := FilePackager{
+				DirCfg: dirCfg,
+				Log:    testLogger,
+				KMCfg:  kmCfg,
+			}
+			got := testPackager.trimPackages()
+			if tt.want == nil && got != nil {
+				t.Errorf("%s did not expect error but got: %v", tt.name, got)
+			}
+			if tt.want != nil && got == nil {
+				t.Errorf("%s expected an error but received nil", tt.name)
+			}
+
+			if tt.want == nil {
+				files, err := dirCfg.Upload.GetFiles()
+				if err != nil {
+					t.Fatalf("%s: failed to read upload path: %v", tt.name, err)
+				}
+				if len(files) != tt.numFilesExpected {
+					t.Errorf("%s expected %d files got %d files", tt.name, tt.numFilesExpected, len(files))
+				}
+				if testPackager.KMCfg.Status.Packaging.ReportCount != nil && *testPackager.KMCfg.Status.Packaging.ReportCount != int64(tt.numReportsExpected) {
+					t.Errorf("%s expected %d number of reports got %d", tt.name, tt.numReportsExpected, *testPackager.KMCfg.Status.Packaging.ReportCount)
+				}
+			}
+		})
+	}
+
 }

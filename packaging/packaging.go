@@ -409,10 +409,10 @@ func (p *FilePackager) trimPackages() error {
 	}
 
 	reportCount := int64(datetimesSet.Len())
-	p.KMCfg.Status.Packaging.ReportCount = &reportCount
 
 	if reportCount <= p.KMCfg.Spec.Packaging.MaxReports {
 		log.Info("number of stored reports within limit")
+		p.KMCfg.Status.Packaging.ReportCount = &reportCount
 		return nil
 	}
 
@@ -439,6 +439,7 @@ func (p *FilePackager) trimPackages() error {
 		}
 	}
 
+	p.KMCfg.Status.Packaging.ReportCount = &p.KMCfg.Spec.Packaging.MaxReports
 	return nil
 }
 
