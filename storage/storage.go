@@ -199,3 +199,17 @@ func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha1.EmbeddedPersistentVolumeCl
 		Spec: e.Spec,
 	}
 }
+
+// MakeEmbeddedPVC produces a template to create the PVC
+func MakeEmbeddedPVC(pvc *corev1.PersistentVolumeClaim) *kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim {
+	return &kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: pvc.APIVersion,
+			Kind:       pvc.Kind,
+		},
+		EmbeddedObjectMetadata: kokumetricscfgv1alpha1.EmbeddedObjectMetadata{
+			Name: pvc.Name,
+		},
+		Spec: pvc.Spec,
+	}
+}

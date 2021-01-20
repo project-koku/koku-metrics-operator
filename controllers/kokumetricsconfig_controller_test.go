@@ -326,7 +326,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
-			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
+			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
 
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
@@ -383,7 +383,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
-			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
+			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
 
 			deleteDeployment(ctx, emptyDep2)
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())

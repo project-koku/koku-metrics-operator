@@ -419,9 +419,6 @@ type StorageStatus struct {
 
 	// VolumeMounted is a bool to indicate if storage volume was mounted.
 	VolumeMounted bool `json:"volume_mounted,omitempty"`
-
-	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
-	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
 // KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
@@ -460,6 +457,9 @@ type KokuMetricsConfigStatus struct {
 
 	// Storage is a field
 	Storage StorageStatus `json:"storage,omitempty"`
+
+	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
+	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
 // +kubebuilder:object:root=true

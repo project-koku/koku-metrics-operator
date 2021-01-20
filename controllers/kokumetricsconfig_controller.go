@@ -485,7 +485,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
 }
 
-func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
+func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("kokumetricsconfig", "configurePVC")
 	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
@@ -508,7 +508,14 @@ func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 		return &ctrl.Result{}, nil
 	}
 
-	kmCfg.Status.Storage.PersistentVolumeClaim = pvcTemplate
+	pvcStatus := &corev1.PersistentVolumeClaim{}
+	namespace := types.NamespacedName{
+		Namespace: req.Namespace,
+		Name:      pvcTemplate.Name}
+	if err := r.Get(ctx, namespace, pvcStatus); err != nil {
+		return &ctrl.Result{}, fmt.Errorf("failed to get PVC name %s, %v", pvcTemplate.Name, err)
+	}
+	kmCfg.Status.PersistentVolumeClaim = storage.MakeEmbeddedPVC(pvcStatus)
 
 	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
 		kmCfg.Status.Storage.VolumeMounted = false
@@ -552,7 +559,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	ReflectSpec(r, kmCfg)
 
 	if r.InCluster {
-		res, err := configurePVC(r, kmCfg)
+		res, err := configurePVC(r, req, kmCfg)
 		if err != nil || res != nil {
 			return *res, err
 		}
