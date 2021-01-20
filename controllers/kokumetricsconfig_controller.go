@@ -629,7 +629,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		errors = append(errors, err)
 	}
 
-	uploadFiles, err := dirCfg.Upload.GetFiles()
+	uploadFiles, err := dirCfg.Upload.GetFilesFullPath()
 	if err != nil {
 		result = ctrl.Result{}
 		errors = append(errors, err)

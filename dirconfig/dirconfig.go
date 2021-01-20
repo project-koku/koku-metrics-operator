@@ -100,6 +100,18 @@ func (dir *Directory) GetFiles() ([]string, error) {
 	return fileList, nil
 }
 
+func (dir *Directory) GetFilesFullPath() ([]string, error) {
+	files, err := dir.GetFiles()
+	if err != nil {
+		return nil, fmt.Errorf("could not get full file paths: %v", err)
+	}
+	pathsList := []string{}
+	for _, f := range files {
+		pathsList = append(pathsList, filepath.Join(dir.Path, f))
+	}
+	return pathsList, nil
+}
+
 func (dir *Directory) Exists() bool {
 	stat := os.Stat
 	if dir.DirectoryFileSystem != nil {
