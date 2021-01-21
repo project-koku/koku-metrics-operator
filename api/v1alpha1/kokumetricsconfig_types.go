@@ -136,8 +136,9 @@ type PackagingSpec struct {
 	MaxSize int64 `json:"max_size_MB"`
 
 	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
-	// The default is 12 reports which corresponds to 3 days worth of data given the other default values.
-	// +kubebuilder:default=12
+	// The default is 30 reports which corresponds to approximately 7 days worth of data given the other default values.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=30
 	MaxReports int64 `json:"max_reports_to_store"`
 }
 

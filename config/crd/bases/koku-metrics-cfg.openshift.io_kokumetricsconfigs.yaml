@@ -75,12 +75,13 @@ spec:
                   the packaging object.
                 properties:
                   max_reports_to_store:
-                    default: 12
+                    default: 30
                     description: MaxReports is a field of KokuMetricsConfig to represent
-                      the maximum number of reports to store. The default is 12 reports
-                      which corresponds to 3 days worth of data given the other default
-                      values.
+                      the maximum number of reports to store. The default is 30 reports
+                      which corresponds to approximately 7 days worth of data given
+                      the other default values.
                     format: int64
+                    minimum: 1
                     type: integer
                   max_size_MB:
                     default: 100
