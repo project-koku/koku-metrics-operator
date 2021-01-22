@@ -134,6 +134,12 @@ type PackagingSpec struct {
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=100
 	MaxSize int64 `json:"max_size_MB"`
+
+	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
+	// The default is 30 reports which corresponds to approximately 7 days worth of data given the other default values.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=30
+	MaxReports int64 `json:"max_reports_to_store"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
@@ -260,14 +266,20 @@ type PackagingStatus struct {
 	// +nullable
 	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_packaging_time,omitempty"`
 
+	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
+	MaxReports *int64 `json:"max_reports_to_store,omitempty"`
+
 	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
 	MaxSize *int64 `json:"max_size_MB,omitempty"`
 
 	// PackagedFiles is a field of KokuMetricsConfig to represent the list of file packages in storage.
 	PackagedFiles []string `json:"packaged_files,omitempty"`
 
-	// PackagingError is a field of KokuMetricsConfigStatus to represent the error encountered packaging the reports.
+	// PackagingError is a field of KokuMetricsConfig to represent the error encountered packaging the reports.
 	PackagingError string `json:"error,omitempty"`
+
+	// ReportCount is a field of KokuMetricsConfig to represent the number of reports in storage.
+	ReportCount *int64 `json:"number_reports_stored,omitempty"`
 }
 
 // UploadStatus defines the observed state of Upload object in the KokuMetricsConfigStatus.
@@ -393,9 +405,6 @@ type StorageStatus struct {
 
 	// VolumeMounted is a bool to indicate if storage volume was mounted.
 	VolumeMounted bool `json:"volume_mounted,omitempty"`
-
-	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
-	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
 // KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
@@ -434,6 +443,9 @@ type KokuMetricsConfigStatus struct {
 
 	// Storage is a field
 	Storage StorageStatus `json:"storage,omitempty"`
+
+	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
+	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -85,6 +86,51 @@ func TestGetFiles(t *testing.T) {
 	for _, tt := range getFilesTests {
 		dir := &Directory{Path: tt.path}
 		got, err := dir.GetFiles()
+		if err == nil && tt.err != nil {
+			t.Errorf("%s expected error got: %v", tt.name, err)
+		}
+		if err != nil && tt.err == nil {
+			t.Errorf("%s expected nil error got: %v", tt.name, err)
+		}
+		if !reflect.DeepEqual(tt.want, got) {
+			t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestGetFilesFullPath(t *testing.T) {
+	if err := os.Mkdir("empty-dir", 0644); err != nil {
+		t.Fatalf("failed to create empty-dir: %v", err)
+	}
+	defer os.RemoveAll("empty-dir")
+	getFilesTests := []struct {
+		name string
+		path string
+		want []string
+		err  error
+	}{
+		{
+			name: "path exists with files",
+			path: "./test_files",
+			want: []string{filepath.Join("test_files", "test_file")},
+			err:  nil,
+		},
+		{
+			name: "path exists with no files",
+			path: "./empty-dir",
+			want: []string{},
+			err:  nil,
+		},
+		{
+			name: "path does not exist",
+			path: "./not_real",
+			want: nil,
+			err:  errTest,
+		},
+	}
+	for _, tt := range getFilesTests {
+		dir := &Directory{Path: tt.path}
+		got, err := dir.GetFilesFullPath()
 		if err == nil && tt.err != nil {
 			t.Errorf("%s expected error got: %v", tt.name, err)
 		}
@@ -315,5 +361,124 @@ func TestGetDirectoryConfig(t *testing.T) {
 		if tc.expected == nil && err != nil {
 			t.Errorf("%s expected nil error but got: %v", tc.name, err)
 		}
+	}
+}
+
+func TestCheckConfig(t *testing.T) {
+	basePath := "./test_files/config_test"
+	tts := []struct {
+		name     string
+		dirs     map[string]string
+		expected bool
+	}{
+		{
+			name:     "parent does not exist",
+			dirs:     map[string]string{},
+			expected: false,
+		},
+		{
+			name: "reports & staging & upload missing",
+			dirs: map[string]string{
+				"parent": basePath,
+			},
+			expected: false,
+		},
+		{
+			name: "staging & upload missing",
+			dirs: map[string]string{
+				"parent":  basePath,
+				"reports": "reports",
+			},
+			expected: false,
+		},
+		{
+			name: "reports & upload missing",
+			dirs: map[string]string{
+				"parent":  basePath,
+				"staging": "staging",
+			},
+			expected: false,
+		},
+		{
+			name: "reports & staging missing",
+			dirs: map[string]string{
+				"parent": basePath,
+				"upload": "upload",
+			},
+			expected: false,
+		},
+		{
+			name: "upload missing",
+			dirs: map[string]string{
+				"parent":  basePath,
+				"reports": "reports",
+				"staging": "staging",
+			},
+			expected: false,
+		},
+		{
+			name: "staging missing",
+			dirs: map[string]string{
+				"parent":  basePath,
+				"reports": "reports",
+				"upload":  "upload",
+			},
+			expected: false,
+		},
+		{
+			name: "reports missing",
+			dirs: map[string]string{
+				"parent":  basePath,
+				"staging": "staging",
+				"upload":  "upload",
+			},
+			expected: false,
+		},
+		{
+			name: "all dirs exist",
+			dirs: map[string]string{
+				"parent":  basePath,
+				"reports": "reports",
+				"staging": "staging",
+				"upload":  "upload",
+			},
+			expected: true,
+		},
+	}
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+			defer os.RemoveAll(basePath)
+			testDirCfg := &DirectoryConfig{}
+			for name, path := range tt.dirs {
+				switch name {
+				case "parent":
+					testDirCfg.Parent = Directory{Path: path}
+					if err := testDirCfg.Parent.Create(); err != nil {
+						t.Fatalf("%s: failed to create test dir: %v", tt.name, err)
+					}
+				case "reports":
+					testDirCfg.Reports = Directory{Path: filepath.Join(basePath, path)}
+					if err := testDirCfg.Reports.Create(); err != nil {
+						t.Fatalf("%s: failed to create test dir: %v", tt.name, err)
+					}
+				case "staging":
+					testDirCfg.Staging = Directory{Path: filepath.Join(basePath, path)}
+					if err := testDirCfg.Staging.Create(); err != nil {
+						t.Fatalf("%s: failed to create test dir: %v", tt.name, err)
+					}
+				case "upload":
+					testDirCfg.Upload = Directory{Path: filepath.Join(basePath, path)}
+					if err := testDirCfg.Upload.Create(); err != nil {
+						t.Fatalf("%s: failed to create test dir: %v", tt.name, err)
+					}
+				default:
+					t.Fatalf("%s unknown directory: %s", tt.name, name)
+				}
+			}
+			got := testDirCfg.CheckConfig()
+			if got != tt.expected {
+				t.Errorf("%s expected %t, got %t", tt.name, tt.expected, got)
+			}
+		})
 	}
 }

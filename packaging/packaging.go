@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ import (
 	"github.com/google/uuid"
 	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/strset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,7 +51,6 @@ type FilePackager struct {
 	manifest         manifestInfo
 	uid              string
 	createdTimestamp string
-	MaxSize          int64
 	maxBytes         int64
 	start            time.Time
 	end              time.Time
@@ -391,10 +392,60 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
+func (p *FilePackager) TrimPackages() error {
+	log := p.Log.WithValues("kokumetricsconfig", "trimPackages")
+
+	packages, err := p.DirCfg.Upload.GetFiles()
+	if err != nil {
+		return fmt.Errorf("failed to read upload dir: %v", err)
+	}
+
+	datetimesSet := strset.NewSet()
+	for _, f := range packages {
+		if strings.HasSuffix(f, "tar.gz") {
+			datetimesSet.Add(strings.Split(f, "-")[0])
+		}
+	}
+
+	reportCount := int64(datetimesSet.Len())
+
+	if reportCount <= p.KMCfg.Spec.Packaging.MaxReports {
+		log.Info("number of stored reports within limit")
+		p.KMCfg.Status.Packaging.ReportCount = &reportCount
+		return nil
+	}
+
+	log.Info("max report count reached: removing oldest reports")
+
+	datetimes := []string{}
+	for d := range datetimesSet.Range() {
+		datetimes = append(datetimes, d)
+	}
+
+	sort.Strings(datetimes)
+	ind := len(datetimes) - int(p.KMCfg.Spec.Packaging.MaxReports)
+	filesToExclude := datetimes[0:ind]
+
+	for _, pre := range filesToExclude {
+		for _, file := range packages {
+			if !strings.HasPrefix(file, pre) {
+				continue
+			}
+			log.Info(fmt.Sprintf("removing report: %s", file))
+			if err := os.Remove(filepath.Join(p.DirCfg.Upload.Path, file)); err != nil {
+				return fmt.Errorf("failed to remove %s: %v", file, err)
+			}
+		}
+	}
+
+	p.KMCfg.Status.Packaging.ReportCount = &p.KMCfg.Spec.Packaging.MaxReports
+	return nil
+}
+
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
 	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
-	p.maxBytes = p.MaxSize * megaByte
+	p.maxBytes = *p.KMCfg.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
 	p.createdTimestamp = time.Now().Format(timestampFormat)
 
