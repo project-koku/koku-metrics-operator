@@ -57,6 +57,7 @@ var (
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
+	defaultMaxReports     int64 = 1
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
 	instance                    = kokumetricscfgv1alpha1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -67,7 +68,8 @@ var (
 				AuthType: kokumetricscfgv1alpha1.Token,
 			},
 			Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-				MaxSize: 100,
+				MaxSize:    100,
+				MaxReports: defaultMaxReports,
 			},
 			Upload: kokumetricscfgv1alpha1.UploadSpec{
 				UploadCycle:    &defaultUploadCycle,
