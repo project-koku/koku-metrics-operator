@@ -57,6 +57,7 @@ var (
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
+	defaultMaxReports     int64 = 1
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
 	instance                    = kokumetricscfgv1alpha1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -67,7 +68,8 @@ var (
 				AuthType: kokumetricscfgv1alpha1.Token,
 			},
 			Packaging: kokumetricscfgv1alpha1.PackagingSpec{
-				MaxSize: 100,
+				MaxSize:    100,
+				MaxReports: defaultMaxReports,
 			},
 			Upload: kokumetricscfgv1alpha1.UploadSpec{
 				UploadCycle:    &defaultUploadCycle,
@@ -326,7 +328,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
-			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
+			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
 
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
@@ -383,7 +385,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
-			Expect(fetched.Status.Storage.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
+			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
 
 			deleteDeployment(ctx, emptyDep2)
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())

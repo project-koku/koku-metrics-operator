@@ -34,7 +34,6 @@ var (
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
-	// archive      = "archive"
 )
 
 type DirListFunc = func(path string) ([]os.FileInfo, error)
@@ -55,7 +54,6 @@ type DirectoryConfig struct {
 	Upload  Directory
 	Staging Directory
 	Reports Directory
-	Archive Directory
 	*DirectoryFileSystem
 }
 
@@ -98,6 +96,18 @@ func (dir *Directory) GetFiles() ([]string, error) {
 		fileList = append(fileList, file.Name())
 	}
 	return fileList, nil
+}
+
+func (dir *Directory) GetFilesFullPath() ([]string, error) {
+	files, err := dir.GetFiles()
+	if err != nil {
+		return nil, fmt.Errorf("could not get full file paths: %v", err)
+	}
+	pathsList := []string{}
+	for _, f := range files {
+		pathsList = append(pathsList, filepath.Join(dir.Path, f))
+	}
+	return pathsList, nil
 }
 
 func (dir *Directory) Exists() bool {
@@ -174,4 +184,12 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	}
 
 	return mapstructure.Decode(dirMap, &dirCfg)
+}
+
+func (dirCfg *DirectoryConfig) CheckConfig() bool {
+	// quite verbose, but iterating through struct fields is hard
+	if !dirCfg.Parent.Exists() || !dirCfg.Upload.Exists() || !dirCfg.Staging.Exists() || !dirCfg.Reports.Exists() {
+		return false
+	}
+	return true
 }

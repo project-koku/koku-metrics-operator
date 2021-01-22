@@ -34,7 +34,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 FROM gcr.io/distroless/static:nonroot
 
 # For terminal access, use this image:
-# FROM gcr.io/distroless/base:debug
+# FROM gcr.io/distroless/base:debug-nonroot
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

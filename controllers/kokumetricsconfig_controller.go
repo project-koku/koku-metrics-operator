@@ -121,6 +121,7 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.K
 
 	// set the default max file size for packaging
 	kmCfg.Status.Packaging.MaxSize = &kmCfg.Spec.Packaging.MaxSize
+	kmCfg.Status.Packaging.MaxReports = &kmCfg.Spec.Packaging.MaxReports
 
 	// set the upload wait to whatever is in the spec, if the spec is defined
 	if kmCfg.Spec.Upload.UploadWait != nil {
@@ -370,26 +371,20 @@ func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	}
 }
 
-func packageFiles(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
-	log := r.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
+func packageFiles(p *packaging.FilePackager) {
+	log := p.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
 
 	// if its time to package
-	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+	if !checkCycle(p.Log, *p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
 		return
 	}
 
 	// Package and split the payload if necessary
-	packager := packaging.FilePackager{
-		KMCfg:   kmCfg,
-		DirCfg:  dirCfg,
-		Log:     r.Log,
-		MaxSize: *kmCfg.Status.Packaging.MaxSize,
-	}
-	kmCfg.Status.Packaging.PackagingError = ""
-	if err := packager.PackageReports(); err != nil {
+	p.KMCfg.Status.Packaging.PackagingError = ""
+	if err := p.PackageReports(); err != nil {
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
-		kmCfg.Status.Packaging.PackagingError = err.Error()
+		p.KMCfg.Status.Packaging.PackagingError = err.Error()
 	}
 }
 
@@ -490,7 +485,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alp
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
 }
 
-func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
+func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("kokumetricsconfig", "configurePVC")
 	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
@@ -500,10 +495,11 @@ func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 
 	stor := &storage.Storage{
 		Client: r.Client,
+		KMCfg:  kmCfg,
 		Log:    r.Log,
 		PVC:    storage.MakeVolumeClaimTemplate(*pvcTemplate),
 	}
-	mountEstablished, err := stor.ConvertVolume(kmCfg)
+	mountEstablished, err := stor.ConvertVolume()
 	if err != nil {
 		return &ctrl.Result{}, fmt.Errorf("failed to mount on PVC: %v", err)
 	}
@@ -512,7 +508,14 @@ func configurePVC(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1alpha1.
 		return &ctrl.Result{}, nil
 	}
 
-	kmCfg.Status.Storage.PersistentVolumeClaim = pvcTemplate
+	pvcStatus := &corev1.PersistentVolumeClaim{}
+	namespace := types.NamespacedName{
+		Namespace: req.Namespace,
+		Name:      pvcTemplate.Name}
+	if err := r.Get(ctx, namespace, pvcStatus); err != nil {
+		return &ctrl.Result{}, fmt.Errorf("failed to get PVC name %s, %v", pvcTemplate.Name, err)
+	}
+	kmCfg.Status.PersistentVolumeClaim = storage.MakeEmbeddedPVC(pvcStatus)
 
 	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
 		kmCfg.Status.Storage.VolumeMounted = false
@@ -556,7 +559,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	ReflectSpec(r, kmCfg)
 
 	if r.InCluster {
-		res, err := configurePVC(r, kmCfg)
+		res, err := configurePVC(r, req, kmCfg)
 		if err != nil || res != nil {
 			return *res, err
 		}
@@ -598,7 +601,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
-	if dirCfg == nil || !dirCfg.Parent.Exists() {
+	if dirCfg == nil || !dirCfg.CheckConfig() {
 		if err := dirCfg.GetDirectoryConfig(); err != nil {
 			log.Error(err, "failed to get directory configuration")
 			return ctrl.Result{}, err // without this directory, it is pointless to continue
@@ -609,7 +612,12 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	collectPromStats(r, kmCfg, dirCfg)
 
 	// package report files
-	packageFiles(r, kmCfg, dirCfg)
+	packager := &packaging.FilePackager{
+		KMCfg:  kmCfg,
+		DirCfg: dirCfg,
+		Log:    r.Log,
+	}
+	packageFiles(packager)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
@@ -622,7 +630,13 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		errors = append(errors, err)
 	}
 
-	uploadFiles, err := dirCfg.Upload.GetFiles()
+	// remove old reports if maximum report count has been exceeded
+	if err := packager.TrimPackages(); err != nil {
+		result = ctrl.Result{}
+		errors = append(errors, err)
+	}
+
+	uploadFiles, err := dirCfg.Upload.GetFilesFullPath()
 	if err != nil {
 		result = ctrl.Result{}
 		errors = append(errors, err)
