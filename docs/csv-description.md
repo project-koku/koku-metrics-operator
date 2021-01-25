@@ -6,8 +6,9 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Querying Prometheus to create reports specific to cost management.
 * Packaging these reports as a tarball which is uploaded to cost management through cloud.redhat.com.
 * The operator is also capable of creating a source in cloud.redhat.com. A source is required for cost management to process the upload.
+* When the operator is configured, it will create a PVC to store the reports on. The operator can be configured to create a user-specified PVC or use a PVC that already exists. If not specified, the default PVC name is `koku-metrics-operator-data` and it is configured at 10GB of storage.  
+* The operator can be installed and configured to support an air-gapped network. The reports are stored on a PVC and must be manually downloaded and uploaded to cloud.redhat.com to support restricted networks. 
 #### Limitations (Potential for metrics data loss)
-* Report storage is not backed by a PersitentVolume. If the operator is redeployed, a gap may be introduced in the usage metrics.
 * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
 ## Installation
 The operator must be installed in the `koku-metrics-operator` namespace. Installing the operator through OperatorHub will create the namespace automatically, or it can be created through either the UI or CLI:
@@ -50,7 +51,26 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     * Replace the `create_source` field value with `true`.
 
     **Note:** if the source already exists, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
-4. Select `Create`.
+4. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec: 
+    * Add the desired configuration to the `volume_claim_template` field in the spec:
+
+        ```
+          volume_claim_template:
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: pvc-spec-definition
+            spec:
+              storageClassName: gp2
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 10Gi
+        ```
+
+    **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
+5. Select `Create`.
 
 #### Configure through the CLI
 ##### Configure authentication
@@ -118,7 +138,24 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     * Replace `create_source` field value with `true`.
 
     **Note:** if the source already exists, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
-4. Deploy the `KokuMetricsConfig` resource:
+4. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec: 
+    * Add the `volume_claim_template` field in the spec and specify the desired PVC configuration:
+
+        ```
+          volume_claim_template:
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: pvc-spec-definition
+            spec:
+              storageClassName: gp2
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 10Gi
+        ```
+5. Deploy the `KokuMetricsConfig` resource:
     ```
     $ oc create -f kokumetricsconfig.yaml
     ```
