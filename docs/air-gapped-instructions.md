@@ -1,6 +1,10 @@
-# Air-Gapped Operator Instructions
+# Restricted Network Usage
 ## Installation
-To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html). The functionality of the Operator in a restricted network is to query Prometheus to create metric reports, which are then packaged and stored on a PVC. These reports can then be manually downloaded and uploaded to cost management at [cloud.redhat.com](https://cloud.redhat.com). For more information, reach out to <cost-mgmt@redhat.com>.
+To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `koku-metrics-operator` package.
+
+Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [cloud.redhat.com](https://cloud.redhat.com).
+
+For more information, reach out to <cost-mgmt@redhat.com>.
 ## Configure the koku-metrics-operator for an air-gapped scenario
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
@@ -43,9 +47,9 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     ```
 5. Select `Create`.
 
-## Downloading reports from the Operator & cleaning up the PVC
+## Download reports from the Operator & clean up the PVC
 If the `koku-metrics-operator` is configured to run in a restricted network, the metric reports will not automatically upload to cost managment. Instead, they need to be manually copied from the PVC for upload to [cloud.redhat.com](https://cloud.redhat.com). The default configuration saves one week of reports which means the process of downloading and uploading reports should be repeated weekly to prevent loss of metrics data. To download the reports, complete the following steps:
-1. Create the following Pod, ensuring the claimName matches the PVC containing the report data:
+1. Create the following Pod, ensuring the `claimName` matches the PVC containing the report data:
     ```
     kind: Pod
     apiVersion: v1
@@ -68,7 +72,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
     ```
     $ oc rsync volume-shell:/tmp/koku-metrics-operator-reports/upload local/path/to/save/folder
     ```
-3. Once confirming that the files have been successfully copied, use rsh to connect to the pod and delete the upload folder so that they are no longer in storage:
+3. Once confirming that the files have been successfully copied, use rsh to connect to the pod and delete the contents of the upload folder so that they are no longer in storage:
     ```
     $ oc rsh volume-shell
     $ rm /tmp/koku-metrics-operator-reports/upload/*
@@ -77,7 +81,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
     ```
     $ oc delete -f volume-shell.yaml
     ```
-## Creating a source
+## Create a source
 In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the cloud.redhat.com platform, open the [Sources menu](https://cloud.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
 
 1. Navigate to the Sources menu
@@ -91,18 +95,9 @@ In a restricted network, the `koku-metrics-operator` cannot automatically create
 
 7. In the cloud.redhat.com Sources wizard, review the details and click `Finish` to create the Source.
 
-## Uploading the reports to cost managment
+## Upload the reports to cost managment
 Uploading reports to cost managment is done through curl:
-  * To use basic authentication, replace the `USERNAME` and `PASS` with the username and password for [cloud.redhat.com](https://cloud.redhat.com):
-
-    ```
-    $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
-    ```
-
-  * To use token authentication, log in to [access.redhat.com](https://access.redhat.com/management/api) and generate a token. Replace `GENERATED_TOKEN` with the generated token in the following curl command:
-
-    ```
-    $ CLUSTER_ID=$(oc get clusterversion -o jsonpath='{.items[].spec.clusterID}{"\n"}')
-    $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" https://cloud.redhat.com/api/ingress/v1/upload -H "Authorization: Bearer GENERATED_TOKEN" -H "User-Agent: cost-mgmt-operator/4f1cc5580da20a11e6dfba50d04d8ae50f2e5fa5 cluster/CLUSTER_ID"
-    ```
-  **Note:** Regardless of the authentication method choosen, replace the `FILE_NAME` with the file that you want to upload.
+  ```
+  $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
+  ```
+where `USERNAME` and `PASS` correspond to the user credentials for [cloud.redhat.com](https://cloud.redhat.com), and `FILE_NAME` is the name of the report to upload.
