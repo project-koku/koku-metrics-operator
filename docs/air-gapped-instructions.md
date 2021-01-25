@@ -95,7 +95,6 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`. Note that
     $ oc create -f kokumetricsconfig.yaml
     ```
 ## Downloading reports from the Operator/ cleaning reports up
-The operator must be installed in the `koku-metrics-operator` namespace. Installing the operator through OperatorHub will create the namespace automatically, or it can be created through either the UI or CLI:
 1. Copy the following pod resource template and save it to a file called `volume-shell.yaml`:
 
     ```
