@@ -2,8 +2,6 @@
 ## Installation
 To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html). The functionality of the Operator in a restricted network is to query Prometheus to create metric reports, which are then packaged and stored on a PVC. These reports can then be manually downloaded and uploaded to cost management at [cloud.redhat.com](https://cloud.redhat.com). For more information, reach out to <cost-mgmt@redhat.com>.
 ## Configure the koku-metrics-operator for an air-gapped scenario
-The operator can be configured through either the UI or CLI:
-#### Configure through the UI
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
@@ -26,7 +24,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
         ```
 
     **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
-3. Specify the desired report retention. The operator will retain 30 reports by default. This is about one weeks worth of data if using the default cycles. To edit the number of retained reports, edit the packaging field in the spec: 
+3. Specify the desired report retention. The operator will retain 30 reports by default. This is about one week's worth of data if using the default cycles. To edit the number of retained reports, edit the packaging field in the spec: 
     * Edit the `max_reports_to_store` field within the `packaging` field in the spec to be the desired number of reports to retain. Once this max number is reached, the operator will delete the oldest report on the PVC:
 
         ```
@@ -45,55 +43,6 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     ```
 5. Select `Create`.
 
-#### Configure through the CLI
-##### Create the KokuMetricsConfig
-Configure the koku-metrics-operator by creating a `KokuMetricsConfig`. Note that for an air-gapped installation, the `upload_toggle` field must be set to false as it is in the following yaml. 
-1. Copy the following `KokuMetricsConfig` resource template and save it to a file called `kokumetricsconfig.yaml`:
-
-    ```
-    apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
-    kind: KokuMetricsConfig
-    metadata:
-      name: kokumetricscfg-sample
-    spec:
-      authentication:
-        type: token
-      packaging:
-        max_size_MB: 100
-        max_reports_to_store: 30
-      prometheus_config: {}
-      source:
-        check_cycle: 1440,
-        create_source: false,
-        name: INSERT-SOURCE-NAME
-      upload:
-        upload_cycle: 360,
-        upload_toggle: false
-    ```
-
-2. Specify the desired storage configuration. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec: 
-    * Add the `volume_claim_template` field in the spec and specify the desired PVC configuration:
-
-        ```
-          volume_claim_template:
-            apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: pvc-spec-definition
-            spec:
-              storageClassName: gp2
-              accessModes:
-                - ReadWriteOnce
-              resources:
-                requests:
-                  storage: 10Gi
-        ```
-3. Specify the desired report retention. The operator will retain 30 reports by default. This is about one weeks worth of data if using the default cycles. 
-    * To change the number of retained reports, edit the `max_reports_to_store` field within the `packaging` field in the spec to be the desired number of reports to retain. Once this max number is reached, the operator will delete the oldest report on the PVC:
-4. Deploy the `KokuMetricsConfig` resource:
-    ```
-    $ oc create -f kokumetricsconfig.yaml
-    ```
 ## Downloading reports from the Operator/ cleaning reports up
 1. Copy the following pod resource template and save it to a file called `volume-shell.yaml`:
 

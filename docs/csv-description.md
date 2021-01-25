@@ -11,8 +11,6 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 #### Limitations (Potential for metrics data loss)
 * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
 ## Configure the koku-metrics-operator
-The operator can be configured through either the UI or CLI:
-#### Configure through the UI
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
@@ -56,93 +54,3 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 
     **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
 5. Select `Create`.
-
-#### Configure through the CLI
-##### Configure authentication
-The default configuration method for the operator to create sources and upload to [cloud.redhat.com](https://cloud.redhat.com/) is `token`. No further steps are required for configuring `token` authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
-1. Copy the following into a file called `auth-secret.yaml`:
-
-    ```
-    kind: Secret
-    apiVersion: v1
-    metadata:
-      name: authentication-secret
-      namespace: koku-metrics-operator
-    data:
-    username: >-
-      Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==
-    password: >-
-      Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==
-    ```
-
-2. Replace the metadata.name with the preferred name for the authentication secret.
-3. Replace the `username` and `password` values with the base64-encoded username and password credentials for logging into cloud.redhat.com.
-4. Deploy the secret to the `koku-metrics-operator` namespace:
-    ```
-    $ oc create -f auth-secret.yaml
-    ```
-
-    **Note:** The name of the secret should match the `spec:  authentication:  secret_name` set in the KokuMetricsConfig that is going to be configured in the next steps.
-
-##### Create the KokuMetricsConfig
-Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
-1. Copy the following `KokuMetricsConfig` resource template and save it to a file called `kokumetricsconfig.yaml`:
-
-    ```
-    apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
-    kind: KokuMetricsConfig
-    metadata:
-      name: kokumetricscfg-sample
-    spec:
-      authentication:
-        type: token
-      packaging:
-        max_size_MB: 100
-      prometheus_config: {}
-      source:
-        check_cycle: 1440,
-        create_source: false,
-        name: INSERT-SOURCE-NAME
-      upload:
-        upload_cycle: 360,
-        upload_toggle: true
-    ```
-
-2. To configure the operator to use `basic` authentication, edit the following values in the `kokumetricsconfig.yaml` file:
-    * Replace `authentication: type:` with `basic`.
-    * Add a field called `secret_name` to the authentication field in the spec and set it equal to the name of the authentication secret that was created earlier. The authentication spec should look similar to the following:
-
-        ```
-          authentication:
-            secret_name: SECRET-NAME
-            type: basic
-        ```
-
-3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `kokumetricsconfig.yaml` file:
-    * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
-    * Replace `create_source` field value with `true`.
-
-    **Note:** if the source already exists, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
-4. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec: 
-    * Add the `volume_claim_template` field in the spec and specify the desired PVC configuration:
-
-        ```
-          volume_claim_template:
-            apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: pvc-spec-definition
-            spec:
-              storageClassName: gp2
-              accessModes:
-                - ReadWriteOnce
-              resources:
-                requests:
-                  storage: 10Gi
-        ```
-5. Deploy the `KokuMetricsConfig` resource:
-    ```
-    $ oc create -f kokumetricsconfig.yaml
-    ```
-
-The koku-metrics-operator will now create, package, and upload OpenShift usage reports to cost management.
