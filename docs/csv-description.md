@@ -20,8 +20,10 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 #### Limitations (Potential for metrics data loss)
 * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
+
+**Note** The following limitations are specific to operators configured to run in a restricted network: 
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal. 
-* The default report retention is 30 reports (about one week's worth of data). If the operator is configured to run in restricted-network mode, the reports must be manually downloaded and uploaded to cloud.redhat.com every week, or they will be deleted and the data will be lost. 
+* The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to cloud.redhat.com every week, or they will be deleted and the data will be lost. 
 ## Configure the koku-metrics-operator
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
