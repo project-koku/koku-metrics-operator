@@ -43,7 +43,8 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     ```
 5. Select `Create`.
 
-## Downloading reports from the Operator/ cleaning reports up
+## Downloading reports from the Operator & cleaning up the PVC
+If the `koku-metrics-operator` is configured to run in a restricted network, the metric reports will not be automatically uploaded to cost managment. Instead, they will need to be manually copied from the PVC to later be uploaded to [cloud.redhat.com](https://cloud.redhat.com). The default report retention is set to 30 which means the process of downloading and uploading reports should be repeated weekly so as not to lose metric data. In order to connect to the PVC and download the reports, complete the following steps: 
 1. Copy the following pod resource template and save it to a file called `volume-shell.yaml`:
 
     ```
@@ -64,24 +65,49 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
         - name: koku-metrics-operator-reports
           mountPath: /tmp/koku-metrics-operator-reports
     ```
-2. If a PVC other than the default was specified within the operator configuration, change the claimName to the name of the specified PVC.
-3. Deploy the pod resource:
+2. Confirm that the `claimName` matches the PVC that the operator is configured to use. If no PVC was specified during operator configuration, this should remain `koku-metrics-operator-data`. 
+3. Deploy the pod:
     ```
     $ oc create -f volume-shell.yaml
     ```
-4. Copy the files from the PVC to a local folder: 
-  ```
-  oc rsync volume-shell:/tmp/koku-metrics-operator-reports/upload local/path/to/save/folder
-  ```
-5. Once confirming that the files have been successfully copied, use rsh to connect to the pod and delete the upload folder: 
-  ```
-  oc rsh volume-shell
-  cd  /tmp/koku-metrics-operator-reports/
-  rm -rf upload/
-  ```
+4. Use rsync to copy all of the files ready for upload from the PVC to a local folder: 
+    ```
+    $ oc rsync volume-shell:/tmp/koku-metrics-operator-reports/upload local/path/to/save/folder
+    ```
+5. Once confirming that the files have been successfully copied, use rsh to connect to the pod and delete the upload folder so that they are no longer taking up storage: 
+    ```
+    $ oc rsh volume-shell
+    $ cd  /tmp/koku-metrics-operator-reports/
+    $ rm -rf upload/
+    ```
+6. Delete the pod that was used to connect to the PVC: 
+    ```
+    $ oc delete -f volume-shell.yaml
+    ```
+## Creating a source 
+In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the cloud.redhat.com platform, open the [Sources menu](https://cloud.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
+
+Navigate to Sources and click `Add source` to open the Sources wizard.
+Enter a name for your source and click `Next`.
+Select Cost Management as the application and OpenShift Container Platform as the source type. Click `Next`.
+
+When prompted, enter the cluster identifier into the cloud.redhat.com Sources wizard, and click `Next`.
+
+  **Note:** The cluster identifier can be found in Help > About in OpenShift.
+
+In the cloud.redhat.com Sources wizard, review the details and click `Finish` to add the OpenShift Container Platform cluster to cost management.
+
 ## Uploading the reports to cost managment 
-1. Use curl along with your username and password to upload the reports to cloud.redhat.com: 
-```
-curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.qpc.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
-```
- **Note:** Replace the `FILE_NAME` with the file that you want to upload. 
+1. Uploading reports to cost managment can be done through curl: 
+  * To use basic authentication, replace the `USERNAME` and `PASS` with your username and password for [cloud.redhat.com](https://cloud.redhat.com): 
+
+    ```
+    $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
+    ```
+
+  * To use token authentication, log in to [access.redhat.com](https://access.redhat.com/management/api) and generate a token. Replace `GENERATED_TOKEN` with the token that you have generated and replace the `CLUSTER_ID` with your cluster ID in the following curl command: 
+
+    ```
+    $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" https://cloud.redhat.com/api/ingress/v1/upload -H "Authorization: Bearer GENERATED_TOKEN" -H "User-Agent: cost-mgmt-operator/9ec0b9f48045ee0f9e4137e54dd01eddea2455c4 cluster/CLUSTER_ID"
+    ```
+  **Note:** Regardless of the authentication method you choose, replace the `FILE_NAME` with the file that you want to upload. 
