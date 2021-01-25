@@ -10,21 +10,6 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * The operator can be installed and configured to support an air-gapped network. The reports are stored on a PVC and must be manually downloaded and uploaded to cloud.redhat.com to support restricted networks. 
 #### Limitations (Potential for metrics data loss)
 * A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
-## Installation
-The operator must be installed in the `koku-metrics-operator` namespace. Installing the operator through OperatorHub will create the namespace automatically, or it can be created through either the UI or CLI:
-#### Namespace creation:
-##### UI
-1. On the left navigation pane, select `Administration` -> `Namespaces` -> `Create Namespace`.
-2. Name the namespace `koku-metrics-operator`.
-3. Select `Create`.
-##### CLI
-1. Run the following via the CLI to create and use the `koku-metrics-operator` project:
-```
-oc new-project koku-metrics-operator
-```
-#### Operator installation:
-Ensure that the operator is installed into the `koku-metrics-operator` namespace.
-
 ## Configure the koku-metrics-operator
 The operator can be configured through either the UI or CLI:
 #### Configure through the UI
