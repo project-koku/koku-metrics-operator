@@ -24,14 +24,8 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 **Note** The following limitations are specific to operators configured to run in a restricted network: 
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal. 
 * The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to cloud.redhat.com every week, or they will be deleted and the data will be lost. 
-## Configure the koku-metrics-operator
-**Note** There are separate instructions for configuring the `koku-metrics-operator` to run in a restricted network. 
-##### Configure authentication
-The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
-1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
-2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to cloud.redhat.com credentials.
-3. Select `Create`.
-##### Storage configuration
+
+#### Storage configuration pre-requisite
 The operator will attempt to create and use the following PVC when installed:
   ```
     volume_claim_template:
@@ -53,6 +47,13 @@ To use the default specification, the follow assumptions must be met:
 2. Dynamic provisioning for that default StorageClass is enabled.
 If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. For manual configuration, a valid PVC should be supplied in the `volume_claim_template` spec of the KokuMetricsConfig CR.
 
+## Configure the koku-metrics-operator
+**Note** There are separate instructions for configuring the `koku-metrics-operator` to run in a restricted network. 
+##### Configure authentication
+The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
+1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
+2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to cloud.redhat.com credentials.
+3. Select `Create`.
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
@@ -116,7 +117,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
         ```
 
     **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
-3. Specify the desired report retention. The operator will retain 30 reports by default. This corresponds to approximately one week's worth of data if using the default packaging cycle. To modify the number of retained reports:
+3. (Optional) Specify the desired report retention. The operator will retain 30 reports by default. This corresponds to approximately one week's worth of data if using the default packaging cycle. To modify the number of retained reports:
     * Change the `packaging` spec field `max_reports_to_store` to the desired number of reports to retain. Once this max number is reached, the operator will start removing the oldest packages remaining on the PVC:
 
         ```
