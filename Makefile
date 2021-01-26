@@ -267,7 +267,7 @@ bundle: manifests kustomize
 
 # Build the bundle image.
 bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	cd koku-metrics-operator/$(VERSION) && docker build -t $(BUNDLE_IMG) .
 
 # Push the bundle image.
 bundle-push:
