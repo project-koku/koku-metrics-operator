@@ -2,7 +2,7 @@
 ## Introduction
 The `koku-metrics-operator` is an OpenShift Operator used to collect OpenShift usage data and upload it to [cost managment](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/getting_started_with_cost_management/assembly_introduction_cost_management). The operator queries Prometheus to create metric reports which are packaged and uploaded to cost management at [cloud.redhat.com](https://cloud.redhat.com).
 
-This operator is capable of functioning within a restricted network. In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html).
+This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html).
 
 For more information, reach out to <cost-mgmt@redhat.com>.
 ## Features and Capabilities
@@ -93,7 +93,7 @@ To install the `koku-metrics-operator` in a restricted network, follow the [olm 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [cloud.redhat.com](https://cloud.redhat.com).
 
 For more information, reach out to <cost-mgmt@redhat.com>.
-## Configure the koku-metrics-operator for an air-gapped scenario
+## Configure the koku-metrics-operator for a restricted network
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
