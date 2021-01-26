@@ -34,7 +34,7 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator:v0.9.2
-    createdAt: "2021-01-26T17:04:43Z"
+    createdAt: "2021-01-26T17:50:33Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
@@ -84,19 +84,19 @@ spec:
     
     #### Storage configuration prerequisite
     The operator will attempt to create and use the following PVC when installed:
-      ```
-        volume_claim_template:
-          apiVersion: v1
-          kind: PersistentVolumeClaim
-          metadata:
-            name: koku-metrics-operator-data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 10Gi
-      ```
+    
+          volume_claim_template:
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: koku-metrics-operator-data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 10Gi
+    
     If a different PVC should be utilized, a valid PVC should be specified in the KokuMetricsConfig CR as described in the appropriate section below. The PVC to be used may exist already, or the operator will attempt to create it.
     
     To use the default specification, the follow assumptions must be met:
@@ -118,30 +118,35 @@ spec:
     2. For `basic` authentication, edit the following values in the spec:
         * Replace `authentication: type:` with `basic`.
         * Add the `secret_name` field under `authentication`, and set it equal to the name of the authentication Secret that was created above. The spec should look similar to the following:
+    
             ```
               authentication:
                 secret_name: SECRET-NAME
                 type: basic
             ```
+    
     3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `source` field:
         * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
         * Replace the `create_source` field value with `true`.
+    
         **Note:** if the source already exists, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
     4. If not specified, the operator will create a default PersistentVolumeClaim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
         * Add the desired configuration to the `volume_claim_template` field in the spec:
-            ```
-              volume_claim_template:
-                apiVersion: v1
-                kind: PersistentVolumeClaim
-                metadata:
-                  name: pvc-spec-definition
-                spec:
-                  accessModes:
-                    - ReadWriteOnce
-                  resources:
-                    requests:
-                      storage: 10Gi
-            ```
+    
+          ```
+            volume_claim_template:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: pvc-spec-definition
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Gi
+          ```
+    
         **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
     5. Select `Create`.
     
@@ -159,75 +164,84 @@ spec:
     2. Specify the desired storage. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
         * Add the desired configuration to the `volume_claim_template` field in the spec:
     
-            ```
-              volume_claim_template:
-                apiVersion: v1
-                kind: PersistentVolumeClaim
-                metadata:
-                  name: pvc-spec-definition
-                spec:
-                  storageClassName: gp2
-                  accessModes:
-                    - ReadWriteOnce
-                  resources:
-                    requests:
-                      storage: 10Gi
-            ```
+          ```
+            volume_claim_template:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: pvc-spec-definition
+              spec:
+                storageClassName: gp2
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Gi
+          ```
     
         **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
     3. (Optional) Specify the desired report retention. The operator will retain 30 reports by default. This corresponds to approximately one week's worth of data if using the default packaging cycle. To modify the number of retained reports:
         * Change the `packaging` spec field `max_reports_to_store` to the desired number of reports to retain. Once this max number is reached, the operator will start removing the oldest packages remaining on the PVC:
     
-            ```
-              packaging:
-                max_size_MB: 100
-                max_reports_to_store: 30
-            ```
+          ```
+            packaging:
+              max_size_MB: 100
+              max_reports_to_store: 30
+          ```
     
         **Note:** The number of retained reports directly affects the frequency that reports must be manually downloaded from the PVC. Take caution in setting this to a higher number of reports, as the operator cannot write data to the PVC if the storage is full.
     4. To configure the operator to perform in a restricted network, set the `upload_toggle` to `false`:
     
-        ```
-          upload:
-            upload_cycle: 360,
-            upload_toggle: false
-        ```
+      ```
+        upload:
+          upload_cycle: 360,
+          upload_toggle: false
+      ```
+    
     5. Select `Create`.
     
     ## Download reports from the Operator & clean up the PVC
     If the `koku-metrics-operator` is configured to run in a restricted network, the metric reports will not automatically upload to cost managment. Instead, they need to be manually copied from the PVC for upload to [cloud.redhat.com](https://cloud.redhat.com). The default configuration saves one week of reports which means the process of downloading and uploading reports should be repeated weekly to prevent loss of metrics data. To download the reports, complete the following steps:
     1. Create the following Pod, ensuring the `claimName` matches the PVC containing the report data:
-        ```
-        kind: Pod
-        apiVersion: v1
-        metadata:
-          name: volume-shell
-        spec:
-          volumes:
+    
+      ```
+      kind: Pod
+      apiVersion: v1
+      metadata:
+        name: volume-shell
+      spec:
+        volumes:
+        - name: koku-metrics-operator-reports
+          persistentVolumeClaim:
+            claimName: koku-metrics-operator-data
+        containers:
+        - name: volume-shell
+          image: busybox
+          command: ['sleep', '3600']
+          volumeMounts:
           - name: koku-metrics-operator-reports
-            persistentVolumeClaim:
-              claimName: koku-metrics-operator-data
-          containers:
-          - name: volume-shell
-            image: busybox
-            command: ['sleep', '3600']
-            volumeMounts:
-            - name: koku-metrics-operator-reports
-              mountPath: /tmp/koku-metrics-operator-reports
-        ```
+            mountPath: /tmp/koku-metrics-operator-reports
+      ```
+    
     2. Use rsync to copy all of the files ready for upload from the PVC to a local folder:
-        ```
-        $ oc rsync volume-shell:/tmp/koku-metrics-operator-reports/upload local/path/to/save/folder
-        ```
+    
+      ```
+      $ oc rsync volume-shell:/tmp/koku-metrics-operator-reports/upload local/path/to/save/folder
+      ```
+    
     3. Once confirming that the files have been successfully copied, use rsh to connect to the pod and delete the contents of the upload folder so that they are no longer in storage:
-        ```
-        $ oc rsh volume-shell
-        $ rm /tmp/koku-metrics-operator-reports/upload/*
-        ```
+    
+      ```
+      $ oc rsh volume-shell
+      $ rm /tmp/koku-metrics-operator-reports/upload/*
+      ```
+    
     4. (Optional) Delete the pod that was used to connect to the PVC:
-        ```
-        $ oc delete -f volume-shell.yaml
-        ```
+    
+      ```
+      $ oc delete -f volume-shell.yaml
+      ```
+    
     ## Create a source
     In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the cloud.redhat.com platform, open the [Sources menu](https://cloud.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
     
@@ -244,9 +258,9 @@ spec:
     
     ## Upload the reports to cost managment
     Uploading reports to cost managment is done through curl:
-      ```
-      $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
-      ```
+    
+        $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
+    
     where `USERNAME` and `PASS` correspond to the user credentials for [cloud.redhat.com](https://cloud.redhat.com), and `FILE_NAME` is the name of the report to upload.
 
   displayName: Koku Metrics Operator
