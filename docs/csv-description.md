@@ -26,7 +26,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal. 
 * The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to cloud.redhat.com every week, or they will be deleted and the data will be lost. 
 
-#### Storage configuration pre-requisite
+#### Storage configuration prerequisite
 The operator will attempt to create and use the following PVC when installed:
   ```
     volume_claim_template:
@@ -41,12 +41,13 @@ The operator will attempt to create and use the following PVC when installed:
           requests:
             storage: 10Gi
   ```
-If a different PVC should be utilized, a valid PVC should be specified in the KokuMetricsConfig CR as described in the following section. The PVC to be used may exist already, or the operator will attempt to create it.
+If a different PVC should be utilized, a valid PVC should be specified in the KokuMetricsConfig CR as described in the appropriate section below. The PVC to be used may exist already, or the operator will attempt to create it.
 
 To use the default specification, the follow assumptions must be met:
 1. A default StorageClass is defined.
 2. Dynamic provisioning for that default StorageClass is enabled.
-If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. For manual configuration, a valid PVC should be supplied in the `volume_claim_template` spec of the KokuMetricsConfig CR.
+
+If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. After configuring storage, a valid PVC template should be supplied in the `volume_claim_template` spec of the KokuMetricsConfig CR.
 
 ## Configure the koku-metrics-operator
 **Note** There are separate instructions for configuring the `koku-metrics-operator` to run in a restricted network. 
