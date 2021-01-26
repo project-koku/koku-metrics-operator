@@ -86,7 +86,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
     **Note:** If using the YAML View, the `volume_claim_template` field must be added to the spec
 5. Select `Create`.
 
-# Restricted Network Usage
+# Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
 To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `koku-metrics-operator` package.
 
