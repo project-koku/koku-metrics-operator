@@ -34,7 +34,7 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator:v0.9.2
-    createdAt: "2021-01-26T17:50:33Z"
+    createdAt: "2021-01-28T14:12:57Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
@@ -300,13 +300,11 @@ spec:
           replicas: 1
           selector:
             matchLabels:
-              application: koku-metrics-operator
               control-plane: controller-manager
           strategy: {}
           template:
             metadata:
               labels:
-                application: koku-metrics-operator
                 control-plane: controller-manager
             spec:
               containers:

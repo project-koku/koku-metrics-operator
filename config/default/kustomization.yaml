@@ -9,8 +9,8 @@ namespace: koku-metrics-operator
 namePrefix: koku-metrics-
 
 # Labels to add to all resources and selectors.
-commonLabels:
- application: koku-metrics-operator
+# commonLabels:
+#  application: koku-metrics-operator
 
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml

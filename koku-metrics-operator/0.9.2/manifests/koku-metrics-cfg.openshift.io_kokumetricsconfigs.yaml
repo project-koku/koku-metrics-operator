@@ -4,8 +4,6 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  labels:
-    application: koku-metrics-operator
   name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
 spec:
   group: koku-metrics-cfg.openshift.io
