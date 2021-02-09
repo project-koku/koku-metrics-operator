@@ -17,7 +17,7 @@ metadata:
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Managment
   name: koku-metrics-operator.vX.Y.Z
-  namespace: koku-metrics-operator
+  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -26,6 +26,10 @@ spec:
       kind: KokuMetricsConfig
       name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
       version: v1alpha1
+    - description: KokuMetricsConfig is the Schema for the kokumetricsconfig API
+      kind: KokuMetricsConfig
+      name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
+      version: v1beta1
   description: INSERT-DESCRIPTION
   displayName: Koku Metrics Operator
   icon:

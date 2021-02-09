@@ -1,7 +1,7 @@
 /*
 
 
-Copyright 2020 Red Hat, Inc.
+Copyright 2021 Red Hat, Inc.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
@@ -17,23 +17,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package crhchttp
+package v1beta1
 
 import (
-	"github.com/go-logr/logr"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// AuthConfig provides the data for reconciling the CR with defaults
-type AuthConfig struct {
-	Client            client.Client
-	ClusterID         string
-	Authentication    kokumetricscfgv1beta1.AuthenticationType
-	BearerTokenString string
-	BasicAuthUser     string
-	BasicAuthPassword string
-	ValidateCert      bool
-	OperatorCommit    string
-	Log               logr.Logger
+// log is for logging in this package.
+var kokumetricsconfiglog = logf.Log.WithName("kokumetricsconfig-resource")
+
+func (r *KokuMetricsConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	kokumetricsconfiglog.Info("setting up webhook :)")
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(r).
+		Complete()
 }
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
