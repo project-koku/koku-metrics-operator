@@ -122,7 +122,7 @@ type AuthenticationSpec struct {
 
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
 	// +optional
-	AuthenticationSecretName string `json:"secretName,omitempty"`
+	AuthenticationSecretName string `json:"secret_name,omitempty"`
 }
 
 // PackagingSpec defines the desired state of the Packaging object in the KokuMetricsConfigSpec.
@@ -133,13 +133,13 @@ type PackagingSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=100
-	MaxSize int64 `json:"maxSizeMB"`
+	MaxSize int64 `json:"max_size_MB"`
 
 	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
 	// The default is 30 reports which corresponds to approximately 7 days worth of data given the other default values.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=30
-	MaxReports int64 `json:"maxReportsToStore"`
+	MaxReports int64 `json:"max_reports_to_store"`
 }
 
 // UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
@@ -149,27 +149,27 @@ type UploadSpec struct {
 	// IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
 	// The default is `/api/ingress/v1/upload`.
 	// +kubebuilder:default=`/api/ingress/v1/upload`
-	IngressAPIPath string `json:"ingressPath"`
+	IngressAPIPath string `json:"ingress_path"`
 
 	// UploadWait is a field of KokuMetricsConfig to represent the time to wait before sending an upload.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	UploadWait *int64 `json:"uploadWait,omitempty"`
+	UploadWait *int64 `json:"upload_wait,omitempty"`
 
 	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
 	// The default is 360 min (6 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=360
-	UploadCycle *int64 `json:"uploadCycle"`
+	UploadCycle *int64 `json:"upload_cycle"`
 
 	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
 	// The default is true.
 	// +kubebuilder:default=true
-	UploadToggle *bool `json:"uploadToggle"`
+	UploadToggle *bool `json:"upload_toggle"`
 
 	// ValidateCert is a field of KokuMetricsConfig to represent if the Ingress endpoint must be certificate validated.
 	// +kubebuilder:default=true
-	ValidateCert *bool `json:"validateCert"`
+	ValidateCert *bool `json:"validate_cert"`
 }
 
 // PrometheusSpec defines the desired state of PrometheusConfig object in the KokuMetricsConfigSpec.
@@ -179,13 +179,13 @@ type PrometheusSpec struct {
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
 	// +kubebuilder:default=`https://thanos-querier.openshift-monitoring.svc:9091`
-	SvcAddress string `json:"serviceAddress"`
+	SvcAddress string `json:"service_address"`
 
 	// FOR DEVELOPMENT ONLY.
 	// SkipTLSVerification is a field of KokuMetricsConfig to represent if the thanos-querier endpoint must be certificate validated.
 	// The default is false.
 	// +kubebuilder:default=false
-	SkipTLSVerification *bool `json:"skipTLSVerification"`
+	SkipTLSVerification *bool `json:"skip_tls_verification"`
 }
 
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the KokuMetricsConfigSpec.
@@ -195,7 +195,7 @@ type CloudDotRedHatSourceSpec struct {
 	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
 	// The default is `/api/sources/v1.0/`.
 	// +kubebuilder:default=`/api/sources/v1.0/`
-	SourcesAPIPath string `json:"sourcesPath"`
+	SourcesAPIPath string `json:"sources_path"`
 
 	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on cloud.redhat.com.
 	// +optional
@@ -203,13 +203,13 @@ type CloudDotRedHatSourceSpec struct {
 
 	// CreateSource is a field of KokuMetricsConfigSpec to represent if the source should be created if not found.
 	// +kubebuilder:default=false
-	CreateSource *bool `json:"createSource"`
+	CreateSource *bool `json:"create_source"`
 
 	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule
 	// The default is 1440 min (24 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=1440
-	CheckCycle *int64 `json:"checkCycle"`
+	CheckCycle *int64 `json:"check_cycle"`
 }
 
 // KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
@@ -225,7 +225,7 @@ type KokuMetricsConfigSpec struct {
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// The default is `https://cloud.redhat.com`.
 	// +kubebuilder:default=`https://cloud.redhat.com`
-	APIURL string `json:"apiURL,omitempty"`
+	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of KokuMetricsConfig to represent the authentication object.
 	Authentication AuthenticationSpec `json:"authentication"`
@@ -237,13 +237,13 @@ type KokuMetricsConfigSpec struct {
 	Upload UploadSpec `json:"upload"`
 
 	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
-	PrometheusConfig PrometheusSpec `json:"prometheusConfig"`
+	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
 	// Source is a field of KokuMetricsConfig to represent the desired source on cloud.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
 	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
-	VolumeClaimTemplate *EmbeddedPersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
+	VolumeClaimTemplate *EmbeddedPersistentVolumeClaim `json:"volume_claim_template,omitempty"`
 }
 
 // AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.
@@ -253,10 +253,10 @@ type AuthenticationStatus struct {
 	AuthType AuthenticationType `json:"type,omitempty"`
 
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
-	AuthenticationSecretName string `json:"secretName,omitempty"`
+	AuthenticationSecretName string `json:"secret_name,omitempty"`
 
 	// AuthenticationCredentialsFound is a field of KokuMetricsConfig to represent if used for uploads were found.
-	AuthenticationCredentialsFound *bool `json:"credentialsFound,omitempty"`
+	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
 }
 
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.
@@ -264,22 +264,22 @@ type PackagingStatus struct {
 
 	// LastSuccessfulPackagingTime is a field of KokuMetricsConfig that shows the time of the last successful file packaging.
 	// +nullable
-	LastSuccessfulPackagingTime metav1.Time `json:"lastSuccessfulPackagingTime,omitempty"`
+	LastSuccessfulPackagingTime metav1.Time `json:"last_successful_packaging_time,omitempty"`
 
 	// MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
-	MaxReports *int64 `json:"maxReportsToStore,omitempty"`
+	MaxReports *int64 `json:"max_reports_to_store,omitempty"`
 
 	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
-	MaxSize *int64 `json:"maxSizeMB,omitempty"`
+	MaxSize *int64 `json:"max_size_MB,omitempty"`
 
 	// PackagedFiles is a field of KokuMetricsConfig to represent the list of file packages in storage.
-	PackagedFiles []string `json:"packagedFiles,omitempty"`
+	PackagedFiles []string `json:"packaged_files,omitempty"`
 
 	// PackagingError is a field of KokuMetricsConfig to represent the error encountered packaging the reports.
 	PackagingError string `json:"error,omitempty"`
 
 	// ReportCount is a field of KokuMetricsConfig to represent the number of reports in storage.
-	ReportCount *int64 `json:"numberReportsStored,omitempty"`
+	ReportCount *int64 `json:"number_reports_stored,omitempty"`
 }
 
 // UploadStatus defines the observed state of Upload object in the KokuMetricsConfigStatus.
@@ -287,36 +287,36 @@ type UploadStatus struct {
 
 	// IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
 	// +optional
-	IngressAPIPath string `json:"ingressPath,omitempty"`
+	IngressAPIPath string `json:"ingress_path,omitempty"`
 
 	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
 	// The default is true
 	UploadToggle *bool `json:"upload,omitempty"`
 
 	// UploadWait is a field of KokuMetricsConfig to represent the time to wait before sending an upload.
-	UploadWait *int64 `json:"uploadWait,omitempty"`
+	UploadWait *int64 `json:"upload_wait,omitempty"`
 
 	// UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
 	// The default is 360 min (6 hours).
-	UploadCycle *int64 `json:"uploadCycle,omitempty"`
+	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
 	// UploadError is a field of KokuMetricsConfigStatus to represent the error encountered uploading reports.
 	// +optional
 	UploadError string `json:"error,omitempty"`
 
 	// LastUploadStatus is a field of KokuMetricsConfig that shows the http status of the last upload.
-	LastUploadStatus string `json:"lastUploadStatus,omitempty"`
+	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
 	// LastUploadTime is a field of KokuMetricsConfig that shows the time that the last upload was attempted.
 	// +nullable
-	LastUploadTime metav1.Time `json:"lastUploadTime,omitempty"`
+	LastUploadTime metav1.Time `json:"last_upload_time,omitempty"`
 
 	// LastSuccessfulUploadTime is a field of KokuMetricsConfig that shows the time of the last successful upload.
 	// +nullable
-	LastSuccessfulUploadTime metav1.Time `json:"lastSuccessfulUploadTime,omitempty"`
+	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
 
 	// ValidateCert is a field of KokuMetricsConfig to represent if the Ingress endpoint must be certificate validated.
-	ValidateCert *bool `json:"validateCert,omitempty"`
+	ValidateCert *bool `json:"validate_cert,omitempty"`
 }
 
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the KokuMetricsConfigStatus.
@@ -324,7 +324,7 @@ type CloudDotRedHatSourceStatus struct {
 
 	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
 	// +optional
-	SourcesAPIPath string `json:"sourcesPath,omitempty"`
+	SourcesAPIPath string `json:"sources_path,omitempty"`
 
 	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on cloud.redhat.com.
 	// +optional
@@ -332,11 +332,11 @@ type CloudDotRedHatSourceStatus struct {
 
 	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on cloud.redhat.com.
 	// +optional
-	SourceDefined *bool `json:"sourceDefined,omitempty"`
+	SourceDefined *bool `json:"source_defined,omitempty"`
 
 	// CreateSource is a field of KokuMetricsConfigStatus to represent if the source should be created if not found.
 	// +optional
-	CreateSource *bool `json:"createSource,omitempty"`
+	CreateSource *bool `json:"create_source,omitempty"`
 
 	// SourceError is a field of KokuMetricsConfigStatus to represent the error encountered creating the source.
 	// +optional
@@ -344,67 +344,67 @@ type CloudDotRedHatSourceStatus struct {
 
 	// LastSourceCheckTime is a field of KokuMetricsConfig that shows the time that the last check was attempted.
 	// +nullable
-	LastSourceCheckTime metav1.Time `json:"lastCheckTime,omitempty"`
+	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
 	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule.
 	// The default is 1440 min (24 hours).
-	CheckCycle *int64 `json:"checkCycle,omitempty"`
+	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
 
 // PrometheusStatus defines the status for querying prometheus.
 type PrometheusStatus struct {
 
 	// PrometheusConfigured is a field of KokuMetricsConfigStatus to represent if the operator is configured to connect to prometheus.
-	PrometheusConfigured bool `json:"prometheusConfigured"`
+	PrometheusConfigured bool `json:"prometheus_configured"`
 
 	// ConfigError is a field of KokuMetricsConfigStatus to represent errors during prometheus configuration.
-	ConfigError string `json:"configurationError,omitempty"`
+	ConfigError string `json:"configuration_error,omitempty"`
 
 	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
-	PrometheusConnected bool `json:"prometheusConnected"`
+	PrometheusConnected bool `json:"prometheus_connected"`
 
 	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
-	ConnectionError string `json:"prometheusConnectionError,omitempty"`
+	ConnectionError string `json:"prometheus_connection_error,omitempty"`
 
 	// LastQueryStartTime is a field of KokuMetricsConfigStatus to represent the last time queries were started.
 	// +nullable
-	LastQueryStartTime metav1.Time `json:"lastQueryStartTime,omitempty"`
+	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
 
 	// LastQuerySuccessTime is a field of KokuMetricsConfigStatus to represent the last time queries were successful.
 	// +nullable
-	LastQuerySuccessTime metav1.Time `json:"lastQuerySuccessTime,omitempty"`
+	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
 
 	// SvcAddress is the internal thanos-querier address.
-	SvcAddress string `json:"serviceAddress,omitempty"`
+	SvcAddress string `json:"service_address,omitempty"`
 
 	// SkipTLSVerification is a field of KokuMetricsConfigStatus to represent if the thanos-querier endpoint must be certificate validated.
-	SkipTLSVerification *bool `json:"skipTLSVerification,omitempty"`
+	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // ReportsStatus defines the status for generating reports.
 type ReportsStatus struct {
 
 	// ReportMonth is a field of KokuMetricsConfigStatus to represent the month for which reports are being generated.
-	ReportMonth string `json:"reportMonth,omitempty"`
+	ReportMonth string `json:"report_month,omitempty"`
 
 	// LastHourQueried is a field of KokuMetricsConfigStatus to represent the time range for which metrics were last queried.
-	LastHourQueried string `json:"lastHourQueried,omitempty"`
+	LastHourQueried string `json:"last_hour_queried,omitempty"`
 
 	// DataCollected is a field of KokuMetricsConfigStatus to represent whether or not data was collected for the last query.
-	DataCollected bool `json:"dataCollected,omitempty"`
+	DataCollected bool `json:"data_collected,omitempty"`
 
 	// DataCollectionMessage is a field of KokuMetricsConfigStatus to represent a message associated with the data_collected status.
-	DataCollectionMessage string `json:"dataCollectionMessage,omitempty"`
+	DataCollectionMessage string `json:"data_collection_message,omitempty"`
 }
 
 // StorageStatus defines the status for storage.
 type StorageStatus struct {
 
 	// VolumeType is the string representation of the volume type.
-	VolumeType string `json:"volumeType,omitempty"`
+	VolumeType string `json:"volume_type,omitempty"`
 
 	// VolumeMounted is a bool to indicate if storage volume was mounted.
-	VolumeMounted bool `json:"volumeMounted,omitempty"`
+	VolumeMounted bool `json:"volume_mounted,omitempty"`
 }
 
 // KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
@@ -417,7 +417,7 @@ type KokuMetricsConfigStatus struct {
 
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// +optional
-	APIURL string `json:"apiURL,omitempty"`
+	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of KokuMetricsConfig to represent the authentication status.
 	Authentication AuthenticationStatus `json:"authentication,omitempty"`
@@ -429,7 +429,7 @@ type KokuMetricsConfigStatus struct {
 	Upload UploadStatus `json:"upload,omitempty"`
 
 	// OperatorCommit is a field of KokuMetricsConfig that shows the commit hash of the operator.
-	OperatorCommit string `json:"operatorCommit,omitempty"`
+	OperatorCommit string `json:"operator_commit,omitempty"`
 
 	// Prometheus represents the status of premetheus queries.
 	Prometheus PrometheusStatus `json:"prometheus,omitempty"`
@@ -445,7 +445,7 @@ type KokuMetricsConfigStatus struct {
 	Storage StorageStatus `json:"storage,omitempty"`
 
 	// PersistentVolumeClaim is a field of KokuMetricsConfig to represent a PVC.
-	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistentVolumeClaim,omitempty"`
+	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
 // +kubebuilder:object:root=true

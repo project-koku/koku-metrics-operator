@@ -2,5 +2,5 @@ resources:
 # - manifests.yaml
 - service.yaml
 
-configurations:
+# configurations:
 # - kustomizeconfig.yaml
