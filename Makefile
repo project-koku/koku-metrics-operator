@@ -1,6 +1,6 @@
 # Current Operator version
 PREVIOUS_VERSION ?= 0.9.2
-VERSION ?= 0.10.5
+VERSION ?= 0.9.3
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
@@ -195,9 +195,6 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-conversion: conversion-gen
-	$(CONVERSION_GEN) --go-header-file "./hack/boilerplate.go.txt" --input-dirs "./api/v1alpha1" --output-base "." --output-file-base="zz_generated.conversion" --skip-unsafe=true --v 5
-
 # Build the docker image
 docker-build: test
 	docker build . -t ${IMG}
@@ -239,23 +236,6 @@ ifeq (, $(shell which controller-gen))
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
-endif
-
-# find or download conversion-gen
-# download conversion-gen if necessary
-conversion-gen:
-ifeq (, $(shell which conversion-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/conversion-gen@v0.20.2 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONVERSION_GEN=$(GOBIN)/conversion-gen
-else
-CONVERSION_GEN=$(shell which conversion-gen)
 endif
 
 kustomize:
