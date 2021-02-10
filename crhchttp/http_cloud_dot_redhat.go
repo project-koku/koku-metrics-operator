@@ -28,6 +28,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/textproto"
@@ -42,6 +43,21 @@ import (
 // Client is an http.Client
 var Client HTTPClient
 var cacerts = "/etc/ssl/certs/ca-certificates.crt"
+
+// DefaultTransport is a copy from the golang http package
+var DefaultTransport = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
 
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
@@ -120,7 +136,7 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
-	transport := &http.Transport{Proxy: http.ProxyFromEnvironment}
+	transport := DefaultTransport
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
 		caCert, err := ioutil.ReadFile(cacerts)
