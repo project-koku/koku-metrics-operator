@@ -11,7 +11,7 @@ resources:
 # - patches/webhook_in_kokumetricsconfigs.yaml
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
 
-# [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
+# [CA injection] To enable webhook, uncomment all the sections with [CA injection] prefix.
 # patches here are for enabling the CA injection for each CRD
 # - patches/cainjection_in_kokumetricsconfigs.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
