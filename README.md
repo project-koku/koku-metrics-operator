@@ -8,7 +8,7 @@
 
 Operator to obtain OCP usage data and upload it to koku. The operator utilizes [Golang](http://golang.org/) to collect usage data from an OCP cluster installation.
 
-You must have access to an OpenShift v.4.5.0+ cluster.
+You must have access to an OpenShift v.4.5+ cluster.
 
 To submit an issue please visit https://issues.redhat.com/projects/COST/
 
