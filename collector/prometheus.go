@@ -35,11 +35,11 @@ import (
 	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
-	promSpec *kokumetricscfgv1alpha1.PrometheusSpec
+	promSpec *kokumetricscfgv1beta1.PrometheusSpec
 
 	certKey  = "service-ca.crt"
 	tokenKey = "token"
@@ -80,7 +80,7 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func getPrometheusConfig(kmCfg *kokumetricscfgv1alpha1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
+func getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
 	if !inCluster {
 		val, ok := os.LookupEnv("SECRET_ABSPATH")
 		if ok {
@@ -122,7 +122,7 @@ func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
 	return promv1.NewAPI(client), nil
 }
 
-func statusHelper(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig, status string, err error) {
+func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string, err error) {
 	switch status {
 	case "configuration":
 		if err != nil {
@@ -154,7 +154,7 @@ func testPrometheusConnection(promConn prometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1alpha1.KokuMetricsConfig) error {
+func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	log := c.Log.WithValues("kokumetricsconfig", "GetPromConn")
 	var err error
 

@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.1
-VERSION ?= 0.9.2
+PREVIOUS_VERSION ?= 0.9.2
+VERSION ?= 0.9.3
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
@@ -17,7 +17,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 # CRD_OPTIONS ?= "crd:trivialVersions=true"
-CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
+CRD_OPTIONS ?= "crd:crdVersions={v1}"
 
 # Use git branch for dev team deployment of pushed branches
 GITBRANCH=$(shell git branch --show-current)

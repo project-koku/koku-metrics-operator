@@ -37,7 +37,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ import (
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg            *kokumetricscfgv1alpha1.KokuMetricsConfig
+	KMCfg            *kokumetricscfgv1beta1.KokuMetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
 	Log              logr.Logger
 	manifest         manifestInfo

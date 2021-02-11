@@ -33,18 +33,18 @@ import (
 
 	"github.com/go-logr/logr"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	kokumetricscfgv1alpha1 "github.com/project-koku/koku-metrics-operator/api/v1alpha1"
+	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
 	tenGi = *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI)
 	// DefaultPVC is a basic PVC
-	DefaultPVC = kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim{
+	DefaultPVC = kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "PersistentVolumeClaim",
 		},
-		EmbeddedObjectMetadata: kokumetricscfgv1alpha1.EmbeddedObjectMetadata{
+		EmbeddedObjectMetadata: kokumetricscfgv1beta1.EmbeddedObjectMetadata{
 			Name: "koku-metrics-operator-data",
 			Labels: map[string]string{
 				"application": "koku-metrics-operator",
@@ -72,10 +72,11 @@ func (v *volume) isMounted() bool {
 
 // Storage is a struct containing volume information
 type Storage struct {
-	Client client.Client
-	KMCfg  *kokumetricscfgv1alpha1.KokuMetricsConfig
-	Log    logr.Logger
-	PVC    *corev1.PersistentVolumeClaim
+	Client    client.Client
+	KMCfg     *kokumetricscfgv1beta1.KokuMetricsConfig
+	Log       logr.Logger
+	Namespace string
+	PVC       *corev1.PersistentVolumeClaim
 
 	vol *volume
 }
@@ -84,7 +85,7 @@ func (s *Storage) getOrCreateVolume() error {
 	ctx := context.Background()
 	log := s.Log.WithValues("kokumetricsconfig", "getOrCreateVolume")
 	namespace := types.NamespacedName{
-		Namespace: "koku-metrics-operator",
+		Namespace: s.Namespace,
 		Name:      s.PVC.Name}
 	if err := s.Client.Get(ctx, namespace, s.PVC); err == nil {
 		log.Info(fmt.Sprintf("PVC name %s already exists", s.PVC.Name))
@@ -144,7 +145,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 	log.Info("getting deployment")
 	deployment := &appsv1.Deployment{}
 	namespace := types.NamespacedName{
-		Namespace: "koku-metrics-operator",
+		Namespace: s.Namespace,
 		Name:      "koku-metrics-controller-manager"}
 	if err := s.Client.Get(ctx, namespace, deployment); err != nil {
 		return false, fmt.Errorf("unable to get Deployment: %v", err)
@@ -158,7 +159,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 		log.Info(fmt.Sprintf("deployment is owned by: %s", owner.Name))
 		csv = &operatorsv1alpha1.ClusterServiceVersion{}
 		namespace := types.NamespacedName{
-			Namespace: "koku-metrics-operator",
+			Namespace: s.Namespace,
 			Name:      owner.Name}
 		if err := s.Client.Get(ctx, namespace, csv); err != nil {
 			return false, fmt.Errorf("unable to get ClusterServiceVersion: %v", err)
@@ -187,7 +188,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 }
 
 // MakeVolumeClaimTemplate produces a template to create the PVC
-func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim) *corev1.PersistentVolumeClaim {
+func MakeVolumeClaimTemplate(e kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim, namespace string) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: e.APIVersion,
@@ -195,7 +196,7 @@ func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha1.EmbeddedPersistentVolumeCl
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        e.Name,
-			Namespace:   "koku-metrics-operator",
+			Namespace:   namespace,
 			Labels:      e.Labels,
 			Annotations: e.Annotations,
 		},
@@ -204,13 +205,13 @@ func MakeVolumeClaimTemplate(e kokumetricscfgv1alpha1.EmbeddedPersistentVolumeCl
 }
 
 // MakeEmbeddedPVC produces a template to create the PVC
-func MakeEmbeddedPVC(pvc *corev1.PersistentVolumeClaim) *kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim {
-	return &kokumetricscfgv1alpha1.EmbeddedPersistentVolumeClaim{
+func MakeEmbeddedPVC(pvc *corev1.PersistentVolumeClaim) *kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim {
+	return &kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: pvc.APIVersion,
 			Kind:       pvc.Kind,
 		},
-		EmbeddedObjectMetadata: kokumetricscfgv1alpha1.EmbeddedObjectMetadata{
+		EmbeddedObjectMetadata: kokumetricscfgv1beta1.EmbeddedObjectMetadata{
 			Name: pvc.Name,
 		},
 		Spec: pvc.Spec,
