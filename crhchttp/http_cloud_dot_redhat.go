@@ -173,8 +173,8 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 	}
 	body := bodySlice[1]
 
-	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return nil, fmt.Errorf("error response: %s", body)
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		return nil, fmt.Errorf("status: %d | error response: %s", resp.StatusCode, body)
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {

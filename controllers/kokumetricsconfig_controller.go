@@ -85,9 +85,10 @@ type KokuMetricsConfigReconciler struct {
 }
 
 type previousAuthValidation struct {
-	username string
-	password string
-	err      error
+	username  string
+	password  string
+	err       error
+	timestamp metav1.Time
 }
 
 type serializedAuthMap struct {
@@ -314,9 +315,9 @@ func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, reqNamespace types.NamespacedName) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
 	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
-	kmCfg.Status.Authentication.AuthErrorMessage = ""
 	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		kmCfg.Status.Authentication.ValidBasicAuth = nil
+		kmCfg.Status.Authentication.AuthErrorMessage = ""
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
@@ -345,7 +346,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	}
 }
 
-func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
 	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
@@ -353,8 +354,10 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 
 	log := r.Log.WithValues("KokuMetricsConfig", "validateCredentials")
 
-	if previousValidation != nil && previousValidation.password == sSpec.Auth.BasicAuthPassword && previousValidation.username == sSpec.Auth.BasicAuthUser {
-		log.Info("THIS SHOULD NOT BE TRUE!!!")
+	if previousValidation != nil &&
+		previousValidation.password == sSpec.Auth.BasicAuthPassword &&
+		previousValidation.username == sSpec.Auth.BasicAuthUser &&
+		!checkCycle(r.Log, cycle, previousValidation.timestamp, "credential verification") {
 		return previousValidation.err
 	}
 
@@ -363,13 +366,14 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 	_, err := sources.GetSources(sSpec, client)
 
 	previousValidation = &previousAuthValidation{
-		username: sSpec.Auth.BasicAuthUser,
-		password: sSpec.Auth.BasicAuthPassword,
-		err:      err,
+		username:  sSpec.Auth.BasicAuthUser,
+		password:  sSpec.Auth.BasicAuthPassword,
+		err:       err,
+		timestamp: metav1.Now(),
 	}
 
-	if err != nil {
-		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in %s. Credentials will be re-verified during the next reconciliation.", kmCfg.Spec.Authentication.AuthenticationSecretName)
+	if err != nil && strings.Contains(err.Error(), "401") {
+		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", kmCfg.Spec.Authentication.AuthenticationSecretName)
 		log.Info(msg)
 		kmCfg.Status.Authentication.AuthErrorMessage = msg
 		kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
@@ -674,7 +678,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		Log:    r.Log,
 	}
 
-	if err := validateCredentials(r, sSpec, kmCfg); err == nil {
+	if err := validateCredentials(r, sSpec, kmCfg, 1440); err == nil {
 		// Block will run when creds are valid.
 
 		// Check if source is defined and update the status to confirmed/created
@@ -684,6 +688,11 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
 			result = ctrl.Result{}
 			errors = append(errors, err)
+		}
+
+		// revalidate if an upload fails due to 401
+		if strings.Contains(kmCfg.Status.Upload.LastUploadStatus, "401") {
+			_ = validateCredentials(r, sSpec, kmCfg, 0)
 		}
 	}
 

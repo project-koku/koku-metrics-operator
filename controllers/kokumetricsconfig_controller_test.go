@@ -469,6 +469,33 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
+		It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood-unauthorized"
+			instCopy.Spec.APIURL = unauthorizedTS.URL
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+
+			// wait until the cluster ID is set
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
+		})
 		It("should find basic auth creds for mixedcase basic auth CRD case", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "mixed-case"
@@ -803,8 +830,52 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
-			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
+			Expect(fetched.Status.Upload.UploadError).To(Equal(""))
+			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("200"))
+			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
+		})
+		It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
+			err := setup()
+			Expect(err, nil)
+			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
+			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
+
+			hourAgo := metav1.Now().Time.Add(-time.Hour)
+
+			previousValidation = &previousAuthValidation{
+				username:  "user1",
+				password:  "password1",
+				err:       nil,
+				timestamp: metav1.Time{Time: hourAgo},
+			}
+
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "attemptupload-unauthorized"
+			instCopy.Spec.APIURL = unauthorizedTS.URL
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+
+			// wait until the cluster ID is set
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			fmt.Printf("\n\n%+v\n\n", fetched.Status.Authentication)
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.Upload.UploadError).NotTo(Equal(""))
+			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
 			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})

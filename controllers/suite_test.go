@@ -139,7 +139,8 @@ var (
 		},
 	}
 
-	validTS *httptest.Server
+	validTS        *httptest.Server
+	unauthorizedTS *httptest.Server
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -154,7 +155,10 @@ func TestController(t *testing.T) {
 
 var _ = BeforeSuite(func(done Done) {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, client")
+		w.WriteHeader(http.StatusOK)
+	}))
+	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
@@ -385,4 +389,5 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	validTS.Close()
+	unauthorizedTS.Close()
 })
