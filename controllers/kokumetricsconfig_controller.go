@@ -66,8 +66,9 @@ var (
 	falseDef = false
 	trueDef  = true
 
-	dirCfg     *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-	sourceSpec *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
+	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
+	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
+	previousValidation *previousAuthValidation
 )
 
 // KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
@@ -81,6 +82,12 @@ type KokuMetricsConfigReconciler struct {
 
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
+}
+
+type previousAuthValidation struct {
+	username string
+	password string
+	err      error
 }
 
 type serializedAuthMap struct {
@@ -308,8 +315,8 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
 	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	kmCfg.Status.Authentication.AuthErrorMessage = ""
-	kmCfg.Status.Authentication.ValidBasicAuth = nil
 	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
+		kmCfg.Status.Authentication.ValidBasicAuth = nil
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
@@ -346,9 +353,20 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 
 	log := r.Log.WithValues("KokuMetricsConfig", "validateCredentials")
 
+	if previousValidation != nil && previousValidation.password == sSpec.Auth.BasicAuthPassword && previousValidation.username == sSpec.Auth.BasicAuthUser {
+		log.Info("THIS SHOULD NOT BE TRUE!!!")
+		return previousValidation.err
+	}
+
 	log.Info("validating credentials")
 	client := crhchttp.GetClient(sSpec.Auth)
 	_, err := sources.GetSources(sSpec, client)
+
+	previousValidation = &previousAuthValidation{
+		username: sSpec.Auth.BasicAuthUser,
+		password: sSpec.Auth.BasicAuthPassword,
+		err:      err,
+	}
 
 	if err != nil {
 		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in %s. Credentials will be re-verified during the next reconciliation.", kmCfg.Spec.Authentication.AuthenticationSecretName)

@@ -34,7 +34,6 @@ import (
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/storage"
-	"github.com/project-koku/koku-metrics-operator/testutils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -44,7 +43,6 @@ import (
 )
 
 var (
-	testLogger                  = testutils.TestLogger{}
 	namespace                   = "koku-metrics-operator"
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
@@ -236,7 +234,6 @@ func setup() error {
 		},
 	}
 	// setup the initial testing directory
-	testLogger.Info("setting up for controller tests")
 	testingDir := "/tmp/koku-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
@@ -261,7 +258,7 @@ func setup() error {
 }
 
 func shutdown() {
-	testLogger.Info("tearing down for controller tests")
+	previousValidation = nil
 	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
 }
 
@@ -658,7 +655,6 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should fail due to missing auth secret name with basic set", func() {
-
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "missingname"
 			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
@@ -780,7 +776,36 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
 			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
+			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
+			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
+		})
+		It("tar.gz being present - upload attempt should 'succeed'", func() {
+			err := setup()
+			Expect(err, nil)
+			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
+			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
+			instCopy := instance.DeepCopy()
+			instCopy.ObjectMeta.Name = namePrefix + "attemptuploadsuccess"
+			instCopy.Spec.APIURL = validTS.URL
+			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+
+			// wait until the cluster ID is set
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
+			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
+			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should check the last upload time in the upload status", func() {
