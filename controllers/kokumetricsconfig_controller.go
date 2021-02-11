@@ -32,7 +32,6 @@ import (
 
 	"github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/xorcare/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +62,9 @@ var (
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
 	promCompareFormat        = "2006-01-02T15"
+
+	falseDef = false
+	trueDef  = true
 
 	dirCfg     *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
@@ -255,21 +257,22 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 		return err
 	}
 
-	if val, ok := secret.Data[authSecretUserKey]; ok {
-		authConfig.BasicAuthUser = string(val)
-	} else {
-		log.Info("secret not found with expected user data")
-		err = fmt.Errorf("secret not found with expected user data")
-		return err
+	keys := make(map[string]string)
+	for k, v := range secret.Data {
+		keys[strings.ToLower(k)] = string(v)
 	}
 
-	if val, ok := secret.Data[authSecretPasswordKey]; ok {
-		authConfig.BasicAuthPassword = string(val)
-	} else {
-		log.Info("secret not found with expected password data")
-		err = fmt.Errorf("secret not found with expected password data")
-		return err
+	for _, k := range []string{authSecretUserKey, authSecretPasswordKey} {
+		if len(keys[k]) <= 0 {
+			msg := fmt.Sprintf("secret not found with expected %s data", k)
+			log.Info(msg)
+			return fmt.Errorf(msg)
+		}
 	}
+
+	authConfig.BasicAuthUser = keys[authSecretUserKey]
+	authConfig.BasicAuthPassword = keys[authSecretPasswordKey]
+
 	return nil
 }
 
@@ -308,9 +311,9 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
 			log.Error(nil, "failed to obtain cluster authentication token")
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		} else {
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 		}
 		return err
 	} else if kmCfg.Spec.Authentication.AuthenticationSecretName != "" {
@@ -318,17 +321,42 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 		err := GetAuthSecret(r, kmCfg, authConfig, reqNamespace)
 		if err != nil {
 			log.Error(nil, "failed to obtain authentication secret credentials")
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		} else {
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(true)
+			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 		}
 		return err
 	} else {
 		// No authentication secret name set when using basic auth
-		kmCfg.Status.Authentication.AuthenticationCredentialsFound = pointer.Bool(false)
+		kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		err := fmt.Errorf("no authentication secret name set when using basic auth")
 		return err
 	}
+}
+
+func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
+		// no need to validate token auth
+		return nil
+	}
+
+	log := r.Log.WithValues("KokuMetricsConfig", "validateCredentials")
+
+	log.Info("validating credentials")
+	client := crhchttp.GetClient(sSpec.Auth)
+	_, err := sources.GetSources(sSpec, client)
+
+	if err != nil {
+		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in %s. Credentials will be re-verified during the next reconciliation.", kmCfg.Spec.Authentication.AuthenticationSecretName)
+		log.Info(msg)
+		kmCfg.Status.Authentication.AuthErrorMessage = msg
+		kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
+		return err
+	}
+	log.Info("credentials are valid")
+	kmCfg.Status.Authentication.AuthErrorMessage = ""
+	kmCfg.Status.Authentication.ValidBasicAuth = &trueDef
+	return nil
 }
 
 func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
@@ -344,7 +372,7 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 	kmCfg.Status.OperatorCommit = GitCommit
 }
 
-func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
 	// check if the Source Spec has changed
 	updated := false
 	if sourceSpec != nil {
@@ -352,15 +380,9 @@ func checkSource(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	}
 	sourceSpec = kmCfg.Spec.Source.DeepCopy()
 
-	sSpec := &sources.SourceSpec{
-		APIURL: kmCfg.Status.APIURL,
-		Auth:   authConfig,
-		Spec:   kmCfg.Status.Source,
-		Log:    r.Log,
-	}
 	log := r.Log.WithValues("KokuMetricsConfig", "checkSource")
 	if sSpec.Spec.SourceName != "" && (updated || checkCycle(r.Log, *sSpec.Spec.CheckCycle, sSpec.Spec.LastSourceCheckTime, "source check")) {
-		client := crhchttp.GetClient(authConfig)
+		client := crhchttp.GetClient(sSpec.Auth)
 		kmCfg.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(sSpec, client)
 		if err != nil {
@@ -598,9 +620,6 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{}, err
 	}
 
-	// Check if source is defined and update the status to confirmed/created
-	checkSource(r, authConfig, kmCfg)
-
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
 	if dirCfg == nil || !dirCfg.CheckConfig() {
@@ -626,10 +645,24 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
 	var errors []error
 
-	// attempt upload
-	if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
-		result = ctrl.Result{}
-		errors = append(errors, err)
+	sSpec := &sources.SourceSpec{
+		APIURL: kmCfg.Status.APIURL,
+		Auth:   authConfig,
+		Spec:   kmCfg.Status.Source,
+		Log:    r.Log,
+	}
+
+	if err := validateCredentials(r, sSpec, kmCfg); err == nil {
+		// Block will run when creds are valid.
+
+		// Check if source is defined and update the status to confirmed/created
+		checkSource(r, sSpec, kmCfg)
+
+		// attempt upload
+		if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
+			result = ctrl.Result{}
+			errors = append(errors, err)
+		}
 	}
 
 	// remove old reports if maximum report count has been exceeded

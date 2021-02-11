@@ -32,8 +32,9 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
-	"github.com/xorcare/pointer"
 )
+
+var trueDef = true
 
 type mappedMockPromResult map[string]*mockPromResult
 type mockPromResult struct {
@@ -496,7 +497,7 @@ func TestGetPromConn(t *testing.T) {
 			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
-			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = pointer.Bool(true)
+			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,

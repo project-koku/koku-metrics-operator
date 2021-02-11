@@ -214,6 +214,19 @@ func GetSourceTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, err
 	return data.Data[0].ID, nil
 }
 
+// GetSources does a basic get request to the sources endpoint
+func GetSources(sSpec *SourceSpec, client crhchttp.HTTPClient) ([]byte, error) {
+	request := &sourceGetReq{
+		client:   client,
+		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		endpoint: SourcesEndpoint,
+		errKey:   "validating auth credentials",
+	}
+
+	// https://cloud.redhat.com/api/sources/v1.0/sources
+	return request.getRequest(sSpec)
+}
+
 // CheckSourceExists Determine if the source exists with given parameters
 func CheckSourceExists(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID, name, sourceRef string) (*SourceItem, error) {
 	log := sSpec.Log.WithValues("kokumetricsconfig", "CheckSourceExists")
