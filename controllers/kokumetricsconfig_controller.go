@@ -306,14 +306,15 @@ func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 
 func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, reqNamespace types.NamespacedName) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
+	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
+	kmCfg.Status.Authentication.AuthErrorMessage = ""
 	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
 			log.Error(nil, "failed to obtain cluster authentication token")
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-		} else {
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
+			kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
 		}
 		return err
 	} else if kmCfg.Spec.Authentication.AuthenticationSecretName != "" {
@@ -322,14 +323,14 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 		if err != nil {
 			log.Error(nil, "failed to obtain authentication secret credentials")
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-		} else {
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
+			kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
 		}
 		return err
 	} else {
 		// No authentication secret name set when using basic auth
 		kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		err := fmt.Errorf("no authentication secret name set when using basic auth")
+		kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
 		return err
 	}
 }
