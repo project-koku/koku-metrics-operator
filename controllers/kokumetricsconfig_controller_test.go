@@ -400,6 +400,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "default-cr"
+			instCopy.Spec.APIURL = validTS.URL
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
@@ -412,7 +413,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
@@ -447,6 +449,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 		It("should find basic auth creds for good basic auth CRD case", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood"
+			instCopy.Spec.APIURL = validTS.URL
 			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -462,7 +465,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
+			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 
@@ -471,6 +475,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 		It("should find basic auth creds for mixedcase basic auth CRD case", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "mixed-case"
+			instCopy.Spec.APIURL = validTS.URL
 			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authMixedCaseName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -486,7 +491,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authMixedCaseName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
+			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 
@@ -511,6 +517,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -587,6 +595,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -612,6 +622,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthPassSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -637,6 +649,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthUserSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -662,6 +676,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(""))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
@@ -685,6 +701,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 
@@ -708,6 +726,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 

@@ -308,6 +308,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
 	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	kmCfg.Status.Authentication.AuthErrorMessage = ""
+	kmCfg.Status.Authentication.ValidBasicAuth = nil
 	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
@@ -324,6 +325,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 			log.Error(nil, "failed to obtain authentication secret credentials")
 			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 			kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
+			kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
 		}
 		return err
 	} else {
@@ -331,6 +333,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 		kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		err := fmt.Errorf("no authentication secret name set when using basic auth")
 		kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
+		kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
 		return err
 	}
 }

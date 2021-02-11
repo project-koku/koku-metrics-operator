@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -136,6 +138,8 @@ var (
 			},
 		},
 	}
+
+	validTS *httptest.Server
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -149,6 +153,10 @@ func TestController(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
+	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, client")
+	}))
+
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 	ctx := context.Background()
 
@@ -375,4 +383,6 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
+
+	validTS.Close()
 })
