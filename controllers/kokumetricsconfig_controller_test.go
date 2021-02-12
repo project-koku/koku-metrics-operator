@@ -844,10 +844,11 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			hourAgo := metav1.Now().Time.Add(-time.Hour)
 
 			previousValidation = &previousAuthValidation{
-				username:  "user1",
-				password:  "password1",
-				err:       nil,
-				timestamp: metav1.Time{Time: hourAgo},
+				secretName: authSecretName,
+				username:   "user1",
+				password:   "password1",
+				err:        nil,
+				timestamp:  metav1.Time{Time: hourAgo},
 			}
 
 			instCopy := instance.DeepCopy()
@@ -865,8 +866,6 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
-
-			fmt.Printf("\n\n%+v\n\n", fetched.Status.Authentication)
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
