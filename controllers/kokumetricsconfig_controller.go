@@ -85,10 +85,11 @@ type KokuMetricsConfigReconciler struct {
 }
 
 type previousAuthValidation struct {
-	username  string
-	password  string
-	err       error
-	timestamp metav1.Time
+	secretName string
+	username   string
+	password   string
+	err        error
+	timestamp  metav1.Time
 }
 
 type serializedAuthMap struct {
@@ -276,6 +277,10 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 			log.Info(msg)
 			return fmt.Errorf(msg)
 		}
+	}
+
+	if previousValidation != nil && previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
+		previousValidation = &previousAuthValidation{secretName: kmCfg.Status.Authentication.AuthenticationSecretName}
 	}
 
 	authConfig.BasicAuthUser = keys[authSecretUserKey]
