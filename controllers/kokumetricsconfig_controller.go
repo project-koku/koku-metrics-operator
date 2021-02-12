@@ -360,8 +360,11 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 
 	log := r.Log.WithValues("KokuMetricsConfig", "validateCredentials")
 
-	if previousValidation != nil &&
-		previousValidation.password == sSpec.Auth.BasicAuthPassword &&
+	if previousValidation == nil {
+		previousValidation = &previousAuthValidation{}
+	}
+
+	if previousValidation.password == sSpec.Auth.BasicAuthPassword &&
 		previousValidation.username == sSpec.Auth.BasicAuthUser &&
 		!checkCycle(r.Log, cycle, previousValidation.timestamp, "credential verification") {
 		return previousValidation.err
@@ -371,12 +374,11 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 	client := crhchttp.GetClient(sSpec.Auth)
 	_, err := sources.GetSources(sSpec, client)
 
-	previousValidation = &previousAuthValidation{
-		username:  sSpec.Auth.BasicAuthUser,
-		password:  sSpec.Auth.BasicAuthPassword,
-		err:       err,
-		timestamp: metav1.Now(),
-	}
+	previousValidation.username = sSpec.Auth.BasicAuthUser
+	previousValidation.password = sSpec.Auth.BasicAuthPassword
+	previousValidation.err = err
+	previousValidation.timestamp = metav1.Now()
+
 	kmCfg.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
