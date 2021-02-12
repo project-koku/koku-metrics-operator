@@ -263,6 +263,10 @@ type AuthenticationStatus struct {
 
 	// AuthErrorMessage is a field of KokuMetricsConfig to represent an `invalid credentials` error message.
 	AuthErrorMessage string `json:"error,omitempty"`
+
+	// LastVerificationTime is a field of KokuMetricsConfig to represent the last time credentials were verified.
+	// +nullable
+	LastVerificationTime *metav1.Time `json:"last_credential_verification_time,omitempty"`
 }
 
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.

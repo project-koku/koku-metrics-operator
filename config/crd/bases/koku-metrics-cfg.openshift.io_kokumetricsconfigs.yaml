@@ -389,6 +389,12 @@ spec:
                     description: AuthErrorMessage is a field of KokuMetricsConfig
                       to represent an `invalid credentials` error message.
                     type: string
+                  last_credential_verification_time:
+                    description: LastVerificationTime is a field of KokuMetricsConfig
+                      to represent the last time credentials were verified.
+                    format: date-time
+                    nullable: true
+                    type: string
                   secret_name:
                     description: AuthenticationSecretName is a field of KokuMetricsConfig
                       to represent the secret with the user and password used for
@@ -1168,6 +1174,12 @@ spec:
                   error:
                     description: AuthErrorMessage is a field of KokuMetricsConfig
                       to represent an `invalid credentials` error message.
+                    type: string
+                  last_credential_verification_time:
+                    description: LastVerificationTime is a field of KokuMetricsConfig
+                      to represent the last time credentials were verified.
+                    format: date-time
+                    nullable: true
                     type: string
                   secret_name:
                     description: AuthenticationSecretName is a field of KokuMetricsConfig

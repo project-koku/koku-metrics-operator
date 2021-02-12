@@ -318,6 +318,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		kmCfg.Status.Authentication.ValidBasicAuth = nil
 		kmCfg.Status.Authentication.AuthErrorMessage = ""
+		kmCfg.Status.Authentication.LastVerificationTime = nil
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
@@ -371,6 +372,7 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 		err:       err,
 		timestamp: metav1.Now(),
 	}
+	kmCfg.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
 		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", kmCfg.Spec.Authentication.AuthenticationSecretName)
