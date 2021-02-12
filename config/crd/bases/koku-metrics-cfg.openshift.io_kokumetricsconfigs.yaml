@@ -385,6 +385,16 @@ spec:
                     description: AuthenticationCredentialsFound is a field of KokuMetricsConfig
                       to represent if used for uploads were found.
                     type: boolean
+                  error:
+                    description: AuthErrorMessage is a field of KokuMetricsConfig
+                      to represent an `invalid credentials` error message.
+                    type: string
+                  last_credential_verification_time:
+                    description: LastVerificationTime is a field of KokuMetricsConfig
+                      to represent the last time credentials were verified.
+                    format: date-time
+                    nullable: true
+                    type: string
                   secret_name:
                     description: AuthenticationSecretName is a field of KokuMetricsConfig
                       to represent the secret with the user and password used for
@@ -397,6 +407,10 @@ spec:
                     - token
                     - basic
                     type: string
+                  valid_basic_auth:
+                    description: ValidBasicAuth is a field of KokuMetricsConfig to
+                      represent if the given basic auth credentials are valid.
+                    type: boolean
                 type: object
               clusterID:
                 description: ClusterID is a field of KokuMetricsConfig to represent
@@ -1157,6 +1171,16 @@ spec:
                     description: AuthenticationCredentialsFound is a field of KokuMetricsConfig
                       to represent if used for uploads were found.
                     type: boolean
+                  error:
+                    description: AuthErrorMessage is a field of KokuMetricsConfig
+                      to represent an `invalid credentials` error message.
+                    type: string
+                  last_credential_verification_time:
+                    description: LastVerificationTime is a field of KokuMetricsConfig
+                      to represent the last time credentials were verified.
+                    format: date-time
+                    nullable: true
+                    type: string
                   secret_name:
                     description: AuthenticationSecretName is a field of KokuMetricsConfig
                       to represent the secret with the user and password used for
@@ -1169,6 +1193,10 @@ spec:
                     - token
                     - basic
                     type: string
+                  valid_basic_auth:
+                    description: ValidBasicAuth is a field of KokuMetricsConfig to
+                      represent if the given basic auth credentials are valid.
+                    type: boolean
                 type: object
               clusterID:
                 description: ClusterID is a field of KokuMetricsConfig to represent

@@ -192,6 +192,53 @@ func TestGetSourceTypeID(t *testing.T) {
 	}
 }
 
+func TestGetSources(t *testing.T) {
+	getSourcesTests := []struct {
+		name        string
+		response    *http.Response
+		responseErr error
+		expected    []byte
+		expectedErr error
+	}{
+		{
+			name: "successful response with data",
+			response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
+			},
+			responseErr: nil,
+			expected:    []byte("1"),
+			expectedErr: nil,
+		},
+		{
+			name:        "request failure",
+			response:    &http.Response{},
+			responseErr: errSources,
+			expected:    nil,
+			expectedErr: errSources,
+		},
+	}
+	for _, tt := range getSourcesTests {
+		t.Run(tt.name, func(t *testing.T) {
+			clt := &MockClient{res: tt.response, err: tt.responseErr}
+			got, err := GetSources(sSpec, clt)
+			if tt.expectedErr != nil && err == nil {
+				t.Errorf("%s expected error, got: %v", tt.name, err)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if len(got) > 0 && len(tt.expected) <= 0 {
+				t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
+			}
+			if len(got) <= 0 && len(tt.expected) > 0 {
+				t.Errorf("%s got %s want %s", tt.name, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestCheckSourceExists(t *testing.T) {
 	// https://cloud.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
 	checkSourceExistsTests := []struct {

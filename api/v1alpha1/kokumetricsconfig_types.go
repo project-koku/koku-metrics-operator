@@ -257,6 +257,16 @@ type AuthenticationStatus struct {
 
 	// AuthenticationCredentialsFound is a field of KokuMetricsConfig to represent if used for uploads were found.
 	AuthenticationCredentialsFound *bool `json:"credentials_found,omitempty"`
+
+	// ValidBasicAuth is a field of KokuMetricsConfig to represent if the given basic auth credentials are valid.
+	ValidBasicAuth *bool `json:"valid_basic_auth,omitempty"`
+
+	// AuthErrorMessage is a field of KokuMetricsConfig to represent an `invalid credentials` error message.
+	AuthErrorMessage string `json:"error,omitempty"`
+
+	// LastVerificationTime is a field of KokuMetricsConfig to represent the last time credentials were verified.
+	// +nullable
+	LastVerificationTime *metav1.Time `json:"last_credential_verification_time,omitempty"`
 }
 
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.

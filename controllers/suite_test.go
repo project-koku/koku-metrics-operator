@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -136,6 +138,9 @@ var (
 			},
 		},
 	}
+
+	validTS        *httptest.Server
+	unauthorizedTS *httptest.Server
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -149,6 +154,13 @@ func TestController(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
+	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 	ctx := context.Background()
 
@@ -287,6 +299,17 @@ func createAuthSecret(ctx context.Context, namespace string) {
 		}}
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
+func createMixedCaseAuthSecret(ctx context.Context, namespace string) {
+	secret := &corev1.Secret{Data: map[string][]byte{
+		"UserName": []byte("user1"),
+		"PassWord": []byte("password1"),
+	},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      authMixedCaseName,
+			Namespace: namespace,
+		}}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+}
 
 func createBadAuthSecret(ctx context.Context, namespace string) {
 	secret := &corev1.Secret{Data: map[string][]byte{},
@@ -303,6 +326,17 @@ func createBadAuthPassSecret(ctx context.Context, namespace string) {
 	},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      badAuthPassSecretName,
+			Namespace: namespace,
+		}}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+}
+
+func createBadAuthUserSecret(ctx context.Context, namespace string) {
+	secret := &corev1.Secret{Data: map[string][]byte{
+		authSecretPasswordKey: []byte("password1"),
+	},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      badAuthUserSecretName,
 			Namespace: namespace,
 		}}
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
@@ -333,10 +367,12 @@ func clusterPrep(ctx context.Context) {
 
 		// Create auth secret in operator namespace
 		createAuthSecret(ctx, namespace)
+		createMixedCaseAuthSecret(ctx, namespace)
 
 		// Create an empty auth secret
 		createBadAuthSecret(ctx, namespace)
 		createBadAuthPassSecret(ctx, namespace)
+		createBadAuthUserSecret(ctx, namespace)
 
 		// Create openshift config namespace and secret
 		createNamespace(ctx, openShiftConfigNamespace)
@@ -351,4 +387,7 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
+
+	validTS.Close()
+	unauthorizedTS.Close()
 })
