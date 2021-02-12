@@ -279,7 +279,7 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 		}
 	}
 
-	if previousValidation != nil && previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
+	if previousValidation == nil || previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
 		previousValidation = &previousAuthValidation{secretName: kmCfg.Status.Authentication.AuthenticationSecretName}
 	}
 
