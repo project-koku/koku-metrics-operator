@@ -248,6 +248,10 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", "GetAuthSecret")
 
+	if previousValidation == nil || previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
+		previousValidation = &previousAuthValidation{secretName: kmCfg.Status.Authentication.AuthenticationSecretName}
+	}
+
 	log.Info("secret namespace", "namespace", reqNamespace.Namespace)
 	secret := &corev1.Secret{}
 	namespace := types.NamespacedName{
@@ -277,10 +281,6 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 			log.Info(msg)
 			return fmt.Errorf(msg)
 		}
-	}
-
-	if previousValidation == nil || previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
-		previousValidation = &previousAuthValidation{secretName: kmCfg.Status.Authentication.AuthenticationSecretName}
 	}
 
 	authConfig.BasicAuthUser = keys[authSecretUserKey]
