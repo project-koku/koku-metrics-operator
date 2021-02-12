@@ -1,4 +1,4 @@
-# v0.9.2-alpha Koku Metrics Operator (Unsupported)
+# v0.9.3-alpha Koku Metrics Operator (Unsupported)
 ## Introduction
 The `koku-metrics-operator` is an OpenShift Operator used to collect OpenShift usage data and upload it to [cost managment](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/getting_started_with_cost_management/assembly_introduction_cost_management). The operator queries Prometheus to create metric reports which are packaged and uploaded to cost management at [cloud.redhat.com](https://cloud.redhat.com).
 
@@ -82,7 +82,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
           apiVersion: v1
           kind: PersistentVolumeClaim
           metadata:
-            name: pvc-spec-definition
+            name: <insert-name>
           spec:
             accessModes:
               - ReadWriteOnce
@@ -113,9 +113,9 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
           apiVersion: v1
           kind: PersistentVolumeClaim
           metadata:
-            name: pvc-spec-definition
+            name: <insert-name>
           spec:
-            storageClassName: gp2
+            storageClassName: <insert-class-name>
             accessModes:
               - ReadWriteOnce
             resources:
@@ -153,6 +153,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   apiVersion: v1
   metadata:
     name: volume-shell
+    namespace: koku-metrics-operator
   spec:
     volumes:
     - name: koku-metrics-operator-reports
