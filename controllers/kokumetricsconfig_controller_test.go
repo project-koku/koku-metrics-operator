@@ -448,8 +448,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
 			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
+			Expect(fetched.Status.Source.SourceError).To(Equal(""))
 
-			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeTrue())
 			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
 
@@ -475,8 +475,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
 			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
+			Expect(fetched.Status.Source.SourceError).To(Equal(""))
 
-			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeTrue())
 			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
 
@@ -896,7 +896,6 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
 			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
-			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("tar.gz being present - upload attempt should 'succeed'", func() {
@@ -925,7 +924,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).To(Equal(""))
 			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("200"))
-			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
+			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeFalse())
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
@@ -968,7 +967,6 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).NotTo(Equal(""))
 			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
-			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeFalse())
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should check the last upload time in the upload status", func() {

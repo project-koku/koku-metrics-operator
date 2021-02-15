@@ -769,12 +769,6 @@ spec:
                     description: LastUploadStatus is a field of KokuMetricsConfig
                       that shows the http status of the last upload.
                     type: string
-                  last_upload_time:
-                    description: LastUploadTime is a field of KokuMetricsConfig that
-                      shows the time that the last upload was attempted.
-                    format: date-time
-                    nullable: true
-                    type: string
                   upload:
                     description: UploadToggle is a field of KokuMetricsConfig to represent
                       if the operator should upload to cloud.redhat.com. The default
@@ -1497,7 +1491,8 @@ spec:
                     type: integer
                   create_source:
                     description: CreateSource is a field of KokuMetricsConfigStatus
-                      to represent if the source should be created if not found.
+                      to represent if the source should be created if not found. A
+                      source will not be created if upload_toggle is `false`.
                     type: boolean
                   error:
                     description: SourceError is a field of KokuMetricsConfigStatus
@@ -1555,12 +1550,6 @@ spec:
                   last_upload_status:
                     description: LastUploadStatus is a field of KokuMetricsConfig
                       that shows the http status of the last upload.
-                    type: string
-                  last_upload_time:
-                    description: LastUploadTime is a field of KokuMetricsConfig that
-                      shows the time that the last upload was attempted.
-                    format: date-time
-                    nullable: true
                     type: string
                   upload:
                     description: UploadToggle is a field of KokuMetricsConfig to represent

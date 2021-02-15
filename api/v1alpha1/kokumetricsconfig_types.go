@@ -319,10 +319,6 @@ type UploadStatus struct {
 	// LastUploadStatus is a field of KokuMetricsConfig that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
-	// LastUploadTime is a field of KokuMetricsConfig that shows the time that the last upload was attempted.
-	// +nullable
-	LastUploadTime metav1.Time `json:"last_upload_time,omitempty"`
-
 	// LastSuccessfulUploadTime is a field of KokuMetricsConfig that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
