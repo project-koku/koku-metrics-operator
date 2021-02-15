@@ -156,6 +156,7 @@ func TestController(t *testing.T) {
 var _ = BeforeSuite(func(done Done) {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "Hello, client")
 	}))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

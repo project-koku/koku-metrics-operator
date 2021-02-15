@@ -162,7 +162,8 @@ type UploadSpec struct {
 	// +kubebuilder:default=360
 	UploadCycle *int64 `json:"upload_cycle"`
 
-	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
+	// UploadToggle is a field of KokuMetricsConfig to represent if the operator is installed in a restricted-network.
+	// If `false`, the operator will not upload to cloud.redhat.com or check/create sources.
 	// The default is true.
 	// +kubebuilder:default=true
 	UploadToggle *bool `json:"upload_toggle"`
@@ -202,6 +203,7 @@ type CloudDotRedHatSourceSpec struct {
 	SourceName string `json:"name,omitempty"`
 
 	// CreateSource is a field of KokuMetricsConfigSpec to represent if the source should be created if not found.
+	// A source will not be created if upload_toggle is `false`.
 	// +kubebuilder:default=false
 	CreateSource *bool `json:"create_source"`
 

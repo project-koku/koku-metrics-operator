@@ -130,7 +130,8 @@ spec:
                   create_source:
                     default: false
                     description: CreateSource is a field of KokuMetricsConfigSpec
-                      to represent if the source should be created if not found.
+                      to represent if the source should be created if not found. A
+                      source will not be created if upload_toggle is `false`.
                     type: boolean
                   name:
                     description: SourceName is a field of KokuMetricsConfigSpec to
@@ -168,8 +169,9 @@ spec:
                   upload_toggle:
                     default: true
                     description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator should upload to cloud.redhat.com. The default
-                      is true.
+                      if the operator is installed in a restricted-network. If `false`,
+                      the operator will not upload to cloud.redhat.com or check/create
+                      sources. The default is true.
                     type: boolean
                   upload_wait:
                     description: UploadWait is a field of KokuMetricsConfig to represent
@@ -954,8 +956,9 @@ spec:
                   upload_toggle:
                     default: true
                     description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator should upload to cloud.redhat.com. The default
-                      is true.
+                      if the operator is installed in a restricted-network. If `false`,
+                      the operator will not upload to cloud.redhat.com or check/create
+                      sources. The default is true.
                     type: boolean
                   upload_wait:
                     description: UploadWait is a field of KokuMetricsConfig to represent

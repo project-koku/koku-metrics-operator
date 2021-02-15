@@ -89,6 +89,36 @@ var (
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
+	airGappedInstance = kokumetricscfgv1beta1.KokuMetricsConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+		},
+		Spec: kokumetricscfgv1beta1.KokuMetricsConfigSpec{
+			Authentication: kokumetricscfgv1beta1.AuthenticationSpec{
+				AuthType: kokumetricscfgv1beta1.Token,
+			},
+			Packaging: kokumetricscfgv1beta1.PackagingSpec{
+				MaxSize:    100,
+				MaxReports: defaultMaxReports,
+			},
+			Upload: kokumetricscfgv1beta1.UploadSpec{
+				UploadCycle:    &defaultUploadCycle,
+				UploadToggle:   &falseValue,
+				IngressAPIPath: "/api/ingress/v1/upload",
+				ValidateCert:   &trueValue,
+			},
+			Source: kokumetricscfgv1beta1.CloudDotRedHatSourceSpec{
+				CreateSource:   &falseValue,
+				SourcesAPIPath: "/api/sources/v1.0/",
+				CheckCycle:     &defaultCheckCycle,
+			},
+			PrometheusConfig: kokumetricscfgv1beta1.PrometheusSpec{
+				SkipTLSVerification: &trueValue,
+				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
+			},
+			APIURL: "https://not-the-real-cloud.redhat.com",
+		},
+	}
 	differentPVC = &kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -391,13 +421,44 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 		})
 	})
 
-	Context("Process CRD resource - post PVC mount", func() {
+	Context("Process CRD resource - post PVC mount - disconnected cluster", func() {
 		It("default CR works fine", func() {
 			createDeployment(ctx, pvcDeployment)
 
+			instCopy := airGappedInstance.DeepCopy()
+			instCopy.Spec.APIURL = unauthorizedTS.URL
+			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped"
+			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+
+			// wait until the cluster ID is set
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
+			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
+			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
+			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
+
+		})
+	})
+
+	Context("Process CRD resource - post PVC mount - connected cluster", func() {
+		It("default CR works fine", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "default-cr"
 			instCopy.Spec.APIURL = validTS.URL
+			instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
@@ -414,6 +475,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+			Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
+			Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
 
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
@@ -435,7 +498,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
