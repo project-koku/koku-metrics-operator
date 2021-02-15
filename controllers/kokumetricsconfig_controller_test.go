@@ -422,12 +422,12 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("Process CRD resource - post PVC mount - disconnected cluster", func() {
-		It("default CR works fine", func() {
+		It("basic auth works fine", func() {
 			createDeployment(ctx, pvcDeployment)
 
 			instCopy := airGappedInstance.DeepCopy()
 			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped"
+			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-basic"
 			instCopy.Spec.Authentication.AuthType = kokumetricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -443,11 +443,41 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+
 			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
-			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
+			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
+
+			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeTrue())
+			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
+
+		})
+		It("token auth works fine", func() {
+			instCopy := airGappedInstance.DeepCopy()
+			instCopy.Spec.APIURL = unauthorizedTS.URL
+			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-token"
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+
+			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+
+			// wait until the cluster ID is set
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
+
+			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+
+			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
+			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
+
+			Expect(fetched.Status.Upload.LastUploadTime.IsZero()).To(BeTrue())
+			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
 
 		})
