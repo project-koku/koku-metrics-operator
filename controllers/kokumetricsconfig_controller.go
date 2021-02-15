@@ -666,6 +666,8 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	if kmCfg.Spec.Upload.UploadToggle != nil && *kmCfg.Spec.Upload.UploadToggle {
 
+		log.Info("configuration is for connected cluster")
+
 		authConfig := &crhchttp.AuthConfig{
 			Log:            r.Log,
 			ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
@@ -707,6 +709,8 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 				_ = validateCredentials(r, sSpec, kmCfg, 0)
 			}
 		}
+	} else {
+		log.Info("configuration is for restricted-network cluster")
 	}
 
 	// remove old reports if maximum report count has been exceeded
