@@ -485,13 +485,13 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
 		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
 		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
 			kmCfg.Status.Upload.UploadError = err.Error()
+			return nil
 		}
-		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
-		kmCfg.Status.Upload.LastUploadTime = uploadTime
 		if strings.Contains(uploadStatus, "202") {
 			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
@@ -638,23 +638,6 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
 	setOperatorCommit(r, kmCfg)
 
-	authConfig := &crhchttp.AuthConfig{
-		Log:            r.Log,
-		ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
-		Authentication: kmCfg.Status.Authentication.AuthType,
-		OperatorCommit: kmCfg.Status.OperatorCommit,
-		ClusterID:      kmCfg.Status.ClusterID,
-		Client:         r.Client,
-	}
-
-	// obtain credentials token/basic & return if there are authentication credential errors
-	if err := setAuthentication(r, authConfig, kmCfg, req.NamespacedName); err != nil {
-		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
-		}
-		return ctrl.Result{}, err
-	}
-
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
 	if dirCfg == nil || !dirCfg.CheckConfig() {
@@ -680,29 +663,53 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
 	var errors []error
 
-	sSpec := &sources.SourceSpec{
-		APIURL: kmCfg.Status.APIURL,
-		Auth:   authConfig,
-		Spec:   kmCfg.Status.Source,
-		Log:    r.Log,
-	}
+	if kmCfg.Spec.Upload.UploadToggle != nil && *kmCfg.Spec.Upload.UploadToggle {
 
-	if err := validateCredentials(r, sSpec, kmCfg, 1440); err == nil {
-		// Block will run when creds are valid.
+		log.Info("configuration is for connected cluster")
 
-		// Check if source is defined and update the status to confirmed/created
-		checkSource(r, sSpec, kmCfg)
-
-		// attempt upload
-		if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
-			result = ctrl.Result{}
-			errors = append(errors, err)
+		authConfig := &crhchttp.AuthConfig{
+			Log:            r.Log,
+			ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
+			Authentication: kmCfg.Status.Authentication.AuthType,
+			OperatorCommit: kmCfg.Status.OperatorCommit,
+			ClusterID:      kmCfg.Status.ClusterID,
+			Client:         r.Client,
 		}
 
-		// revalidate if an upload fails due to 401
-		if strings.Contains(kmCfg.Status.Upload.LastUploadStatus, "401") {
-			_ = validateCredentials(r, sSpec, kmCfg, 0)
+		// obtain credentials token/basic & return if there are authentication credential errors
+		if err := setAuthentication(r, authConfig, kmCfg, req.NamespacedName); err != nil {
+			if err := r.Status().Update(ctx, kmCfg); err != nil {
+				log.Error(err, "failed to update KokuMetricsConfig status")
+			}
+			return ctrl.Result{}, err
 		}
+
+		sSpec := &sources.SourceSpec{
+			APIURL: kmCfg.Status.APIURL,
+			Auth:   authConfig,
+			Spec:   kmCfg.Status.Source,
+			Log:    r.Log,
+		}
+
+		if err := validateCredentials(r, sSpec, kmCfg, 1440); err == nil {
+			// Block will run when creds are valid.
+
+			// Check if source is defined and update the status to confirmed/created
+			checkSource(r, sSpec, kmCfg)
+
+			// attempt upload
+			if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
+				result = ctrl.Result{}
+				errors = append(errors, err)
+			}
+
+			// revalidate if an upload fails due to 401
+			if strings.Contains(kmCfg.Status.Upload.LastUploadStatus, "401") {
+				_ = validateCredentials(r, sSpec, kmCfg, 0)
+			}
+		}
+	} else {
+		log.Info("configuration is for restricted-network cluster")
 	}
 
 	// remove old reports if maximum report count has been exceeded

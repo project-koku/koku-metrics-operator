@@ -131,7 +131,8 @@ spec:
                   create_source:
                     default: false
                     description: CreateSource is a field of KokuMetricsConfigSpec
-                      to represent if the source should be created if not found.
+                      to represent if the source should be created if not found. A
+                      source will not be created if upload_toggle is `false`.
                     type: boolean
                   name:
                     description: SourceName is a field of KokuMetricsConfigSpec to
@@ -169,8 +170,9 @@ spec:
                   upload_toggle:
                     default: true
                     description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator should upload to cloud.redhat.com. The default
-                      is true.
+                      if the operator is installed in a restricted-network. If `false`,
+                      the operator will not upload to cloud.redhat.com or check/create
+                      sources. The default is true.
                     type: boolean
                   upload_wait:
                     description: UploadWait is a field of KokuMetricsConfig to represent
@@ -767,12 +769,6 @@ spec:
                   last_upload_status:
                     description: LastUploadStatus is a field of KokuMetricsConfig
                       that shows the http status of the last upload.
-                    type: string
-                  last_upload_time:
-                    description: LastUploadTime is a field of KokuMetricsConfig that
-                      shows the time that the last upload was attempted.
-                    format: date-time
-                    nullable: true
                     type: string
                   upload:
                     description: UploadToggle is a field of KokuMetricsConfig to represent
@@ -955,8 +951,9 @@ spec:
                   upload_toggle:
                     default: true
                     description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator should upload to cloud.redhat.com. The default
-                      is true.
+                      if the operator is installed in a restricted-network. If `false`,
+                      the operator will not upload to cloud.redhat.com or check/create
+                      sources. The default is true.
                     type: boolean
                   upload_wait:
                     description: UploadWait is a field of KokuMetricsConfig to represent
@@ -1495,7 +1492,8 @@ spec:
                     type: integer
                   create_source:
                     description: CreateSource is a field of KokuMetricsConfigStatus
-                      to represent if the source should be created if not found.
+                      to represent if the source should be created if not found. A
+                      source will not be created if upload_toggle is `false`.
                     type: boolean
                   error:
                     description: SourceError is a field of KokuMetricsConfigStatus
@@ -1553,12 +1551,6 @@ spec:
                   last_upload_status:
                     description: LastUploadStatus is a field of KokuMetricsConfig
                       that shows the http status of the last upload.
-                    type: string
-                  last_upload_time:
-                    description: LastUploadTime is a field of KokuMetricsConfig that
-                      shows the time that the last upload was attempted.
-                    format: date-time
-                    nullable: true
                     type: string
                   upload:
                     description: UploadToggle is a field of KokuMetricsConfig to represent
