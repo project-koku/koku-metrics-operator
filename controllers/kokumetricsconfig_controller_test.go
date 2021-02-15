@@ -924,7 +924,6 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.Upload.UploadError).To(Equal(""))
 			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("200"))
-			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeFalse())
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
