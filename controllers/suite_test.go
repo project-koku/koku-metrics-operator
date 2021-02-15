@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -155,8 +156,13 @@ func TestController(t *testing.T) {
 
 var _ = BeforeSuite(func(done Done) {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "Hello, client")
+		if strings.Contains(r.URL.Path, "ingress") {
+			w.WriteHeader(http.StatusAccepted)
+			fmt.Fprintln(w, "Upload Accepted")
+		} else {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, "Hello, client")
+		}
 	}))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
