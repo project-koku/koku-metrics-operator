@@ -485,13 +485,14 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
 		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
+		kmCfg.Status.Upload.LastUploadTime = uploadTime
 		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
 			kmCfg.Status.Upload.UploadError = err.Error()
+			return nil
 		}
-		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
-		kmCfg.Status.Upload.LastUploadTime = uploadTime
 		if strings.Contains(uploadStatus, "202") {
 			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
