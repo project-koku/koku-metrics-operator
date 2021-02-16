@@ -364,10 +364,6 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 		previousValidation = &previousAuthValidation{}
 	}
 
-	if true {
-		fmt.Println("this is a test commit to change coverage")
-	}
-
 	if previousValidation.password == sSpec.Auth.BasicAuthPassword &&
 		previousValidation.username == sSpec.Auth.BasicAuthUser &&
 		!checkCycle(r.Log, cycle, previousValidation.timestamp, "credential verification") {
