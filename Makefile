@@ -5,6 +5,7 @@ VERSION ?= 0.9.4
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
 # Options for 'bundle-build'
+DEFAULT_CHANNEL ?= alpha
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
