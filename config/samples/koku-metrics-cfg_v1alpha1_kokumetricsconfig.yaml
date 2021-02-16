@@ -1,7 +1,7 @@
 apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
 kind: KokuMetricsConfig
 metadata:
-  name: kokumetricscfg-sample
+  name: kokumetricscfg-sample-v1alpha1
 spec:
   authentication:
     type: token
