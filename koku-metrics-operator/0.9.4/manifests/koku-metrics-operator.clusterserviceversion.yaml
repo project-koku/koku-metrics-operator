@@ -321,7 +321,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/project-koku/koku-metrics-operator@sha256:a5f9ebcb2d7b1d9dd9b53fb3bbd529f450b26b22c59d161efc73087cc761e45e
+                image: quay.io/project-koku/koku-metrics-operator@sha256:a09b76b020abf2768b67a1680db1228124b0292c7fb957f9b75c749a5d0578b7
                 name: manager
                 resources:
                   limits:
@@ -439,7 +439,7 @@ spec:
     type: AllNamespaces
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:a5f9ebcb2d7b1d9dd9b53fb3bbd529f450b26b22c59d161efc73087cc761e45e
+      image: quay.io/project-koku/koku-metrics-operator@sha256:a09b76b020abf2768b67a1680db1228124b0292c7fb957f9b75c749a5d0578b7
   keywords:
   - cost
   - management
