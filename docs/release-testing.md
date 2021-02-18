@@ -32,7 +32,7 @@ Testing an upgrade is a complicated and an involved process. The general steps a
 
 1. Check `quay.io/project-koku/kmc-test-catalog` for the most recent operator release. If the index does not exist, create it:
 
-Check `quay.io/project-koku/koku-metrics-operator-bundle` for the most recent operator release bundle:
+Check `quay.io/project-koku/koku-metrics-operator-bundle` for the most recent operator release bundle. Create it if it does not exist:
 
 ```sh
 $ cd koku-metrics-operator/$PREVIOUS_VERSION
@@ -42,7 +42,7 @@ $ docker build -f Dockerfile . -t quay.io/project-koku/koku-metrics-operator-bun
 Use `opm` to build a catalog image with the koku-metrics-operator and then push the image:
 
 ```sh
-$ opm index add --bundles quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
+$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v<VERSION_BEFORE_PREVIOUS_VERSION> --bundles quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
 $ docker push quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION
 ```
 
