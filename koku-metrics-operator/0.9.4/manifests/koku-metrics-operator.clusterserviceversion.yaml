@@ -446,8 +446,8 @@ spec:
   - usage
   - monitor
   maintainers:
-  - email: cost-mgmt@redhat.com
-    name: cost-mgmt
+  - email: costmanagement@redhat.com
+    name: costmanagement
   maturity: alpha
   provider:
     name: Red Hat
