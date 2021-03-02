@@ -96,7 +96,7 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
 				Method:          "max",
-				Factor:          sumFactor,
+				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
 			RowKey: "volumename",
@@ -107,7 +107,7 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
 				Method:          "max",
-				Factor:          sumFactor,
+				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-request-byte-seconds",
 			},
 			RowKey: "volumename",
