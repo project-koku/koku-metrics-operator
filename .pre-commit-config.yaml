@@ -7,6 +7,6 @@ repos:
     - id: go-imports
     - id: go-mod-tidy
 - repo: git://github.com/golangci/golangci-lint
-  rev: master
+  rev: v1.37.1
   hooks:
     - id: golangci-lint
