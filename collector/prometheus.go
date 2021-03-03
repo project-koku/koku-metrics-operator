@@ -20,11 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package collector
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -209,8 +206,6 @@ func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults)
 		if len(warnings) > 0 {
 			log.Info("query warnings", "Warnings", warnings)
 		}
-		// filename := filepath.Join("/Users/mskarbek/projects/koku-metrics-operator/collector/test_files/NEW_FILES", query.Name)
-		// Save(filename, queryResult)
 		matrix, ok := queryResult.(model.Matrix)
 		if !ok {
 			return fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
@@ -219,30 +214,4 @@ func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults)
 		results.iterateMatrix(matrix, query)
 	}
 	return nil
-}
-
-// Marshal is a function that marshals the object into an
-// io.Reader.
-// By default, it uses the JSON marshaller.
-var Marshal = func(v interface{}) (io.Reader, error) {
-	b, err := json.MarshalIndent(v, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	return bytes.NewReader(b), nil
-}
-
-// Save saves a representation of v to the file at path.
-func Save(path string, v interface{}) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	r, err := Marshal(v)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(f, r)
-	return err
 }
