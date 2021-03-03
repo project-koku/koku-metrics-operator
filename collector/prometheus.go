@@ -160,7 +160,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 	updated := true
 	if promSpec != nil {
-		updated = !reflect.DeepEqual(*promSpec, kmCfg.Spec.PrometheusConfig) || !kmCfg.Status.Prometheus.PrometheusConfigured
+		updated = !reflect.DeepEqual(*promSpec, kmCfg.Spec.PrometheusConfig)
 	}
 	promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
 
