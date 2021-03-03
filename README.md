@@ -181,7 +181,7 @@ Review the logs for the Koku Metrics operator.
 ### Cleanup
 
 ```sh
-$ oc delete -f config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+$ oc delete -f config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 $ oc delete deployments,service -l control-plane=controller-manager
 $ oc delete role,rolebinding --all
 ```

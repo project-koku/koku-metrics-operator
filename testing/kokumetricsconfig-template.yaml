@@ -1,4 +1,4 @@
-apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
+apiVersion: koku-metrics-cfg.openshift.io/v1beta1
 kind: KokuMetricsConfig
 metadata:
   name: kokumetricscfg-sample
