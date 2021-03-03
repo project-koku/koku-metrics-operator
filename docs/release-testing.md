@@ -18,39 +18,32 @@ Change into the directory and run `make build`. This will generate an `opm` exec
 ### Testing an operator upgrade - Overview
 
 Testing an upgrade is a complicated and an involved process. The general steps are as follows:
-1. Create an opm index (test-catalog) for the most recent release and push to Quay.
+1. Create an opm index (test-catalog) for the most recent release and push to Quay (quay.io/project-koku/kmc-test-catalog contains previous versions and can be used instead of creating your own initial catalog).
 2. Create a CatalogSource in OCP, and install the operator (this should be the version that will be upgraded).
 3. Generate the new controller image, and push to Quay.
 4. Generate the new bundle.
 5. Build the bundle image and push to Quay.
 6. Create an opm index (test-catalog) that contains the last release and the new release, and push to Quay.
-7. Check that the test-catalog in OCP contains the new version.
+7. Update the CatalogSource in OCP to point to the new test-catalog image.
 8. Observe the installed operator, and ensure it upgrades automatically.
 
 
 ### Testing an operator upgrade
 
-1. Create an opm index (test-catalog) for the most recent release and push to Quay:
+1. Check `quay.io/project-koku/kmc-test-catalog` for the most recent operator release. If the index does not exist, create it:
 
-Copy the previous release bundle to the testing directory:
-
-```sh
-$ PREVIOUS_VERSION=<version to upgrade from>
-$ cp -r koku-metrics-operator/$PREVIOUS_VERSION testing
-$ cd testing/$PREVIOUS_VERSION
-```
-
-Build the bundle and push to quay:
+Check `quay.io/project-koku/koku-metrics-operator-bundle` for the most recent operator release bundle. Create it if it does not exist:
 
 ```sh
-$ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:v$PREVIOUS_VERSION; docker push quay.io/$USERNAME/koku-metrics-operator-bundle:v$PREVIOUS_VERSION
+$ cd koku-metrics-operator/$PREVIOUS_VERSION
+$ docker build -f Dockerfile . -t quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION; docker push quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION
 ```
 
 Use `opm` to build a catalog image with the koku-metrics-operator and then push the image:
 
 ```sh
-$ opm index add --bundles quay.io/$USERNAME/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/$USERNAME/test-catalog:latest --container-tool docker
-$ docker push quay.io/$USERNAME/test-catalog:latest
+$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v<VERSION_BEFORE_PREVIOUS_VERSION> --bundles quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
+$ docker push quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION
 ```
 
 2. Create a CatalogSource in OCP, and install the operator (this should be the version that will be upgraded):
@@ -64,10 +57,10 @@ metadata:
   namespace: openshift-marketplace
 spec:
   sourceType: grpc
-  image: quay.io/$USERNAME/test-catalog:latest
+  image: quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION
   updateStrategy:
     registryPoll:
-      interval: 1m
+      interval: 3m
 ```
 
 Deploy the catalog source to the cluster:
@@ -132,11 +125,11 @@ $ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle
 6. Create an opm index (test-catalog) that contains the last release and the new release, and push to Quay:
 
 ```sh
-$ opm index add --bundles quay.io/$USERNAME/koku-metrics-operator-bundle:v$PREVIOUS_VERSION,quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION --tag quay.io/$USERNAME/test-catalog:latest --container-tool docker
-$ docker push quay.io/$USERNAME/test-catalog:latest
+$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --bundles quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION --tag quay.io/$USERNAME/test-catalog:latest --container-tool docker
+$ docker push quay.io/$USERNAME/test-catalog:v$VERSION
 ```
 
-7. Check that the test-catalog in OCP contains the new version.
+7. Update the image in the CatalogSource to point to the new test-catalog version (i.e. `image: quay.io/$USERNAME/test-catalog:v$VERSION`).
 8. Observe the installed operator, and ensure it upgrades automatically.
 
-Once the operator has upgraded, run through manual tests as normal. 
+Once the operator has upgraded, run through manual tests as normal.
