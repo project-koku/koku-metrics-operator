@@ -128,30 +128,30 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
-	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-auth:
-	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 local-validate-cert:
-	@sed -i "" '/upload/d' testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '  upload:'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
-	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@sed -i "" '/upload/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  upload:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-ci-route:
-	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-spec:
-	@echo 'spec:' >> testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@echo 'spec:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 deploy-cr:
-	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
@@ -162,10 +162,10 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 deploy-local-cr:
-	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
 ifeq ($(AUTH), basic)
@@ -178,7 +178,7 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml
+	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
