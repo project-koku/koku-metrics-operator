@@ -23,11 +23,12 @@ COPY storage/ storage/
 COPY strset/ strset/
 
 # Copy git to inject the commit during build
-COPY .git .git
+COPY .git .
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
-    /usr/local/go/bin/go build -ldflags "-X controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
+echo " injecting GIT COMMIT: $GIT_COMMIT" && \
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+/usr/local/go/bin/go build -ldflags "-X 'github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT'" -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
