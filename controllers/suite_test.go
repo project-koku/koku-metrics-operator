@@ -216,9 +216,9 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&KokuMetricsConfigReconciler{
+		err = (&CostManagementMetricsConfigReconciler{
 			Client:    k8sManager.GetClient(),
-			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
+			Log:       ctrl.Log.WithName("controllers").WithName("CostManagementMetricsConfigReconciler"),
 			Scheme:    scheme.Scheme,
 			Clientset: clientset,
 			InCluster: true,

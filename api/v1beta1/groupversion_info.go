@@ -17,9 +17,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Package v1beta1 contains API Schema definitions for the koku-metrics-cfg v1beta1 API group
+// Package v1beta1 contains API Schema definitions for the cost-mgmt-metrics-cfg v1beta1 API group
 // +kubebuilder:object:generate=true
-// +groupName=koku-metrics-cfg.openshift.io
+// +groupName=cost-mgmt-metrics-cfg.openshift.io
 package v1beta1
 
 import (
@@ -29,7 +29,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "koku-metrics-cfg.openshift.io", Version: "v1beta1"}
+	GroupVersion = schema.GroupVersion{Group: "cost-mgmt-metrics-cfg.openshift.io", Version: "v1beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

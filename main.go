@@ -98,15 +98,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.KokuMetricsConfigReconciler{
+	if err = (&controllers.CostManagementMetricsConfigReconciler{
 		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
+		Log:       ctrl.Log.WithName("controllers").WithName("CostManagementMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
 		Clientset: clientset,
 		InCluster: inCluster,
 		Namespace: watchNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
+		setupLog.Error(err, "unable to create controller", "controller", "CostManagementMetricsConfig")
 		os.Exit(1)
 	}
 

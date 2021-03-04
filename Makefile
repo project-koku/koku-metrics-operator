@@ -1,3 +1,12 @@
+# Upstream vars 
+UPSTREAM_API = KokuMetricsConfig
+DOWNSTREAM_API = CostManagementMetricsConfig
+UPSTREAM_LOWERCASE = kokumetricsconfig
+DOWNSTREAM_LOWERCASE = costmanagementmetricsconfig
+UPSTREAM_HYPHEN = koku-metrics-cfg
+DOWNSTREAM_HYPHEN = cost-mgmt-metrics-cfg
+REMOVE_FILES = koku-metrics-operator/ config/ 
+
 # Current Operator version
 PREVIOUS_VERSION ?= 0.9.4
 VERSION ?= 0.9.5
@@ -281,3 +290,50 @@ test-catalog:
 # Push the test-catalog
 test-catalog-push:
 	docker push ${CATALOG_IMG}
+
+# sed replace the files to change the api 
+upstream:
+	go mod vendor
+	go mod tidy
+	# rm -rf $(REMOVE_FILES)
+	# sed replace the api
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' api/v1beta1/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' api/v1beta1/*
+	- sed -i -- 's/$(UPSTREAM_HYPHEN)/$(DOWNSTREAM_HYPHEN)/g' api/v1beta1/*
+	# sed replace collector
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' collector/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' collector/*
+	- sed -i -- 's/$(UPSTREAM_HYPHEN)/$(DOWNSTREAM_HYPHEN)/g' collector/*
+	# sed replace controllers
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_HYPHEN)/$(DOWNSTREAM_HYPHEN)/g' controllers/*
+	# sed replace crhchttp
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' crhchttp/*
+	# sed replace packaging 
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' packaging/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' packaging/*
+	# sed replace sources
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' sources/*
+	# sed replace storage
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' storage/*
+	# sed replace main.go
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' main.go
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' main.go
+	- sed -i -- 's/$(UPSTREAM_HYPHEN)/$(DOWNSTREAM_HYPHEN)/g' main.go
+	# sed replace PROJECT
+	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' PROJECT
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' PROJECT
+	- sed -i -- 's/$(UPSTREAM_HYPHEN)/$(DOWNSTREAM_HYPHEN)/g' PROJECT
+	# fix the config
+	- mkdir config
+	- cp -r downstream-config/* config/
+	# fix the cert 
+	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
+	# clean up the other files
+	- git clean -fx
+
+deploy-user-scratch: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/scratchbuild:latest
+	$(KUSTOMIZE) build config/default | kubectl apply -f -

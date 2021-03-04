@@ -316,35 +316,35 @@ func TestTestPrometheusConnection(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		kmCfg  *kokumetricscfgv1beta1.KokuMetricsConfig
+		kmCfg  *kokumetricscfgv1beta1.CostManagementMetricsConfig
 		status string
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "configuration",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "configuration",
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "connection",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &kokumetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "connection",
 			want:   false,
 			err:    errTest,
@@ -494,7 +494,7 @@ func TestGetPromConn(t *testing.T) {
 					os.Remove(toke)
 				}()
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
 			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef

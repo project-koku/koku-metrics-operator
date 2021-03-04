@@ -45,7 +45,7 @@ import (
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var testLogger = testutils.TestLogger{}
-var kmCfg = &kokumetricscfgv1beta1.KokuMetricsConfig{}
+var kmCfg = &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
 	Log:    testLogger,
@@ -1004,7 +1004,7 @@ func TestTrimPackages(t *testing.T) {
 			dirCfg := &dirconfig.DirectoryConfig{
 				Upload: dirconfig.Directory{Path: tmpDir2},
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			kmCfg := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 			kmCfg.Spec.Packaging.MaxReports = tt.maxReports
 			testPackager := FilePackager{
 				DirCfg: dirCfg,

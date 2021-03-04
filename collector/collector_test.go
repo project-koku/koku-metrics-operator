@@ -61,7 +61,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeKMCfg  = &kokumetricscfgv1beta1.KokuMetricsConfig{}
+	fakeKMCfg  = &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},

@@ -59,11 +59,11 @@ var (
 	defaultUploadWait     int64 = 0
 	defaultMaxReports     int64 = 1
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
-	instance                    = kokumetricscfgv1beta1.KokuMetricsConfig{
+	instance                    = kokumetricscfgv1beta1.CostManagementMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 		},
-		Spec: kokumetricscfgv1beta1.KokuMetricsConfigSpec{
+		Spec: kokumetricscfgv1beta1.CostManagementMetricsConfigSpec{
 			Authentication: kokumetricscfgv1beta1.AuthenticationSpec{
 				AuthType: kokumetricscfgv1beta1.Token,
 			},
@@ -89,11 +89,11 @@ var (
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
-	airGappedInstance = kokumetricscfgv1beta1.KokuMetricsConfig{
+	airGappedInstance = kokumetricscfgv1beta1.CostManagementMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 		},
-		Spec: kokumetricscfgv1beta1.KokuMetricsConfigSpec{
+		Spec: kokumetricscfgv1beta1.CostManagementMetricsConfigSpec{
 			Authentication: kokumetricscfgv1beta1.AuthenticationSpec{
 				AuthType: kokumetricscfgv1beta1.Token,
 			},
@@ -292,7 +292,7 @@ func shutdown() {
 	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
 }
 
-var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
+var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
@@ -345,7 +345,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-2"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the deployment vol has changed
 			Eventually(func() bool {
@@ -403,7 +403,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the deployment vol has changed
 			Eventually(func() bool {
@@ -432,7 +432,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -460,7 +460,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-token"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -491,7 +491,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -519,7 +519,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -544,7 +544,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -570,7 +570,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -597,7 +597,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = authMixedCaseName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -624,7 +624,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
@@ -649,7 +649,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Source.SourceName = sourceName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -675,7 +675,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Source.CreateSource = &trueValue
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -701,7 +701,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -728,7 +728,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -755,7 +755,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -781,7 +781,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -807,7 +807,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -832,7 +832,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -858,7 +858,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// check the CR was created ok
 			Eventually(func() bool {
@@ -882,7 +882,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -910,7 +910,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -951,7 +951,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -978,7 +978,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			fetched := &kokumetricscfgv1beta1.CostManagementMetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {

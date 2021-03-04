@@ -73,7 +73,7 @@ func (v *volume) isMounted() bool {
 // Storage is a struct containing volume information
 type Storage struct {
 	Client    client.Client
-	KMCfg     *kokumetricscfgv1beta1.KokuMetricsConfig
+	KMCfg     *kokumetricscfgv1beta1.CostManagementMetricsConfig
 	Log       logr.Logger
 	Namespace string
 	PVC       *corev1.PersistentVolumeClaim
@@ -83,7 +83,7 @@ type Storage struct {
 
 func (s *Storage) getOrCreateVolume() error {
 	ctx := context.Background()
-	log := s.Log.WithValues("kokumetricsconfig", "getOrCreateVolume")
+	log := s.Log.WithValues("costmanagementmetricsconfig", "getOrCreateVolume")
 	namespace := types.NamespacedName{
 		Namespace: s.Namespace,
 		Name:      s.PVC.Name}
@@ -140,7 +140,7 @@ func (s *Storage) mountVolume(dep *appsv1.Deployment, depSpec *appsv1.Deployment
 // ConvertVolume converts the EmptyDir volume in deployment to PVC
 func (s *Storage) ConvertVolume() (bool, error) {
 	ctx := context.Background()
-	log := s.Log.WithValues("kokumetricsconfig", "ConvertVolume")
+	log := s.Log.WithValues("costmanagementmetricsconfig", "ConvertVolume")
 
 	log.Info("getting deployment")
 	deployment := &appsv1.Deployment{}
