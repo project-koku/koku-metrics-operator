@@ -1,7 +1,7 @@
 The following shows a complete CR and gives a brief description of each spec field. Every `spec` field is optional.
 
 ```
-apiVersion: koku-metrics-cfg.openshift.io/v1alpha1
+apiVersion: koku-metrics-cfg.openshift.io/v1beta1
 kind: KokuMetricsConfig
 metadata:
   name: kokumetricsconfig-sample
