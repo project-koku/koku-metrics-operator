@@ -62,7 +62,7 @@ Create 2 files in that directory: `token` and `service-ca.crt`. Copy the values 
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
     ```
-    This command uses the CR defined in `config/samples/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/koku-metrics-cfg_v1alpha1_kokumetricsconfig.yaml`. The command then deploys this CR to the cluster.
+    This command uses the CR defined in `config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml`. The command then deploys this CR to the cluster.
 
     After this CR has been created in the cluster, reconciliation will begin.
 
