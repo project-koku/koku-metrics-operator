@@ -115,7 +115,11 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 			value := getValue(saveStruct, stream.Values)
 			results[obj][saveStruct.ValName] = floatToString(value)
 			if saveStruct.TransformedName != "" {
-				results[obj][saveStruct.TransformedName] = floatToString(value * float64(len(stream.Values)*saveStruct.Factor))
+				factor := saveStruct.Factor
+				if saveStruct.Method == "max" {
+					factor *= float64(len(stream.Values))
+				}
+				results[obj][saveStruct.TransformedName] = floatToString(value * factor)
 			}
 		}
 	}

@@ -149,23 +149,23 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
 1. Create the following Pod, ensuring the `claimName` matches the PVC containing the report data:
 
   ```
-  kind: Pod
-  apiVersion: v1
-  metadata:
-    name: volume-shell
-    namespace: koku-metrics-operator
-  spec:
-    volumes:
-    - name: koku-metrics-operator-reports
-      persistentVolumeClaim:
-        claimName: koku-metrics-operator-data
-    containers:
-    - name: volume-shell
-      image: busybox
-      command: ['sleep', '3600']
-      volumeMounts:
+    kind: Pod
+    apiVersion: v1
+    metadata:
+      name: volume-shell
+      namespace: koku-metrics-operator
+    spec:
+      volumes:
       - name: koku-metrics-operator-reports
-        mountPath: /tmp/koku-metrics-operator-reports
+        persistentVolumeClaim:
+          claimName: koku-metrics-operator-data
+      containers:
+      - name: volume-shell
+        image: busybox
+        command: ['sleep', '3600']
+        volumeMounts:
+        - name: koku-metrics-operator-reports
+          mountPath: /tmp/koku-metrics-operator-reports
   ```
 
 2. Use rsync to copy all of the files ready for upload from the PVC to a local folder:

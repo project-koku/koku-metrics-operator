@@ -22,8 +22,8 @@ package collector
 import "github.com/prometheus/common/model"
 
 const (
-	maxFactor int = 60
-	sumFactor int = 1
+	maxFactor float64 = 60
+	sumFactor float64 = 60
 )
 
 var (
@@ -96,7 +96,7 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
 				Method:          "max",
-				Factor:          sumFactor,
+				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
 			RowKey: "volumename",
@@ -107,7 +107,7 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
 				Method:          "max",
-				Factor:          sumFactor,
+				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-request-byte-seconds",
 			},
 			RowKey: "volumename",
@@ -145,8 +145,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
-				Method:          "sum",
-				Factor:          sumFactor,
+				Method:          "max",
+				Factor:          maxFactor,
 				TransformedName: "pod-limit-cpu-core-seconds",
 			},
 			RowKey: "pod",
@@ -157,8 +157,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
-				Method:          "sum",
-				Factor:          sumFactor,
+				Method:          "max",
+				Factor:          maxFactor,
 				TransformedName: "pod-limit-memory-byte-seconds",
 			},
 			RowKey: "pod",
@@ -169,8 +169,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
-				Method:          "sum",
-				Factor:          sumFactor,
+				Method:          "max",
+				Factor:          maxFactor,
 				TransformedName: "pod-request-cpu-core-seconds",
 			},
 			RowKey: "pod",
@@ -181,8 +181,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
-				Method:          "sum",
-				Factor:          sumFactor,
+				Method:          "max",
+				Factor:          maxFactor,
 				TransformedName: "pod-request-memory-byte-seconds",
 			},
 			RowKey: "pod",
@@ -247,6 +247,6 @@ type regexFields map[string]string
 type saveQueryValue struct {
 	ValName         string
 	Method          string
-	Factor          int
+	Factor          float64
 	TransformedName string
 }
