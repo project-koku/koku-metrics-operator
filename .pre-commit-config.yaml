@@ -9,6 +9,6 @@ repos:
     - id: go-mod-tidy
     - id: go-mod-vendor
 - repo: git://github.com/golangci/golangci-lint
-  rev: master
+  rev: v1.37.1
   hooks:
     - id: golangci-lint
