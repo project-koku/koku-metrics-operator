@@ -316,6 +316,10 @@ upstream:
 	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' controllers/*
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' controllers/*
 	- sed -i -- 's/$(UPSTREAM_HYPHEN)/$(DOWNSTREAM_HYPHEN)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_REPORTS)/$(DOWNSTREAM_REPORTS)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_APP)/$(DOWNSTREAM_APP)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_PVC)/$(DOWNSTREAM_PVC)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_MANAGER)/$(DOWNSTREAM_MANAGER)/g' controllers/*
 	# sed replace crhchttp
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' crhchttp/*
 	# sed replace packaging 

@@ -65,7 +65,7 @@ var (
 	useCluster         bool
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "costmanagement-metrics-controller-manager",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -88,13 +88,13 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      "costmanagement-metrics-operator-reports",
+									MountPath: "/tmp/costmanagement-metrics-operator-reports",
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: "costmanagement-metrics-operator-reports",
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
@@ -103,7 +103,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "costmanagement-metrics-controller-manager",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -126,15 +126,15 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      "costmanagement-metrics-operator-reports",
+									MountPath: "/tmp/costmanagement-metrics-operator-reports",
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: "costmanagement-metrics-operator-reports",
 						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}},
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "costmanagement-metrics-operator-data"}}}},
 				},
 			},
 		},

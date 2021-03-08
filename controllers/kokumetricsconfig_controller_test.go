@@ -43,7 +43,7 @@ import (
 )
 
 var (
-	namespace                   = "koku-metrics-operator"
+	namespace                   = "costmanagement-metrics-operator"
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	sourceName                  = "cluster-test"
@@ -264,7 +264,7 @@ func setup() error {
 		},
 	}
 	// setup the initial testing directory
-	testingDir := "/tmp/koku-metrics-operator-reports/"
+	testingDir := "/tmp/costmanagement-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			return fmt.Errorf("could not create %s directory: %v", testingDir, err)
@@ -289,7 +289,7 @@ func setup() error {
 
 func shutdown() {
 	previousValidation = nil
-	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
+	os.RemoveAll("/tmp/costmanagement-metrics-operator-reports/")
 }
 
 var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() {
@@ -334,7 +334,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
-					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "koku-metrics-operator-data"
+					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "costmanagement-metrics-operator-data"
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
@@ -372,7 +372,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
-				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != "koku-metrics-operator-data"
+				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != "costmanagement-metrics-operator-data"
 			}, timeout, interval).Should(BeTrue())
 
 			deleteDeployment(ctx, emptyDep1)
