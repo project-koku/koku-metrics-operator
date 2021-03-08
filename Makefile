@@ -5,6 +5,8 @@ UPSTREAM_LOWERCASE = kokumetricsconfig
 DOWNSTREAM_LOWERCASE = costmanagementmetricsconfig
 UPSTREAM_HYPHEN = koku-metrics-cfg
 DOWNSTREAM_HYPHEN = cost-mgmt-metrics-cfg
+UPSTREAM_MANAGER = koku-metrics-controller-manager
+DOWNSTREAM_MANAGER = costmanagement-metrics-controller-manager
 REMOVE_FILES = koku-metrics-operator/ config/ 
 
 # Current Operator version
@@ -295,7 +297,7 @@ test-catalog-push:
 upstream:
 	go mod vendor
 	go mod tidy
-	# rm -rf $(REMOVE_FILES)
+	rm -rf $(REMOVE_FILES)
 	# sed replace the api
 	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' api/v1beta1/*
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' api/v1beta1/*
@@ -318,6 +320,7 @@ upstream:
 	# sed replace storage
 	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' storage/*
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_MANAGER)/$(DOWNSTREAM_MANAGER)/g' storage/*
 	# sed replace main.go
 	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' main.go
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' main.go
