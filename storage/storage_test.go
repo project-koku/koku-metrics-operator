@@ -33,9 +33,9 @@ import (
 )
 
 var (
-	kokuMetricsCfgNamespace = "koku-metrics-operator"
+	kokuMetricsCfgNamespace = "costmanagement-metrics-operator"
 	emptyDir                = &corev1.Volume{
-		Name:         "koku-metrics-operator-reports",
+		Name:         "costmanagement-metrics-operator-reports",
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
 	emptyDirWrong = &corev1.Volume{
@@ -43,20 +43,20 @@ var (
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
 	persistVC = &corev1.Volume{
-		Name: "koku-metrics-operator-reports",
+		Name: "costmanagement-metrics-operator-reports",
 		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "costmanagement-metrics-operator-data"}}}
 	persistVCfake = &corev1.Volume{
-		Name: "koku-metrics-operator-reports",
+		Name: "costmanagement-metrics-operator-reports",
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "not-the-right-one"}}}
 	volMount = &corev1.VolumeMount{
-		Name:      "koku-metrics-operator-reports",
-		MountPath: "/tmp/koku-metrics-operator-reports",
+		Name:      "costmanagement-metrics-operator-reports",
+		MountPath: "/tmp/costmanagement-metrics-operator-reports",
 	}
 	volMountWrong = &corev1.VolumeMount{
 		Name:      "wrong-mount",
-		MountPath: "/tmp/koku-metrics-operator-reports",
+		MountPath: "/tmp/costmanagement-metrics-operator-reports",
 	}
 	// For the following deployments, the only things of importance are the ObjectMeta, Volumes, VolumeMounts.
 	// All the other definitions are boilerplate so that the deployment will be created successfully.

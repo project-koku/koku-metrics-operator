@@ -7,6 +7,12 @@ UPSTREAM_HYPHEN = koku-metrics-cfg
 DOWNSTREAM_HYPHEN = cost-mgmt-metrics-cfg
 UPSTREAM_MANAGER = koku-metrics-controller-manager
 DOWNSTREAM_MANAGER = costmanagement-metrics-controller-manager
+UPSTREAM_REPORTS = koku-metrics-operator-reports
+DOWNSTREAM_REPORTS = costmanagement-metrics-operator-reports
+UPSTREAM_APP = "koku-metrics-operator"
+DOWNSTREAM_APP = "costmanagement-metrics-operator"
+UPSTREAM_PVC = koku-metrics-operator-data
+DOWNSTREAM_PVC = costmanagement-metrics-operator-data
 REMOVE_FILES = koku-metrics-operator/ config/ 
 
 # Current Operator version
@@ -321,6 +327,11 @@ upstream:
 	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' storage/*
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' storage/*
 	- sed -i -- 's/$(UPSTREAM_MANAGER)/$(DOWNSTREAM_MANAGER)/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_REPORTS)/$(DOWNSTREAM_REPORTS)/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_APP)/$(DOWNSTREAM_APP)/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_PVC)/$(DOWNSTREAM_PVC)/g' storage/*
+	# sed replace dirconfig 
+	- sed -i -- 's/$(UPSTREAM_REPORTS)/$(DOWNSTREAM_REPORTS)/g' dirconfig/*
 	# sed replace main.go
 	- sed -i -- 's/$(UPSTREAM_API)/$(DOWNSTREAM_API)/g' main.go
 	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' main.go

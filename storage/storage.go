@@ -45,9 +45,9 @@ var (
 			Kind:       "PersistentVolumeClaim",
 		},
 		EmbeddedObjectMetadata: kokumetricscfgv1beta1.EmbeddedObjectMetadata{
-			Name: "koku-metrics-operator-data",
+			Name: "costmanagement-metrics-operator-data",
 			Labels: map[string]string{
-				"application": "koku-metrics-operator",
+				"application": "costmanagement-metrics-operator",
 			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -97,7 +97,7 @@ func (s *Storage) getOrCreateVolume() error {
 
 func (s *Storage) getVolume(vols []corev1.Volume) error {
 	for i, v := range vols {
-		if v.Name == "koku-metrics-operator-reports" {
+		if v.Name == "costmanagement-metrics-operator-reports" {
 			s.vol = &volume{index: i, volume: &v}
 			if v.EmptyDir != nil {
 				s.KMCfg.Status.Storage.VolumeType = v.EmptyDir.String()
