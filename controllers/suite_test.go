@@ -168,7 +168,7 @@ var _ = BeforeSuite(func(done Done) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 	ctx := context.Background()
 
 	// Default to run locally
