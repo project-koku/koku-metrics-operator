@@ -1,9 +1,9 @@
 domain: openshift.io
 layout: go.kubebuilder.io/v2
-repo: github.com/project-koku/koku-metrics-operator
+repo: github.com/project-costmanagement/costmanagement-metrics-operator
 resources:
-- group: koku-metrics-cfg
-  kind: KokuMetricsConfig
+- group: costmanagement-metrics-cfg
+  kind: CostManagementMetricsConfig
   version: v1beta1
 version: 3-alpha
 plugins:

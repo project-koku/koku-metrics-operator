@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/strset"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
@@ -61,7 +61,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeKMCfg  = &kokumetricscfgv1beta1.KokuMetricsConfig{}
+	fakeKMCfg  = &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},

@@ -46,7 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,7 +65,7 @@ var (
 	useCluster         bool
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "costmanagement-metrics-controller-manager",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -88,13 +88,13 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      "costmanagement-metrics-operator-reports",
+									MountPath: "/tmp/costmanagement-metrics-operator-reports",
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: "costmanagement-metrics-operator-reports",
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
@@ -103,7 +103,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "costmanagement-metrics-controller-manager",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -126,15 +126,15 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      "costmanagement-metrics-operator-reports",
+									MountPath: "/tmp/costmanagement-metrics-operator-reports",
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: "costmanagement-metrics-operator-reports",
 						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}},
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "costmanagement-metrics-operator-data"}}}},
 				},
 			},
 		},
@@ -168,7 +168,7 @@ var _ = BeforeSuite(func(done Done) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 	ctx := context.Background()
 
 	// Default to run locally
@@ -192,7 +192,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = kokumetricscfgv1beta1.AddToScheme(scheme.Scheme)
+	err = costmanagementmetricscfgv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = configv1.AddToScheme(scheme.Scheme)
@@ -216,9 +216,9 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&KokuMetricsConfigReconciler{
+		err = (&CostManagementMetricsConfigReconciler{
 			Client:    k8sManager.GetClient(),
-			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
+			Log:       ctrl.Log.WithName("controllers").WithName("CostManagementMetricsConfigReconciler"),
 			Scheme:    scheme.Scheme,
 			Clientset: clientset,
 			InCluster: true,

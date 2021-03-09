@@ -1,4 +1,4 @@
-module github.com/project-koku/koku-metrics-operator
+module github.com/project-costmanagement/costmanagement-metrics-operator
 
 go 1.13
 

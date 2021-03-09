@@ -281,3 +281,54 @@ test-catalog:
 # Push the test-catalog
 test-catalog-push:
 	docker push ${CATALOG_IMG}
+
+# sed replace the files to change the api 
+upstream:
+	go mod vendor
+	go mod tidy
+	rm -rf $(REMOVE_FILES)
+	# sed replace the api
+	- sed -i -- 's/koku/costmanagement/g' api/v1beta1/*
+	- sed -i -- 's/Koku/CostManagement/g' api/v1beta1/*
+	# sed replace collector
+	- sed -i -- 's/koku/costmanagement/g' collector/*
+	- sed -i -- 's/Koku/CostManagement/g' collector/*
+	# sed replace controllers
+	- sed -i -- 's/koku/costmanagement/g' controllers/*
+	- sed -i -- 's/Koku/CostManagement/g' controllers/*
+	# sed replace crhchttp
+	- sed -i -- 's/koku/costmanagement/g' crhchttp/*
+	- sed -i -- 's/Koku/CostManagement/g' crhchttp/*
+	# sed replace packaging 
+	- sed -i -- 's/koku/costmanagement/g' packaging/*
+	- sed -i -- 's/Koku/CostManagement/g' packaging/*
+	# sed replace sources
+	- sed -i -- 's/koku/costmanagement/g' sources/*
+	- sed -i -- 's/Koku/CostManagement/g' sources/*
+	# sed replace storage
+	- sed -i -- 's/koku/costmanagement/g' storage/*
+	- sed -i -- 's/Koku/CostManagement/g' storage/*
+	# sed replace dirconfig 
+	- sed -i -- 's/koku/costmanagement/g' dirconfig/*
+	- sed -i -- 's/Koku/CostManagement/g' dirconfig/*
+	# sed replace main.go
+	- sed -i -- 's/koku/costmanagement/g' main.go
+	- sed -i -- 's/Koku/CostManagement/g' main.go
+	# sed replace PROJECT
+	- sed -i -- 's/koku/costmanagement/g' PROJECT
+	- sed -i -- 's/Koku/CostManagement/g' PROJECT
+	# fix the go.mod 
+	# sed replace collector
+	- sed -i -- 's/koku/costmanagement/g' go.mod
+	- sed -i -- 's/Koku/CostManagement/g' go.mod
+	# fix the config
+	# - mkdir config
+	# - cp -r downstream-config/* config/
+	# fix the cert 
+	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
+	# clean up the other files
+	- git clean -fx
+
+deploy-user-scratch: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/scratchbuild:latest
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
