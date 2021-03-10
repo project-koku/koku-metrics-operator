@@ -1,5 +1,9 @@
 # Downstream Args
 REMOVE_FILES = koku-metrics-operator/
+UPSTREAM_LOWERCASE = koku
+UPSTREAM_UPPERCASE = Koku 
+DOWNSTREAM_LOWERCASE = costmanagement
+DOWNSTREAM_UPPERCASE = CostManagement
 # Current Operator version
 PREVIOUS_VERSION ?= 0.9.4
 VERSION ?= 0.9.5
@@ -290,64 +294,64 @@ upstream:
 	go mod tidy
 	rm -rf $(REMOVE_FILES)
 	# sed replace the api
-	- sed -i -- 's/koku/costmanagement/g' api/v1beta1/*
-	- sed -i -- 's/Koku/CostManagement/g' api/v1beta1/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' api/v1beta1/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' api/v1beta1/*
 	# sed replace collector
-	- sed -i -- 's/koku/costmanagement/g' collector/*
-	- sed -i -- 's/Koku/CostManagement/g' collector/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' collector/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' collector/*
 	# sed replace controllers
-	- sed -i -- 's/koku/costmanagement/g' controllers/*
-	- sed -i -- 's/Koku/CostManagement/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' controllers/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' controllers/*
 	# sed replace crhchttp
-	- sed -i -- 's/koku/costmanagement/g' crhchttp/*
-	- sed -i -- 's/Koku/CostManagement/g' crhchttp/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' crhchttp/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' crhchttp/*
 	# sed replace packaging 
-	- sed -i -- 's/koku/costmanagement/g' packaging/*
-	- sed -i -- 's/Koku/CostManagement/g' packaging/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' packaging/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' packaging/*
 	# sed replace sources
-	- sed -i -- 's/koku/costmanagement/g' sources/*
-	- sed -i -- 's/Koku/CostManagement/g' sources/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' sources/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' sources/*
 	# sed replace storage
-	- sed -i -- 's/koku/costmanagement/g' storage/*
-	- sed -i -- 's/Koku/CostManagement/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' storage/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' storage/*
 	# sed replace dirconfig 
-	- sed -i -- 's/koku/costmanagement/g' dirconfig/*
-	- sed -i -- 's/Koku/CostManagement/g' dirconfig/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' dirconfig/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' dirconfig/*
 	# sed replace main.go
-	- sed -i -- 's/koku/costmanagement/g' main.go
-	- sed -i -- 's/Koku/CostManagement/g' main.go
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' main.go
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' main.go
 	# sed replace PROJECT
-	- sed -i -- 's/koku/costmanagement/g' PROJECT
-	- sed -i -- 's/Koku/CostManagement/g' PROJECT
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' PROJECT
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' PROJECT
 	# fix the go.mod 
 	# sed replace collector
-	- sed -i -- 's/koku/costmanagement/g' go.mod
-	- sed -i -- 's/Koku/CostManagement/g' go.mod
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' go.mod
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' go.mod
 	# fix the config
-	- sed -i -- 's/koku/costmanagement/g' config/crd/bases/*
-	- sed -i -- 's/Koku/CostManagement/g' config/crd/bases/*
-	- sed -i -- 's/koku/costmanagement/g' config/crd/patches/*
-	- sed -i -- 's/Koku/CostManagement/g' config/crd/patches/*
-	- sed -i -- 's/koku/costmanagement/g' config/crd/*
-	- sed -i -- 's/Koku/CostManagement/g' config/crd/*
-	- sed -i -- 's/koku/costmanagement/g' config/default/*
-	- sed -i -- 's/Koku/CostManagement/g' config/default/*
-	- sed -i -- 's/koku/costmanagement/g' config/manager/*
-	- sed -i -- 's/Koku/CostManagement/g' config/manager/*
-	- sed -i -- 's/koku/costmanagement/g' config/manifests/*
-	- sed -i -- 's/Koku/CostManagement/g' config/manifests/*
-	- sed -i -- 's/koku/costmanagement/g' config/manifests/bases/*
-	- sed -i -- 's/Koku/CostManagement/g' config/manifests/bases/*
-	- sed -i -- 's/koku/costmanagement/g' config/prometheus/*
-	- sed -i -- 's/Koku/CostManagement/g' config/prometheus/*
-	- sed -i -- 's/koku/costmanagement/g' config/rbac/*
-	- sed -i -- 's/Koku/CostManagement/g' config/rbac/*
-	- sed -i -- 's/koku/costmanagement/g' config/samples/*
-	- sed -i -- 's/Koku/CostManagement/g' config/samples/*
-	- sed -i -- 's/koku/costmanagement/g' config/serviceaccounts/*
-	- sed -i -- 's/Koku/CostManagement/g' config/serviceaccounts/*
-	- sed -i -- 's/koku/costmanagement/g' config/webhook/*
-	- sed -i -- 's/Koku/CostManagement/g' config/webhook/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/crd/bases/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/crd/bases/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/crd/patches/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/crd/patches/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/crd/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/crd/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/default/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/default/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/manager/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/manager/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/manifests/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/manifests/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/manifests/bases/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/manifests/bases/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/prometheus/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/prometheus/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/rbac/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/rbac/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/samples/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/samples/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/serviceaccounts/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/serviceaccounts/*
+	- sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' config/webhook/*
+	- sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' config/webhook/*
 	# fix the cert 
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
 	# clean up the other files
