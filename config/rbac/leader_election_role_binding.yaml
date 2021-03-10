@@ -8,5 +8,5 @@ roleRef:
   name: leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: koku-metrics-manager-role
+  name: costmanagement-metrics-manager-role
   namespace: operator

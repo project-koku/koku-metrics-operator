@@ -322,6 +322,31 @@ upstream:
 	- sed -i -- 's/koku/costmanagement/g' go.mod
 	- sed -i -- 's/Koku/CostManagement/g' go.mod
 	# fix the config
+	- sed -i -- 's/koku/costmanagement/g' config/crd/bases/*
+	- sed -i -- 's/Koku/CostManagement/g' config/crd/bases/*
+	- sed -i -- 's/koku/costmanagement/g' config/crd/patches/*
+	- sed -i -- 's/Koku/CostManagement/g' config/crd/patches/*
+	- sed -i -- 's/koku/costmanagement/g' config/crd/*
+	- sed -i -- 's/Koku/CostManagement/g' config/crd/*
+	- sed -i -- 's/koku/costmanagement/g' config/default/*
+	- sed -i -- 's/Koku/CostManagement/g' config/default/*
+	- sed -i -- 's/koku/costmanagement/g' config/manager/*
+	- sed -i -- 's/Koku/CostManagement/g' config/manager/*
+	# - sed -i -- 's/koku/costmanagement/g' config/manager/manager.yaml
+	- sed -i -- 's/koku/costmanagement/g' config/manifests/*
+	- sed -i -- 's/Koku/CostManagement/g' config/manifests/*
+	- sed -i -- 's/koku/costmanagement/g' config/manifests/bases/*
+	- sed -i -- 's/Koku/CostManagement/g' config/manifests/bases/*
+	- sed -i -- 's/koku/costmanagement/g' config/prometheus/*
+	- sed -i -- 's/Koku/CostManagement/g' config/prometheus/*
+	- sed -i -- 's/koku/costmanagement/g' config/rbac/*
+	- sed -i -- 's/Koku/CostManagement/g' config/rbac/*
+	- sed -i -- 's/koku/costmanagement/g' config/samples/*
+	- sed -i -- 's/Koku/CostManagement/g' config/samples/*
+	- sed -i -- 's/koku/costmanagement/g' config/serviceaccounts/*
+	- sed -i -- 's/Koku/CostManagement/g' config/serviceaccounts/*
+	- sed -i -- 's/koku/costmanagement/g' config/webhook/*
+	- sed -i -- 's/Koku/CostManagement/g' config/webhook/*
 	# - mkdir config
 	# - cp -r downstream-config/* config/
 	# fix the cert 
