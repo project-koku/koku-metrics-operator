@@ -633,7 +633,7 @@ func (r *CostManagementMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	log.Info("using the following inputs", "CostManagementMetricsConfigConfig", kmCfg.Status)
+	log.Info("using the following inputs", "CostManagementMetricsConfig", kmCfg.Status)
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
 	setOperatorCommit(r, kmCfg)

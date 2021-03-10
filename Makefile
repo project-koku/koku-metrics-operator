@@ -1,3 +1,5 @@
+# Downstream Args
+REMOVE_FILES = koku-metrics-operator/
 # Current Operator version
 PREVIOUS_VERSION ?= 0.9.4
 VERSION ?= 0.9.5
