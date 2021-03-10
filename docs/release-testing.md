@@ -1,6 +1,6 @@
 ## Generating and testing release bundles
 
-A full overview of community operator testing can be found [here](https://operator-framework.github.io/community-operators/testing-operators/). The following steps were parsed from the testing document and are specific to testing the `koku-metrics-operator`.
+A full overview of community operator testing can be found [here](https://operator-framework.github.io/community-operators/testing-operators/). The following steps were parsed from the testing document and are specific to testing the `costmanagement-metrics-operator`.
 
 ### Pre-requisites
 
@@ -18,7 +18,7 @@ Change into the directory and run `make build`. This will generate an `opm` exec
 ### Testing an operator upgrade - Overview
 
 Testing an upgrade is a complicated and an involved process. The general steps are as follows:
-1. Create an opm index (test-catalog) for the most recent release and push to Quay (quay.io/project-koku/kmc-test-catalog contains previous versions and can be used instead of creating your own initial catalog).
+1. Create an opm index (test-catalog) for the most recent release and push to Quay (quay.io/project-costmanagement/kmc-test-catalog contains previous versions and can be used instead of creating your own initial catalog).
 2. Create a CatalogSource in OCP, and install the operator (this should be the version that will be upgraded).
 3. Generate the new controller image, and push to Quay.
 4. Generate the new bundle.
@@ -30,20 +30,20 @@ Testing an upgrade is a complicated and an involved process. The general steps a
 
 ### Testing an operator upgrade
 
-1. Check `quay.io/project-koku/kmc-test-catalog` for the most recent operator release. If the index does not exist, create it:
+1. Check `quay.io/project-costmanagement/kmc-test-catalog` for the most recent operator release. If the index does not exist, create it:
 
-Check `quay.io/project-koku/koku-metrics-operator-bundle` for the most recent operator release bundle. Create it if it does not exist:
+Check `quay.io/project-costmanagement/costmanagement-metrics-operator-bundle` for the most recent operator release bundle. Create it if it does not exist:
 
 ```sh
-$ cd koku-metrics-operator/$PREVIOUS_VERSION
-$ docker build -f Dockerfile . -t quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION; docker push quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION
+$ cd costmanagement-metrics-operator/$PREVIOUS_VERSION
+$ docker build -f Dockerfile . -t quay.io/project-costmanagement/costmanagement-metrics-operator-bundle:v$PREVIOUS_VERSION; docker push quay.io/project-costmanagement/costmanagement-metrics-operator-bundle:v$PREVIOUS_VERSION
 ```
 
-Use `opm` to build a catalog image with the koku-metrics-operator and then push the image:
+Use `opm` to build a catalog image with the costmanagement-metrics-operator and then push the image:
 
 ```sh
-$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v<VERSION_BEFORE_PREVIOUS_VERSION> --bundles quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
-$ docker push quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION
+$ opm index add --from-index quay.io/project-costmanagement/kmc-test-catalog:v<VERSION_BEFORE_PREVIOUS_VERSION> --bundles quay.io/project-costmanagement/costmanagement-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-costmanagement/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
+$ docker push quay.io/project-costmanagement/kmc-test-catalog:v$PREVIOUS_VERSION
 ```
 
 2. Create a CatalogSource in OCP, and install the operator (this should be the version that will be upgraded):
@@ -57,7 +57,7 @@ metadata:
   namespace: openshift-marketplace
 spec:
   sourceType: grpc
-  image: quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION
+  image: quay.io/project-costmanagement/kmc-test-catalog:v$PREVIOUS_VERSION
   updateStrategy:
     registryPoll:
       interval: 3m
@@ -71,9 +71,9 @@ $ oc apply -f catalog-source.yaml
 
 Verify that the catalog source was created without errors in the `openshift-marketplace` project.
 
-Search OperatorHub for the koku-metrics-operator. It should be available under the `custom` or `my-test-catalog` provider type depending on your OCP version.
+Search OperatorHub for the costmanagement-metrics-operator. It should be available under the `custom` or `my-test-catalog` provider type depending on your OCP version.
 
-Install the koku-metrics-operator in the `koku-metrics-operator` namespace, and test as normal.
+Install the costmanagement-metrics-operator in the `costmanagement-metrics-operator` namespace, and test as normal.
 
 
 3. Generate the new controller image, and push to Quay:
@@ -81,8 +81,8 @@ Install the koku-metrics-operator in the `koku-metrics-operator` namespace, and 
 ```sh
 $ USERNAME=<quay-username>
 $ VERSION=<release-version>
-$ docker build . -t quay.io/$USERNAME/koku-metrics-operator:v$VERSION
-$ docker push quay.io/$USERNAME/koku-metrics-operator:v$VERSION
+$ docker build . -t quay.io/$USERNAME/costmanagement-metrics-operator:v$VERSION
+$ docker push quay.io/$USERNAME/costmanagement-metrics-operator:v$VERSION
 ```
 
 4. Generate the new bundle:
@@ -101,31 +101,31 @@ Run the following command to generate the bundle:
 $ make bundle DEFAULT_CHANNEL=alpha
 ```
 
-This will generate a new `<release-version>` bundle inside of the `koku-metrics-operator` directory within the repository.
+This will generate a new `<release-version>` bundle inside of the `costmanagement-metrics-operator` directory within the repository.
 
 5. Build the bundle image and push to Quay:
 
 Copy the generated bundle to the testing directory:
 
 ```sh
-$ cp -r koku-metrics-operator/$VERSION testing
+$ cp -r costmanagement-metrics-operator/$VERSION testing
 $ cd testing/$VERSION
 ```
 
 Change the container images to the test controller image that was generated in step 3:
 
-Search and replace `quay.io/project-koku/koku-metrics-operator:v$VERSION` with `quay.io/$USERNAME/koku-metrics-operator:v$VERSION` in the clusterserviceversion.
+Search and replace `quay.io/project-costmanagement/costmanagement-metrics-operator:v$VERSION` with `quay.io/$USERNAME/costmanagement-metrics-operator:v$VERSION` in the clusterserviceversion.
 
 Build and push:
 
 ```sh
-$ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION; docker push quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION
+$ docker build -f Dockerfile . -t quay.io/$USERNAME/costmanagement-metrics-operator-bundle:v$VERSION; docker push quay.io/$USERNAME/costmanagement-metrics-operator-bundle:v$VERSION
 ```
 
 6. Create an opm index (test-catalog) that contains the last release and the new release, and push to Quay:
 
 ```sh
-$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --bundles quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION --tag quay.io/$USERNAME/test-catalog:latest --container-tool docker
+$ opm index add --from-index quay.io/project-costmanagement/kmc-test-catalog:v$PREVIOUS_VERSION --bundles quay.io/$USERNAME/costmanagement-metrics-operator-bundle:v$VERSION --tag quay.io/$USERNAME/test-catalog:latest --container-tool docker
 $ docker push quay.io/$USERNAME/test-catalog:v$VERSION
 ```
 

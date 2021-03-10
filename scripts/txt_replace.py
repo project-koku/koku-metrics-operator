@@ -42,13 +42,13 @@ def fix_csv(version_tuple):
     # all the replacements that will be made in the CSV
     replacements = {
         "0001-01-01T00:00:00Z": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
-        "INSERT-CONTAINER-IMAGE": f"quay.io/project-koku/koku-metrics-operator:v{version}",
+        "INSERT-CONTAINER-IMAGE": f"quay.io/project-costmanagement/costmanagement-metrics-operator:v{version}",
         "INSERT-DESCRIPTION": "|-\n    " + description,
-        "name: Red Hat": f"name: Red Hat\n  replaces: koku-metrics-operator.v{previous}",
-        "type: AllNamespaces": f"type: AllNamespaces\n  relatedImages:\n    - name: koku-metrics-operator\n      image: {sha}"
+        "name: Red Hat": f"name: Red Hat\n  replaces: costmanagement-metrics-operator.v{previous}",
+        "type: AllNamespaces": f"type: AllNamespaces\n  relatedImages:\n    - name: costmanagement-metrics-operator\n      image: {sha}"
     }
 
-    filename = f"koku-metrics-operator/{version}/manifests/koku-metrics-operator.clusterserviceversion.yaml"
+    filename = f"costmanagement-metrics-operator/{version}/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml"
     for k,v in replacements.items():
         replace(filename, k, v)
 
@@ -59,7 +59,7 @@ def fix_dockerfile(version_tuple):
         "bundle/metadata": "metadata",
     }
 
-    filename = f"koku-metrics-operator/{version}/Dockerfile"
+    filename = f"costmanagement-metrics-operator/{version}/Dockerfile"
     for k,v in replacements.items():
         replace(filename, k, v)
 
