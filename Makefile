@@ -334,7 +334,6 @@ upstream:
 	- sed -i -- 's/Koku/CostManagement/g' config/default/*
 	- sed -i -- 's/koku/costmanagement/g' config/manager/*
 	- sed -i -- 's/Koku/CostManagement/g' config/manager/*
-	# - sed -i -- 's/koku/costmanagement/g' config/manager/manager.yaml
 	- sed -i -- 's/koku/costmanagement/g' config/manifests/*
 	- sed -i -- 's/Koku/CostManagement/g' config/manifests/*
 	- sed -i -- 's/koku/costmanagement/g' config/manifests/bases/*
@@ -349,8 +348,6 @@ upstream:
 	- sed -i -- 's/Koku/CostManagement/g' config/serviceaccounts/*
 	- sed -i -- 's/koku/costmanagement/g' config/webhook/*
 	- sed -i -- 's/Koku/CostManagement/g' config/webhook/*
-	# - mkdir config
-	# - cp -r downstream-config/* config/
 	# fix the cert 
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
 	# clean up the other files
