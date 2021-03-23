@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
 )
 
 var errTest = errors.New("test error")

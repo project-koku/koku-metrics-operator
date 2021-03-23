@@ -21,7 +21,7 @@ package crhchttp
 
 import (
 	"github.com/go-logr/logr"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,7 +29,7 @@ import (
 type AuthConfig struct {
 	Client            client.Client
 	ClusterID         string
-	Authentication    kokumetricscfgv1beta1.AuthenticationType
+	Authentication    costmanagementmetricscfgv1beta1.AuthenticationType
 	BearerTokenString string
 	BasicAuthUser     string
 	BasicAuthPassword string

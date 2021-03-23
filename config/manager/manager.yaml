@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - command:
-        - /manager
+        - /home/costmanagement-metrics-operator/bin/costmanagement-metrics-operator
         args:
         - --enable-leader-election
         image: controller:latest
@@ -45,9 +45,9 @@ spec:
             memory: 20Mi
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
-        - mountPath: /tmp/koku-metrics-operator-reports
-          name: koku-metrics-operator-reports
-      serviceAccountName: koku-metrics-manager-role
+        - mountPath: /tmp/costmanagement-metrics-operator-reports
+          name: costmanagement-metrics-operator-reports
+      serviceAccountName: costmanagement-metrics-manager-role
       terminationGracePeriodSeconds: 10
       volumes:
-        - name: koku-metrics-operator-reports
+        - name: costmanagement-metrics-operator-reports

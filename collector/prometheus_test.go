@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -316,35 +316,35 @@ func TestTestPrometheusConnection(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		kmCfg  *kokumetricscfgv1beta1.KokuMetricsConfig
+		kmCfg  *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig
 		status string
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "configuration",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "configuration",
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "connection",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			kmCfg:  &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{},
 			status: "connection",
 			want:   false,
 			err:    errTest,
@@ -494,7 +494,7 @@ func TestGetPromConn(t *testing.T) {
 					os.Remove(toke)
 				}()
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
 			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
@@ -521,7 +521,7 @@ func TestGetPrometheusConfig(t *testing.T) {
 		t.Fatalf("failed to get working dir: %v", err)
 	}
 	trueDef := true
-	kmCfg := &kokumetricscfgv1beta1.PrometheusSpec{
+	kmCfg := &costmanagementmetricscfgv1beta1.PrometheusSpec{
 		SvcAddress:          "svc-address",
 		SkipTLSVerification: &trueDef,
 	}

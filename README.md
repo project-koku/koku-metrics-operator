@@ -1,12 +1,12 @@
-# koku-metrics-operator
+# costmanagement-metrics-operator
 
-[![License: AGPL v3](https://img.shields.io/github/license/project-koku/koku.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Docker Repository on Quay](https://quay.io/repository/project-koku/koku-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-koku/koku-metrics-operator)
-[![Unit Tests](https://github.com/project-koku/koku-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-koku/koku-metrics-operator/actions?query=branch%3Amaster+workflow%3A%22Unit+Tests%22)
+[![License: AGPL v3](https://img.shields.io/github/license/project-costmanagement/costmanagement.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Docker Repository on Quay](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator)
+[![Unit Tests](https://github.com/project-costmanagement/costmanagement-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-costmanagement/costmanagement-metrics-operator/actions?query=branch%3Amaster+workflow%3A%22Unit+Tests%22)
 
 ## About
 
-Operator to obtain OCP usage data and upload it to koku. The operator utilizes [Golang](http://golang.org/) to collect usage data from an OCP cluster installation.
+Operator to obtain OCP usage data and upload it to costmanagement. The operator utilizes [Golang](http://golang.org/) to collect usage data from an OCP cluster installation.
 
 You must have access to an OpenShift v.4.5+ cluster.
 
@@ -19,10 +19,10 @@ More specific documentation for local development can be found [here](docs/local
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
-This project requires Go 1.13 or greater if you plan on running the operator locally. To get started developing against `koku-metrics-operator` first clone a local copy of the git repository.
+This project requires Go 1.13 or greater if you plan on running the operator locally. To get started developing against `costmanagement-metrics-operator` first clone a local copy of the git repository.
 
 ```
-git clone https://github.com/project-koku/koku-metrics-operator.git
+git clone https://github.com/project-costmanagement/costmanagement-metrics-operator.git
 ```
 
 Run the following command to prevent changes to `config/manager/kustomization.yaml` from being committed to the repo:
@@ -68,7 +68,7 @@ make test
 
 ## Deploying the Operator
 
-First, create the `koku-metrics-operator` project. This is where we are going to deploy our Operator.
+First, create the `costmanagement-metrics-operator` project. This is where we are going to deploy our Operator.
 
 Before running the operator, the CRD must be registered with the Kubernetes apiserver:
 
@@ -113,37 +113,37 @@ Build the image:
 ```sh
 $ export USERNAME=<quay-username>
 
-$ make docker-build IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
+$ make docker-build IMG=quay.io/$USERNAME/costmanagement-metrics-operator:v0.0.1
 ```
 
 Push the image to a repository and make sure to set the repository to public:
 
 ```sh
-$ make docker-push IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
+$ make docker-push IMG=quay.io/$USERNAME/costmanagement-metrics-operator:v0.0.1
 ```
 **Note**:
 The name and tag of the image (`IMG=<some-registry>/<project-name>:tag`) in both the commands can also be set in the Makefile. Modify the line which has `IMG ?= controller:latest` to set your desired default image name.
 
-Branches of the repository are built automaticaly [here](https://quay.io/repository/project-koku/koku-metrics-operator).
+Branches of the repository are built automaticaly [here](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator).
 
 
 #### Deploy the operator
 
 
 ```sh
-$ cd config/default/ && kustomize edit set namespace "koku-metrics-operator" && cd ../..
+$ cd config/default/ && kustomize edit set namespace "costmanagement-metrics-operator" && cd ../..
 ```
 
 Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.
 
 ```sh
-$ make deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
+$ make deploy IMG=quay.io/$USERNAME/costmanagement-metrics-operator:v0.0.1
 ```
 
 You can optionally build, push, and deploy the image all at the same time by running:
 
 ```sh
-$ make build-and-deploy IMG=quay.io/$USERNAME/koku-metrics-operator:v0.0.1
+$ make build-and-deploy IMG=quay.io/$USERNAME/costmanagement-metrics-operator:v0.0.1
 ```
 
 You can also optionally substitute the USER arg for the IMG arg above for the build & deploy commands. Run `make help` to see all of the options.
@@ -156,7 +156,7 @@ If your current branch has been pushed to the origin repository then you can dep
 $ make deploy-branch
 ```
 
-Verify that the koku-metrics-operator is up and running:
+Verify that the costmanagement-metrics-operator is up and running:
 
 ```console
 $ oc get deployment
@@ -176,12 +176,12 @@ Create the CR with basic authentication specifying a username and password:
 $ make deploy-cr USER=$YOUR_USERNAME PASS=$YOUR_PASSWORD AUTH=basic
 ```
 
-Review the logs for the Koku Metrics operator.
+Review the logs for the CostManagementMetrics operator.
 
 ### Cleanup
 
 ```sh
-$ oc delete -f config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+$ oc delete -f config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 $ oc delete deployments,service -l control-plane=controller-manager
 $ oc delete role,rolebinding --all
 ```

@@ -1,3 +1,9 @@
+# Downstream Args
+REMOVE_FILES = koku-metrics-operator/ docs/
+UPSTREAM_LOWERCASE = koku
+UPSTREAM_UPPERCASE = Koku 
+DOWNSTREAM_LOWERCASE = costmanagement
+DOWNSTREAM_UPPERCASE = CostManagement
 # Current Operator version
 PREVIOUS_VERSION ?= 0.9.4
 VERSION ?= 0.9.5
@@ -281,3 +287,22 @@ test-catalog:
 # Push the test-catalog
 test-catalog-push:
 	docker push ${CATALOG_IMG}
+
+# sed replace the files to change the api 
+upstream:
+	rm -rf $(REMOVE_FILES)
+	# sed replace everything but the Makefile
+	- find . -type f -not -name "Makefile" -not -name "config" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- find . -type f -not -name "Makefile" -not -name "config" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	go mod tidy
+	go mod vendor
+	# fix the cert 
+	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
+	# clean up the other files
+	- git clean -fx
+	# mv the sample to the correctly named file 
+	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+
+deploy-user-scratch: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/scratchbuild:latest
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
