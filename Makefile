@@ -1,5 +1,5 @@
 # Downstream Args
-REMOVE_FILES = koku-metrics-operator/ README.md
+REMOVE_FILES = koku-metrics-operator/ docs/
 UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku 
 DOWNSTREAM_LOWERCASE = costmanagement
