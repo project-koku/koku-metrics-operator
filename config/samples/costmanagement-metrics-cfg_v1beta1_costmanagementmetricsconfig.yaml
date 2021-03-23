@@ -1,0 +1,18 @@
+apiVersion: costmanagement-metrics-cfg.openshift.io/v1beta1
+kind: CostManagementMetricsConfig
+metadata:
+  name: costmanagementmetricscfg-sample-v1beta1
+spec:
+  authentication:
+    type: token
+  packaging:
+    max_reports_to_store: 30
+    max_size_MB: 100
+  prometheus_config: {}
+  source:
+    name: INSERT-SOURCE-NAME
+    check_cycle: 1440
+    create_source: false
+  upload:
+    upload_cycle: 360
+    upload_toggle: true

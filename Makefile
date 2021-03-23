@@ -1,5 +1,5 @@
 # Downstream Args
-REMOVE_FILES = koku-metrics-operator/
+REMOVE_FILES = koku-metrics-operator/ README.md
 UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku 
 DOWNSTREAM_LOWERCASE = costmanagement
@@ -300,6 +300,8 @@ upstream:
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
 	# clean up the other files
 	- git clean -fx
+	# mv the sample to the correctly named file 
+	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 deploy-user-scratch: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/scratchbuild:latest
