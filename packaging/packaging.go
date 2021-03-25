@@ -57,6 +57,7 @@ type FilePackager struct {
 }
 
 const timestampFormat = "20060102T150405"
+const parseFormat = "2006-01-02 15:04:05.999999999 -0700 MST"
 
 // Define the global variables
 const megaByte int64 = 1024 * 1024
@@ -278,7 +279,9 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 		return fmt.Errorf("getStartEnd: error reading file: %v", err)
 	}
 	startInterval := firstLine[startIndex]
-	p.start, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", startInterval)
+	if p.start, err = time.Parse(parseFormat, startInterval); err != nil {
+		return fmt.Errorf("parse start-date time error: %v", err)
+	}
 	// need to grab the last line in the file to get the last interval end
 	allLines, err := csvReader.ReadAll()
 	if err != nil {
@@ -286,7 +289,9 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	}
 	lastLine := allLines[len(allLines)-1]
 	endInterval := lastLine[endIndex]
-	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
+	if p.end, err = time.Parse(parseFormat, endInterval); err != nil {
+		return fmt.Errorf("parse end-date time error: %v", err)
+	}
 	return nil
 }
 
@@ -470,6 +475,12 @@ func (p *FilePackager) PackageReports() error {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
+	}
+	// ensure start and end dates are populated:
+	if p.start.IsZero() || p.end.IsZero() {
+		return fmt.Errorf(
+			"invalid start or end times: start: %s | end: %s", p.start.Format(parseFormat), p.end.Format(parseFormat),
+		)
 	}
 	// check if the files need to be split
 	log.Info("checking to see if the report files need to be split")

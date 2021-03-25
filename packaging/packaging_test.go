@@ -119,7 +119,7 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
 	tempDir, err := ioutil.TempDir(dir, pattern)
 	if err != nil {
-		t.Fatalf("Failed to create temp folder.")
+		t.Fatalf("Failed to create temp folder: %v", err)
 	}
 	setPerm(t, mode, tempDir)
 	return tempDir
@@ -496,6 +496,49 @@ func TestPackagingReports(t *testing.T) {
 	}
 }
 
+func TestPackagingReportsBadFiles(t *testing.T) {
+	tests := []struct {
+		name string
+		file string
+		err  error
+	}{
+		{
+			name: "missing-pod-file",
+			file: "bad-csv.csv",
+			err:  errTest,
+		},
+		{
+			name: "csv-missing-info",
+			file: "ocp_pod_missing_end.csv",
+			err:  errTest,
+		},
+	}
+	for _, tt := range tests {
+		// using tt.name from the case to use it as the `t.Run` test name
+		t.Run(tt.name, func(t *testing.T) {
+			// lots of setup
+			tempDir := getTempDir(t, 0777, "./test_files", "")
+			defer os.RemoveAll(tempDir)
+			dirCfg := genDirCfg(t, tempDir)
+			filesrc := filepath.Join("test_files", tt.file)
+			filedst := filepath.Join(dirCfg.Reports.Path, tt.file)
+			if _, err := Copy(0777, filesrc, filedst); err != nil {
+				t.Fatalf("failed to copy file to temp folder: %v", err)
+			}
+			ten := int64(10)
+			kmc := &kokumetricscfgv1beta1.KokuMetricsConfig{Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{Packaging: kokumetricscfgv1beta1.PackagingStatus{MaxSize: &ten}}}
+			testPackager := FilePackager{Log: testLogger, KMCfg: kmc, DirCfg: dirCfg}
+
+			// actual test
+			got := testPackager.PackageReports()
+			t.Logf("%s output: %v", tt.name, got.Error())
+			if got == nil {
+				t.Errorf("%s expected error but got nil", tt.name)
+			}
+		})
+	}
+}
+
 func TestGetAndRenderManifest(t *testing.T) {
 	// set up the tests to check the manifest contents
 	getAndRenderManifestTests := []struct {
@@ -590,8 +633,8 @@ func TestGetAndRenderManifest(t *testing.T) {
 			manifestDate := metav1.Now()
 
 			// getting the start and end time from the ocp_pod_label test csv
-			startTime, _ := time.Parse("2006-01-02 15:04:05", strings.Split("2021-01-05 18:00:00", " +")[0])
-			endTime, _ := time.Parse("2006-01-02 15:04:05", strings.Split("2021-01-07 18:59:59", " +")[0])
+			startTime, _ := time.Parse("2006-01-02 15:04:05", "2021-01-05 18:00:00")
+			endTime, _ := time.Parse("2006-01-02 15:04:05", "2021-01-07 18:59:59")
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
 				ClusterID: testPackager.KMCfg.Status.ClusterID,
@@ -631,6 +674,58 @@ func TestGetAndRenderManifest(t *testing.T) {
 			}
 			if len(foundManifest.Files) != len(expectedFiles) {
 				t.Errorf("%s manifest filelist length does not match. Expected %d, got %d", tt.name, len(foundManifest.Files), len(expectedFiles))
+			}
+		})
+	}
+}
+
+func TestGetStartEnd(t *testing.T) {
+	tests := []struct {
+		name       string
+		file       string
+		err        error
+		errSnippet string
+	}{
+		{
+			name: "no-parse-errors",
+			file: "ocp_pod_label.csv",
+			err:  nil,
+		},
+		{
+			name:       "missing-header-errors",
+			file:       "ocp_pod_missing_header.csv",
+			err:        errTest,
+			errSnippet: "could not index",
+		},
+		{
+			name:       "missing-start-errors",
+			file:       "ocp_pod_missing_start.csv",
+			err:        errTest,
+			errSnippet: "cannot parse",
+		},
+		{
+			name:       "missing-end-errors",
+			file:       "ocp_pod_missing_end.csv",
+			err:        errTest,
+			errSnippet: "cannot parse",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename := filepath.Join("test_files", tt.file)
+			testPackager := FilePackager{}
+			got := testPackager.getStartEnd(filename)
+			t.Logf("%s output: %v", tt.name, got)
+			if got != nil && tt.err == nil {
+				t.Errorf("%s got %v error, expected %v", tt.name, got, tt.err)
+			}
+			if got == nil && tt.err != nil {
+				t.Errorf("%s got %v error, expected %v", tt.name, got, tt.err)
+			}
+			if tt.errSnippet != "" {
+				if !strings.Contains(got.Error(), tt.errSnippet) {
+					t.Errorf("%s: expected substring `%s` in `%s`", tt.name, tt.errSnippet, got.Error())
+				}
 			}
 		})
 	}
