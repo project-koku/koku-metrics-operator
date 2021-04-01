@@ -190,16 +190,17 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
 ## Create a source
 In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the cloud.redhat.com platform, open the [Sources menu](https://cloud.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
 
+Prerequisites:
+* The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
+
+Create source:
 1. Navigate to the Sources menu
 2. Select the `Red Hat sources` tab
-3. Click `Add source` to open the Sources wizard.
-4. Enter a name for the source and click `Next`.
-5. Select `Red Hat Openshift Container Platform` as the source type and Cost Management as the application. Click `Next`.
-6. Enter the cluster identifier into the cloud.redhat.com Sources wizard, and click `Next`.
-
-    **Note:** The cluster identifier can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
-
-7. In the cloud.redhat.com Sources wizard, review the details and click `Finish` to create the Source.
+3. Create a new `Red Hat Openshift Container Platform` source:
+    * give the source a unique name
+    * add the Cost Management application
+    * add the cluster identifier
+4. In the Sources wizard, review the details and click `Finish` to create the Source.
 
 ## Upload the reports to cost managment
 Uploading reports to cost managment is done through curl:
