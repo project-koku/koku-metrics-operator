@@ -289,7 +289,7 @@ test-catalog-push:
 	docker push ${CATALOG_IMG}
 
 # sed replace the files to change the api 
-upstream:
+downstream:
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
 	- find . -type f -not -name "Makefile" -not -name "config" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
