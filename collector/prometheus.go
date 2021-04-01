@@ -196,7 +196,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := c.Log.WithValues("kokumetricsconfig", "getQueryResults")
 	for _, query := range *queries {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 		defer cancel()
 
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
