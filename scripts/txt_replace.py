@@ -14,13 +14,13 @@ def check_version(v_tup):
         exit()
     split = new.split(".")
     if len(split) != 3:
-        print("expect version format: X.Y.Z\nactual version format: %s" % v)
+        print("expect version format: X.Y.Z\nactual version format: %s" % new)
         exit()
     for value in split:
         try:
             int(value)
         except ValueError:
-            print("expect version format: X.Y.Z\nactual version format: %s" % v)
+            print("expect version format: X.Y.Z\nactual version format: %s" % split)
             exit()
 
 def replace(file_path, pattern, subst):
@@ -42,7 +42,7 @@ def fix_csv(version_tuple):
     # all the replacements that will be made in the CSV
     replacements = {
         "0001-01-01T00:00:00Z": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
-        "INSERT-CONTAINER-IMAGE": f"quay.io/project-costmanagement/costmanagement-metrics-operator:v{version}",
+        "INSERT-CONTAINER-IMAGE": f"{sha}",
         "INSERT-DESCRIPTION": "|-\n    " + description,
         "name: Red Hat": f"name: Red Hat\n  replaces: costmanagement-metrics-operator.v{previous}",
         "type: AllNamespaces": f"type: AllNamespaces\n  relatedImages:\n    - name: costmanagement-metrics-operator\n      image: {sha}"
