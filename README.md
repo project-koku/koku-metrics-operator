@@ -12,6 +12,23 @@ You must have access to an OpenShift v.4.5+ cluster.
 
 To submit an issue please visit https://issues.redhat.com/projects/COST/
 
+## Syncing the upstream with the downstream
+
+To incorporate changes from the upstream branch (master) into the downstream branch (downstream), complete the following steps.
+
+1. Create a branch from the downstream, pull in the changes from master, and run the conversion command: 
+
+    ```
+    git checkout downstream
+    git pull
+    git checkout -b new-branch
+    git branch --set-upstream-to=origin/master 
+    git pull
+    make downstream
+
+    ```
+
+2. Resolve any conflicts and submit a PR against the downstream branch. 
 
 ## Development
 
