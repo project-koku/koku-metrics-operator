@@ -141,7 +141,7 @@ var (
 	podQueries = &querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
-			QueryString: "sum(kube_pod_container_resource_limits_cpu_cores) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_limits{resource='cpu'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
@@ -153,7 +153,7 @@ var (
 		},
 		query{
 			Name:        "pod-limit-memory-bytes",
-			QueryString: "sum(kube_pod_container_resource_limits_memory_bytes) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_limits{resource='memory'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
@@ -165,7 +165,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-cpu-cores",
-			QueryString: "sum(kube_pod_container_resource_requests_cpu_cores) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_requests{resource='cpu'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
@@ -177,7 +177,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-memory-bytes",
-			QueryString: "sum(kube_pod_container_resource_requests_memory_bytes) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_requests{resource='memory'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
