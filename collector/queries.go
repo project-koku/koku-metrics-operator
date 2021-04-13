@@ -30,7 +30,7 @@ var (
 	nodeQueries = &querys{
 		query{
 			Name:        "node-allocatable-cpu-cores",
-			QueryString: "kube_node_status_allocatable_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			QueryString: "kube_node_status_allocatable{resource='cpu'} * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-cpu-cores",
@@ -42,7 +42,7 @@ var (
 		},
 		query{
 			Name:        "node-allocatable-memory-bytes",
-			QueryString: "kube_node_status_allocatable_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			QueryString: "kube_node_status_allocatable{resource='memory'} * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-memory-bytes",
@@ -54,7 +54,7 @@ var (
 		},
 		query{
 			Name:        "node-capacity-cpu-cores",
-			QueryString: "kube_node_status_capacity_cpu_cores * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			QueryString: "kube_node_status_capacity{resource='cpu'} * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-cpu-cores",
@@ -66,7 +66,7 @@ var (
 		},
 		query{
 			Name:        "node-capacity-memory-bytes",
-			QueryString: "kube_node_status_capacity_memory_bytes * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+			QueryString: "kube_node_status_capacity{resource='memory'} * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-memory-bytes",
