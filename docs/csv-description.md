@@ -1,4 +1,4 @@
-# v0.9.5 Koku Metrics Operator
+# Koku Metrics Operator
 ## Introduction
 The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/getting_started_with_cost_management/assembly_introduction_cost_management) service for Openshift, used to gather the required information from the cluster. It is recommended to be installed in OpenShift 4.5+. This operator obtains OpenShift usage data by querying Prometheus and uploads it to cost management to be processed. The Operator queries Prometheus every hour to create metric reports, which are then packaged and uploaded to cost management at [cloud.redhat.com](https://cloud.redhat.com). For more information, reach out to <costmanagement@redhat.com>.
 
