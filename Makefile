@@ -5,8 +5,8 @@ UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.5
-VERSION ?= 0.9.6
+PREVIOUS_VERSION ?= 0.9.6
+VERSION ?= 0.9.7
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
