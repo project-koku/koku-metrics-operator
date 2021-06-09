@@ -1,6 +1,6 @@
 # koku-metrics-operator
 
-[![License: AGPL v3](https://img.shields.io/github/license/project-koku/koku.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: Apache-2.0](https://img.shields.io/github/license/project-koku/koku.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Docker Repository on Quay](https://quay.io/repository/project-koku/koku-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-koku/koku-metrics-operator)
 [![Unit Tests](https://github.com/project-koku/koku-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-koku/koku-metrics-operator/actions?query=branch%3Amaster+workflow%3A%22Unit+Tests%22)
 
