@@ -101,6 +101,7 @@ var (
 		query{
 			Name:        "persistentvolumeclaim-usage-bytes",
 			QueryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
+			MetricKey:   staticFields{"node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-usage-bytes",
 				Method:          "sum",
