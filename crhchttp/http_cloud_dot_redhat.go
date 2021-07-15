@@ -46,6 +46,8 @@ var DefaultTransport = &http.Transport{
 	ExpectContinueTimeout: 1 * time.Second,
 }
 
+var delimeter = strings.Repeat("=", 100)
+
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -189,9 +191,7 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	_, err = ProcessResponse(log, resp)
-	logChar := "="
-	delimeter := strings.Repeat(logChar, 100)
+	resBody, err := ProcessResponse(log, resp)
 	log.Info("\n\n" + delimeter +
 		"\nmethod: " + resp.Request.Method +
 		"\nstatus: " + fmt.Sprint(resp.StatusCode) +
@@ -201,20 +201,9 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 		"\nFiles included: " + fmt.Sprint(fileInfo.UploadFiles) +
 		"\nManifest ID: " + fileInfo.ManifestID +
 		"\nCluster ID: " + fileInfo.ClusterID +
+		"\nAccount ID: " + string(resBody) +
 		"\n" + delimeter + "\n\n")
 
-	// if len(resBody) > 0 {
-	// 	var accountID map[string]string
-	// 	// accountID = make(map[string]string)
-	// 	json.Unmarshal([]byte(resBody), &accountID)
-	// 	// accountId := string(resBody)
-	// 	fmt.Println(reflect.TypeOf(accountID))
-	// 	fmt.Println(accountID)
-	// 	log.Info(string(resBody))
-	// 	log.Info("right here!")
-	// 	fmt.Println(accountID["upload"])
-	// 	log.Info(accountID["upload"])
-	// }
 	if err != nil {
 		return uploadStatus, currentTime, resp.Header.Get("x-rh-insights-request-id"), err
 	}

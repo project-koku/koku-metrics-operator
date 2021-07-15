@@ -88,6 +88,8 @@ type manifestInfo struct {
 	filename string
 }
 
+var fileInfo = make(map[string]FileMapping)
+
 // renderManifest writes the manifest
 func (m *manifestInfo) renderManifest() error {
 	// write the manifest file
@@ -169,13 +171,6 @@ func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter
 
 // writeTarball packages the files into tar balls
 func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error {
-	// create the file mapping
-	// log := p.Log.WithValues("kokumetricsconfig", "writeTarball")
-	// log.Info("\n\n\n***********************************")
-	// fileMap := FileMapping{}
-	// fileMap.tarName = tarFileName
-	// fileMap.manifestID = manifestFileName
-	// create the tarfile
 	tarFile, err := os.Create(tarFileName)
 	if err != nil {
 		return fmt.Errorf("writeTarball: error creating tar file: %v", err)
@@ -189,6 +184,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 	// add the files to the tarFile
 	var files []string
+	files = append(files, manifestFileName)
 	for idx, filePath := range archiveFiles {
 		if strings.HasSuffix(filePath, ".csv") {
 			uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
@@ -196,9 +192,10 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 			if err := p.addFileToTarWriter(uploadName, filePath, tw); err != nil {
 				return fmt.Errorf("writeTarball: failed to create tar file: %v", err)
 			}
+		} else {
+			files = append(files, filePath)
 		}
 	}
-	// fileMap.uploadFiles = files
 	fileName := strings.Split(tarFileName, "/upload/")[1]
 	fileMap := &FileMapping{
 		TarName:     fileName,
@@ -206,11 +203,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 		ClusterID:   p.KMCfg.Status.ClusterID,
 		UploadFiles: files,
 	}
-	// fileMapRender, _ := json.Marshal(fileMap)
-	// log.Info(string(fileMapRender))
-	// fmt.Println(string(fileMapRender))
-	// log.Info("***********************************\n\n\n\n")
-	p.Mapping = make(map[string]FileMapping)
+	p.Mapping = fileInfo
 	p.Mapping[fileName] = *fileMap
 	if err := p.addFileToTarWriter("manifest.json", manifestFileName, tw); err != nil {
 		return fmt.Errorf("writeTarball: failed to create tar file: %v", err)
