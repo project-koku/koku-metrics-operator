@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/project-koku/koku-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -170,18 +171,18 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
+func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileMapping) (string, metav1.Time, string, error) {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("could not setup the request: %v", err)
+		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
 
 	client := GetClient(authConfig)
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("could not send the request: %v", err)
+		return "", currentTime, "", fmt.Errorf("could not send the request: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -189,9 +190,34 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 	uploadTime := metav1.Now()
 
 	_, err = ProcessResponse(log, resp)
+	logChar := "="
+	delimeter := strings.Repeat(logChar, 100)
+	log.Info("\n\n" + delimeter +
+		"\nmethod: " + resp.Request.Method +
+		"\nstatus: " + fmt.Sprint(resp.StatusCode) +
+		"\nURL: " + fmt.Sprint(resp.Request.URL) +
+		"\nx-rh-insights-request-id: " + resp.Header.Get("x-rh-insights-request-id") +
+		"\nPackaged file name: " + fileInfo.TarName +
+		"\nFiles included: " + fmt.Sprint(fileInfo.UploadFiles) +
+		"\nManifest ID: " + fileInfo.ManifestID +
+		"\nCluster ID: " + fileInfo.ClusterID +
+		"\n" + delimeter + "\n\n")
+
+	// if len(resBody) > 0 {
+	// 	var accountID map[string]string
+	// 	// accountID = make(map[string]string)
+	// 	json.Unmarshal([]byte(resBody), &accountID)
+	// 	// accountId := string(resBody)
+	// 	fmt.Println(reflect.TypeOf(accountID))
+	// 	fmt.Println(accountID)
+	// 	log.Info(string(resBody))
+	// 	log.Info("right here!")
+	// 	fmt.Println(accountID["upload"])
+	// 	log.Info(accountID["upload"])
+	// }
 	if err != nil {
-		return uploadStatus, currentTime, err
+		return uploadStatus, currentTime, resp.Header.Get("x-rh-insights-request-id"), err
 	}
 
-	return uploadStatus, uploadTime, nil
+	return uploadStatus, uploadTime, resp.Header.Get("x-rh-insights-request-id"), nil
 }
