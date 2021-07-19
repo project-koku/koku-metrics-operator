@@ -473,7 +473,7 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		uploadInfo, exists := fileInfo[file]
 		if !exists {
 			log.Info("File information is missing. Cannot upload the file")
-			return nil
+			continue
 		}
 		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, uploadInfo)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
