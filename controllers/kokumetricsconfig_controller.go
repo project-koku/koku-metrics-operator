@@ -471,6 +471,10 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
 		uploadInfo, exists := fileInfo[file]
+		if !exists {
+			log.Info("File information is missing. Cannot upload the file")
+			return nil
+		}
 		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, uploadInfo)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
 		kmCfg.Status.Upload.LastPayloadName = uploadInfo.TarName
@@ -486,9 +490,7 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		if strings.Contains(uploadStatus, "202") {
 			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
-			if exists {
-				delete(fileInfo, file)
-			}
+			delete(fileInfo, file)
 			log.Info("removing tar file since upload was successful")
 			if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
 				log.Error(err, "error removing tar file")
