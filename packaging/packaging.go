@@ -192,8 +192,6 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 			if err := p.addFileToTarWriter(uploadName, filePath, tw); err != nil {
 				return fmt.Errorf("writeTarball: failed to create tar file: %v", err)
 			}
-		} else {
-			files = append(files, filePath)
 		}
 	}
 	fileName := strings.Split(tarFileName, "/upload/")[1]
