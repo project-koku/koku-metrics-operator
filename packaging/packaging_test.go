@@ -916,7 +916,13 @@ func TestGetFileInfo(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name:             "test raising an error",
+			name:             "test bad tar file",
+			tarFileName:      "badfile.tar.gz",
+			expectedManifest: FileInfoManifest{},
+			expectErr:        true,
+		},
+		{
+			name:             "test nonexistent tar",
 			tarFileName:      "nonexistent.tar.gz",
 			expectedManifest: FileInfoManifest{},
 			expectErr:        true,
