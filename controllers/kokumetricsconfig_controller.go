@@ -6,9 +6,13 @@
 package controllers
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -432,7 +436,49 @@ func packageFiles(p *packaging.FilePackager) {
 	}
 }
 
-func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, fileInfo map[string]packaging.FileMapping) error {
+func getFileInfo(r *KokuMetricsConfigReconciler, file string) (map[string]interface{}, error) {
+	log := r.Log.WithValues("kokumetricsconfig", "getFileInfo")
+	fileInfo := map[string]interface{}{}
+	openFile, err := os.Open(file)
+	if err != nil {
+		log.Info("Could not open tar.gz")
+		return fileInfo, err
+	}
+	archive, err := gzip.NewReader(openFile)
+	if err != nil {
+		log.Info("Could not read the tar.gz")
+		return fileInfo, err
+	}
+	tr := tar.NewReader(archive)
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fileInfo, err
+		}
+		if hdr.Name != "manifest.json" {
+			continue
+		}
+		//Using a bytes buffer is an important part to print the values as a string
+		buff := new(bytes.Buffer)
+		_, err = buff.ReadFrom(tr)
+		if err != nil {
+			log.Info("Could not read from the buffer.")
+			return fileInfo, err
+		}
+		s := buff.String()
+		if err := json.Unmarshal([]byte(s), &fileInfo); err != nil {
+			log.Info("Could not load the manifest json.")
+			return fileInfo, err
+		}
+	}
+	return fileInfo, nil
+}
+
+func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
 	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
 
 	// if its time to upload/package
@@ -462,6 +508,16 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		if !strings.Contains(file, "tar.gz") {
 			continue
 		}
+		manifestInfo, err := getFileInfo(r, filepath.Join(dirCfg.Upload.Path, file))
+		if err != nil {
+			log.Error(err, "Could not read file information from tar.gz")
+			continue
+		}
+		var stringFiles []string
+		files := manifestInfo["files"].([]interface{})
+		for _, i := range files {
+			stringFiles = append(stringFiles, i.(string))
+		}
 		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
 		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
@@ -470,16 +526,11 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 			return err
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
-		uploadInfo, exists := fileInfo[file]
-		if !exists {
-			log.Info("File information is missing. Cannot upload the file")
-			continue
-		}
-		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, uploadInfo)
+		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file, stringFiles)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
-		kmCfg.Status.Upload.LastPayloadName = uploadInfo.TarName
-		kmCfg.Status.Upload.LastPayloadFiles = uploadInfo.UploadFiles
-		kmCfg.Status.Upload.LastPayloadManifestID = uploadInfo.ManifestID
+		kmCfg.Status.Upload.LastPayloadName = file
+		kmCfg.Status.Upload.LastPayloadFiles = stringFiles
+		kmCfg.Status.Upload.LastPayloadManifestID = manifestInfo["uuid"].(string)
 		kmCfg.Status.Upload.LastPayloadRequestID = requestID
 		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
@@ -490,7 +541,6 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		if strings.Contains(uploadStatus, "202") {
 			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
-			delete(fileInfo, file)
 			log.Info("removing tar file since upload was successful")
 			if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
 				log.Error(err, "error removing tar file")
@@ -694,7 +744,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 			checkSource(r, sSpec, kmCfg)
 
 			// attempt upload
-			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager.Mapping); err != nil {
+			if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
 				result = ctrl.Result{}
 				errors = append(errors, err)
 			}

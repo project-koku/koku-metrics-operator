@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/project-koku/koku-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -173,7 +172,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileMapping) (string, metav1.Time, string, error) {
+func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo map[string]interface{}, file string, stringFiles []string) (string, metav1.Time, string, error) {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
@@ -197,10 +196,10 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 		"\nstatus: " + fmt.Sprint(resp.StatusCode) +
 		"\nURL: " + fmt.Sprint(resp.Request.URL) +
 		"\nx-rh-insights-request-id: " + resp.Header.Get("x-rh-insights-request-id") +
-		"\nPackaged file name: " + fileInfo.TarName +
-		"\nFiles included: " + fmt.Sprint(fileInfo.UploadFiles) +
-		"\nManifest ID: " + fileInfo.ManifestID +
-		"\nCluster ID: " + fileInfo.ClusterID +
+		"\nPackaged file name: " + file +
+		"\nFiles included: " + fmt.Sprint(stringFiles) +
+		"\nManifest ID: " + fileInfo["uuid"].(string) +
+		"\nCluster ID: " + fileInfo["cluster_id"].(string) +
 		"\nAccount ID: " + string(resBody) +
 		"\n" + delimeter + "\n\n")
 
