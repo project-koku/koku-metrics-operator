@@ -893,8 +893,6 @@ func TestSplitFiles(t *testing.T) {
 }
 
 func TestGetFileInfo(t *testing.T) {
-	// tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
-	// defer os.RemoveAll(tmpDir)
 	files := []string{
 		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.0.csv",
 		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.1.csv",
