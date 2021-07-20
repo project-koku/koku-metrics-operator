@@ -161,6 +161,8 @@ func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter
 
 // writeTarball packages the files into tar balls
 func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error {
+
+	// create the tarfile
 	tarFile, err := os.Create(tarFileName)
 	if err != nil {
 		return fmt.Errorf("writeTarball: error creating tar file: %v", err)
