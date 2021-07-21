@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/project-koku/koku-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -44,6 +45,8 @@ var DefaultTransport = &http.Transport{
 	TLSHandshakeTimeout:   10 * time.Second,
 	ExpectContinueTimeout: 1 * time.Second,
 }
+
+var delimeter = strings.Repeat("=", 100)
 
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
@@ -170,28 +173,40 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
+func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
 	log := authConfig.Log.WithValues("kokumetricsconfig", "Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("could not setup the request: %v", err)
+		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
 
 	client := GetClient(authConfig)
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("could not send the request: %v", err)
+		return "", currentTime, "", fmt.Errorf("could not send the request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	_, err = ProcessResponse(log, resp)
+	resBody, err := ProcessResponse(log, resp)
+	log.Info("\n\n" + delimeter +
+		"\nmethod: " + resp.Request.Method +
+		"\nstatus: " + fmt.Sprint(resp.StatusCode) +
+		"\nURL: " + fmt.Sprint(resp.Request.URL) +
+		"\nx-rh-insights-request-id: " + resp.Header.Get("x-rh-insights-request-id") +
+		"\nPackaged file name: " + file +
+		"\nFiles included: " + fmt.Sprint(fileInfo.Files) +
+		"\nManifest ID: " + fileInfo.UUID +
+		"\nCluster ID: " + fileInfo.ClusterID +
+		"\nAccount ID: " + string(resBody) +
+		"\n" + delimeter + "\n\n")
+
 	if err != nil {
-		return uploadStatus, currentTime, err
+		return uploadStatus, currentTime, resp.Header.Get("x-rh-insights-request-id"), err
 	}
 
-	return uploadStatus, uploadTime, nil
+	return uploadStatus, uploadTime, resp.Header.Get("x-rh-insights-request-id"), nil
 }

@@ -304,6 +304,18 @@ type UploadStatus struct {
 	// LastUploadStatus is a field of KokuMetricsConfig that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
+	// LastPayloadName is a field of KokuMetricsConfig that shows the name of the last payload file.
+	LastPayloadName string `json:"last_payload_name,omitempty"`
+
+	// LastPayloadManifest is a field of KokuMetricsConfig that shows the manifestID of the last payload.
+	LastPayloadManifestID string `json:"last_payload_manifest_id,omitempty"`
+
+	// LastPayloadRequestID is a field of KokuMetricsConfig that shows the insights request id of the last payload.
+	LastPayloadRequestID string `json:"last_payload_request_id,omitempty"`
+
+	// LastPayloadFiles is a field of KokuMetricsConfig to represent the list of files in the last payload that was sent.
+	LastPayloadFiles []string `json:"last_payload_files,omitempty"`
+
 	// LastSuccessfulUploadTime is a field of KokuMetricsConfig that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`

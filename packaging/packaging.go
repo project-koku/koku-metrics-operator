@@ -7,6 +7,7 @@ package packaging
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"encoding/csv"
 	"encoding/json"
@@ -75,6 +76,7 @@ type manifest struct {
 	End       time.Time `json:"end"`
 }
 
+type FileInfoManifest manifest
 type manifestInfo struct {
 	manifest Manifest
 	filename string
@@ -497,4 +499,47 @@ func (p *FilePackager) PackageReports() error {
 	log.Info("file packaging was successful")
 	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
+}
+
+func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
+	log := p.Log.WithValues("kokumetricsconfig", "getFileInfo")
+	fileInfo := FileInfoManifest{}
+	openFile, err := os.Open(file)
+	if err != nil {
+		log.Info("Could not open tar.gz")
+		return fileInfo, err
+	}
+	archive, err := gzip.NewReader(openFile)
+	if err != nil {
+		log.Info("Could not read the tar.gz")
+		return fileInfo, err
+	}
+	tr := tar.NewReader(archive)
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fileInfo, err
+		}
+		if hdr.Name != "manifest.json" {
+			continue
+		}
+		//Using a bytes buffer is an important part to print the values as a string
+		buff := new(bytes.Buffer)
+		_, err = buff.ReadFrom(tr)
+		if err != nil {
+			log.Info("Could not read from the buffer.")
+			return fileInfo, err
+		}
+		s := buff.String()
+		if err := json.Unmarshal([]byte(s), &fileInfo); err != nil {
+			log.Info("Could not load the manifest json.")
+			return fileInfo, err
+		}
+		break // exit `for` loop after processing the manifest.json
+	}
+	return fileInfo, nil
 }

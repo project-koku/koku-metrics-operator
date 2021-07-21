@@ -447,6 +447,11 @@ func (in *UploadStatus) DeepCopyInto(out *UploadStatus) {
 		*out = new(int64)
 		**out = **in
 	}
+	if in.LastPayloadFiles != nil {
+		in, out := &in.LastPayloadFiles, &out.LastPayloadFiles
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.LastSuccessfulUploadTime.DeepCopyInto(&out.LastSuccessfulUploadTime)
 	if in.ValidateCert != nil {
 		in, out := &in.ValidateCert, &out.ValidateCert

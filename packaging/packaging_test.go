@@ -892,6 +892,65 @@ func TestSplitFiles(t *testing.T) {
 	}
 }
 
+func TestGetFileInfo(t *testing.T) {
+	files := []string{
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.0.csv",
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.1.csv",
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.2.csv",
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.3.csv",
+	}
+	fileInfoTests := []struct {
+		name             string
+		tarFileName      string
+		expectedManifest FileInfoManifest
+		expectErr        bool
+	}{
+		{
+			name:        "test good manifest",
+			tarFileName: "20210720T180121-cost-mgmt.tar.gz",
+			expectedManifest: FileInfoManifest{
+				ClusterID: "30d0669b-4d46-479d-accb-9784e9d129d8",
+				UUID:      "ff1c03d2-e303-4ab8-a8fc-d1267bf160d4",
+				Files:     files,
+			},
+			expectErr: false,
+		},
+		{
+			name:             "test bad tar file",
+			tarFileName:      "badfile.tar.gz",
+			expectedManifest: FileInfoManifest{},
+			expectErr:        true,
+		},
+		{
+			name:             "test nonexistent tar",
+			tarFileName:      "nonexistent.tar.gz",
+			expectedManifest: FileInfoManifest{},
+			expectErr:        true,
+		},
+	}
+	for _, tt := range fileInfoTests {
+		// using tt.name from the case to use it as the `t.Run` test name
+		t.Run(tt.name, func(t *testing.T) {
+			manifest, err := testPackager.GetFileInfo(filepath.Join("test_files/", tt.tarFileName))
+			if tt.expectErr && err == nil {
+				t.Errorf("%s expected an error but received nil", tt.name)
+			}
+			if !tt.expectErr && err != nil {
+				t.Errorf("%s did not expect error but got: %v", tt.name, err)
+			}
+			if manifest.ClusterID != tt.expectedManifest.ClusterID {
+				t.Errorf("%s expected %s as clusterID got %s", tt.name, tt.expectedManifest.ClusterID, manifest.ClusterID)
+			}
+			if manifest.UUID != tt.expectedManifest.UUID {
+				t.Errorf("%s expected %s as manifestID got %s", tt.name, tt.expectedManifest.UUID, manifest.UUID)
+			}
+			if len(manifest.Files) != len(tt.expectedManifest.Files) {
+				t.Errorf("%s expected %d files got %d files", tt.name, len(tt.expectedManifest.Files), len(manifest.Files))
+			}
+		})
+	}
+}
+
 func TestTrimPackages(t *testing.T) {
 	tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
 	defer os.RemoveAll(tmpDir)

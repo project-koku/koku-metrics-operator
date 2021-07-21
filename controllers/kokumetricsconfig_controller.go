@@ -432,7 +432,7 @@ func packageFiles(p *packaging.FilePackager) {
 	}
 }
 
-func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
+func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
 	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
 
 	// if its time to upload/package
@@ -462,6 +462,13 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		if !strings.Contains(file, "tar.gz") {
 			continue
 		}
+
+		manifestInfo, err := packager.GetFileInfo(filepath.Join(dirCfg.Upload.Path, file))
+		if err != nil {
+			log.Error(err, "Could not read file information from tar.gz")
+			continue
+		}
+
 		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
 		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
@@ -470,8 +477,12 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 			return err
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
-		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
+		kmCfg.Status.Upload.LastPayloadName = file
+		kmCfg.Status.Upload.LastPayloadFiles = manifestInfo.Files
+		kmCfg.Status.Upload.LastPayloadManifestID = manifestInfo.UUID
+		kmCfg.Status.Upload.LastPayloadRequestID = requestID
 		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
@@ -684,7 +695,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 			checkSource(r, sSpec, kmCfg)
 
 			// attempt upload
-			if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
+			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
 				result = ctrl.Result{}
 				errors = append(errors, err)
 			}
