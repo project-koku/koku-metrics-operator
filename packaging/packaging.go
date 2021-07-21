@@ -539,6 +539,7 @@ func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
 			log.Info("Could not load the manifest json.")
 			return fileInfo, err
 		}
+	break // exit `for` loop after processing the manifest.json
 	}
 	return fileInfo, nil
 }
