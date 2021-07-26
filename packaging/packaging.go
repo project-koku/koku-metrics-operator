@@ -62,18 +62,23 @@ var maxSplits int64 = 1000
 // ErrNoReports a "no reports" Error type
 var ErrNoReports = errors.New("reports not found")
 
+// Set boolean on whether community or certified
+var isCertified bool = false
+
 // Manifest interface
 type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string    `json:"uuid"`
-	ClusterID string    `json:"cluster_id"`
-	Version   string    `json:"version"`
-	Date      time.Time `json:"date"`
-	Files     []string  `json:"files"`
-	Start     time.Time `json:"start"`
-	End       time.Time `json:"end"`
+	UUID      string                                        `json:"uuid"`
+	ClusterID string                                        `json:"cluster_id"`
+	Version   string                                        `json:"version"`
+	Date      time.Time                                     `json:"date"`
+	Files     []string                                      `json:"files"`
+	Start     time.Time                                     `json:"start"`
+	End       time.Time                                     `json:"end"`
+	CR        kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr"`
+	Certified bool                                          `json:"certified"`
 }
 
 type FileInfoManifest manifest
@@ -107,7 +112,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc kokumetricscfgv1beta1.KokuMetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -124,6 +129,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 			Files:     manifestFiles,
 			Start:     p.start.UTC(),
 			End:       p.end.UTC(),
+			Certified: isCertified,
+			CR:        kmc.Status,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
@@ -466,7 +473,7 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(fileList, p.DirCfg.Staging.Path)
+	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.KMCfg)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)

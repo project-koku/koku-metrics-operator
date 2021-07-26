@@ -208,6 +208,11 @@ type KokuMetricsConfigSpec struct {
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
 
+	// ClusterVersion is a field of KokuMetricsConfig to represent the cluster version. Normally this value should not be
+	// specified. Only set this value if the clusterVersion cannot be obtained from the ClusterVersion.
+	// +optional
+	ClusterVersion string `json:"clusterVersion,omitempty"`
+
 	// FOR DEVELOPMENT ONLY.
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// The default is `https://cloud.redhat.com`.
@@ -420,6 +425,9 @@ type KokuMetricsConfigStatus struct {
 
 	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID.
 	ClusterID string `json:"clusterID,omitempty"`
+
+	// ClusterVersion is a field of KokuMetricsConfig to represent the cluster version.
+	ClusterVersion string `json:"clusterVersion,omitempty"`
 
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// +optional

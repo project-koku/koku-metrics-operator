@@ -552,7 +552,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 					t.Fatal("could not set start/end times")
 				}
 			}
-			testPackager.getManifest(csvFileNames, tt.dirName)
+			testPackager.getManifest(csvFileNames, tt.dirName, *testPackager.KMCfg)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -735,7 +735,7 @@ func TestWriteTarball(t *testing.T) {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
 			}
 			manifestName := tt.manifestName
-			testPackager.getManifest(csvFileNames, stagingDir)
+			testPackager.getManifest(csvFileNames, stagingDir, *testPackager.KMCfg)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}

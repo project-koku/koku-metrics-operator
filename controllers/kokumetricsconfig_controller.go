@@ -164,7 +164,7 @@ func GetClientset() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-// GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
+// GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
 func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
@@ -176,6 +176,9 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
 	if clusterVersion.Spec.ClusterID != "" {
 		kmCfg.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
+	}
+	if clusterVersion.Spec.Channel != "" {
+		kmCfg.Status.ClusterVersion = string(clusterVersion.Spec.Channel)
 	}
 	return nil
 }
