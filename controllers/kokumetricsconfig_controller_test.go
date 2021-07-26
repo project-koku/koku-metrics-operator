@@ -32,6 +32,7 @@ var (
 	namespace                   = "koku-metrics-operator"
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
+	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
 	authSecretName              = "cloud-dot-redhat"
 	authMixedCaseName           = "mixed-case"
@@ -340,6 +341,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.ClusterVersion).To(Equal(channel))
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
@@ -859,7 +861,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 		It("should attempt upload due to tar.gz being present", func() {
 			err := setup()
 			Expect(err, nil)
-			createClusterVersion(ctx, clusterID)
+			createClusterVersion(ctx, clusterID, channel)
 			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 

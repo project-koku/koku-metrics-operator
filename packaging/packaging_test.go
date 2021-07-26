@@ -581,6 +581,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
 				ClusterID: testPackager.KMCfg.Status.ClusterID,
+				CRStatus:  testPackager.KMCfg.Status,
 				Version:   testPackager.KMCfg.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
 				Files:     expectedFiles,
@@ -602,6 +603,9 @@ func TestGetAndRenderManifest(t *testing.T) {
 				t.Errorf(errorMsg, expectedManifest.Start, foundManifest.Start)
 			}
 			if foundManifest.End != expectedManifest.End {
+				t.Errorf(errorMsg, expectedManifest.End, foundManifest.End)
+			}
+			if foundManifest.CRStatus.Upload.UploadToggle != expectedManifest.CRStatus.Upload.UploadToggle {
 				t.Errorf(errorMsg, expectedManifest.End, foundManifest.End)
 			}
 			for _, file := range expectedFiles {
