@@ -231,11 +231,12 @@ func createNamespace(ctx context.Context, namespace string) {
 	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 }
 
-func createClusterVersion(ctx context.Context, clusterID string) {
+func createClusterVersion(ctx context.Context, clusterID string, channel string) {
 	instance := &configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Spec: configv1.ClusterVersionSpec{
 			ClusterID: configv1.ClusterID(clusterID),
+			Channel:   channel,
 		},
 	}
 	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
@@ -372,7 +373,7 @@ func clusterPrep(ctx context.Context) {
 		createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
 		// Create cluster version
-		createClusterVersion(ctx, clusterID)
+		createClusterVersion(ctx, clusterID, channel)
 	}
 }
 

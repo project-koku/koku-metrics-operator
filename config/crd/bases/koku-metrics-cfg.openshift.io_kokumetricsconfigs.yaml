@@ -70,6 +70,12 @@ spec:
                   the cluster UUID. Normally this value should not be specified. Only
                   set this value if the clusterID cannot be obtained from the ClusterVersion.
                 type: string
+              clusterVersion:
+                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                  the cluster version. Normally this value should not be specified.
+                  Only set this value if the clusterVersion cannot be obtained from
+                  the ClusterVersion.
+                type: string
               packaging:
                 description: Packaging is a field of KokuMetricsConfig to represent
                   the packaging object.
@@ -416,6 +422,10 @@ spec:
               clusterID:
                 description: ClusterID is a field of KokuMetricsConfig to represent
                   the cluster UUID.
+                type: string
+              clusterVersion:
+                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                  the cluster version.
                 type: string
               operator_commit:
                 description: OperatorCommit is a field of KokuMetricsConfig that shows
