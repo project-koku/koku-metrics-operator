@@ -77,7 +77,7 @@ type manifest struct {
 	Files     []string                                      `json:"files"`
 	Start     time.Time                                     `json:"start"`
 	End       time.Time                                     `json:"end"`
-	CR        kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr"`
+	CRStatus  kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
 	Certified bool                                          `json:"certified"`
 }
 
@@ -130,7 +130,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string,
 			Start:     p.start.UTC(),
 			End:       p.end.UTC(),
 			Certified: isCertified,
-			CR:        kmc.Status,
+			CRStatus:  kmc.Status,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
