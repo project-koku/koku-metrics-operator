@@ -298,7 +298,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 }
 
 func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	if kmCfg.Status.ClusterID == "" {
+	if kmCfg.Status.ClusterID == "" || kmCfg.Status.ClusterVersion == "" {
 		r.cvClientBuilder = cv.NewBuilder()
 		err := GetClusterID(r, kmCfg)
 		return err
