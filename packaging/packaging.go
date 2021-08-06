@@ -1,26 +1,13 @@
-/*
-
-
-Copyright 2020 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+//
+// Copyright 2021 Red Hat Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
 
 package packaging
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"encoding/csv"
 	"encoding/json"
@@ -75,20 +62,26 @@ var maxSplits int64 = 1000
 // ErrNoReports a "no reports" Error type
 var ErrNoReports = errors.New("reports not found")
 
+// Set boolean on whether community or certified
+var isCertified bool = false
+
 // Manifest interface
 type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string    `json:"uuid"`
-	ClusterID string    `json:"cluster_id"`
-	Version   string    `json:"version"`
-	Date      time.Time `json:"date"`
-	Files     []string  `json:"files"`
-	Start     time.Time `json:"start"`
-	End       time.Time `json:"end"`
+	UUID      string                                        `json:"uuid"`
+	ClusterID string                                        `json:"cluster_id"`
+	Version   string                                        `json:"version"`
+	Date      time.Time                                     `json:"date"`
+	Files     []string                                      `json:"files"`
+	Start     time.Time                                     `json:"start"`
+	End       time.Time                                     `json:"end"`
+	CRStatus  kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
+	Certified bool                                          `json:"certified"`
 }
 
+type FileInfoManifest manifest
 type manifestInfo struct {
 	manifest Manifest
 	filename string
@@ -119,7 +112,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc kokumetricscfgv1beta1.KokuMetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -136,6 +129,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string)
 			Files:     manifestFiles,
 			Start:     p.start.UTC(),
 			End:       p.end.UTC(),
+			Certified: isCertified,
+			CRStatus:  kmc.Status,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
@@ -478,7 +473,7 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(fileList, p.DirCfg.Staging.Path)
+	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.KMCfg)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -511,4 +506,47 @@ func (p *FilePackager) PackageReports() error {
 	log.Info("file packaging was successful")
 	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
+}
+
+func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
+	log := p.Log.WithValues("kokumetricsconfig", "getFileInfo")
+	fileInfo := FileInfoManifest{}
+	openFile, err := os.Open(file)
+	if err != nil {
+		log.Info("Could not open tar.gz")
+		return fileInfo, err
+	}
+	archive, err := gzip.NewReader(openFile)
+	if err != nil {
+		log.Info("Could not read the tar.gz")
+		return fileInfo, err
+	}
+	tr := tar.NewReader(archive)
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fileInfo, err
+		}
+		if hdr.Name != "manifest.json" {
+			continue
+		}
+		//Using a bytes buffer is an important part to print the values as a string
+		buff := new(bytes.Buffer)
+		_, err = buff.ReadFrom(tr)
+		if err != nil {
+			log.Info("Could not read from the buffer.")
+			return fileInfo, err
+		}
+		s := buff.String()
+		if err := json.Unmarshal([]byte(s), &fileInfo); err != nil {
+			log.Info("Could not load the manifest json.")
+			return fileInfo, err
+		}
+		break // exit `for` loop after processing the manifest.json
+	}
+	return fileInfo, nil
 }

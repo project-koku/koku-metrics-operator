@@ -1,21 +1,7 @@
-/*
-
-
-Copyright 2021 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+//
+// Copyright 2021 Red Hat Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
 
 package v1beta1
 
@@ -222,6 +208,11 @@ type CostManagementMetricsConfigSpec struct {
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
 
+	// ClusterVersion is a field of KokuMetricsConfig to represent the cluster version. Normally this value should not be
+	// specified. Only set this value if the clusterVersion cannot be obtained from the ClusterVersion.
+	// +optional
+	ClusterVersion string `json:"clusterVersion,omitempty"`
+
 	// FOR DEVELOPMENT ONLY.
 	// APIURL is a field of CostManagementMetricsConfig to represent the url of the API endpoint for service interaction.
 	// The default is `https://cloud.redhat.com`.
@@ -318,7 +309,19 @@ type UploadStatus struct {
 	// LastUploadStatus is a field of CostManagementMetricsConfig that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
-	// LastSuccessfulUploadTime is a field of CostManagementMetricsConfig that shows the time of the last successful upload.
+	// LastPayloadName is a field of KokuMetricsConfig that shows the name of the last payload file.
+	LastPayloadName string `json:"last_payload_name,omitempty"`
+
+	// LastPayloadManifest is a field of KokuMetricsConfig that shows the manifestID of the last payload.
+	LastPayloadManifestID string `json:"last_payload_manifest_id,omitempty"`
+
+	// LastPayloadRequestID is a field of KokuMetricsConfig that shows the insights request id of the last payload.
+	LastPayloadRequestID string `json:"last_payload_request_id,omitempty"`
+
+	// LastPayloadFiles is a field of KokuMetricsConfig to represent the list of files in the last payload that was sent.
+	LastPayloadFiles []string `json:"last_payload_files,omitempty"`
+
+	// LastSuccessfulUploadTime is a field of KokuMetricsConfig that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
 
@@ -423,7 +426,10 @@ type CostManagementMetricsConfigStatus struct {
 	// ClusterID is a field of CostManagementMetricsConfig to represent the cluster UUID.
 	ClusterID string `json:"clusterID,omitempty"`
 
-	// APIURL is a field of CostManagementMetricsConfig to represent the url of the API endpoint for service interaction.
+	// ClusterVersion is a field of KokuMetricsConfig to represent the cluster version.
+	ClusterVersion string `json:"clusterVersion,omitempty"`
+
+	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// +optional
 	APIURL string `json:"api_url,omitempty"`
 

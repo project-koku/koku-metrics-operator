@@ -1,21 +1,7 @@
-/*
-
-
-Copyright 2020 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+//
+// Copyright 2021 Red Hat Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
 
 package controllers
 
@@ -178,9 +164,9 @@ func GetClientset() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-// GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
-func GetClusterID(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) error {
-	log := r.Log.WithValues("CostManagementMetricsConfig", "GetClusterID")
+// GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
+func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
 	cvClient := r.cvClientBuilder.New(r)
 	clusterVersion, err := cvClient.GetClusterVersion()
@@ -190,6 +176,9 @@ func GetClusterID(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagemen
 	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
 	if clusterVersion.Spec.ClusterID != "" {
 		kmCfg.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
+	}
+	if clusterVersion.Spec.Channel != "" {
+		kmCfg.Status.ClusterVersion = string(clusterVersion.Spec.Channel)
 	}
 	return nil
 }
@@ -308,8 +297,8 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 }
 
-func setClusterID(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) error {
-	if kmCfg.Status.ClusterID == "" {
+func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+	if kmCfg.Status.ClusterID == "" || kmCfg.Status.ClusterVersion == "" {
 		r.cvClientBuilder = cv.NewBuilder()
 		err := GetClusterID(r, kmCfg)
 		return err
@@ -446,8 +435,8 @@ func packageFiles(p *packaging.FilePackager) {
 	}
 }
 
-func uploadFiles(r *CostManagementMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
-	log := r.Log.WithValues("costmanagementmetricsconfig", "uploadFiles")
+func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
+	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
 
 	// if its time to upload/package
 	if !*kmCfg.Spec.Upload.UploadToggle {
@@ -476,6 +465,13 @@ func uploadFiles(r *CostManagementMetricsConfigReconciler, authConfig *crhchttp.
 		if !strings.Contains(file, "tar.gz") {
 			continue
 		}
+
+		manifestInfo, err := packager.GetFileInfo(filepath.Join(dirCfg.Upload.Path, file))
+		if err != nil {
+			log.Error(err, "Could not read file information from tar.gz")
+			continue
+		}
+
 		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
 		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
@@ -484,8 +480,12 @@ func uploadFiles(r *CostManagementMetricsConfigReconciler, authConfig *crhchttp.
 			return err
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
-		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
+		kmCfg.Status.Upload.LastPayloadName = file
+		kmCfg.Status.Upload.LastPayloadFiles = manifestInfo.Files
+		kmCfg.Status.Upload.LastPayloadManifestID = manifestInfo.UUID
+		kmCfg.Status.Upload.LastPayloadRequestID = requestID
 		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
@@ -698,7 +698,7 @@ func (r *CostManagementMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctr
 			checkSource(r, sSpec, kmCfg)
 
 			// attempt upload
-			if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
+			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
 				result = ctrl.Result{}
 				errors = append(errors, err)
 			}

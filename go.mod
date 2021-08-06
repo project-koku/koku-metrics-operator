@@ -10,6 +10,7 @@ require (
 	github.com/onsi/gomega v1.8.1
 	github.com/openshift/api v0.0.0-20200117162508-e7ccdda6ba67
 	github.com/operator-framework/api v0.2.0
+	github.com/project-koku/koku-metrics-operator v0.9.8
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.14.0
 	k8s.io/api v0.18.2

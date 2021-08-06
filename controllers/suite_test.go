@@ -1,21 +1,7 @@
-/*
-
-
-Copyright 2020 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+//
+// Copyright 2021 Red Hat Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
 
 package controllers
 
@@ -168,7 +154,7 @@ var _ = BeforeSuite(func(done Done) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
-	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	ctx := context.Background()
 
 	// Default to run locally
@@ -245,11 +231,12 @@ func createNamespace(ctx context.Context, namespace string) {
 	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 }
 
-func createClusterVersion(ctx context.Context, clusterID string) {
+func createClusterVersion(ctx context.Context, clusterID string, channel string) {
 	instance := &configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Spec: configv1.ClusterVersionSpec{
 			ClusterID: configv1.ClusterID(clusterID),
+			Channel:   channel,
 		},
 	}
 	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
@@ -386,7 +373,7 @@ func clusterPrep(ctx context.Context) {
 		createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
 		// Create cluster version
-		createClusterVersion(ctx, clusterID)
+		createClusterVersion(ctx, clusterID, channel)
 	}
 }
 
