@@ -165,8 +165,8 @@ func GetClientset() (*kubernetes.Clientset, error) {
 }
 
 // GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
-func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.KokuMetricsConfig) error {
-	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
+func GetClusterID(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) error {
+	log := r.Log.WithValues("CostManagementMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
 	cvClient := r.cvClientBuilder.New(r)
 	clusterVersion, err := cvClient.GetClusterVersion()
@@ -297,7 +297,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 }
 
-func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.KokuMetricsConfig) error {
+func setClusterID(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) error {
 	if kmCfg.Status.ClusterID == "" || kmCfg.Status.ClusterVersion == "" {
 		r.cvClientBuilder = cv.NewBuilder()
 		err := GetClusterID(r, kmCfg)
@@ -435,7 +435,7 @@ func packageFiles(p *packaging.FilePackager) {
 	}
 }
 
-func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *costmanagementmetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
+func uploadFiles(r *CostManagementMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
 	log := r.Log.WithValues("costmanagementmetricsconfig", "uploadFiles")
 
 	// if its time to upload/package

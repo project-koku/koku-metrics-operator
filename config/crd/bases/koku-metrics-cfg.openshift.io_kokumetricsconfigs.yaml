@@ -71,7 +71,7 @@ spec:
                   set this value if the clusterID cannot be obtained from the ClusterVersion.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                description: ClusterVersion is a field of CostManagementMetricsConfig to represent
                   the cluster version. Normally this value should not be specified.
                   Only set this value if the clusterVersion cannot be obtained from
                   the ClusterVersion.
@@ -424,7 +424,7 @@ spec:
                   the cluster UUID.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                description: ClusterVersion is a field of CostManagementMetricsConfig to represent
                   the cluster version.
                 type: string
               operator_commit:
@@ -770,22 +770,22 @@ spec:
                       represent the path of the Ingress API service.
                     type: string
                   last_payload_files:
-                    description: LastPayloadFiles is a field of KokuMetricsConfig
+                    description: LastPayloadFiles is a field of CostManagementMetricsConfig
                       to represent the list of files in the last payload that was
                       sent.
                     items:
                       type: string
                     type: array
                   last_payload_manifest_id:
-                    description: LastPayloadManifest is a field of KokuMetricsConfig
+                    description: LastPayloadManifest is a field of CostManagementMetricsConfig
                       that shows the manifestID of the last payload.
                     type: string
                   last_payload_name:
-                    description: LastPayloadName is a field of KokuMetricsConfig that
+                    description: LastPayloadName is a field of CostManagementMetricsConfig that
                       shows the name of the last payload file.
                     type: string
                   last_payload_request_id:
-                    description: LastPayloadRequestID is a field of KokuMetricsConfig
+                    description: LastPayloadRequestID is a field of CostManagementMetricsConfig
                       that shows the insights request id of the last payload.
                     type: string
                   last_successful_upload_time:

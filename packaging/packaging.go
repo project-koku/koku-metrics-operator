@@ -70,15 +70,15 @@ type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string                                                  `json:"uuid"`
-	ClusterID string                                                  `json:"cluster_id"`
-	Version   string                                                  `json:"version"`
-	Date      time.Time                                               `json:"date"`
-	Files     []string                                                `json:"files"`
-	Start     time.Time                                               `json:"start"`
-	End       time.Time                                               `json:"end"`
-	CRStatus  costmanagementmetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
-	Certified bool                                                    `json:"certified"`
+	UUID      string                                                            `json:"uuid"`
+	ClusterID string                                                            `json:"cluster_id"`
+	Version   string                                                            `json:"version"`
+	Date      time.Time                                                         `json:"date"`
+	Files     []string                                                          `json:"files"`
+	Start     time.Time                                                         `json:"start"`
+	End       time.Time                                                         `json:"end"`
+	CRStatus  costmanagementmetricscfgv1beta1.CostManagementMetricsConfigStatus `json:"cr_status"`
+	Certified bool                                                              `json:"certified"`
 }
 
 type FileInfoManifest manifest
@@ -112,7 +112,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc costmanagementmetricscfgv1beta1.KokuMetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
