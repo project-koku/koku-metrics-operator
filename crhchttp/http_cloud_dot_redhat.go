@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/project-koku/koku-metrics-operator/packaging"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -174,7 +174,7 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 
 // Upload Send data to cloud.redhat.com
 func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
-	log := authConfig.Log.WithValues("kokumetricsconfig", "Upload")
+	log := authConfig.Log.WithValues("costmanagementmetricsconfig", "Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {

@@ -467,7 +467,7 @@ type KokuMetricsConfigStatus struct {
 // +kubebuilder:storageversion
 // +kubebuilder:resource:scope=Namespaced
 
-// KokuMetricsConfig is the Schema for the kokumetricsconfig API
+// KokuMetricsConfig is the Schema for the costmanagementmetricsconfig API
 type KokuMetricsConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

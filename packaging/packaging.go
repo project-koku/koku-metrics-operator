@@ -63,7 +63,7 @@ var maxSplits int64 = 1000
 var ErrNoReports = errors.New("reports not found")
 
 // Set boolean on whether community or certified
-var isCertified bool = false
+var isCertified bool = true
 
 // Manifest interface
 type Manifest interface{}
@@ -77,7 +77,7 @@ type manifest struct {
 	Files     []string                                      `json:"files"`
 	Start     time.Time                                     `json:"start"`
 	End       time.Time                                     `json:"end"`
-	CRStatus  kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
+	CRStatus  costmanagementmetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
 	Certified bool                                          `json:"certified"`
 }
 
@@ -112,7 +112,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc kokumetricscfgv1beta1.KokuMetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc costmanagementmetricscfgv1beta1.KokuMetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -509,7 +509,7 @@ func (p *FilePackager) PackageReports() error {
 }
 
 func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "getFileInfo")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "getFileInfo")
 	fileInfo := FileInfoManifest{}
 	openFile, err := os.Open(file)
 	if err != nil {

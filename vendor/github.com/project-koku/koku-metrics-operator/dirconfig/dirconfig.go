@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	parentDir    = "/tmp/koku-metrics-operator-reports/"
+	parentDir    = "/tmp/costmanagement-metrics-operator-reports/"
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"

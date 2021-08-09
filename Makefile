@@ -292,10 +292,10 @@ test-catalog-push:
 downstream:
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-	# go mod tidy
-	# go mod vendor
+	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	go mod tidy
+	go mod vendor
 	# fix the cert 
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
 	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' packaging/packaging.go

@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-// Package v1beta1 contains API Schema definitions for the koku-metrics-cfg v1beta1 API group
+// Package v1beta1 contains API Schema definitions for the costmanagement-metrics-cfg v1beta1 API group
 // +kubebuilder:object:generate=true
-// +groupName=koku-metrics-cfg.openshift.io
+// +groupName=costmanagement-metrics-cfg.openshift.io
 package v1beta1
 
 import (
@@ -15,7 +15,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "koku-metrics-cfg.openshift.io", Version: "v1beta1"}
+	GroupVersion = schema.GroupVersion{Group: "costmanagement-metrics-cfg.openshift.io", Version: "v1beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
