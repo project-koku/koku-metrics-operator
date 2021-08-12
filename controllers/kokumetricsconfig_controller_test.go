@@ -1,21 +1,7 @@
-/*
-
-
-Copyright 2020 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+//
+// Copyright 2021 Red Hat Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
 
 package controllers
 
@@ -46,6 +32,7 @@ var (
 	namespace                   = "costmanagement-metrics-operator"
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
+	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
 	authSecretName              = "cloud-dot-redhat"
 	authMixedCaseName           = "mixed-case"
@@ -354,6 +341,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.ClusterVersion).To(Equal(channel))
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
@@ -873,7 +861,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 		It("should attempt upload due to tar.gz being present", func() {
 			err := setup()
 			Expect(err, nil)
-			createClusterVersion(ctx, clusterID)
+			createClusterVersion(ctx, clusterID, channel)
 			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 

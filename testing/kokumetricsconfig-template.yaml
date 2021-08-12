@@ -1,5 +1,5 @@
 apiVersion: costmanagement-metrics-cfg.openshift.io/v1beta1
-kind: KokuMetricsConfig
+kind: CostManagementMetricsConfig
 metadata:
   name: costmanagementmetricscfg-sample
 spec:

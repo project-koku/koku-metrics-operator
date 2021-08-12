@@ -1,12 +1,12 @@
 # Downstream Args
 REMOVE_FILES = koku-metrics-operator/ docs/
 UPSTREAM_LOWERCASE = koku
-UPSTREAM_UPPERCASE = Koku 
+UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.7
-VERSION ?= 0.9.8
+PREVIOUS_VERSION ?= 0.9.8
+VERSION ?= 0.9.9
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
@@ -292,12 +292,13 @@ test-catalog-push:
 downstream:
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- find . -type f -not -name "Makefile" -not -name "config" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- find . -type f -not -name "Makefile" -not -name "config" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	go mod tidy
 	go mod vendor
 	# fix the cert 
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
+	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' packaging/packaging.go
 	# clean up the other files
 	- git clean -fx
 	# mv the sample to the correctly named file 

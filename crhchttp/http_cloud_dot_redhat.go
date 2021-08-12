@@ -1,21 +1,7 @@
-/*
-
-
-Copyright 2020 Red Hat, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+//
+// Copyright 2021 Red Hat Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
 
 package crhchttp
 
@@ -37,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -58,6 +45,8 @@ var DefaultTransport = &http.Transport{
 	TLSHandshakeTimeout:   10 * time.Second,
 	ExpectContinueTimeout: 1 * time.Second,
 }
+
+var delimeter = strings.Repeat("=", 100)
 
 // HTTPClient gives us a testable interface
 type HTTPClient interface {
@@ -184,28 +173,40 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (string, metav1.Time, error) {
+func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
 	log := authConfig.Log.WithValues("costmanagementmetricsconfig", "Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("could not setup the request: %v", err)
+		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
 
 	client := GetClient(authConfig)
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", currentTime, fmt.Errorf("could not send the request: %v", err)
+		return "", currentTime, "", fmt.Errorf("could not send the request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	_, err = ProcessResponse(log, resp)
+	resBody, err := ProcessResponse(log, resp)
+	log.Info("\n\n" + delimeter +
+		"\nmethod: " + resp.Request.Method +
+		"\nstatus: " + fmt.Sprint(resp.StatusCode) +
+		"\nURL: " + fmt.Sprint(resp.Request.URL) +
+		"\nx-rh-insights-request-id: " + resp.Header.Get("x-rh-insights-request-id") +
+		"\nPackaged file name: " + file +
+		"\nFiles included: " + fmt.Sprint(fileInfo.Files) +
+		"\nManifest ID: " + fileInfo.UUID +
+		"\nCluster ID: " + fileInfo.ClusterID +
+		"\nAccount ID: " + string(resBody) +
+		"\n" + delimeter + "\n\n")
+
 	if err != nil {
-		return uploadStatus, currentTime, err
+		return uploadStatus, currentTime, resp.Header.Get("x-rh-insights-request-id"), err
 	}
 
-	return uploadStatus, uploadTime, nil
+	return uploadStatus, uploadTime, resp.Header.Get("x-rh-insights-request-id"), nil
 }

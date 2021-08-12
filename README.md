@@ -1,6 +1,6 @@
 # costmanagement-metrics-operator
 
-[![License: AGPL v3](https://img.shields.io/github/license/project-costmanagement/costmanagement.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: Apache-2.0](https://img.shields.io/github/license/project-costmanagement/costmanagement.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Docker Repository on Quay](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator)
 [![Unit Tests](https://github.com/project-costmanagement/costmanagement-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-costmanagement/costmanagement-metrics-operator/actions?query=branch%3Amaster+workflow%3A%22Unit+Tests%22)
 
@@ -179,7 +179,7 @@ Verify that the costmanagement-metrics-operator is up and running:
 $ oc get deployment
 ```
 
-## Create a KokuMetricsConfig CR
+## Create a CostManagementMetricsConfig CR
 
 Create the CR with the default token authentication:
 
