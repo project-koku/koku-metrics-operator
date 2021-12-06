@@ -24,9 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
@@ -504,7 +506,7 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	return nil
 }
 
-func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
+func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
@@ -516,7 +518,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 
 	if err := r.promCollector.GetPromConn(kmCfg); err != nil {
 		log.Error(err, "failed to get prometheus connection")
-		return
+		return fmt.Errorf("failed to get prometheus connection: %v", err)
 	}
 	timeUTC := metav1.Now().UTC()
 	t := metav1.Time{Time: timeUTC}
@@ -529,7 +531,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
-		return
+		return nil
 	}
 	kmCfg.Status.Prometheus.LastQueryStartTime = t
 	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
@@ -537,10 +539,11 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 		kmCfg.Status.Reports.DataCollected = false
 		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		log.Error(err, "failed to generate reports")
-		return
+		return fmt.Errorf("failed to generate reports: %v", err)
 	}
 	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
+	return nil
 }
 
 func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (*ctrl.Result, error) {
@@ -648,7 +651,9 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
+	if err := collectPromStats(r, kmCfg, dirCfg); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// package report files
 	packager := &packaging.FilePackager{
@@ -739,6 +744,11 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 func (r *KokuMetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kokumetricscfgv1beta1.KokuMetricsConfig{}).
+		WithOptions(controller.Options{
+			RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(
+				time.Duration(500*time.Millisecond),
+				time.Duration(2*time.Minute),
+			)}).
 		Complete(r)
 }
 
