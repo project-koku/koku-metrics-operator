@@ -650,9 +650,15 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 	}
 
+	// Initial returned result -> requeue reconcile after 5 min.
+	// This result is replaced if upload or status update results in error.
+	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
+	var errors []error
+
 	// attempt to collect prometheus stats and create reports
 	if err := collectPromStats(r, kmCfg, dirCfg); err != nil {
-		return ctrl.Result{}, err
+		result = ctrl.Result{}
+		errors = append(errors, err)
 	}
 
 	// package report files
@@ -662,11 +668,6 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		Log:    r.Log,
 	}
 	packageFiles(packager)
-
-	// Initial returned result -> requeue reconcile after 5 min.
-	// This result is replaced if upload or status update results in error.
-	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
-	var errors []error
 
 	if kmCfg.Spec.Upload.UploadToggle != nil && *kmCfg.Spec.Upload.UploadToggle {
 
