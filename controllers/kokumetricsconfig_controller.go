@@ -564,6 +564,9 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 	}
 	if mountEstablished { // this bool confirms that the deployment volume mount was updated. This bool does _not_ confirm that the deployment is mounted to the spec PVC.
 		log.Info(fmt.Sprintf("deployment was successfully mounted onto PVC name: %s", stor.PVC.Name))
+
+		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{} // set the packaging time to zero so that all files are packaged during the next call to packageFiles
+
 		return &ctrl.Result{}, nil
 	}
 
@@ -646,15 +649,29 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 
-	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
-
-	// package report files
 	packager := &packaging.FilePackager{
 		KMCfg:  kmCfg,
 		DirCfg: dirCfg,
 		Log:    r.Log,
 	}
+
+	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
+	// package all the files so that the next prometheus query generates a fresh report
+	if kmCfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+		files, err := dirCfg.Reports.GetFiles()
+		if err != nil {
+			// this error shouldn't happen if the dir was created correctly. So just log the error and move on
+			log.Error(err, "failed to read report files")
+		}
+		if len(files) > 0 {
+			packageFiles(packager)
+		}
+	}
+
+	// attempt to collect prometheus stats and create reports
+	collectPromStats(r, kmCfg, dirCfg)
+
+	// package report files
 	packageFiles(packager)
 
 	// Initial returned result -> requeue reconcile after 5 min.
