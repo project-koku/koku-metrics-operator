@@ -662,9 +662,10 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
 	// package all the files so that the next prometheus query generates a fresh report
 	if kmCfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+		log.Info("checking for files from an old operator version")
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
-			log.Info("packaging files from old operator version")
+			log.Info("packaging files from an sold operator version")
 			packageFiles(packager)
 		}
 	}
