@@ -566,6 +566,10 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 		log.Info(fmt.Sprintf("deployment was successfully mounted onto PVC name: %s", stor.PVC.Name))
 
 		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{} // set the packaging time to zero so that all files are packaged during the next call to packageFiles
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			log.Error(err, "failed to update KokuMetricsConfig status")
+			return &ctrl.Result{}, err
+		}
 
 		return &ctrl.Result{}, nil
 	}
@@ -659,11 +663,8 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// package all the files so that the next prometheus query generates a fresh report
 	if kmCfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
 		files, err := dirCfg.Reports.GetFiles()
-		if err != nil {
-			// this error shouldn't happen if the dir was created correctly. So just log the error and move on
-			log.Error(err, "failed to read report files")
-		}
-		if len(files) > 0 {
+		if err == nil && len(files) > 0 {
+			log.Info("packaging files from old operator version")
 			packageFiles(packager)
 		}
 	}
