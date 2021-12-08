@@ -127,6 +127,7 @@ var (
 	podQueries = &querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
+			Chunked:     true,
 			QueryString: "sum(kube_pod_container_resource_limits{resource='cpu'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
@@ -139,6 +140,7 @@ var (
 		},
 		query{
 			Name:        "pod-limit-memory-bytes",
+			Chunked:     true,
 			QueryString: "sum(kube_pod_container_resource_limits{resource='memory'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
@@ -151,6 +153,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-cpu-cores",
+			Chunked:     true,
 			QueryString: "sum(kube_pod_container_resource_requests{resource='cpu'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
@@ -163,6 +166,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-memory-bytes",
+			Chunked:     true,
 			QueryString: "sum(kube_pod_container_resource_requests{resource='memory'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
@@ -175,6 +179,7 @@ var (
 		},
 		query{
 			Name:        "pod-usage-cpu-cores",
+			Chunked:     true,
 			QueryString: "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',pod!=''}[5m])) BY (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
@@ -187,6 +192,7 @@ var (
 		},
 		query{
 			Name:        "pod-usage-memory-bytes",
+			Chunked:     true,
 			QueryString: "sum(container_memory_usage_bytes{container!='POD', container!='',pod!=''}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
@@ -219,6 +225,7 @@ type querys []query
 
 type query struct {
 	Name           string
+	Chunked        bool
 	QueryString    string
 	MetricKey      staticFields
 	MetricKeyRegex regexFields

@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -106,7 +105,7 @@ func (s *Storage) mountVolume(dep *appsv1.Deployment, depSpec *appsv1.Deployment
 
 	depSpec.Template.Spec.Volumes[s.vol.index] = *s.vol.volume
 	var patch client.Patch
-	var obj runtime.Object
+	var obj client.Object
 	if csv != nil {
 		obj = csv
 		patch = client.MergeFrom(csv.DeepCopy())
