@@ -47,7 +47,7 @@ spec:
         volumeMounts:
         - mountPath: /tmp/koku-metrics-operator-reports
           name: koku-metrics-operator-reports
-      serviceAccountName: koku-metrics-manager-role
+      serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
         - name: koku-metrics-operator-reports
