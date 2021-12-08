@@ -397,6 +397,8 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 		// If the commit is different, this is either a fresh install or the operator was upgraded.
 		// After an upgrade, the report structure may differ from the old report structure,
 		// so we need to package the old files before generating new reports.
+		// We set this packaging time to zero so that the next call to packageFiles
+		// will force file packaging to occur.
 		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 	}
 	kmCfg.Status.OperatorCommit = GitCommit
