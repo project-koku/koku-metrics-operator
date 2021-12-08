@@ -128,9 +128,19 @@ func TestGenerateReports(t *testing.T) {
 	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
-			res := &model.Matrix{}
-			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-			mapResults[query.QueryString] = &mockPromResult{value: *res}
+			if query.Chunked {
+				for _, v := range [12]string{"00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"} {
+					res := &model.Matrix{}
+					filename := fmt.Sprintf("%s-%s", query.Name, v)
+					Load(filepath.Join("test_files", "test_data", filename), res, t)
+					key := fmt.Sprintf("%s-%s", query.QueryString, v)
+					mapResults[key] = &mockPromResult{value: *res}
+				}
+			} else {
+				res := &model.Matrix{}
+				Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+				mapResults[query.QueryString] = &mockPromResult{value: *res}
+			}
 		}
 	}
 
@@ -184,9 +194,19 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	queryList := []*querys{nodeQueries, podQueries, volQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
-			res := &model.Matrix{}
-			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-			mapResults[query.QueryString] = &mockPromResult{value: *res}
+			if query.Chunked {
+				for _, v := range [12]string{"00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"} {
+					res := &model.Matrix{}
+					filename := fmt.Sprintf("%s-%s", query.Name, v)
+					Load(filepath.Join("test_files", "test_data", filename), res, t)
+					key := fmt.Sprintf("%s-%s", query.QueryString, v)
+					mapResults[key] = &mockPromResult{value: *res}
+				}
+			} else {
+				res := &model.Matrix{}
+				Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+				mapResults[query.QueryString] = &mockPromResult{value: *res}
+			}
 		}
 	}
 	namespaceError := "namespace error"
