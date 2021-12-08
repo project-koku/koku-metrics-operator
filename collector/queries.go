@@ -128,7 +128,7 @@ var (
 		query{
 			Name:        "pod-limit-cpu-cores",
 			Chunked:     true,
-			QueryString: "sum(kube_pod_container_resource_limits{resource='cpu'}) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_limits{resource='cpu'} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
@@ -141,7 +141,7 @@ var (
 		query{
 			Name:        "pod-limit-memory-bytes",
 			Chunked:     true,
-			QueryString: "sum(kube_pod_container_resource_limits{resource='memory'}) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_limits{resource='memory'} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
@@ -154,7 +154,7 @@ var (
 		query{
 			Name:        "pod-request-cpu-cores",
 			Chunked:     true,
-			QueryString: "sum(kube_pod_container_resource_requests{resource='cpu'}) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_requests{resource='cpu'} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
@@ -167,7 +167,7 @@ var (
 		query{
 			Name:        "pod-request-memory-bytes",
 			Chunked:     true,
-			QueryString: "sum(kube_pod_container_resource_requests{resource='memory'}) by (pod, namespace, node)",
+			QueryString: "sum(kube_pod_container_resource_requests{resource='memory'} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) by (pod, namespace, node)",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
