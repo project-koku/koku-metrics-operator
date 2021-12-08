@@ -665,7 +665,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.Info("checking for files from an old operator version")
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
-			log.Info("packaging files from an sold operator version")
+			log.Info("packaging files from an old operator version")
 			packageFiles(packager)
 		}
 	}
