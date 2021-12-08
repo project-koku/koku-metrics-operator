@@ -393,6 +393,12 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 			GitCommit = commit
 		}
 	}
+	if kmCfg.Status.OperatorCommit != GitCommit {
+		// If the commit is different, this is either a fresh install or the operator was upgraded.
+		// After an upgrade, the report structure may differ from the old report structure,
+		// so we need to package the old files before generating new reports.
+		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+	}
 	kmCfg.Status.OperatorCommit = GitCommit
 }
 
@@ -564,13 +570,6 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 	}
 	if mountEstablished { // this bool confirms that the deployment volume mount was updated. This bool does _not_ confirm that the deployment is mounted to the spec PVC.
 		log.Info(fmt.Sprintf("deployment was successfully mounted onto PVC name: %s", stor.PVC.Name))
-
-		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{} // set the packaging time to zero so that all files are packaged during the next call to packageFiles
-		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
-			return &ctrl.Result{}, err
-		}
-
 		return &ctrl.Result{}, nil
 	}
 
