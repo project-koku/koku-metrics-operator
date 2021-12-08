@@ -168,7 +168,7 @@ func GetClientset() (*kubernetes.Clientset, error) {
 func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
-	cvClient := r.cvClientBuilder.New(r)
+	cvClient := r.cvClientBuilder.New(r.Client)
 	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return err
@@ -596,9 +596,8 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
-func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
-	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
 
 	// fetch the KokuMetricsConfig instance
