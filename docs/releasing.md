@@ -23,7 +23,7 @@ VERSION ?= <release-version>
 Run the following command to generate the release bundle:
 
 ```
-make bundle DEFAULT_CHANNEL=alpha
+make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta
 ```
 This will generate a new `<release-version>` bundle inside of the `koku-metrics-operator` directory within the repository.
 

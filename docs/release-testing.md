@@ -29,6 +29,12 @@ Testing an upgrade is a complicated and an involved process. The general steps a
 
 
 ### Testing an operator upgrade
+0. set version numbers:
+```sh
+$ VERSION_BEFORE_PREVIOUS_VERSION=0.9.7
+$ PREVIOUS_VERSION=0.9.8
+$ VERSION=0.9.9
+```
 
 1. Check `quay.io/project-koku/kmc-test-catalog` for the most recent operator release. If the index does not exist, create it:
 
@@ -42,7 +48,7 @@ $ docker build -f Dockerfile . -t quay.io/project-koku/koku-metrics-operator-bun
 Use `opm` to build a catalog image with the koku-metrics-operator and then push the image:
 
 ```sh
-$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v<VERSION_BEFORE_PREVIOUS_VERSION> --bundles quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
+$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v$VERSION_BEFORE_PREVIOUS_VERSION --bundles quay.io/project-koku/koku-metrics-operator-bundle:v$PREVIOUS_VERSION --tag quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --container-tool docker
 $ docker push quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION
 ```
 
@@ -98,7 +104,7 @@ VERSION ?= <release-version>
 Run the following command to generate the bundle:
 
 ```sh
-$ make bundle DEFAULT_CHANNEL=alpha
+$ make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta IMG=quay.io/$USERNAME/koku-metrics-operator:v$VERSION
 ```
 
 This will generate a new `<release-version>` bundle inside of the `koku-metrics-operator` directory within the repository.
@@ -108,15 +114,11 @@ This will generate a new `<release-version>` bundle inside of the `koku-metrics-
 Copy the generated bundle to the testing directory:
 
 ```sh
-$ cp -r koku-metrics-operator/$VERSION testing
+$ mv koku-metrics-operator/$VERSION testing
 $ cd testing/$VERSION
 ```
 
-Change the container images to the test controller image that was generated in step 3:
-
-Search and replace `quay.io/project-koku/koku-metrics-operator:v$VERSION` with `quay.io/$USERNAME/koku-metrics-operator:v$VERSION` in the clusterserviceversion.
-
-Build and push:
+Build and push bundle to your Quay repo:
 
 ```sh
 $ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION; docker push quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION
@@ -125,7 +127,7 @@ $ docker build -f Dockerfile . -t quay.io/$USERNAME/koku-metrics-operator-bundle
 6. Create an opm index (test-catalog) that contains the last release and the new release, and push to Quay:
 
 ```sh
-$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --bundles quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION --tag quay.io/$USERNAME/test-catalog:latest --container-tool docker
+$ opm index add --from-index quay.io/project-koku/kmc-test-catalog:v$PREVIOUS_VERSION --bundles quay.io/$USERNAME/koku-metrics-operator-bundle:v$VERSION --tag quay.io/$USERNAME/test-catalog:v$VERSION --container-tool docker
 $ docker push quay.io/$USERNAME/test-catalog:v$VERSION
 ```
 
