@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.8
-VERSION ?= 0.9.9
+PREVIOUS_VERSION ?= 1.1.1
+VERSION ?= 1.1.2
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -297,12 +297,12 @@ ifeq (,$(shell which opm 2>/dev/null))
 	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$(OS)-$(ARCH)-opm ;\
 	chmod +x $(OPM) ;\
 	}
-else 
+else
 OPM = $(shell which opm)
 endif
 endif
-BUNDLE_IMGS ?= $(BUNDLE_IMG) 
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif 
+BUNDLE_IMGS ?= $(BUNDLE_IMG)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
 .PHONY: catalog-build
 catalog-build: opm
 	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
