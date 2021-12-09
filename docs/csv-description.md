@@ -162,7 +162,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
       containers:
       - name: volume-shell
         image: busybox
-        command: ['sleep', '3600']
+        command: ['sleep', 'infinity']
         volumeMounts:
         - name: koku-metrics-operator-reports
           mountPath: /tmp/koku-metrics-operator-reports
