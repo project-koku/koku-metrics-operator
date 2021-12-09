@@ -132,8 +132,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
-				Method:          "max",
-				Factor:          maxFactor,
+				Method:          "sum",
+				Factor:          sumFactor,
 				TransformedName: "pod-limit-cpu-core-seconds",
 			},
 			RowKey: "pod",
@@ -145,8 +145,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
-				Method:          "max",
-				Factor:          maxFactor,
+				Method:          "sum",
+				Factor:          sumFactor,
 				TransformedName: "pod-limit-memory-byte-seconds",
 			},
 			RowKey: "pod",
@@ -158,8 +158,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
-				Method:          "max",
-				Factor:          maxFactor,
+				Method:          "sum",
+				Factor:          sumFactor,
 				TransformedName: "pod-request-cpu-core-seconds",
 			},
 			RowKey: "pod",
@@ -171,8 +171,8 @@ var (
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
-				Method:          "max",
-				Factor:          maxFactor,
+				Method:          "sum",
+				Factor:          sumFactor,
 				TransformedName: "pod-request-memory-byte-seconds",
 			},
 			RowKey: "pod",
