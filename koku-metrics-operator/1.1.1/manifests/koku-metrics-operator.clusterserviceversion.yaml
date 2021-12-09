@@ -34,8 +34,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
-    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:871ff99d5c5ab3aa538da854b4dc1c8fbb7139f0d6f9f2d9b9067fa05d281fe9
-    createdAt: "2021-12-09T15:53:12Z"
+    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:da062c74a576ba7314b16a12fb628d5147edabe66293e021d7261b3e65c9824c
+    createdAt: "2021-12-09T20:57:45Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
@@ -323,7 +323,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/project-koku/koku-metrics-operator@sha256:871ff99d5c5ab3aa538da854b4dc1c8fbb7139f0d6f9f2d9b9067fa05d281fe9
+                image: quay.io/project-koku/koku-metrics-operator@sha256:da062c74a576ba7314b16a12fb628d5147edabe66293e021d7261b3e65c9824c
                 name: manager
                 resources:
                   limits:
@@ -453,7 +453,7 @@ spec:
     type: AllNamespaces
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:871ff99d5c5ab3aa538da854b4dc1c8fbb7139f0d6f9f2d9b9067fa05d281fe9
+      image: quay.io/project-koku/koku-metrics-operator@sha256:da062c74a576ba7314b16a12fb628d5147edabe66293e021d7261b3e65c9824c
   keywords:
   - cost
   - management
