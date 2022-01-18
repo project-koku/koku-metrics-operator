@@ -37,6 +37,16 @@ FROM gcr.io/distroless/static:nonroot
 # For terminal access, use this image:
 # FROM gcr.io/distroless/base:debug-nonroot
 
+LABEL \
+    com.redhat.component="koku-metrics-operator-container" \
+    description="Koku Metrics Operator" \
+    io.k8s.description="Operator to deploy and manage instances of Koku Metrics" \
+    io.k8s.display-name="Koku Metrics Operator" \
+    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
+    maintainer="Cost Management <cost-mgmt@redhat.com>" \
+    name="koku-metrics-operator" \
+    summary="Koku Metrics Operator"
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER nonroot:nonroot
