@@ -5,10 +5,11 @@ UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.8
-VERSION ?= 0.9.9
+PREVIOUS_VERSION ?= 1.1.1
+VERSION ?= 1.1.2
 # Default bundle image tag
-BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
+IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
 # Options for 'bundle-build'
 DEFAULT_CHANNEL ?= beta
@@ -40,6 +41,9 @@ endif
 
 EXTERNAL_PROM_ROUTE=https://$(shell oc get routes thanos-querier -n openshift-monitoring -o "jsonpath={.spec.host}")
 IMAGE_SHA=$(shell docker inspect --format='{{index .RepoDigests 0}}' ${IMG})
+
+OS = $(shell go env GOOS)
+ARCH = $(shell go env GOARCH)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of:"
@@ -188,7 +192,7 @@ endif
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	GOFLAGS="-mod=vendor" $(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
 fmt:
@@ -200,15 +204,15 @@ vet:
 
 # Generate code
 generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	GOFLAGS="-mod=vendor" $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${IMG}
+	docker build -t ${IMG} .
 
 # Build the docker image
 docker-build-no-test:
-	docker build . -t ${IMG}
+	docker build -t ${IMG} .
 
 # Push the docker image
 docker-push:
@@ -288,7 +292,7 @@ test-catalog:
 test-catalog-push:
 	docker push ${CATALOG_IMG}
 
-# sed replace the files to change the api 
+# sed replace the files to change the api
 downstream:
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
@@ -296,14 +300,39 @@ downstream:
 	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	go mod tidy
 	go mod vendor
-	# fix the cert 
+	# fix the cert
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
 	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' packaging/packaging.go
 	# clean up the other files
 	- git clean -fx
-	# mv the sample to the correctly named file 
+	# mv the sample to the correctly named file
 	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 deploy-user-scratch: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/scratchbuild:latest
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+
+.PHONY: opm
+OPM = ./bin/opm
+opm:
+ifeq (,$(wildcard $(OPM)))
+ifeq (,$(shell which opm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$(OS)-$(ARCH)-opm ;\
+	chmod +x $(OPM) ;\
+	}
+else
+OPM = $(shell which opm)
+endif
+endif
+BUNDLE_IMGS ?= $(BUNDLE_IMG)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
+.PHONY: catalog-build
+catalog-build: opm
+	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+
+.PHONY: catalog-push
+catalog-push: ## Push the catalog image.
+	$(MAKE) docker-push IMG=$(CATALOG_IMG)

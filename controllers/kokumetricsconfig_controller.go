@@ -168,7 +168,7 @@ func GetClientset() (*kubernetes.Clientset, error) {
 func GetClusterID(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) error {
 	log := r.Log.WithValues("CostManagementMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
-	cvClient := r.cvClientBuilder.New(r)
+	cvClient := r.cvClientBuilder.New(r.Client)
 	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return err
@@ -393,6 +393,14 @@ func setOperatorCommit(r *CostManagementMetricsConfigReconciler, kmCfg *costmana
 			GitCommit = commit
 		}
 	}
+	if kmCfg.Status.OperatorCommit != GitCommit {
+		// If the commit is different, this is either a fresh install or the operator was upgraded.
+		// After an upgrade, the report structure may differ from the old report structure,
+		// so we need to package the old files before generating new reports.
+		// We set this packaging time to zero so that the next call to packageFiles
+		// will force file packaging to occur.
+		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+	}
 	kmCfg.Status.OperatorCommit = GitCommit
 }
 
@@ -596,9 +604,8 @@ func configurePVC(r *CostManagementMetricsConfigReconciler, req ctrl.Request, km
 // +kubebuilder:rbac:groups=apps,namespace=costmanagement-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the CostManagementMetricsConfig custom resource based on changes or requeue
-func (r *CostManagementMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *CostManagementMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
-	ctx := context.Background()
 	log := r.Log.WithValues("CostManagementMetricsConfig", req.NamespacedName)
 
 	// fetch the CostManagementMetricsConfig instance
@@ -647,15 +654,27 @@ func (r *CostManagementMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctr
 		}
 	}
 
-	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
-
-	// package report files
 	packager := &packaging.FilePackager{
 		KMCfg:  kmCfg,
 		DirCfg: dirCfg,
 		Log:    r.Log,
 	}
+
+	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
+	// package all the files so that the next prometheus query generates a fresh report
+	if kmCfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+		log.Info("checking for files from an old operator version")
+		files, err := dirCfg.Reports.GetFiles()
+		if err == nil && len(files) > 0 {
+			log.Info("packaging files from an old operator version")
+			packageFiles(packager)
+		}
+	}
+
+	// attempt to collect prometheus stats and create reports
+	collectPromStats(r, kmCfg, dirCfg)
+
+	// package report files
 	packageFiles(packager)
 
 	// Initial returned result -> requeue reconcile after 5 min.

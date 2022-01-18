@@ -57,6 +57,7 @@ def fix_dockerfile(version_tuple):
     replacements = {
         "bundle/manifests": "manifests",
         "bundle/metadata": "metadata",
+        "bundle/tests": "tests",
     }
 
     filename = f"costmanagement-metrics-operator/{version}/Dockerfile"

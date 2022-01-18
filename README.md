@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/github/license/project-costmanagement/costmanagement.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Docker Repository on Quay](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator)
-[![Unit Tests](https://github.com/project-costmanagement/costmanagement-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-costmanagement/costmanagement-metrics-operator/actions?query=branch%3Amaster+workflow%3A%22Unit+Tests%22)
+[![Unit Tests](https://github.com/project-costmanagement/costmanagement-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-costmanagement/costmanagement-metrics-operator/actions?query=branch%3Amain+workflow%3A%22Unit+Tests%22)
 
 ## About
 
@@ -16,19 +16,19 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 
 To incorporate changes from the upstream branch (master) into the downstream branch (downstream), complete the following steps.
 
-1. Create a branch from the downstream, pull in the changes from master, and run the conversion command: 
+1. Create a branch from the downstream, pull in the changes from master, and run the conversion command:
 
     ```
     git checkout downstream
     git pull
     git checkout -b new-branch
-    git branch --set-upstream-to=origin/master 
+    git branch --set-upstream-to=origin/main
     git pull
     make downstream
 
     ```
 
-2. Resolve any conflicts and submit a PR against the downstream branch. 
+2. Resolve any conflicts and submit a PR against the downstream branch.
 
 ## Development
 

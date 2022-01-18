@@ -1,6 +1,6 @@
 exclude: ^vendor/
 repos:
-- repo: git://github.com/dnephin/pre-commit-golang
+- repo: https://github.com/dnephin/pre-commit-golang
   rev: v0.4.0
   hooks:
     - id: go-fmt
@@ -8,7 +8,7 @@ repos:
     - id: go-imports
     - id: go-mod-tidy
     - id: go-mod-vendor
-- repo: git://github.com/golangci/golangci-lint
+- repo: https://github.com/golangci/golangci-lint
   rev: v1.40.1
   hooks:
     - id: golangci-lint

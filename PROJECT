@@ -1,10 +1,16 @@
 domain: openshift.io
 layout: go.kubebuilder.io/v2
+projectName: cost-management-metrics-operator
 repo: github.com/project-costmanagement/costmanagement-metrics-operator
 resources:
-- group: costmanagement-metrics-cfg
+-
+  controller: true
+  domain: openshift.io
+  group: costmanagement-metrics-cfg
   kind: CostManagementMetricsConfig
+  path: github.com/project-costmanagement/costmanagement-metrics-operator
   version: v1beta1
-version: 3-alpha
+version: "3"
 plugins:
-  go.operator-sdk.io/v2-alpha: {}
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}

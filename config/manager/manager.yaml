@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - command:
-        - /home/costmanagement-metrics-operator/bin/costmanagement-metrics-operator
+        - /usr/bin/costmanagement-metrics-operator
         args:
         - --enable-leader-election
         image: controller:latest
@@ -47,7 +47,7 @@ spec:
         volumeMounts:
         - mountPath: /tmp/costmanagement-metrics-operator-reports
           name: costmanagement-metrics-operator-reports
-      serviceAccountName: costmanagement-metrics-manager-role
+      serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
         - name: costmanagement-metrics-operator-reports

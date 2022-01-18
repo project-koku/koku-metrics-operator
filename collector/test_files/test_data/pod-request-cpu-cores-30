@@ -1,0 +1,117 @@
+[
+	{
+		"metric": {
+			"namespace": "openshift-etcd-operator",
+			"node": "ip-10-0-184-152.us-east-2.compute.internal",
+			"pod": "etcd-operator-576bc857f8-6k7x2"
+		},
+		"values": [
+			[
+				1604687400,
+				"0.01"
+			],
+			[
+				1604687460,
+				"0.01"
+			],
+			[
+				1604687520,
+				"0.01"
+			],
+			[
+				1604687580,
+				"0.01"
+			],
+			[
+				1604687640,
+				"0.01"
+			]
+		]
+	},
+	{
+		"metric": {
+			"namespace": "openshift-controller-manager-operator",
+			"node": "ip-10-0-184-152.us-east-2.compute.internal",
+			"pod": "openshift-controller-manager-operator-6f6978d49f-kw8rd"
+		},
+		"values": [
+			[
+				1604687400,
+				"0.01"
+			],
+			[
+				1604687460,
+				"0.01"
+			],
+			[
+				1604687520,
+				"0.01"
+			],
+			[
+				1604687580,
+				"0.01"
+			],
+			[
+				1604687640,
+				"0.01"
+			]
+		]
+	},
+	{
+		"metric": {
+			"namespace": "openshift-apiserver",
+			"pod": "apiserver-6b74f489cb-tqsrm"
+		},
+		"values": [
+			[
+				1604687400,
+				"0.1"
+			],
+			[
+				1604687460,
+				"0.1"
+			],
+			[
+				1604687520,
+				"0.1"
+			],
+			[
+				1604687580,
+				"0.1"
+			],
+			[
+				1604687640,
+				"0.1"
+			]
+		]
+	},
+	{
+		"metric": {
+			"namespace": "openshift-metering",
+			"node": "ip-10-0-189-61.us-east-2.compute.internal",
+			"pod": "hive-server-0"
+		},
+		"values": [
+			[
+				1604687400,
+				"0.5"
+			],
+			[
+				1604687460,
+				"0.5"
+			],
+			[
+				1604687520,
+				"0.5"
+			],
+			[
+				1604687580,
+				"0.5"
+			],
+			[
+				1604687640,
+				"0.5"
+			]
+		]
+	}
+]
