@@ -41,7 +41,7 @@ var (
 	badAuthUserSecretName       = "baduser"
 	falseValue            bool  = false
 	trueValue             bool  = true
-	defaultContextTimeout int64 = 90
+	defaultContextTimeout int64 = 120
 	diffContextTimeout    int64 = 10
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440

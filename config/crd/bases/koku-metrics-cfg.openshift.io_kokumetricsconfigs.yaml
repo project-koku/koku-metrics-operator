@@ -107,12 +107,12 @@ spec:
                   the configuration of Prometheus connection.
                 properties:
                   context_timeout:
-                    default: 90
+                    default: 120
                     description: ContextTimeout is a field of KokuMetricsConfig to
                       represent how long a query to prometheus should run in seconds
-                      before timing out. The default is 90 seconds.
+                      before timing out. The default is 120 seconds.
                     format: int64
-                    maximum: 120
+                    maximum: 180
                     minimum: 10
                     type: integer
                   service_address:

@@ -163,10 +163,10 @@ type UploadSpec struct {
 type PrometheusSpec struct {
 
 	// ContextTimeout is a field of KokuMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
-	// The default is 90 seconds.
+	// The default is 120 seconds.
 	// +kubebuilder:validation:Minimum=10
-	// +kubebuilder:validation:Maximum=120
-	// +kubebuilder:default=90
+	// +kubebuilder:validation:Maximum=180
+	// +kubebuilder:default=120
 	ContextTimeout *int64 `json:"context_timeout"`
 
 	// FOR DEVELOPMENT ONLY.

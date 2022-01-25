@@ -182,7 +182,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := c.Log.WithValues("kokumetricsconfig", "getQueryResults")
-	timeout := int64(90)
+	timeout := int64(120)
 	if c.ContextTimeout != nil {
 		timeout = *c.ContextTimeout
 	}
