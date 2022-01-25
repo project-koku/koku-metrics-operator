@@ -80,7 +80,7 @@ spec:
                   obtained from the ClusterVersion.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                description: ClusterVersion is a field of CostManagementMetricsConfig to represent
                   the cluster version. Normally this value should not be specified.
                   Only set this value if the clusterVersion cannot be obtained from
                   the ClusterVersion.
@@ -117,7 +117,7 @@ spec:
                 properties:
                   context_timeout:
                     default: 120
-                    description: ContextTimeout is a field of KokuMetricsConfig to
+                    description: ContextTimeout is a field of CostManagementMetricsConfig to
                       represent how long a query to prometheus should run in seconds
                       before timing out. The default is 120 seconds.
                     format: int64
@@ -443,7 +443,7 @@ spec:
                   to represent the cluster version.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                description: ClusterVersion is a field of CostManagementMetricsConfig to represent
                   the cluster version.
                 type: string
               operator_commit:
@@ -666,7 +666,7 @@ spec:
                       to represent errors during prometheus configuration.
                     type: string
                   context_timeout:
-                    description: ContextTimeout is a field of KokuMetricsConfigState
+                    description: ContextTimeout is a field of CostManagementMetricsConfigState
                       to represent how long a query to prometheus should run in seconds
                       before timing out.
                     format: int64
@@ -810,22 +810,22 @@ spec:
                       that shows the insights request id of the last payload.
                     type: string
                   last_payload_files:
-                    description: LastPayloadFiles is a field of KokuMetricsConfig
+                    description: LastPayloadFiles is a field of CostManagementMetricsConfig
                       to represent the list of files in the last payload that was
                       sent.
                     items:
                       type: string
                     type: array
                   last_payload_manifest_id:
-                    description: LastPayloadManifest is a field of KokuMetricsConfig
+                    description: LastPayloadManifest is a field of CostManagementMetricsConfig
                       that shows the manifestID of the last payload.
                     type: string
                   last_payload_name:
-                    description: LastPayloadName is a field of KokuMetricsConfig that
+                    description: LastPayloadName is a field of CostManagementMetricsConfig that
                       shows the name of the last payload file.
                     type: string
                   last_payload_request_id:
-                    description: LastPayloadRequestID is a field of KokuMetricsConfig
+                    description: LastPayloadRequestID is a field of CostManagementMetricsConfig
                       that shows the insights request id of the last payload.
                     type: string
                   last_successful_upload_time:

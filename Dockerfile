@@ -40,14 +40,14 @@ FROM gcr.io/distroless/static:nonroot
 # FROM gcr.io/distroless/base:debug-nonroot
 
 LABEL \
-    com.redhat.component="koku-metrics-operator-container" \
-    description="Koku Metrics Operator" \
-    io.k8s.description="Operator to deploy and manage instances of Koku Metrics" \
-    io.k8s.display-name="Koku Metrics Operator" \
+    com.redhat.component="costmanagement-metrics-operator-container" \
+    description="CostManagement Metrics Operator" \
+    io.k8s.description="Operator to deploy and manage instances of CostManagement Metrics" \
+    io.k8s.display-name="CostManagement Metrics Operator" \
     io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
     maintainer="Cost Management <cost-mgmt@redhat.com>" \
-    name="koku-metrics-operator" \
-    summary="Koku Metrics Operator"
+    name="costmanagement-metrics-operator" \
+    summary="CostManagement Metrics Operator"
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
