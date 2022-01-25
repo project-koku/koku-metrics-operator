@@ -41,6 +41,7 @@ var (
 	badAuthUserSecretName       = "baduser"
 	falseValue            bool  = false
 	trueValue             bool  = true
+	defaultContextTimeout int64 = 90
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
@@ -70,6 +71,7 @@ var (
 				CheckCycle:     &defaultCheckCycle,
 			},
 			PrometheusConfig: kokumetricscfgv1beta1.PrometheusSpec{
+				ContextTimeout:      &defaultContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
@@ -100,6 +102,7 @@ var (
 				CheckCycle:     &defaultCheckCycle,
 			},
 			PrometheusConfig: kokumetricscfgv1beta1.PrometheusSpec{
+				ContextTimeout:      &defaultContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
