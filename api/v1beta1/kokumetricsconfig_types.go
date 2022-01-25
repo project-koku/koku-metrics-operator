@@ -381,7 +381,7 @@ type PrometheusStatus struct {
 	// PrometheusConnected is a field of CostManagementMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
-	//ContextTimeout is a field of CostManagementMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
+	//ContextTimeout is a field of CostManagementMetricsConfigStatus to represent how long a query to prometheus should run in seconds before timing out.
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
 	// ConnectionError is a field of CostManagementMetricsConfigStatus to represent errors during prometheus test query.
