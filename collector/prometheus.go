@@ -186,6 +186,7 @@ func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults)
 	if c.ContextTimeout != nil {
 		timeout = *c.ContextTimeout
 	}
+	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", timeout))
 	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 		defer cancel()

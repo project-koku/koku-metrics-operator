@@ -381,6 +381,9 @@ type PrometheusStatus struct {
 	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
+	//ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
+	ContextTimeout *int64 `json:"context_timeout"`
+
 	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
 	ConnectionError string `json:"prometheus_connection_error,omitempty"`
 

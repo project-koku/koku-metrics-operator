@@ -652,6 +652,12 @@ spec:
                     description: ConfigError is a field of KokuMetricsConfigStatus
                       to represent errors during prometheus configuration.
                     type: string
+                  context_timeout:
+                    description: ContextTimeout is a field of KokuMetricsConfigState
+                      to represent how long a query to prometheus should run in seconds
+                      before timing out.
+                    format: int64
+                    type: integer
                   last_query_start_time:
                     description: LastQueryStartTime is a field of KokuMetricsConfigStatus
                       to represent the last time queries were started.
@@ -685,6 +691,7 @@ spec:
                       validated.
                     type: boolean
                 required:
+                - context_timeout
                 - prometheus_configured
                 - prometheus_connected
                 type: object
