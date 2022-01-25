@@ -24,15 +24,15 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/strset"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg            *kokumetricscfgv1beta1.KokuMetricsConfig
+	KMCfg            *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
 	Log              logr.Logger
 	manifest         manifestInfo
@@ -63,7 +63,7 @@ var maxSplits int64 = 1000
 var ErrNoReports = errors.New("reports not found")
 
 // Set boolean on whether community or certified
-var isCertified bool = false
+var isCertified bool = true
 
 // Manifest interface
 type Manifest interface{}
@@ -77,7 +77,7 @@ type manifest struct {
 	Files     []string                                      `json:"files"`
 	Start     time.Time                                     `json:"start"`
 	End       time.Time                                     `json:"end"`
-	CRStatus  kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
+	CRStatus  costmanagementmetricscfgv1beta1.CostManagementMetricsConfigStatus `json:"cr_status"`
 	Certified bool                                          `json:"certified"`
 }
 
@@ -112,7 +112,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc kokumetricscfgv1beta1.KokuMetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -137,7 +137,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string,
 }
 
 func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error {
-	log := p.Log.WithValues("kokumetricsconfig", "addFileToTarWriter")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "addFileToTarWriter")
 	log.Info("adding file to tar.gz", "file", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -201,7 +201,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 // writePart writes a portion of a split file into a new file
 func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "writePart")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "writePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
 	splitFileName := fileNamePart + strconv.FormatInt(num, 10) + ".csv"
@@ -287,7 +287,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 
 // splitFiles breaks larger files into smaller ones
 func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "splitFiles")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "splitFiles")
 	if !p.needSplit(fileList) {
 		log.Info("files do not require splitting")
 		return fileList, false, nil
@@ -347,7 +347,7 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 
 // moveFiles moves files from reportsDirectory to stagingDirectory
 func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "moveFiles")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "moveFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
@@ -388,7 +388,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 }
 
 func (p *FilePackager) TrimPackages() error {
-	log := p.Log.WithValues("kokumetricsconfig", "trimPackages")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "trimPackages")
 
 	packages, err := p.DirCfg.Upload.GetFiles()
 	if err != nil {
@@ -439,7 +439,7 @@ func (p *FilePackager) TrimPackages() error {
 
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
-	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "PackageReports")
 	p.maxBytes = *p.KMCfg.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
 	p.createdTimestamp = time.Now().Format(timestampFormat)
@@ -509,7 +509,7 @@ func (p *FilePackager) PackageReports() error {
 }
 
 func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "getFileInfo")
+	log := p.Log.WithValues("costmanagementmetricsconfig", "getFileInfo")
 	fileInfo := FileInfoManifest{}
 	openFile, err := os.Open(file)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -75,7 +75,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
-	createNamespace(kokuMetricsCfgNamespace)
+	createNamespace(costmanagementMetricsCfgNamespace)
 
 	close(done)
 }, 60)

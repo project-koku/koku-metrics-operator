@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 )
@@ -112,8 +112,8 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
-	log := c.Log.WithValues("kokumetricsconfig", "GenerateReports")
+func GenerateReports(kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+	log := c.Log.WithValues("costmanagementmetricsconfig", "GenerateReports")
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
@@ -157,7 +157,7 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 			prefix:    emptyNodeRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing node results to file", "filename", nodeReport.file.getName())
+	c.Log.WithValues("costmanagementmetricsconfig", "writeResults").Info("writing node results to file", "filename", nodeReport.file.getName())
 	if err := nodeReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write node report: %v", err)
 	}
@@ -197,7 +197,7 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 			prefix:    emptyPodRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
+	c.Log.WithValues("costmanagementmetricsconfig", "writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
 	if err := podReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write pod report: %v", err)
 	}
@@ -229,7 +229,7 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 			prefix:    emptyVolRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
+	c.Log.WithValues("costmanagementmetricsconfig", "writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
 	if err := volReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write volume report: %v", err)
 	}
@@ -261,7 +261,7 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 			prefix:    emptyNameRow.dateTimes.string(),
 		},
 	}
-	c.Log.WithValues("kokumetricsconfig", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
+	c.Log.WithValues("costmanagementmetricsconfig", "writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
 	if err := namespaceReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write namespace report: %v", err)
 	}
@@ -292,7 +292,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, ts *promv1.Range) {
+func updateReportStatus(kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig, ts *promv1.Range) {
 	kmCfg.Status.Reports.ReportMonth = ts.Start.Format("01")
 	kmCfg.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

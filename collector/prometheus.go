@@ -21,11 +21,11 @@ import (
 	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 )
 
 var (
-	promSpec *kokumetricscfgv1beta1.PrometheusSpec
+	promSpec *costmanagementmetricscfgv1beta1.PrometheusSpec
 
 	certKey  = "service-ca.crt"
 	tokenKey = "token"
@@ -67,7 +67,7 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
+func getPrometheusConfig(kmCfg *costmanagementmetricscfgv1beta1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
 	if !inCluster {
 		val, ok := os.LookupEnv("SECRET_ABSPATH")
 		if ok {
@@ -109,7 +109,7 @@ func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
 	return promv1.NewAPI(client), nil
 }
 
-func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string, err error) {
+func statusHelper(kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig, status string, err error) {
 	switch status {
 	case "configuration":
 		if err != nil {
@@ -141,8 +141,8 @@ func testPrometheusConnection(promConn prometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	log := c.Log.WithValues("kokumetricsconfig", "GetPromConn")
+func (c *PromCollector) GetPromConn(kmCfg *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) error {
+	log := c.Log.WithValues("costmanagementmetricsconfig", "GetPromConn")
 	var err error
 
 	updated := true
@@ -181,7 +181,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 }
 
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
-	log := c.Log.WithValues("kokumetricsconfig", "getQueryResults")
+	log := c.Log.WithValues("costmanagementmetricsconfig", "getQueryResults")
 	timeout := int64(120)
 	if c.ContextTimeout != nil {
 		timeout = *c.ContextTimeout
