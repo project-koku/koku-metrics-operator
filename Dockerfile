@@ -1,10 +1,7 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/ubi:latest as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.16.12 as builder
 
-RUN INSTALL_PKGS="go-toolset git" && \
-    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    rpm -V $INSTALL_PKGS && \
-    yum clean all -y
+USER root
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -41,6 +38,16 @@ FROM gcr.io/distroless/static:nonroot
 
 # For terminal access, use this image:
 # FROM gcr.io/distroless/base:debug-nonroot
+
+LABEL \
+    com.redhat.component="koku-metrics-operator-container" \
+    description="Koku Metrics Operator" \
+    io.k8s.description="Operator to deploy and manage instances of Koku Metrics" \
+    io.k8s.display-name="Koku Metrics Operator" \
+    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
+    maintainer="Cost Management <cost-mgmt@redhat.com>" \
+    name="koku-metrics-operator" \
+    summary="Koku Metrics Operator"
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
