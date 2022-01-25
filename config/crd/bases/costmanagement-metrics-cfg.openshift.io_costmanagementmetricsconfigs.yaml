@@ -109,6 +109,15 @@ spec:
                 description: PrometheusConfig is a field of CostManagementMetricsConfig
                   to represent the configuration of Prometheus connection.
                 properties:
+                  context_timeout:
+                    default: 120
+                    description: ContextTimeout is a field of CostManagementMetricsConfig
+                      to represent how long a query to prometheus should run in seconds
+                      before timing out. The default is 120 seconds.
+                    format: int64
+                    maximum: 180
+                    minimum: 10
+                    type: integer
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: FOR DEVELOPMENT ONLY. SvcAddress is a field of CostManagementMetricsConfig
@@ -646,6 +655,12 @@ spec:
                     description: ConfigError is a field of CostManagementMetricsConfigStatus
                       to represent errors during prometheus configuration.
                     type: string
+                  context_timeout:
+                    description: ContextTimeout is a field of CostManagementMetricsConfigStatus
+                      to represent how long a query to prometheus should run in seconds
+                      before timing out.
+                    format: int64
+                    type: integer
                   last_query_start_time:
                     description: LastQueryStartTime is a field of CostManagementMetricsConfigStatus
                       to represent the last time queries were started.

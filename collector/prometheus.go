@@ -34,11 +34,12 @@ var (
 )
 
 type PromCollector struct {
-	PromConn   prometheusConnection
-	PromCfg    *PrometheusConfig
-	TimeSeries *promv1.Range
-	Log        logr.Logger
-	InCluster  bool
+	PromConn       prometheusConnection
+	PromCfg        *PrometheusConfig
+	TimeSeries     *promv1.Range
+	ContextTimeout *int64
+	Log            logr.Logger
+	InCluster      bool
 }
 
 type prometheusConnection interface {
@@ -181,62 +182,27 @@ func (c *PromCollector) GetPromConn(kmCfg *costmanagementmetricscfgv1beta1.CostM
 
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := c.Log.WithValues("costmanagementmetricsconfig", "getQueryResults")
+	timeout := int64(120)
+	if c.ContextTimeout != nil {
+		timeout = *c.ContextTimeout
+	}
+	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", timeout))
 	for _, query := range *queries {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 		defer cancel()
 
-		if query.Chunked {
-			chunkedTimeRange := promv1.Range{Step: c.TimeSeries.Step}
-			aggResult := map[model.Fingerprint]*model.SampleStream{}
-			aggMatrix := model.Matrix{}
-			for _, v := range [12]int{0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55} {
-				t := c.TimeSeries.Start
-				chunkedTimeRange.Start = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), v, 0, 0, t.Location())
-				chunkedTimeRange.End = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), v+4, 59, 0, t.Location())
-				queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, chunkedTimeRange)
-				if err != nil {
-					return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
-				}
-				if len(warnings) > 0 {
-					log.Info("query warnings", "Warnings", warnings)
-				}
-				matrix, ok := queryResult.(model.Matrix)
-				if !ok {
-					return fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
-				}
-				for _, ss := range matrix {
-					key := ss.Metric.Fingerprint()
-					if aggResult[key] == nil {
-						aggResult[key] = &model.SampleStream{
-							Metric: ss.Metric,
-							Values: ss.Values,
-						}
-					} else {
-						aggResult[key].Values = append(aggResult[key].Values, ss.Values...)
-					}
-				}
-			}
-
-			// stick the aggragated result into a matrix
-			for _, value := range aggResult {
-				aggMatrix = append(aggMatrix, value)
-			}
-			results.iterateMatrix(aggMatrix, query)
-
-		} else {
-			queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
-			if err != nil {
-				return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
-			}
-			if len(warnings) > 0 {
-				log.Info("query warnings", "Warnings", warnings)
-			}
-			matrix, ok := queryResult.(model.Matrix)
-			if !ok {
-				return fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
-			}
-			results.iterateMatrix(matrix, query)
+		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
+		if err != nil {
+			return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
 		}
+		if len(warnings) > 0 {
+			log.Info("query warnings", "Warnings", warnings)
+		}
+		matrix, ok := queryResult.(model.Matrix)
+		if !ok {
+			return fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
+		}
+		results.iterateMatrix(matrix, query)
 	}
 	return nil
 }
