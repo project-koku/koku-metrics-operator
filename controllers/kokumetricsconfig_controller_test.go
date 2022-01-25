@@ -102,6 +102,7 @@ var (
 				CheckCycle:     &defaultCheckCycle,
 			},
 			PrometheusConfig: costmanagementmetricscfgv1beta1.PrometheusSpec{
+				ContextTimeout:      &diffContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
