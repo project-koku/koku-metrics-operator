@@ -1,10 +1,7 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/ubi:latest as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.16.12 as builder
 
-RUN INSTALL_PKGS="go-toolset git" && \
-    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    rpm -V $INSTALL_PKGS && \
-    yum clean all -y
+USER root
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -32,7 +29,7 @@ COPY .git .git
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+CGO_ENABLED=0 GOOS=linux GO111MODULE=on \
 go build -ldflags "-w -s -X github.com/project-costmanagement/costmanagement-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
@@ -41,6 +38,16 @@ FROM gcr.io/distroless/static:nonroot
 
 # For terminal access, use this image:
 # FROM gcr.io/distroless/base:debug-nonroot
+
+LABEL \
+    com.redhat.component="costmanagement-metrics-operator-container" \
+    description="CostManagement Metrics Operator" \
+    io.k8s.description="Operator to deploy and manage instances of CostManagement Metrics" \
+    io.k8s.display-name="CostManagement Metrics Operator" \
+    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
+    maintainer="Cost Management <cost-mgmt@redhat.com>" \
+    name="costmanagement-metrics-operator" \
+    summary="CostManagement Metrics Operator"
 
 WORKDIR /
 COPY --from=builder /workspace/manager .

@@ -162,6 +162,13 @@ type UploadSpec struct {
 // PrometheusSpec defines the desired state of PrometheusConfig object in the CostManagementMetricsConfigSpec.
 type PrometheusSpec struct {
 
+	// ContextTimeout is a field of CostManagementMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
+	// The default is 120 seconds.
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=180
+	// +kubebuilder:default=120
+	ContextTimeout *int64 `json:"context_timeout,omitempty"`
+
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of CostManagementMetricsConfig to represent the thanos-querier address.
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
@@ -373,6 +380,9 @@ type PrometheusStatus struct {
 
 	// PrometheusConnected is a field of CostManagementMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
+
+	//ContextTimeout is a field of CostManagementMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
+	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
 	// ConnectionError is a field of CostManagementMetricsConfigStatus to represent errors during prometheus test query.
 	ConnectionError string `json:"prometheus_connection_error,omitempty"`

@@ -148,6 +148,7 @@ func ReflectSpec(r *CostManagementMetricsConfigReconciler, kmCfg *costmanagement
 
 	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, costmanagementmetricscfgv1beta1.DefaultPrometheusSvcAddress)
 	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
+	kmCfg.Status.Prometheus.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 }
 
 // GetClientset returns a clientset based on rest.config
@@ -534,6 +535,7 @@ func collectPromStats(r *CostManagementMetricsConfigReconciler, kmCfg *costmanag
 		Step:  time.Minute,
 	}
 	r.promCollector.TimeSeries = &timeRange
+	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
