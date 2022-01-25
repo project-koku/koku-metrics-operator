@@ -162,6 +162,13 @@ type UploadSpec struct {
 // PrometheusSpec defines the desired state of PrometheusConfig object in the KokuMetricsConfigSpec.
 type PrometheusSpec struct {
 
+	// ContextTimeout is a field of KokuMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
+	// The default is 90 seconds.
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=120
+	// +kubebuilder:default=90
+	ContextTimeout *int64 `json:"context_timeout"`
+
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.

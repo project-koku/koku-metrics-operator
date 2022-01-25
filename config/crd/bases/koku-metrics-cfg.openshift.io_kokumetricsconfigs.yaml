@@ -106,6 +106,15 @@ spec:
                 description: PrometheusConfig is a field of KokuMetricsConfig to represent
                   the configuration of Prometheus connection.
                 properties:
+                  context_timeout:
+                    default: 90
+                    description: ContextTimeout is a field of KokuMetricsConfig to
+                      represent how long a query to prometheus should run in seconds
+                      before timing out. The default is 90 seconds.
+                    format: int64
+                    maximum: 120
+                    minimum: 10
+                    type: integer
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: FOR DEVELOPMENT ONLY. SvcAddress is a field of KokuMetricsConfig
@@ -118,6 +127,7 @@ spec:
                       must be certificate validated. The default is false.
                     type: boolean
                 required:
+                - context_timeout
                 - service_address
                 - skip_tls_verification
                 type: object

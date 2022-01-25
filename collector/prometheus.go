@@ -34,11 +34,12 @@ var (
 )
 
 type PromCollector struct {
-	PromConn   prometheusConnection
-	PromCfg    *PrometheusConfig
-	TimeSeries *promv1.Range
-	Log        logr.Logger
-	InCluster  bool
+	PromConn       prometheusConnection
+	PromCfg        *PrometheusConfig
+	TimeSeries     *promv1.Range
+	ContextTimeout *int64
+	Log            logr.Logger
+	InCluster      bool
 }
 
 type prometheusConnection interface {
@@ -182,7 +183,11 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := c.Log.WithValues("kokumetricsconfig", "getQueryResults")
 	for _, query := range *queries {
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		timeout := int64(90)
+		if c.ContextTimeout != nil {
+			timeout = *c.ContextTimeout
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 		defer cancel()
 
 		if query.Chunked {
