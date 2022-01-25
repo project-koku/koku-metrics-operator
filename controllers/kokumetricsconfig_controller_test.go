@@ -42,6 +42,7 @@ var (
 	falseValue            bool  = false
 	trueValue             bool  = true
 	defaultContextTimeout int64 = 90
+	diffContextTimeout    int64 = 10
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
@@ -102,7 +103,7 @@ var (
 				CheckCycle:     &defaultCheckCycle,
 			},
 			PrometheusConfig: kokumetricscfgv1beta1.PrometheusSpec{
-				ContextTimeout:      &defaultContextTimeout,
+				ContextTimeout:      &diffContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
@@ -437,6 +438,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
 
+			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
+
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
 			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
 			Expect(fetched.Status.Source.SourceError).To(Equal(""))
@@ -463,6 +466,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 
 			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+
+			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
 
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
 			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
@@ -496,6 +501,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
 			Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
 			Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
