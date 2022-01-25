@@ -7,7 +7,6 @@ package collector
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -42,13 +41,8 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	if m.mappedResults != nil {
 		res, ok = (*m.mappedResults)[query]
 		if !ok {
-			// if we didn't find the result, it could be a chunked query
-			key := fmt.Sprintf("%s-%02d", query, r.Start.Minute())
-			res, ok = (*m.mappedResults)[key]
-			if !ok {
-				// if we still don't find the result, then it's a failure
-				m.t.Fatalf("Could not find test result!")
-			}
+			// if we still don't find the result, then it's a failure
+			m.t.Fatalf("Could not find test result!")
 		}
 	} else if m.singleResult != nil {
 		res = m.singleResult
