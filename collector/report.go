@@ -60,7 +60,7 @@ func (d *data) writeToFile(file io.Writer, set *strset.Set, created bool) error 
 		}
 	}
 	cw.Flush()
-	return nil
+	return cw.Error()
 }
 
 func (d *data) getPrefix() string {
