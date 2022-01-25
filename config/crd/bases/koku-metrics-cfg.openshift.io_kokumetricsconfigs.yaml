@@ -127,7 +127,6 @@ spec:
                       must be certificate validated. The default is false.
                     type: boolean
                 required:
-                - context_timeout
                 - service_address
                 - skip_tls_verification
                 type: object
@@ -691,7 +690,6 @@ spec:
                       validated.
                     type: boolean
                 required:
-                - context_timeout
                 - prometheus_configured
                 - prometheus_connected
                 type: object

@@ -167,7 +167,7 @@ type PrometheusSpec struct {
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:validation:Maximum=180
 	// +kubebuilder:default=120
-	ContextTimeout *int64 `json:"context_timeout"`
+	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
@@ -382,7 +382,7 @@ type PrometheusStatus struct {
 	PrometheusConnected bool `json:"prometheus_connected"`
 
 	//ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
-	ContextTimeout *int64 `json:"context_timeout"`
+	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
 	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
 	ConnectionError string `json:"prometheus_connection_error,omitempty"`
