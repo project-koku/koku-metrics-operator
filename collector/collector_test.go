@@ -416,7 +416,7 @@ func TestIterateMatrix(t *testing.T) {
 					Factor:          maxFactor,
 					TransformedName: "node-allocatable-cpu-core-seconds",
 				},
-				RowKey: "node",
+				RowKey: []model.LabelName{"node"},
 			},
 			matrix: model.Matrix{
 				{
@@ -449,7 +449,7 @@ func TestIterateMatrix(t *testing.T) {
 				Name:           "node-labels",
 				QueryString:    "kube_node_labels",
 				MetricKeyRegex: regexFields{"node_labels": "label_*"},
-				RowKey:         "node",
+				RowKey:         []model.LabelName{"node"},
 			},
 			matrix: model.Matrix{
 				{
@@ -492,7 +492,7 @@ func TestIterateMatrix(t *testing.T) {
 					Factor:          maxFactor,
 					TransformedName: "node-capacity-cpu-core-seconds",
 				},
-				RowKey: "node",
+				RowKey: []model.LabelName{"node"},
 			},
 			matrix: model.Matrix{
 				{

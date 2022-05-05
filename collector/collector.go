@@ -79,10 +79,23 @@ func getResourceID(input string) string {
 	return splitString[len(splitString)-1]
 }
 
+func generateKey(metric model.Metric, keys []model.LabelName) string {
+	if len(keys) == 1 {
+		return string(metric[keys[0]])
+	}
+	result := []string{}
+	for _, key := range keys {
+		result = append(result, string(metric[key]))
+	}
+	sort.Strings(result)
+
+	return strings.Join(result, ",")
+}
+
 func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 	results := *r
 	for _, stream := range matrix {
-		obj := string(stream.Metric[q.RowKey])
+		obj := generateKey(stream.Metric, q.RowKey)
 		if results[obj] == nil {
 			results[obj] = mappedValues{}
 		}

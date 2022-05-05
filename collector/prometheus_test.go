@@ -81,7 +81,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 						Factor:          maxFactor,
 						TransformedName: "usage-cpu-core-seconds",
 					},
-					RowKey: "id",
+					RowKey: []model.LabelName{"id"},
 				},
 				query{
 					Name:        "capacity-cpu-cores",
@@ -93,13 +93,13 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 						Factor:          maxFactor,
 						TransformedName: "capacity-cpu-core-seconds",
 					},
-					RowKey: "id",
+					RowKey: []model.LabelName{"id"},
 				},
 				query{
 					Name:           "labels",
 					QueryString:    "query3",
 					MetricKeyRegex: regexFields{"labels": "label_*"},
-					RowKey:         "id",
+					RowKey:         []model.LabelName{"id"},
 				},
 			},
 			queriesResult: mappedMockPromResult{
