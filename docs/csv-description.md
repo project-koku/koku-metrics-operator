@@ -1,8 +1,8 @@
 # Koku Metrics Operator
 ## Introduction
-The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/getting_started_with_cost_management/assembly_introduction_cost_management) service for Openshift, used to gather the required information from the cluster. It is recommended to be installed in OpenShift 4.5+. This operator obtains OpenShift usage data by querying Prometheus and uploads it to cost management to be processed. The Operator queries Prometheus every hour to create metric reports, which are then packaged and uploaded to cost management at [cloud.redhat.com](https://cloud.redhat.com). For more information, reach out to <costmanagement@redhat.com>.
+The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift, used to gather the required information from the cluster. It is recommended to be installed in OpenShift 4.5+. This operator obtains OpenShift usage data by querying Prometheus and uploads it to cost management to be processed. The Operator queries Prometheus every hour to create metric reports, which are then packaged and uploaded to cost management at [console.redhat.com](https://console.redhat.com). For more information, reach out to <costmanagement@redhat.com>.
 
-This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html).
+This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
 
 For more information, reach out to <cost-mgmt@redhat.com>.
 ## Features and Capabilities
@@ -14,17 +14,17 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 #### Additional Capabilities:
 * The operator can be configured to automatically upload the packaged reports to cost management through Red Hat Insights Ingress service.
-* The operator can create a source in cloud.redhat.com. A source is required for cost management to process the uploaded packages.
+* The operator can create a source in console.redhat.com. A source is required for cost management to process the uploaded packages.
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
-* A source **must** exist in cloud.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
+* A source **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
 
 **Note** The following limitations are specific to operators configured to run in a restricted network:
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
-* The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to cloud.redhat.com every week, or they will be deleted and the data will be lost.
+* The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to console.redhat.com every week, or they will be deleted and the data will be lost.
 
 #### Storage configuration prerequisite
 The operator will attempt to create and use the following PVC when installed:
@@ -54,7 +54,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
-2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to cloud.redhat.com credentials.
+2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to console.redhat.com credentials.
 3. Select `Create`.
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
@@ -98,7 +98,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 ## Installation
 To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `koku-metrics-operator` package.
 
-Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [cloud.redhat.com](https://cloud.redhat.com).
+Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
 For more information, reach out to <cost-mgmt@redhat.com>.
 ## Configure the koku-metrics-operator for a restricted network
@@ -145,7 +145,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 5. Select `Create`.
 
 ## Download reports from the Operator & clean up the PVC
-If the `koku-metrics-operator` is configured to run in a restricted network, the metric reports will not automatically upload to cost managment. Instead, they need to be manually copied from the PVC for upload to [cloud.redhat.com](https://cloud.redhat.com). The default configuration saves one week of reports which means the process of downloading and uploading reports should be repeated weekly to prevent loss of metrics data. To download the reports, complete the following steps:
+If the `koku-metrics-operator` is configured to run in a restricted network, the metric reports will not automatically upload to cost managment. Instead, they need to be manually copied from the PVC for upload to [console.redhat.com](https://console.redhat.com). The default configuration saves one week of reports which means the process of downloading and uploading reports should be repeated weekly to prevent loss of metrics data. To download the reports, complete the following steps:
 1. Create the following Pod, ensuring the `claimName` matches the PVC containing the report data:
 
   ```
@@ -162,7 +162,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
       containers:
       - name: volume-shell
         image: busybox
-        command: ['sleep', '3600']
+        command: ['sleep', 'infinity']
         volumeMounts:
         - name: koku-metrics-operator-reports
           mountPath: /tmp/koku-metrics-operator-reports
@@ -188,7 +188,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   ```
 
 ## Create a source
-In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the cloud.redhat.com platform, open the [Sources menu](https://cloud.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
+In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
 
 Prerequisites:
 * The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
@@ -207,4 +207,4 @@ Uploading reports to cost managment is done through curl:
 
     $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://cloud.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
 
-where `USERNAME` and `PASS` correspond to the user credentials for [cloud.redhat.com](https://cloud.redhat.com), and `FILE_NAME` is the name of the report to upload.
+where `USERNAME` and `PASS` correspond to the user credentials for [console.redhat.com](https://console.redhat.com), and `FILE_NAME` is the name of the report to upload.

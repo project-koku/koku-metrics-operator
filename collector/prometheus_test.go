@@ -21,6 +21,7 @@ import (
 )
 
 var trueDef = true
+var defaultContextTimeout int64 = 90
 
 type mappedMockPromResult map[string]*mockPromResult
 type mockPromResult struct {
@@ -184,8 +185,9 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 
 func TestGetQueryResultsError(t *testing.T) {
 	col := PromCollector{
-		TimeSeries: &promv1.Range{},
-		Log:        testLogger,
+		ContextTimeout: &defaultContextTimeout,
+		TimeSeries:     &promv1.Range{},
+		Log:            testLogger,
 	}
 	getQueryResultsErrorsTests := []struct {
 		name         string

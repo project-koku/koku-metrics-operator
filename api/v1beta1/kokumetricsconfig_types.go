@@ -162,6 +162,13 @@ type UploadSpec struct {
 // PrometheusSpec defines the desired state of PrometheusConfig object in the KokuMetricsConfigSpec.
 type PrometheusSpec struct {
 
+	// ContextTimeout is a field of KokuMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
+	// The default is 120 seconds.
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=180
+	// +kubebuilder:default=120
+	ContextTimeout *int64 `json:"context_timeout,omitempty"`
+
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
@@ -207,6 +214,11 @@ type KokuMetricsConfigSpec struct {
 	// specified. Only set this value if the clusterID cannot be obtained from the ClusterVersion.
 	// +optional
 	ClusterID string `json:"clusterID,omitempty"`
+
+	// ClusterVersion is a field of KokuMetricsConfig to represent the cluster version. Normally this value should not be
+	// specified. Only set this value if the clusterVersion cannot be obtained from the ClusterVersion.
+	// +optional
+	ClusterVersion string `json:"clusterVersion,omitempty"`
 
 	// FOR DEVELOPMENT ONLY.
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
@@ -304,6 +316,18 @@ type UploadStatus struct {
 	// LastUploadStatus is a field of KokuMetricsConfig that shows the http status of the last upload.
 	LastUploadStatus string `json:"last_upload_status,omitempty"`
 
+	// LastPayloadName is a field of KokuMetricsConfig that shows the name of the last payload file.
+	LastPayloadName string `json:"last_payload_name,omitempty"`
+
+	// LastPayloadManifest is a field of KokuMetricsConfig that shows the manifestID of the last payload.
+	LastPayloadManifestID string `json:"last_payload_manifest_id,omitempty"`
+
+	// LastPayloadRequestID is a field of KokuMetricsConfig that shows the insights request id of the last payload.
+	LastPayloadRequestID string `json:"last_payload_request_id,omitempty"`
+
+	// LastPayloadFiles is a field of KokuMetricsConfig to represent the list of files in the last payload that was sent.
+	LastPayloadFiles []string `json:"last_payload_files,omitempty"`
+
 	// LastSuccessfulUploadTime is a field of KokuMetricsConfig that shows the time of the last successful upload.
 	// +nullable
 	LastSuccessfulUploadTime metav1.Time `json:"last_successful_upload_time,omitempty"`
@@ -357,6 +381,9 @@ type PrometheusStatus struct {
 	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
+	//ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
+	ContextTimeout *int64 `json:"context_timeout,omitempty"`
+
 	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
 	ConnectionError string `json:"prometheus_connection_error,omitempty"`
 
@@ -408,6 +435,9 @@ type KokuMetricsConfigStatus struct {
 
 	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID.
 	ClusterID string `json:"clusterID,omitempty"`
+
+	// ClusterVersion is a field of KokuMetricsConfig to represent the cluster version.
+	ClusterVersion string `json:"clusterVersion,omitempty"`
 
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
 	// +optional

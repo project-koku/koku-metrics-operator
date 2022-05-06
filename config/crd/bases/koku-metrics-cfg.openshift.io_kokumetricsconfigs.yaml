@@ -70,6 +70,12 @@ spec:
                   the cluster UUID. Normally this value should not be specified. Only
                   set this value if the clusterID cannot be obtained from the ClusterVersion.
                 type: string
+              clusterVersion:
+                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                  the cluster version. Normally this value should not be specified.
+                  Only set this value if the clusterVersion cannot be obtained from
+                  the ClusterVersion.
+                type: string
               packaging:
                 description: Packaging is a field of KokuMetricsConfig to represent
                   the packaging object.
@@ -100,6 +106,15 @@ spec:
                 description: PrometheusConfig is a field of KokuMetricsConfig to represent
                   the configuration of Prometheus connection.
                 properties:
+                  context_timeout:
+                    default: 120
+                    description: ContextTimeout is a field of KokuMetricsConfig to
+                      represent how long a query to prometheus should run in seconds
+                      before timing out. The default is 120 seconds.
+                    format: int64
+                    maximum: 180
+                    minimum: 10
+                    type: integer
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: FOR DEVELOPMENT ONLY. SvcAddress is a field of KokuMetricsConfig
@@ -247,18 +262,14 @@ spec:
                         type: array
                       dataSource:
                         description: 'This field can be used to specify either: *
-                          An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot
-                          - Beta) * An existing PVC (PersistentVolumeClaim) * An existing
-                          custom resource/object that implements data population (Alpha)
-                          In order to use VolumeSnapshot object types, the appropriate
-                          feature gate must be enabled (VolumeSnapshotDataSource or
-                          AnyVolumeDataSource) If the provisioner or an external controller
-                          can support the specified data source, it will create a
-                          new volume based on the contents of the specified data source.
-                          If the specified data source is not supported, the volume
-                          will not be created and the failure will be reported as
-                          an event. In the future, we plan to support more data source
-                          types and the behavior of the provisioner may change.'
+                          An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+                          * An existing PVC (PersistentVolumeClaim) * An existing
+                          custom resource that implements data population (Alpha)
+                          In order to use custom resource types that implement data
+                          population, the AnyVolumeDataSource feature gate must be
+                          enabled. If the provisioner or an external controller can
+                          support the specified data source, it will create a new
+                          volume based on the contents of the specified data source.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -417,6 +428,10 @@ spec:
                 description: ClusterID is a field of KokuMetricsConfig to represent
                   the cluster UUID.
                 type: string
+              clusterVersion:
+                description: ClusterVersion is a field of KokuMetricsConfig to represent
+                  the cluster version.
+                type: string
               operator_commit:
                 description: OperatorCommit is a field of KokuMetricsConfig that shows
                   the commit hash of the operator.
@@ -516,18 +531,14 @@ spec:
                         type: array
                       dataSource:
                         description: 'This field can be used to specify either: *
-                          An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot
-                          - Beta) * An existing PVC (PersistentVolumeClaim) * An existing
-                          custom resource/object that implements data population (Alpha)
-                          In order to use VolumeSnapshot object types, the appropriate
-                          feature gate must be enabled (VolumeSnapshotDataSource or
-                          AnyVolumeDataSource) If the provisioner or an external controller
-                          can support the specified data source, it will create a
-                          new volume based on the contents of the specified data source.
-                          If the specified data source is not supported, the volume
-                          will not be created and the failure will be reported as
-                          an event. In the future, we plan to support more data source
-                          types and the behavior of the provisioner may change.'
+                          An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+                          * An existing PVC (PersistentVolumeClaim) * An existing
+                          custom resource that implements data population (Alpha)
+                          In order to use custom resource types that implement data
+                          population, the AnyVolumeDataSource feature gate must be
+                          enabled. If the provisioner or an external controller can
+                          support the specified data source, it will create a new
+                          volume based on the contents of the specified data source.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -640,6 +651,12 @@ spec:
                     description: ConfigError is a field of KokuMetricsConfigStatus
                       to represent errors during prometheus configuration.
                     type: string
+                  context_timeout:
+                    description: ContextTimeout is a field of KokuMetricsConfigState
+                      to represent how long a query to prometheus should run in seconds
+                      before timing out.
+                    format: int64
+                    type: integer
                   last_query_start_time:
                     description: LastQueryStartTime is a field of KokuMetricsConfigStatus
                       to represent the last time queries were started.
@@ -758,6 +775,25 @@ spec:
                   ingress_path:
                     description: IngressAPIPath is a field of KokuMetricsConfig to
                       represent the path of the Ingress API service.
+                    type: string
+                  last_payload_files:
+                    description: LastPayloadFiles is a field of KokuMetricsConfig
+                      to represent the list of files in the last payload that was
+                      sent.
+                    items:
+                      type: string
+                    type: array
+                  last_payload_manifest_id:
+                    description: LastPayloadManifest is a field of KokuMetricsConfig
+                      that shows the manifestID of the last payload.
+                    type: string
+                  last_payload_name:
+                    description: LastPayloadName is a field of KokuMetricsConfig that
+                      shows the name of the last payload file.
+                    type: string
+                  last_payload_request_id:
+                    description: LastPayloadRequestID is a field of KokuMetricsConfig
+                      that shows the insights request id of the last payload.
                     type: string
                   last_successful_upload_time:
                     description: LastSuccessfulUploadTime is a field of KokuMetricsConfig

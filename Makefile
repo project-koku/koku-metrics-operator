@@ -1,8 +1,9 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 0.9.7
-VERSION ?= 0.9.8
+PREVIOUS_VERSION ?= 1.1.4
+VERSION ?= 1.1.5
 # Default bundle image tag
-BUNDLE_IMG ?= quay.io/project-koku/koku-metrics-operator-bundle:v$(VERSION)
+IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
 # Options for 'bundle-build'
 DEFAULT_CHANNEL ?= beta
@@ -34,6 +35,9 @@ endif
 
 EXTERNAL_PROM_ROUTE=https://$(shell oc get routes thanos-querier -n openshift-monitoring -o "jsonpath={.spec.host}")
 IMAGE_SHA=$(shell docker inspect --format='{{index .RepoDigests 0}}' ${IMG})
+
+OS = $(shell go env GOOS)
+ARCH = $(shell go env GOARCH)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of:"
@@ -198,11 +202,11 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${IMG}
+	docker build -t ${IMG} .
 
 # Build the docker image
 docker-build-no-test:
-	docker build . -t ${IMG}
+	docker build -t ${IMG} .
 
 # Push the docker image
 docker-push:
@@ -275,9 +279,34 @@ bundle-push:
 	docker push $(BUNDLE_IMG)
 
 # Build a test-catalog
-test-catalog:
-	opm index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
+test-catalog: opm
+	$(OPM) index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
 
 # Push the test-catalog
 test-catalog-push:
 	docker push ${CATALOG_IMG}
+
+.PHONY: opm
+OPM = ./bin/opm
+opm:
+ifeq (,$(wildcard $(OPM)))
+ifeq (,$(shell which opm 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$(OS)-$(ARCH)-opm ;\
+	chmod +x $(OPM) ;\
+	}
+else
+OPM = $(shell which opm)
+endif
+endif
+BUNDLE_IMGS ?= $(BUNDLE_IMG)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
+.PHONY: catalog-build
+catalog-build: opm
+	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+
+.PHONY: catalog-push
+catalog-push: ## Push the catalog image.
+	$(MAKE) docker-push IMG=$(CATALOG_IMG)

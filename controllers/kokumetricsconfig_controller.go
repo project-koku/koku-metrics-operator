@@ -148,6 +148,7 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.Ko
 
 	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, kokumetricscfgv1beta1.DefaultPrometheusSvcAddress)
 	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
+	kmCfg.Status.Prometheus.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 }
 
 // GetClientset returns a clientset based on rest.config
@@ -164,11 +165,11 @@ func GetClientset() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-// GetClusterID Collects the cluster identifier from the Cluster Version custom resource object
+// GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
 func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
-	cvClient := r.cvClientBuilder.New(r)
+	cvClient := r.cvClientBuilder.New(r.Client)
 	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return err
@@ -176,6 +177,9 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
 	if clusterVersion.Spec.ClusterID != "" {
 		kmCfg.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
+	}
+	if clusterVersion.Spec.Channel != "" {
+		kmCfg.Status.ClusterVersion = string(clusterVersion.Spec.Channel)
 	}
 	return nil
 }
@@ -295,7 +299,7 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 }
 
 func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	if kmCfg.Status.ClusterID == "" {
+	if kmCfg.Status.ClusterID == "" || kmCfg.Status.ClusterVersion == "" {
 		r.cvClientBuilder = cv.NewBuilder()
 		err := GetClusterID(r, kmCfg)
 		return err
@@ -390,6 +394,14 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 			GitCommit = commit
 		}
 	}
+	if kmCfg.Status.OperatorCommit != GitCommit {
+		// If the commit is different, this is either a fresh install or the operator was upgraded.
+		// After an upgrade, the report structure may differ from the old report structure,
+		// so we need to package the old files before generating new reports.
+		// We set this packaging time to zero so that the next call to packageFiles
+		// will force file packaging to occur.
+		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+	}
 	kmCfg.Status.OperatorCommit = GitCommit
 }
 
@@ -432,7 +444,7 @@ func packageFiles(p *packaging.FilePackager) {
 	}
 }
 
-func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) error {
+func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
 	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
 
 	// if its time to upload/package
@@ -462,6 +474,13 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		if !strings.Contains(file, "tar.gz") {
 			continue
 		}
+
+		manifestInfo, err := packager.GetFileInfo(filepath.Join(dirCfg.Upload.Path, file))
+		if err != nil {
+			log.Error(err, "Could not read file information from tar.gz")
+			continue
+		}
+
 		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
 		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
@@ -470,8 +489,12 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 			return err
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
-		uploadStatus, uploadTime, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body)
+		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
+		kmCfg.Status.Upload.LastPayloadName = file
+		kmCfg.Status.Upload.LastPayloadFiles = manifestInfo.Files
+		kmCfg.Status.Upload.LastPayloadManifestID = manifestInfo.UUID
+		kmCfg.Status.Upload.LastPayloadRequestID = requestID
 		kmCfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
@@ -512,6 +535,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 		Step:  time.Minute,
 	}
 	r.promCollector.TimeSeries = &timeRange
+	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
@@ -582,9 +606,8 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
-func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
-	ctx := context.Background()
 	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
 
 	// fetch the KokuMetricsConfig instance
@@ -633,15 +656,27 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
-
-	// package report files
 	packager := &packaging.FilePackager{
 		KMCfg:  kmCfg,
 		DirCfg: dirCfg,
 		Log:    r.Log,
 	}
+
+	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
+	// package all the files so that the next prometheus query generates a fresh report
+	if kmCfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+		log.Info("checking for files from an old operator version")
+		files, err := dirCfg.Reports.GetFiles()
+		if err == nil && len(files) > 0 {
+			log.Info("packaging files from an old operator version")
+			packageFiles(packager)
+		}
+	}
+
+	// attempt to collect prometheus stats and create reports
+	collectPromStats(r, kmCfg, dirCfg)
+
+	// package report files
 	packageFiles(packager)
 
 	// Initial returned result -> requeue reconcile after 5 min.
@@ -684,7 +719,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 			checkSource(r, sSpec, kmCfg)
 
 			// attempt upload
-			if err := uploadFiles(r, authConfig, kmCfg, dirCfg); err != nil {
+			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
 				result = ctrl.Result{}
 				errors = append(errors, err)
 			}

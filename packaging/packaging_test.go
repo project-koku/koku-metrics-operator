@@ -552,7 +552,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 					t.Fatal("could not set start/end times")
 				}
 			}
-			testPackager.getManifest(csvFileNames, tt.dirName)
+			testPackager.getManifest(csvFileNames, tt.dirName, *testPackager.KMCfg)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -581,6 +581,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
 				ClusterID: testPackager.KMCfg.Status.ClusterID,
+				CRStatus:  testPackager.KMCfg.Status,
 				Version:   testPackager.KMCfg.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
 				Files:     expectedFiles,
@@ -602,6 +603,9 @@ func TestGetAndRenderManifest(t *testing.T) {
 				t.Errorf(errorMsg, expectedManifest.Start, foundManifest.Start)
 			}
 			if foundManifest.End != expectedManifest.End {
+				t.Errorf(errorMsg, expectedManifest.End, foundManifest.End)
+			}
+			if foundManifest.CRStatus.Upload.UploadToggle != expectedManifest.CRStatus.Upload.UploadToggle {
 				t.Errorf(errorMsg, expectedManifest.End, foundManifest.End)
 			}
 			for _, file := range expectedFiles {
@@ -735,7 +739,7 @@ func TestWriteTarball(t *testing.T) {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
 			}
 			manifestName := tt.manifestName
-			testPackager.getManifest(csvFileNames, stagingDir)
+			testPackager.getManifest(csvFileNames, stagingDir, *testPackager.KMCfg)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -888,6 +892,65 @@ func TestSplitFiles(t *testing.T) {
 			}
 
 			setPerm(t, 0777, dstTemp) // reset dir permissions for proper cleanup
+		})
+	}
+}
+
+func TestGetFileInfo(t *testing.T) {
+	files := []string{
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.0.csv",
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.1.csv",
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.2.csv",
+		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.3.csv",
+	}
+	fileInfoTests := []struct {
+		name             string
+		tarFileName      string
+		expectedManifest FileInfoManifest
+		expectErr        bool
+	}{
+		{
+			name:        "test good manifest",
+			tarFileName: "20210720T180121-cost-mgmt.tar.gz",
+			expectedManifest: FileInfoManifest{
+				ClusterID: "30d0669b-4d46-479d-accb-9784e9d129d8",
+				UUID:      "ff1c03d2-e303-4ab8-a8fc-d1267bf160d4",
+				Files:     files,
+			},
+			expectErr: false,
+		},
+		{
+			name:             "test bad tar file",
+			tarFileName:      "badfile.tar.gz",
+			expectedManifest: FileInfoManifest{},
+			expectErr:        true,
+		},
+		{
+			name:             "test nonexistent tar",
+			tarFileName:      "nonexistent.tar.gz",
+			expectedManifest: FileInfoManifest{},
+			expectErr:        true,
+		},
+	}
+	for _, tt := range fileInfoTests {
+		// using tt.name from the case to use it as the `t.Run` test name
+		t.Run(tt.name, func(t *testing.T) {
+			manifest, err := testPackager.GetFileInfo(filepath.Join("test_files/", tt.tarFileName))
+			if tt.expectErr && err == nil {
+				t.Errorf("%s expected an error but received nil", tt.name)
+			}
+			if !tt.expectErr && err != nil {
+				t.Errorf("%s did not expect error but got: %v", tt.name, err)
+			}
+			if manifest.ClusterID != tt.expectedManifest.ClusterID {
+				t.Errorf("%s expected %s as clusterID got %s", tt.name, tt.expectedManifest.ClusterID, manifest.ClusterID)
+			}
+			if manifest.UUID != tt.expectedManifest.UUID {
+				t.Errorf("%s expected %s as manifestID got %s", tt.name, tt.expectedManifest.UUID, manifest.UUID)
+			}
+			if len(manifest.Files) != len(tt.expectedManifest.Files) {
+				t.Errorf("%s expected %d files got %d files", tt.name, len(tt.expectedManifest.Files), len(manifest.Files))
+			}
 		})
 	}
 }

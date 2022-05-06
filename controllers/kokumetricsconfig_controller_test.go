@@ -32,6 +32,7 @@ var (
 	namespace                   = "koku-metrics-operator"
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
+	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
 	authSecretName              = "cloud-dot-redhat"
 	authMixedCaseName           = "mixed-case"
@@ -40,6 +41,8 @@ var (
 	badAuthUserSecretName       = "baduser"
 	falseValue            bool  = false
 	trueValue             bool  = true
+	defaultContextTimeout int64 = 120
+	diffContextTimeout    int64 = 10
 	defaultUploadCycle    int64 = 360
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
@@ -69,6 +72,7 @@ var (
 				CheckCycle:     &defaultCheckCycle,
 			},
 			PrometheusConfig: kokumetricscfgv1beta1.PrometheusSpec{
+				ContextTimeout:      &defaultContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
@@ -99,6 +103,7 @@ var (
 				CheckCycle:     &defaultCheckCycle,
 			},
 			PrometheusConfig: kokumetricscfgv1beta1.PrometheusSpec{
+				ContextTimeout:      &diffContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
@@ -340,6 +345,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			Expect(fetched.Status.ClusterVersion).To(Equal(channel))
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
@@ -432,6 +438,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
 
+			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
+
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
 			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
 			Expect(fetched.Status.Source.SourceError).To(Equal(""))
@@ -458,6 +466,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 
 			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+
+			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
 
 			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
 			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
@@ -491,6 +501,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
 			Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
 			Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
@@ -859,7 +870,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 		It("should attempt upload due to tar.gz being present", func() {
 			err := setup()
 			Expect(err, nil)
-			createClusterVersion(ctx, clusterID)
+			createClusterVersion(ctx, clusterID, channel)
 			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
