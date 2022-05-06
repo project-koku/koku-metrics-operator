@@ -24,10 +24,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // FilePackager struct for defining the packaging vars

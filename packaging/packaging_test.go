@@ -22,10 +22,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/testutils"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var testingDir string
