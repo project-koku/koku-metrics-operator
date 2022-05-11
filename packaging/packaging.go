@@ -24,10 +24,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
 	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // FilePackager struct for defining the packaging vars

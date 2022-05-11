@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/project-costmanagement/costmanagement-metrics-operator/packaging"
 )
 
 // Client is an http.Client

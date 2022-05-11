@@ -13,11 +13,12 @@ import (
 	"testing"
 	"time"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
+
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
 )
 
 var trueDef = true
@@ -82,7 +83,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 						Factor:          maxFactor,
 						TransformedName: "usage-cpu-core-seconds",
 					},
-					RowKey: "id",
+					RowKey: []model.LabelName{"id"},
 				},
 				query{
 					Name:        "capacity-cpu-cores",
@@ -94,13 +95,13 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 						Factor:          maxFactor,
 						TransformedName: "capacity-cpu-core-seconds",
 					},
-					RowKey: "id",
+					RowKey: []model.LabelName{"id"},
 				},
 				query{
 					Name:           "labels",
 					QueryString:    "query3",
 					MetricKeyRegex: regexFields{"labels": "label_*"},
-					RowKey:         "id",
+					RowKey:         []model.LabelName{"id"},
 				},
 			},
 			queriesResult: mappedMockPromResult{

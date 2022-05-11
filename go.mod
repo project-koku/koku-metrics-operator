@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/go-logr/logr v0.3.0
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/onsi/ginkgo v1.14.1
