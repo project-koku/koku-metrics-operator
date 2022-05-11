@@ -296,8 +296,8 @@ test-catalog-push:
 downstream:
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	- LC_ALL=C find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	go mod tidy
 	go mod vendor
 	# fix the cert
