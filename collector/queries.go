@@ -24,7 +24,7 @@ var (
 				Factor:          maxFactor,
 				TransformedName: "node-allocatable-cpu-core-seconds",
 			},
-			RowKey: "node",
+			RowKey: []model.LabelName{"node"},
 		},
 		query{
 			Name:        "node-allocatable-memory-bytes",
@@ -36,7 +36,7 @@ var (
 				Factor:          maxFactor,
 				TransformedName: "node-allocatable-memory-byte-seconds",
 			},
-			RowKey: "node",
+			RowKey: []model.LabelName{"node"},
 		},
 		query{
 			Name:        "node-capacity-cpu-cores",
@@ -48,7 +48,7 @@ var (
 				Factor:          maxFactor,
 				TransformedName: "node-capacity-cpu-core-seconds",
 			},
-			RowKey: "node",
+			RowKey: []model.LabelName{"node"},
 		},
 		query{
 			Name:        "node-capacity-memory-bytes",
@@ -60,68 +60,68 @@ var (
 				Factor:          maxFactor,
 				TransformedName: "node-capacity-memory-byte-seconds",
 			},
-			RowKey: "node",
+			RowKey: []model.LabelName{"node"},
 		},
 		query{
 			Name:           "node-labels",
 			QueryString:    "kube_node_labels",
 			MetricKeyRegex: regexFields{"node_labels": "label_*"},
-			RowKey:         "node",
+			RowKey:         []model.LabelName{"node"},
 		},
 	}
 	volQueries = &querys{
 		query{
 			Name:        "persistentvolume_pod_info",
-			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info{volumename != ''}",
 			MetricKey:   staticFields{"namespace": "namespace", "pod": "pod"},
-			RowKey:      "volumename",
+			RowKey:      []model.LabelName{"volumename"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-capacity-bytes",
-			QueryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info{volumename != ''}",
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
 				Method:          "max",
 				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
-			RowKey: "volumename",
+			RowKey: []model.LabelName{"volumename"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-request-bytes",
-			QueryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info{volumename != ''}",
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
 				Method:          "max",
 				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-request-byte-seconds",
 			},
-			RowKey: "volumename",
+			RowKey: []model.LabelName{"volumename"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-usage-bytes",
-			QueryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString: "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info{volumename != ''}",
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-usage-bytes",
 				Method:          "sum",
 				Factor:          sumFactor,
 				TransformedName: "persistentvolumeclaim-usage-byte-seconds",
 			},
-			RowKey: "volumename",
+			RowKey: []model.LabelName{"volumename"},
 		},
 		query{
 			Name:           "persistentvolume-labels",
 			QueryString:    "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass) kube_persistentvolume_info",
 			MetricKey:      staticFields{"storageclass": "storageclass", "persistentvolume": "persistentvolume"},
 			MetricKeyRegex: regexFields{"persistentvolume_labels": "label_*"},
-			RowKey:         "persistentvolume",
+			RowKey:         []model.LabelName{"persistentvolume"},
 		},
 		query{
 			Name:           "persistentvolumeclaim-labels",
-			QueryString:    "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info",
+			QueryString:    "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) kube_persistentvolumeclaim_info{volumename != ''}",
 			MetricKey:      staticFields{"namespace": "namespace", "persistentvolumeclaim": "persistentvolumeclaim"},
 			MetricKeyRegex: regexFields{"persistentvolumeclaim_labels": "label_"},
-			RowKey:         "volumename",
+			RowKey:         []model.LabelName{"volumename"},
 		},
 	}
 	podQueries = &querys{
@@ -135,7 +135,7 @@ var (
 				Factor:          sumFactor,
 				TransformedName: "pod-limit-cpu-core-seconds",
 			},
-			RowKey: "pod",
+			RowKey: []model.LabelName{"pod", "namespace"},
 		},
 		query{
 			Name:        "pod-limit-memory-bytes",
@@ -147,7 +147,7 @@ var (
 				Factor:          sumFactor,
 				TransformedName: "pod-limit-memory-byte-seconds",
 			},
-			RowKey: "pod",
+			RowKey: []model.LabelName{"pod", "namespace"},
 		},
 		query{
 			Name:        "pod-request-cpu-cores",
@@ -159,7 +159,7 @@ var (
 				Factor:          sumFactor,
 				TransformedName: "pod-request-cpu-core-seconds",
 			},
-			RowKey: "pod",
+			RowKey: []model.LabelName{"pod", "namespace"},
 		},
 		query{
 			Name:        "pod-request-memory-bytes",
@@ -171,7 +171,7 @@ var (
 				Factor:          sumFactor,
 				TransformedName: "pod-request-memory-byte-seconds",
 			},
-			RowKey: "pod",
+			RowKey: []model.LabelName{"pod", "namespace"},
 		},
 		query{
 			Name:        "pod-usage-cpu-cores",
@@ -184,7 +184,7 @@ var (
 				Factor:          sumFactor,
 				TransformedName: "pod-usage-cpu-core-seconds",
 			},
-			RowKey: "pod",
+			RowKey: []model.LabelName{"pod", "namespace"},
 		},
 		query{
 			Name:        "pod-usage-memory-bytes",
@@ -197,13 +197,13 @@ var (
 				Factor:          sumFactor,
 				TransformedName: "pod-usage-memory-byte-seconds",
 			},
-			RowKey: "pod",
+			RowKey: []model.LabelName{"pod", "namespace"},
 		},
 		query{
 			Name:           "pod-labels",
 			QueryString:    "kube_pod_labels",
 			MetricKeyRegex: regexFields{"pod_labels": "label_*"},
-			RowKey:         "pod",
+			RowKey:         []model.LabelName{"pod", "namespace"},
 		},
 	}
 	namespaceQueries = &querys{
@@ -212,7 +212,7 @@ var (
 			QueryString:    "kube_namespace_labels",
 			MetricKey:      staticFields{"namespace": "namespace"},
 			MetricKeyRegex: regexFields{"namespace_labels": "label_*"},
-			RowKey:         "namespace",
+			RowKey:         []model.LabelName{"namespace"},
 		},
 	}
 )
@@ -226,7 +226,7 @@ type query struct {
 	MetricKey      staticFields
 	MetricKeyRegex regexFields
 	QueryValue     *saveQueryValue
-	RowKey         model.LabelName
+	RowKey         []model.LabelName
 }
 
 type staticFields map[string]model.LabelName

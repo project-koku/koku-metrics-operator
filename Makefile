@@ -5,8 +5,8 @@ UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 # Current Operator version
-PREVIOUS_VERSION ?= 1.1.3
-VERSION ?= 1.1.4
+PREVIOUS_VERSION ?= 1.1.5
+VERSION ?= 1.1.6
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -285,8 +285,8 @@ bundle-push:
 	docker push $(BUNDLE_IMG)
 
 # Build a test-catalog
-test-catalog:
-	opm index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
+test-catalog: opm
+	$(OPM) index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
 
 # Push the test-catalog
 test-catalog-push:
@@ -296,8 +296,8 @@ test-catalog-push:
 downstream:
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	- LC_ALL=C find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find . -type f -not -name "Makefile" -not -name "config" -not -path "./.git/*" -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	go mod tidy
 	go mod vendor
 	# fix the cert

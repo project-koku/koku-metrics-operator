@@ -7,8 +7,9 @@ package crhchttp
 
 import (
 	"github.com/go-logr/logr"
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 )
 
 // AuthConfig provides the data for reconciling the CR with defaults

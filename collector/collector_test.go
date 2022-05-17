@@ -14,12 +14,13 @@ import (
 	"testing"
 	"time"
 
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+
 	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
 	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
 	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
 	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
-	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/model"
 )
 
 var testLogger = testutils.TestLogger{}
@@ -416,7 +417,7 @@ func TestIterateMatrix(t *testing.T) {
 					Factor:          maxFactor,
 					TransformedName: "node-allocatable-cpu-core-seconds",
 				},
-				RowKey: "node",
+				RowKey: []model.LabelName{"node"},
 			},
 			matrix: model.Matrix{
 				{
@@ -449,7 +450,7 @@ func TestIterateMatrix(t *testing.T) {
 				Name:           "node-labels",
 				QueryString:    "kube_node_labels",
 				MetricKeyRegex: regexFields{"node_labels": "label_*"},
-				RowKey:         "node",
+				RowKey:         []model.LabelName{"node"},
 			},
 			matrix: model.Matrix{
 				{
@@ -492,7 +493,7 @@ func TestIterateMatrix(t *testing.T) {
 					Factor:          maxFactor,
 					TransformedName: "node-capacity-cpu-core-seconds",
 				},
-				RowKey: "node",
+				RowKey: []model.LabelName{"node"},
 			},
 			matrix: model.Matrix{
 				{
