@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
 	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
@@ -53,12 +53,12 @@ var (
 	trueDef  = true
 
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
+	sourceSpec         *metricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
 )
 
-// KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
-type KokuMetricsConfigReconciler struct {
+// MetricsConfigReconciler reconciles a MetricsConfig object
+type MetricsConfigReconciler struct {
 	client.Client
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
@@ -86,7 +86,7 @@ type serializedAuth struct {
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
-func StringReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, specItem *string, statusItem *string, defaultVal string) (string, bool) {
+func StringReflectSpec(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig, specItem *string, statusItem *string, defaultVal string) (string, bool) {
 	// Update statusItem if needed
 	changed := false
 	if *statusItem == "" || !reflect.DeepEqual(*specItem, *statusItem) {
@@ -104,51 +104,51 @@ func StringReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 }
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
-func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func ReflectSpec(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig) {
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.APIURL, &kmCfg.Status.APIURL, kokumetricscfgv1beta1.DefaultAPIURL)
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Authentication.AuthenticationSecretName, &kmCfg.Status.Authentication.AuthenticationSecretName, "")
+	StringReflectSpec(r, cfg, &cfg.Spec.APIURL, &cfg.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
+	StringReflectSpec(r, cfg, &cfg.Spec.Authentication.AuthenticationSecretName, &cfg.Status.Authentication.AuthenticationSecretName, "")
 
-	if !reflect.DeepEqual(kmCfg.Spec.Authentication.AuthType, kmCfg.Status.Authentication.AuthType) {
-		kmCfg.Status.Authentication.AuthType = kmCfg.Spec.Authentication.AuthType
+	if !reflect.DeepEqual(cfg.Spec.Authentication.AuthType, cfg.Status.Authentication.AuthType) {
+		cfg.Status.Authentication.AuthType = cfg.Spec.Authentication.AuthType
 	}
-	kmCfg.Status.Upload.ValidateCert = kmCfg.Spec.Upload.ValidateCert
+	cfg.Status.Upload.ValidateCert = cfg.Spec.Upload.ValidateCert
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Upload.IngressAPIPath, &kmCfg.Status.Upload.IngressAPIPath, kokumetricscfgv1beta1.DefaultIngressPath)
-	kmCfg.Status.Upload.UploadToggle = kmCfg.Spec.Upload.UploadToggle
+	StringReflectSpec(r, cfg, &cfg.Spec.Upload.IngressAPIPath, &cfg.Status.Upload.IngressAPIPath, metricscfgv1beta1.DefaultIngressPath)
+	cfg.Status.Upload.UploadToggle = cfg.Spec.Upload.UploadToggle
 
 	// set the default max file size for packaging
-	kmCfg.Status.Packaging.MaxSize = &kmCfg.Spec.Packaging.MaxSize
-	kmCfg.Status.Packaging.MaxReports = &kmCfg.Spec.Packaging.MaxReports
+	cfg.Status.Packaging.MaxSize = &cfg.Spec.Packaging.MaxSize
+	cfg.Status.Packaging.MaxReports = &cfg.Spec.Packaging.MaxReports
 
 	// set the upload wait to whatever is in the spec, if the spec is defined
-	if kmCfg.Spec.Upload.UploadWait != nil {
-		kmCfg.Status.Upload.UploadWait = kmCfg.Spec.Upload.UploadWait
+	if cfg.Spec.Upload.UploadWait != nil {
+		cfg.Status.Upload.UploadWait = cfg.Spec.Upload.UploadWait
 	}
 
 	// if the status is nil, generate an upload wait
-	if kmCfg.Status.Upload.UploadWait == nil {
+	if cfg.Status.Upload.UploadWait == nil {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		uploadWait := r.Int63() % 35
-		kmCfg.Status.Upload.UploadWait = &uploadWait
+		cfg.Status.Upload.UploadWait = &uploadWait
 	}
 
-	if !reflect.DeepEqual(kmCfg.Spec.Upload.UploadCycle, kmCfg.Status.Upload.UploadCycle) {
-		kmCfg.Status.Upload.UploadCycle = kmCfg.Spec.Upload.UploadCycle
+	if !reflect.DeepEqual(cfg.Spec.Upload.UploadCycle, cfg.Status.Upload.UploadCycle) {
+		cfg.Status.Upload.UploadCycle = cfg.Spec.Upload.UploadCycle
 	}
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourcesAPIPath, &kmCfg.Status.Source.SourcesAPIPath, kokumetricscfgv1beta1.DefaultSourcesPath)
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourceName, &kmCfg.Status.Source.SourceName, "")
+	StringReflectSpec(r, cfg, &cfg.Spec.Source.SourcesAPIPath, &cfg.Status.Source.SourcesAPIPath, metricscfgv1beta1.DefaultSourcesPath)
+	StringReflectSpec(r, cfg, &cfg.Spec.Source.SourceName, &cfg.Status.Source.SourceName, "")
 
-	kmCfg.Status.Source.CreateSource = kmCfg.Spec.Source.CreateSource
+	cfg.Status.Source.CreateSource = cfg.Spec.Source.CreateSource
 
-	if !reflect.DeepEqual(kmCfg.Spec.Source.CheckCycle, kmCfg.Status.Source.CheckCycle) {
-		kmCfg.Status.Source.CheckCycle = kmCfg.Spec.Source.CheckCycle
+	if !reflect.DeepEqual(cfg.Spec.Source.CheckCycle, cfg.Status.Source.CheckCycle) {
+		cfg.Status.Source.CheckCycle = cfg.Spec.Source.CheckCycle
 	}
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, kokumetricscfgv1beta1.DefaultPrometheusSvcAddress)
-	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
-	kmCfg.Status.Prometheus.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
+	StringReflectSpec(r, cfg, &cfg.Spec.PrometheusConfig.SvcAddress, &cfg.Status.Prometheus.SvcAddress, metricscfgv1beta1.DefaultPrometheusSvcAddress)
+	cfg.Status.Prometheus.SkipTLSVerification = cfg.Spec.PrometheusConfig.SkipTLSVerification
+	cfg.Status.Prometheus.ContextTimeout = cfg.Spec.PrometheusConfig.ContextTimeout
 }
 
 // GetClientset returns a clientset based on rest.config
@@ -166,8 +166,8 @@ func GetClientset() (*kubernetes.Clientset, error) {
 }
 
 // GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
-func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
+func GetClusterID(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig) error {
+	log := r.Log.WithValues("MetricsConfig", "GetClusterID")
 	// Get current ClusterVersion
 	cvClient := r.cvClientBuilder.New(r.Client)
 	clusterVersion, err := cvClient.GetClusterVersion()
@@ -176,18 +176,18 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	}
 	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
 	if clusterVersion.Spec.ClusterID != "" {
-		kmCfg.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
+		cfg.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
 	}
 	if clusterVersion.Spec.Channel != "" {
-		kmCfg.Status.ClusterVersion = string(clusterVersion.Spec.Channel)
+		cfg.Status.ClusterVersion = string(clusterVersion.Spec.Channel)
 	}
 	return nil
 }
 
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
-func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
+func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
-	log := r.Log.WithValues("KokuMetricsConfig", "GetPullSecretToken")
+	log := r.Log.WithValues("MetricsConfig", "GetPullSecretToken")
 
 	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
@@ -234,19 +234,19 @@ func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Aut
 }
 
 // GetAuthSecret Obtain the username and password from the authentication secret provided in the current namespace
-func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
+func GetAuthSecret(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
 	ctx := context.Background()
-	log := r.Log.WithValues("KokuMetricsConfig", "GetAuthSecret")
+	log := r.Log.WithValues("MetricsConfig", "GetAuthSecret")
 
-	if previousValidation == nil || previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
-		previousValidation = &previousAuthValidation{secretName: kmCfg.Status.Authentication.AuthenticationSecretName}
+	if previousValidation == nil || previousValidation.secretName != cfg.Status.Authentication.AuthenticationSecretName {
+		previousValidation = &previousAuthValidation{secretName: cfg.Status.Authentication.AuthenticationSecretName}
 	}
 
 	log.Info("secret namespace", "namespace", reqNamespace.Namespace)
 	secret := &corev1.Secret{}
 	namespace := types.NamespacedName{
 		Namespace: reqNamespace.Namespace,
-		Name:      kmCfg.Status.Authentication.AuthenticationSecretName}
+		Name:      cfg.Status.Authentication.AuthenticationSecretName}
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
 		switch {
@@ -280,7 +280,7 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 }
 
 func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
-	log := logger.WithValues("KokuMetricsConfig", "checkCycle")
+	log := logger.WithValues("MetricsConfig", "checkCycle")
 	if lastExecution.IsZero() {
 		log.Info(fmt.Sprintf("there have been no prior successful %ss", action))
 		return true
@@ -298,57 +298,57 @@ func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, acti
 
 }
 
-func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	if kmCfg.Status.ClusterID == "" || kmCfg.Status.ClusterVersion == "" {
+func setClusterID(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig) error {
+	if cfg.Status.ClusterID == "" || cfg.Status.ClusterVersion == "" {
 		r.cvClientBuilder = cv.NewBuilder()
-		err := GetClusterID(r, kmCfg)
+		err := GetClusterID(r, cfg)
 		return err
 	}
 	return nil
 }
 
-func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, reqNamespace types.NamespacedName) error {
-	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
-	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
-	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
-		kmCfg.Status.Authentication.ValidBasicAuth = nil
-		kmCfg.Status.Authentication.AuthErrorMessage = ""
-		kmCfg.Status.Authentication.LastVerificationTime = nil
+func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cfg *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
+	log := r.Log.WithValues("MetricsConfig", "setAuthentication")
+	cfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
+	if cfg.Status.Authentication.AuthType == metricscfgv1beta1.Token {
+		cfg.Status.Authentication.ValidBasicAuth = nil
+		cfg.Status.Authentication.AuthErrorMessage = ""
+		cfg.Status.Authentication.LastVerificationTime = nil
 		// Get token from pull secret
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
 			log.Error(nil, "failed to obtain cluster authentication token")
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-			kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
+			cfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+			cfg.Status.Authentication.AuthErrorMessage = err.Error()
 		}
 		return err
-	} else if kmCfg.Spec.Authentication.AuthenticationSecretName != "" {
+	} else if cfg.Spec.Authentication.AuthenticationSecretName != "" {
 		// Get user and password from auth secret in namespace
-		err := GetAuthSecret(r, kmCfg, authConfig, reqNamespace)
+		err := GetAuthSecret(r, cfg, authConfig, reqNamespace)
 		if err != nil {
 			log.Error(nil, "failed to obtain authentication secret credentials")
-			kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-			kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
-			kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
+			cfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+			cfg.Status.Authentication.AuthErrorMessage = err.Error()
+			cfg.Status.Authentication.ValidBasicAuth = &falseDef
 		}
 		return err
 	} else {
 		// No authentication secret name set when using basic auth
-		kmCfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+		cfg.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		err := fmt.Errorf("no authentication secret name set when using basic auth")
-		kmCfg.Status.Authentication.AuthErrorMessage = err.Error()
-		kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
+		cfg.Status.Authentication.AuthErrorMessage = err.Error()
+		cfg.Status.Authentication.ValidBasicAuth = &falseDef
 		return err
 	}
 }
 
-func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
-	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
+func validateCredentials(r *MetricsConfigReconciler, sSpec *sources.SourceSpec, cfg *metricscfgv1beta1.MetricsConfig, cycle int64) error {
+	if cfg.Spec.Authentication.AuthType == metricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
 	}
 
-	log := r.Log.WithValues("KokuMetricsConfig", "validateCredentials")
+	log := r.Log.WithValues("MetricsConfig", "validateCredentials")
 
 	if previousValidation == nil {
 		previousValidation = &previousAuthValidation{}
@@ -369,22 +369,22 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 	previousValidation.err = err
 	previousValidation.timestamp = metav1.Now()
 
-	kmCfg.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
+	cfg.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
-		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", kmCfg.Spec.Authentication.AuthenticationSecretName)
+		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", cfg.Spec.Authentication.AuthenticationSecretName)
 		log.Info(msg)
-		kmCfg.Status.Authentication.AuthErrorMessage = msg
-		kmCfg.Status.Authentication.ValidBasicAuth = &falseDef
+		cfg.Status.Authentication.AuthErrorMessage = msg
+		cfg.Status.Authentication.ValidBasicAuth = &falseDef
 		return err
 	}
 	log.Info("credentials are valid")
-	kmCfg.Status.Authentication.AuthErrorMessage = ""
-	kmCfg.Status.Authentication.ValidBasicAuth = &trueDef
+	cfg.Status.Authentication.AuthErrorMessage = ""
+	cfg.Status.Authentication.ValidBasicAuth = &trueDef
 	return nil
 }
 
-func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func setOperatorCommit(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig) {
 	log := r.Log.WithName("setOperatorCommit")
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
@@ -394,65 +394,65 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 			GitCommit = commit
 		}
 	}
-	if kmCfg.Status.OperatorCommit != GitCommit {
+	if cfg.Status.OperatorCommit != GitCommit {
 		// If the commit is different, this is either a fresh install or the operator was upgraded.
 		// After an upgrade, the report structure may differ from the old report structure,
 		// so we need to package the old files before generating new reports.
 		// We set this packaging time to zero so that the next call to packageFiles
 		// will force file packaging to occur.
-		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		cfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 	}
-	kmCfg.Status.OperatorCommit = GitCommit
+	cfg.Status.OperatorCommit = GitCommit
 }
 
-func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func checkSource(r *MetricsConfigReconciler, sSpec *sources.SourceSpec, cfg *metricscfgv1beta1.MetricsConfig) {
 	// check if the Source Spec has changed
 	updated := false
 	if sourceSpec != nil {
-		updated = !reflect.DeepEqual(*sourceSpec, kmCfg.Spec.Source)
+		updated = !reflect.DeepEqual(*sourceSpec, cfg.Spec.Source)
 	}
-	sourceSpec = kmCfg.Spec.Source.DeepCopy()
+	sourceSpec = cfg.Spec.Source.DeepCopy()
 
-	log := r.Log.WithValues("KokuMetricsConfig", "checkSource")
+	log := r.Log.WithValues("MetricsConfig", "checkSource")
 	if sSpec.Spec.SourceName != "" && (updated || checkCycle(r.Log, *sSpec.Spec.CheckCycle, sSpec.Spec.LastSourceCheckTime, "source check")) {
 		client := crhchttp.GetClient(sSpec.Auth)
-		kmCfg.Status.Source.SourceError = ""
+		cfg.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(sSpec, client)
 		if err != nil {
-			kmCfg.Status.Source.SourceError = err.Error()
+			cfg.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
 		}
-		kmCfg.Status.Source.SourceDefined = &defined
-		kmCfg.Status.Source.LastSourceCheckTime = lastCheck
+		cfg.Status.Source.SourceDefined = &defined
+		cfg.Status.Source.LastSourceCheckTime = lastCheck
 	}
 }
 
 func packageFiles(p *packaging.FilePackager) {
-	log := p.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
+	log := p.Log.WithValues("MetricsConfig", "packageAndUpload")
 
 	// if its time to package
-	if !checkCycle(p.Log, *p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+	if !checkCycle(p.Log, *p.Cfg.Status.Upload.UploadCycle, p.Cfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
 		return
 	}
 
 	// Package and split the payload if necessary
-	p.KMCfg.Status.Packaging.PackagingError = ""
+	p.Cfg.Status.Packaging.PackagingError = ""
 	if err := p.PackageReports(); err != nil {
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
-		p.KMCfg.Status.Packaging.PackagingError = err.Error()
+		p.Cfg.Status.Packaging.PackagingError = err.Error()
 	}
 }
 
-func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
-	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
+func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cfg *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
+	log := r.Log.WithValues("MetricsConfig", "uploadFiles")
 
 	// if its time to upload/package
-	if !*kmCfg.Spec.Upload.UploadToggle {
+	if !*cfg.Spec.Upload.UploadToggle {
 		log.Info("operator is configured to not upload reports")
 		return nil
 	}
-	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
+	if !checkCycle(r.Log, *cfg.Status.Upload.UploadCycle, cfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
 		return nil
 	}
 
@@ -468,8 +468,8 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	}
 
 	log.Info("files ready for upload: " + strings.Join(uploadFiles, ", "))
-	log.Info("pausing for " + fmt.Sprintf("%d", *kmCfg.Status.Upload.UploadWait) + " seconds before uploading")
-	time.Sleep(time.Duration(*kmCfg.Status.Upload.UploadWait) * time.Second)
+	log.Info("pausing for " + fmt.Sprintf("%d", *cfg.Status.Upload.UploadWait) + " seconds before uploading")
+	time.Sleep(time.Duration(*cfg.Status.Upload.UploadWait) * time.Second)
 	for _, file := range uploadFiles {
 		if !strings.Contains(file, "tar.gz") {
 			continue
@@ -488,21 +488,21 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 			log.Error(err, "failed to set multipart body and headers")
 			return err
 		}
-		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
+		ingressURL := cfg.Status.APIURL + cfg.Status.Upload.IngressAPIPath
 		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
-		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
-		kmCfg.Status.Upload.LastPayloadName = file
-		kmCfg.Status.Upload.LastPayloadFiles = manifestInfo.Files
-		kmCfg.Status.Upload.LastPayloadManifestID = manifestInfo.UUID
-		kmCfg.Status.Upload.LastPayloadRequestID = requestID
-		kmCfg.Status.Upload.UploadError = ""
+		cfg.Status.Upload.LastUploadStatus = uploadStatus
+		cfg.Status.Upload.LastPayloadName = file
+		cfg.Status.Upload.LastPayloadFiles = manifestInfo.Files
+		cfg.Status.Upload.LastPayloadManifestID = manifestInfo.UUID
+		cfg.Status.Upload.LastPayloadRequestID = requestID
+		cfg.Status.Upload.UploadError = ""
 		if err != nil {
 			log.Error(err, "upload failed")
-			kmCfg.Status.Upload.UploadError = err.Error()
+			cfg.Status.Upload.UploadError = err.Error()
 			return nil
 		}
 		if strings.Contains(uploadStatus, "202") {
-			kmCfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
+			cfg.Status.Upload.LastSuccessfulUploadTime = uploadTime
 			// remove the tar.gz after a successful upload
 			log.Info("removing tar file since upload was successful")
 			if err := os.Remove(filepath.Join(dirCfg.Upload.Path, file)); err != nil {
@@ -513,8 +513,8 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	return nil
 }
 
-func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
-	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
+func collectPromStats(r *MetricsConfigReconciler, cfg *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
+	log := r.Log.WithValues("MetricsConfig", "collectPromStats")
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
 			Log:       r.Log,
@@ -523,7 +523,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 	}
 	r.promCollector.TimeSeries = nil
 
-	if err := r.promCollector.GetPromConn(kmCfg); err != nil {
+	if err := r.promCollector.GetPromConn(cfg); err != nil {
 		log.Error(err, "failed to get prometheus connection")
 		return
 	}
@@ -535,35 +535,35 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 		Step:  time.Minute,
 	}
 	r.promCollector.TimeSeries = &timeRange
-	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
+	r.promCollector.ContextTimeout = cfg.Spec.PrometheusConfig.ContextTimeout
 
-	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
+	if cfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		return
 	}
-	kmCfg.Status.Prometheus.LastQueryStartTime = t
+	cfg.Status.Prometheus.LastQueryStartTime = t
 	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
-	if err := collector.GenerateReports(kmCfg, dirCfg, r.promCollector); err != nil {
-		kmCfg.Status.Reports.DataCollected = false
-		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
+	if err := collector.GenerateReports(cfg, dirCfg, r.promCollector); err != nil {
+		cfg.Status.Reports.DataCollected = false
+		cfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		log.Error(err, "failed to generate reports")
 		return
 	}
 	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
-	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
+	cfg.Status.Prometheus.LastQuerySuccessTime = t
 }
 
-func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (*ctrl.Result, error) {
+func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cfg *metricscfgv1beta1.MetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("kokumetricsconfig", "configurePVC")
-	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
+	log := r.Log.WithValues("MetricsConfig", "configurePVC")
+	pvcTemplate := cfg.Spec.VolumeClaimTemplate
 	if pvcTemplate == nil {
 		pvcTemplate = &storage.DefaultPVC
 	}
 
 	stor := &storage.Storage{
 		Client:    r.Client,
-		KMCfg:     kmCfg,
+		Cfg:       cfg,
 		Log:       r.Log,
 		Namespace: req.Namespace,
 		PVC:       storage.MakeVolumeClaimTemplate(*pvcTemplate, req.Namespace),
@@ -584,20 +584,20 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 	if err := r.Get(ctx, namespace, pvcStatus); err != nil {
 		return &ctrl.Result{}, fmt.Errorf("failed to get PVC name %s, %v", pvcTemplate.Name, err)
 	}
-	kmCfg.Status.PersistentVolumeClaim = storage.MakeEmbeddedPVC(pvcStatus)
+	cfg.Status.PersistentVolumeClaim = storage.MakeEmbeddedPVC(pvcStatus)
 
-	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
-		kmCfg.Status.Storage.VolumeMounted = false
-		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
+	if strings.Contains(cfg.Status.Storage.VolumeType, "EmptyDir") {
+		cfg.Status.Storage.VolumeMounted = false
+		if err := r.Status().Update(ctx, cfg); err != nil {
+			log.Error(err, "failed to update MetricsConfig status")
 		}
 		return &ctrl.Result{}, fmt.Errorf("PVC not mounted")
 	}
 	return nil, nil
 }
 
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=MetricsConfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=MetricsConfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operators.coreos.com,namespace=koku-metrics-operator,resources=clusterserviceversions,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
@@ -605,47 +605,47 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
-// Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
-func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile Process the MetricsConfig custom resource based on changes or requeue
+func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
-	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
+	log := r.Log.WithValues("MetricsConfig", req.NamespacedName)
 
-	// fetch the KokuMetricsConfig instance
-	kmCfgOriginal := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+	// fetch the MetricsConfig instance
+	cfgOriginal := &metricscfgv1beta1.MetricsConfig{}
 
-	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
-		log.Info(fmt.Sprintf("unable to fetch KokuMetricsConfigCR: %v", err))
+	if err := r.Get(ctx, req.NamespacedName, cfgOriginal); err != nil {
+		log.Info(fmt.Sprintf("unable to fetch MetricsConfigCR: %v", err))
 		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	kmCfg := kmCfgOriginal.DeepCopy()
-	log.Info("reconciling custom resource", "KokuMetricsConfig", kmCfg)
+	cfg := cfgOriginal.DeepCopy()
+	log.Info("reconciling custom resource", "MetricsConfig", cfg)
 
 	// reflect the spec values into status
-	ReflectSpec(r, kmCfg)
+	ReflectSpec(r, cfg)
 
 	if r.InCluster {
-		res, err := configurePVC(r, req, kmCfg)
+		res, err := configurePVC(r, req, cfg)
 		if err != nil || res != nil {
 			return *res, err
 		}
 	}
 
 	// set the cluster ID & return if there are errors
-	if err := setClusterID(r, kmCfg); err != nil {
+	if err := setClusterID(r, cfg); err != nil {
 		log.Error(err, "failed to obtain clusterID")
-		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
+		if err := r.Status().Update(ctx, cfg); err != nil {
+			log.Error(err, "failed to update MetricsConfig status")
 		}
 		return ctrl.Result{}, err
 	}
 
-	log.Info("using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
+	log.Info("using the following inputs", "MetricsConfig", cfg.Status)
 
 	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	setOperatorCommit(r, kmCfg)
+	setOperatorCommit(r, cfg)
 
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
@@ -657,14 +657,14 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	packager := &packaging.FilePackager{
-		KMCfg:  kmCfg,
+		Cfg:    cfg,
 		DirCfg: dirCfg,
 		Log:    r.Log,
 	}
 
 	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
 	// package all the files so that the next prometheus query generates a fresh report
-	if kmCfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+	if cfg.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
 		log.Info("checking for files from an old operator version")
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
@@ -674,7 +674,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
+	collectPromStats(r, cfg, dirCfg)
 
 	// package report files
 	packageFiles(packager)
@@ -684,49 +684,49 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
 	var errors []error
 
-	if kmCfg.Spec.Upload.UploadToggle != nil && *kmCfg.Spec.Upload.UploadToggle {
+	if cfg.Spec.Upload.UploadToggle != nil && *cfg.Spec.Upload.UploadToggle {
 
 		log.Info("configuration is for connected cluster")
 
 		authConfig := &crhchttp.AuthConfig{
 			Log:            r.Log,
-			ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
-			Authentication: kmCfg.Status.Authentication.AuthType,
-			OperatorCommit: kmCfg.Status.OperatorCommit,
-			ClusterID:      kmCfg.Status.ClusterID,
+			ValidateCert:   *cfg.Status.Upload.ValidateCert,
+			Authentication: cfg.Status.Authentication.AuthType,
+			OperatorCommit: cfg.Status.OperatorCommit,
+			ClusterID:      cfg.Status.ClusterID,
 			Client:         r.Client,
 		}
 
 		// obtain credentials token/basic & return if there are authentication credential errors
-		if err := setAuthentication(r, authConfig, kmCfg, req.NamespacedName); err != nil {
-			if err := r.Status().Update(ctx, kmCfg); err != nil {
-				log.Error(err, "failed to update KokuMetricsConfig status")
+		if err := setAuthentication(r, authConfig, cfg, req.NamespacedName); err != nil {
+			if err := r.Status().Update(ctx, cfg); err != nil {
+				log.Error(err, "failed to update MetricsConfig status")
 			}
 			return ctrl.Result{}, err
 		}
 
 		sSpec := &sources.SourceSpec{
-			APIURL: kmCfg.Status.APIURL,
+			APIURL: cfg.Status.APIURL,
 			Auth:   authConfig,
-			Spec:   kmCfg.Status.Source,
+			Spec:   cfg.Status.Source,
 			Log:    r.Log,
 		}
 
-		if err := validateCredentials(r, sSpec, kmCfg, 1440); err == nil {
+		if err := validateCredentials(r, sSpec, cfg, 1440); err == nil {
 			// Block will run when creds are valid.
 
 			// Check if source is defined and update the status to confirmed/created
-			checkSource(r, sSpec, kmCfg)
+			checkSource(r, sSpec, cfg)
 
 			// attempt upload
-			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
+			if err := uploadFiles(r, authConfig, cfg, dirCfg, packager); err != nil {
 				result = ctrl.Result{}
 				errors = append(errors, err)
 			}
 
 			// revalidate if an upload fails due to 401
-			if strings.Contains(kmCfg.Status.Upload.LastUploadStatus, "401") {
-				_ = validateCredentials(r, sSpec, kmCfg, 0)
+			if strings.Contains(cfg.Status.Upload.LastUploadStatus, "401") {
+				_ = validateCredentials(r, sSpec, cfg, 0)
 			}
 		}
 	} else {
@@ -744,10 +744,10 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
-	kmCfg.Status.Packaging.PackagedFiles = uploadFiles
+	cfg.Status.Packaging.PackagedFiles = uploadFiles
 
-	if err := r.Status().Update(ctx, kmCfg); err != nil {
-		log.Error(err, "failed to update KokuMetricsConfig status")
+	if err := r.Status().Update(ctx, cfg); err != nil {
+		log.Error(err, "failed to update MetricsConfig status")
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
@@ -757,9 +757,9 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 // SetupWithManager Setup reconciliation with manager object
-func (r *KokuMetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *MetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kokumetricscfgv1beta1.KokuMetricsConfig{}).
+		For(&metricscfgv1beta1.MetricsConfig{}).
 		Complete(r)
 }
 

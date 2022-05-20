@@ -69,7 +69,7 @@ rules:
 - apiGroups:
   - koku-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs
+  - MetricsConfigs
   verbs:
   - create
   - delete
@@ -81,7 +81,7 @@ rules:
 - apiGroups:
   - koku-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs/status
+  - MetricsConfigs/status
   verbs:
   - get
   - patch

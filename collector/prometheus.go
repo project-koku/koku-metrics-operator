@@ -21,11 +21,11 @@ import (
 	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
-	promSpec *kokumetricscfgv1beta1.PrometheusSpec
+	promSpec *metricscfgv1beta1.PrometheusSpec
 
 	certKey  = "service-ca.crt"
 	tokenKey = "token"
@@ -67,7 +67,7 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
+func getPrometheusConfig(kmCfg *metricscfgv1beta1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
 	if !inCluster {
 		val, ok := os.LookupEnv("SECRET_ABSPATH")
 		if ok {
@@ -109,7 +109,7 @@ func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
 	return promv1.NewAPI(client), nil
 }
 
-func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string, err error) {
+func statusHelper(kmCfg *metricscfgv1beta1.MetricsConfig, status string, err error) {
 	switch status {
 	case "configuration":
 		if err != nil {
@@ -141,29 +141,29 @@ func testPrometheusConnection(promConn prometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+func (c *PromCollector) GetPromConn(cfg *metricscfgv1beta1.MetricsConfig) error {
 	log := c.Log.WithValues("kokumetricsconfig", "GetPromConn")
 	var err error
 
 	updated := true
 	if promSpec != nil {
-		updated = !reflect.DeepEqual(*promSpec, kmCfg.Spec.PrometheusConfig)
+		updated = !reflect.DeepEqual(*promSpec, cfg.Spec.PrometheusConfig)
 	}
-	promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
+	promSpec = cfg.Spec.PrometheusConfig.DeepCopy()
 
-	if updated || c.PromCfg == nil || kmCfg.Status.Prometheus.ConfigError != "" {
+	if updated || c.PromCfg == nil || cfg.Status.Prometheus.ConfigError != "" {
 		log.Info("getting prometheus configuration")
-		c.PromCfg, err = getPrometheusConfig(&kmCfg.Spec.PrometheusConfig, c.InCluster)
-		statusHelper(kmCfg, "configuration", err)
+		c.PromCfg, err = getPrometheusConfig(&cfg.Spec.PrometheusConfig, c.InCluster)
+		statusHelper(cfg, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
 		}
 	}
 
-	if updated || c.PromConn == nil || kmCfg.Status.Prometheus.ConnectionError != "" {
+	if updated || c.PromConn == nil || cfg.Status.Prometheus.ConnectionError != "" {
 		log.Info("getting prometheus connection")
 		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
-		statusHelper(kmCfg, "configuration", err)
+		statusHelper(cfg, "configuration", err)
 		if err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 	log.Info("testing the ability to query prometheus")
 	err = testPrometheusConnection(c.PromConn)
-	statusHelper(kmCfg, "connection", err)
+	statusHelper(cfg, "connection", err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)
 	}

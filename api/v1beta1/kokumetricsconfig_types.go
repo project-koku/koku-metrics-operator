@@ -96,7 +96,7 @@ type EmbeddedPersistentVolumeClaim struct {
 	Spec corev1.PersistentVolumeClaimSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
-// AuthenticationSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
+// AuthenticationSpec defines the desired state of Authentication object in the MetricsConfigSpec.
 type AuthenticationSpec struct {
 
 	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
@@ -111,7 +111,7 @@ type AuthenticationSpec struct {
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
 }
 
-// PackagingSpec defines the desired state of the Packaging object in the KokuMetricsConfigSpec.
+// PackagingSpec defines the desired state of the Packaging object in the MetricsConfigSpec.
 type PackagingSpec struct {
 
 	// MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
@@ -128,7 +128,7 @@ type PackagingSpec struct {
 	MaxReports int64 `json:"max_reports_to_store"`
 }
 
-// UploadSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
+// UploadSpec defines the desired state of Authentication object in the MetricsConfigSpec.
 type UploadSpec struct {
 
 	// FOR DEVELOPMENT ONLY.
@@ -159,7 +159,7 @@ type UploadSpec struct {
 	ValidateCert *bool `json:"validate_cert"`
 }
 
-// PrometheusSpec defines the desired state of PrometheusConfig object in the KokuMetricsConfigSpec.
+// PrometheusSpec defines the desired state of PrometheusConfig object in the MetricsConfigSpec.
 type PrometheusSpec struct {
 
 	// ContextTimeout is a field of KokuMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
@@ -182,7 +182,7 @@ type PrometheusSpec struct {
 	SkipTLSVerification *bool `json:"skip_tls_verification"`
 }
 
-// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the KokuMetricsConfigSpec.
+// CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the MetricsConfigSpec.
 type CloudDotRedHatSourceSpec struct {
 
 	// FOR DEVELOPMENT ONLY.
@@ -191,11 +191,11 @@ type CloudDotRedHatSourceSpec struct {
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on cloud.redhat.com.
+	// SourceName is a field of MetricsConfigSpec to represent the source name on cloud.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// CreateSource is a field of KokuMetricsConfigSpec to represent if the source should be created if not found.
+	// CreateSource is a field of MetricsConfigSpec to represent if the source should be created if not found.
 	// +kubebuilder:default=false
 	CreateSource *bool `json:"create_source"`
 
@@ -206,8 +206,8 @@ type CloudDotRedHatSourceSpec struct {
 	CheckCycle *int64 `json:"check_cycle"`
 }
 
-// KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
-type KokuMetricsConfigSpec struct {
+// MetricsConfigSpec defines the desired state of KokuMetricsConfig.
+type MetricsConfigSpec struct {
 	// +kubebuilder:validation:preserveUnknownFields=false
 
 	// ClusterID is a field of KokuMetricsConfig to represent the cluster UUID. Normally this value should not be
@@ -245,7 +245,7 @@ type KokuMetricsConfigSpec struct {
 	VolumeClaimTemplate *EmbeddedPersistentVolumeClaim `json:"volume_claim_template,omitempty"`
 }
 
-// AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.
+// AuthenticationStatus defines the desired state of Authentication object in the MetricsConfigStatus.
 type AuthenticationStatus struct {
 
 	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
@@ -268,7 +268,7 @@ type AuthenticationStatus struct {
 	LastVerificationTime *metav1.Time `json:"last_credential_verification_time,omitempty"`
 }
 
-// PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.
+// PackagingStatus defines the observed state of the Packing object in the MetricsConfigStatus.
 type PackagingStatus struct {
 
 	// LastSuccessfulPackagingTime is a field of KokuMetricsConfig that shows the time of the last successful file packaging.
@@ -291,7 +291,7 @@ type PackagingStatus struct {
 	ReportCount *int64 `json:"number_reports_stored,omitempty"`
 }
 
-// UploadStatus defines the observed state of Upload object in the KokuMetricsConfigStatus.
+// UploadStatus defines the observed state of Upload object in the MetricsConfigStatus.
 type UploadStatus struct {
 
 	// IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
@@ -309,7 +309,7 @@ type UploadStatus struct {
 	// The default is 360 min (6 hours).
 	UploadCycle *int64 `json:"upload_cycle,omitempty"`
 
-	// UploadError is a field of KokuMetricsConfigStatus to represent the error encountered uploading reports.
+	// UploadError is a field of MetricsConfigStatus to represent the error encountered uploading reports.
 	// +optional
 	UploadError string `json:"error,omitempty"`
 
@@ -336,27 +336,27 @@ type UploadStatus struct {
 	ValidateCert *bool `json:"validate_cert,omitempty"`
 }
 
-// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the KokuMetricsConfigStatus.
+// CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the MetricsConfigStatus.
 type CloudDotRedHatSourceStatus struct {
 
 	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on cloud.redhat.com.
+	// SourceName is a field of MetricsConfigStatus to represent the source name on cloud.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on cloud.redhat.com.
+	// SourceDefined is a field of MetricsConfigStatus to represent if the source exists as defined on cloud.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
-	// CreateSource is a field of KokuMetricsConfigStatus to represent if the source should be created if not found.
+	// CreateSource is a field of MetricsConfigStatus to represent if the source should be created if not found.
 	// A source will not be created if upload_toggle is `false`.
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
 
-	// SourceError is a field of KokuMetricsConfigStatus to represent the error encountered creating the source.
+	// SourceError is a field of MetricsConfigStatus to represent the error encountered creating the source.
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
@@ -372,49 +372,49 @@ type CloudDotRedHatSourceStatus struct {
 // PrometheusStatus defines the status for querying prometheus.
 type PrometheusStatus struct {
 
-	// PrometheusConfigured is a field of KokuMetricsConfigStatus to represent if the operator is configured to connect to prometheus.
+	// PrometheusConfigured is a field of MetricsConfigStatus to represent if the operator is configured to connect to prometheus.
 	PrometheusConfigured bool `json:"prometheus_configured"`
 
-	// ConfigError is a field of KokuMetricsConfigStatus to represent errors during prometheus configuration.
+	// ConfigError is a field of MetricsConfigStatus to represent errors during prometheus configuration.
 	ConfigError string `json:"configuration_error,omitempty"`
 
-	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
+	// PrometheusConnected is a field of MetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
 	//ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
-	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
+	// ConnectionError is a field of MetricsConfigStatus to represent errors during prometheus test query.
 	ConnectionError string `json:"prometheus_connection_error,omitempty"`
 
-	// LastQueryStartTime is a field of KokuMetricsConfigStatus to represent the last time queries were started.
+	// LastQueryStartTime is a field of MetricsConfigStatus to represent the last time queries were started.
 	// +nullable
 	LastQueryStartTime metav1.Time `json:"last_query_start_time,omitempty"`
 
-	// LastQuerySuccessTime is a field of KokuMetricsConfigStatus to represent the last time queries were successful.
+	// LastQuerySuccessTime is a field of MetricsConfigStatus to represent the last time queries were successful.
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
 
 	// SvcAddress is the internal thanos-querier address.
 	SvcAddress string `json:"service_address,omitempty"`
 
-	// SkipTLSVerification is a field of KokuMetricsConfigStatus to represent if the thanos-querier endpoint must be certificate validated.
+	// SkipTLSVerification is a field of MetricsConfigStatus to represent if the thanos-querier endpoint must be certificate validated.
 	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
 }
 
 // ReportsStatus defines the status for generating reports.
 type ReportsStatus struct {
 
-	// ReportMonth is a field of KokuMetricsConfigStatus to represent the month for which reports are being generated.
+	// ReportMonth is a field of MetricsConfigStatus to represent the month for which reports are being generated.
 	ReportMonth string `json:"report_month,omitempty"`
 
-	// LastHourQueried is a field of KokuMetricsConfigStatus to represent the time range for which metrics were last queried.
+	// LastHourQueried is a field of MetricsConfigStatus to represent the time range for which metrics were last queried.
 	LastHourQueried string `json:"last_hour_queried,omitempty"`
 
-	// DataCollected is a field of KokuMetricsConfigStatus to represent whether or not data was collected for the last query.
+	// DataCollected is a field of MetricsConfigStatus to represent whether or not data was collected for the last query.
 	DataCollected bool `json:"data_collected,omitempty"`
 
-	// DataCollectionMessage is a field of KokuMetricsConfigStatus to represent a message associated with the data_collected status.
+	// DataCollectionMessage is a field of MetricsConfigStatus to represent a message associated with the data_collected status.
 	DataCollectionMessage string `json:"data_collection_message,omitempty"`
 }
 
@@ -428,8 +428,8 @@ type StorageStatus struct {
 	VolumeMounted bool `json:"volume_mounted,omitempty"`
 }
 
-// KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
-type KokuMetricsConfigStatus struct {
+// MetricsConfigStatus defines the observed state of KokuMetricsConfig.
+type MetricsConfigStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -482,8 +482,8 @@ type KokuMetricsConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KokuMetricsConfigSpec   `json:"spec"`
-	Status KokuMetricsConfigStatus `json:"status,omitempty"`
+	Spec   MetricsConfigSpec   `json:"spec"`
+	Status MetricsConfigStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -497,4 +497,9 @@ type KokuMetricsConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&KokuMetricsConfig{}, &KokuMetricsConfigList{})
+}
+
+// MetricsConfig inherits from KokuMetricsConfig to carry the configuration throughout the code.
+type MetricsConfig struct {
+	KokuMetricsConfig
 }

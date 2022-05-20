@@ -34,7 +34,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
+            description: MetricsConfigSpec defines the desired state of KokuMetricsConfig.
             properties:
               api_url:
                 default: https://cloud.redhat.com
@@ -144,12 +144,12 @@ spec:
                     type: integer
                   create_source:
                     default: false
-                    description: CreateSource is a field of KokuMetricsConfigSpec
-                      to represent if the source should be created if not found.
+                    description: CreateSource is a field of MetricsConfigSpec to represent
+                      if the source should be created if not found.
                     type: boolean
                   name:
-                    description: SourceName is a field of KokuMetricsConfigSpec to
-                      represent the source name on cloud.redhat.com.
+                    description: SourceName is a field of MetricsConfigSpec to represent
+                      the source name on cloud.redhat.com.
                     type: string
                   sources_path:
                     default: /api/sources/v1.0/
@@ -383,7 +383,7 @@ spec:
             - upload
             type: object
           status:
-            description: KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
+            description: MetricsConfigStatus defines the observed state of KokuMetricsConfig.
             properties:
               api_url:
                 description: APIURL is a field of KokuMetricsConfig to represent the
@@ -648,8 +648,8 @@ spec:
                 description: Prometheus represents the status of premetheus queries.
                 properties:
                   configuration_error:
-                    description: ConfigError is a field of KokuMetricsConfigStatus
-                      to represent errors during prometheus configuration.
+                    description: ConfigError is a field of MetricsConfigStatus to
+                      represent errors during prometheus configuration.
                     type: string
                   context_timeout:
                     description: ContextTimeout is a field of KokuMetricsConfigState
@@ -658,34 +658,34 @@ spec:
                     format: int64
                     type: integer
                   last_query_start_time:
-                    description: LastQueryStartTime is a field of KokuMetricsConfigStatus
+                    description: LastQueryStartTime is a field of MetricsConfigStatus
                       to represent the last time queries were started.
                     format: date-time
                     nullable: true
                     type: string
                   last_query_success_time:
-                    description: LastQuerySuccessTime is a field of KokuMetricsConfigStatus
+                    description: LastQuerySuccessTime is a field of MetricsConfigStatus
                       to represent the last time queries were successful.
                     format: date-time
                     nullable: true
                     type: string
                   prometheus_configured:
-                    description: PrometheusConfigured is a field of KokuMetricsConfigStatus
+                    description: PrometheusConfigured is a field of MetricsConfigStatus
                       to represent if the operator is configured to connect to prometheus.
                     type: boolean
                   prometheus_connected:
-                    description: PrometheusConnected is a field of KokuMetricsConfigStatus
+                    description: PrometheusConnected is a field of MetricsConfigStatus
                       to represent if prometheus can be queried.
                     type: boolean
                   prometheus_connection_error:
-                    description: ConnectionError is a field of KokuMetricsConfigStatus
+                    description: ConnectionError is a field of MetricsConfigStatus
                       to represent errors during prometheus test query.
                     type: string
                   service_address:
                     description: SvcAddress is the internal thanos-querier address.
                     type: string
                   skip_tls_verification:
-                    description: SkipTLSVerification is a field of KokuMetricsConfigStatus
+                    description: SkipTLSVerification is a field of MetricsConfigStatus
                       to represent if the thanos-querier endpoint must be certificate
                       validated.
                     type: boolean
@@ -697,21 +697,20 @@ spec:
                 description: Reports represents the status of report generation.
                 properties:
                   data_collected:
-                    description: DataCollected is a field of KokuMetricsConfigStatus
-                      to represent whether or not data was collected for the last
-                      query.
+                    description: DataCollected is a field of MetricsConfigStatus to
+                      represent whether or not data was collected for the last query.
                     type: boolean
                   data_collection_message:
-                    description: DataCollectionMessage is a field of KokuMetricsConfigStatus
+                    description: DataCollectionMessage is a field of MetricsConfigStatus
                       to represent a message associated with the data_collected status.
                     type: string
                   last_hour_queried:
-                    description: LastHourQueried is a field of KokuMetricsConfigStatus
+                    description: LastHourQueried is a field of MetricsConfigStatus
                       to represent the time range for which metrics were last queried.
                     type: string
                   report_month:
-                    description: ReportMonth is a field of KokuMetricsConfigStatus
-                      to represent the month for which reports are being generated.
+                    description: ReportMonth is a field of MetricsConfigStatus to
+                      represent the month for which reports are being generated.
                     type: string
                 type: object
               source:
@@ -725,13 +724,13 @@ spec:
                     format: int64
                     type: integer
                   create_source:
-                    description: CreateSource is a field of KokuMetricsConfigStatus
-                      to represent if the source should be created if not found. A
-                      source will not be created if upload_toggle is `false`.
+                    description: CreateSource is a field of MetricsConfigStatus to
+                      represent if the source should be created if not found. A source
+                      will not be created if upload_toggle is `false`.
                     type: boolean
                   error:
-                    description: SourceError is a field of KokuMetricsConfigStatus
-                      to represent the error encountered creating the source.
+                    description: SourceError is a field of MetricsConfigStatus to
+                      represent the error encountered creating the source.
                     type: string
                   last_check_time:
                     description: LastSourceCheckTime is a field of KokuMetricsConfig
@@ -740,12 +739,12 @@ spec:
                     nullable: true
                     type: string
                   name:
-                    description: SourceName is a field of KokuMetricsConfigStatus
-                      to represent the source name on cloud.redhat.com.
+                    description: SourceName is a field of MetricsConfigStatus to represent
+                      the source name on cloud.redhat.com.
                     type: string
                   source_defined:
-                    description: SourceDefined is a field of KokuMetricsConfigStatus
-                      to represent if the source exists as defined on cloud.redhat.com.
+                    description: SourceDefined is a field of MetricsConfigStatus to
+                      represent if the source exists as defined on cloud.redhat.com.
                     type: boolean
                   sources_path:
                     description: SourcesAPIPath is a field of KokuMetricsConfig to
@@ -769,8 +768,8 @@ spec:
                   upload object.
                 properties:
                   error:
-                    description: UploadError is a field of KokuMetricsConfigStatus
-                      to represent the error encountered uploading reports.
+                    description: UploadError is a field of MetricsConfigStatus to
+                      represent the error encountered uploading reports.
                     type: string
                   ingress_path:
                     description: IngressAPIPath is a field of KokuMetricsConfig to

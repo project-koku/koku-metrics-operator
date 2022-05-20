@@ -36,7 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -179,7 +179,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = kokumetricscfgv1beta1.AddToScheme(scheme.Scheme)
+	err = metricscfgv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = configv1.AddToScheme(scheme.Scheme)
@@ -203,7 +203,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&KokuMetricsConfigReconciler{
+		err = (&MetricsConfigReconciler{
 			Client:    k8sManager.GetClient(),
 			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
 			Scheme:    scheme.Scheme,

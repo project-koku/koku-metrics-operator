@@ -24,7 +24,7 @@ import (
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
@@ -32,11 +32,11 @@ import (
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var testLogger = testutils.TestLogger{}
-var kmCfg = &kokumetricscfgv1beta1.KokuMetricsConfig{}
+var cfg = &metricscfgv1beta1.MetricsConfig{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
 	Log:    testLogger,
-	KMCfg:  kmCfg,
+	Cfg:    cfg,
 }
 var errTest = errors.New("test error")
 
@@ -463,8 +463,8 @@ func TestPackagingReports(t *testing.T) {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = tt.dirCfg
-			testPackager.KMCfg.Spec.Packaging.MaxReports = tt.maxReports
-			testPackager.KMCfg.Status.Packaging.MaxSize = &tt.maxSize
+			testPackager.Cfg.Spec.Packaging.MaxReports = tt.maxReports
+			testPackager.Cfg.Status.Packaging.MaxSize = &tt.maxSize
 			err := testPackager.PackageReports()
 			if tt.want != nil && err == nil {
 				t.Errorf("%s wanted error got %v", tt.name, err)
@@ -553,7 +553,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 					t.Fatal("could not set start/end times")
 				}
 			}
-			testPackager.getManifest(csvFileNames, tt.dirName, *testPackager.KMCfg)
+			testPackager.getManifest(csvFileNames, tt.dirName, *testPackager.Cfg)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -581,9 +581,9 @@ func TestGetAndRenderManifest(t *testing.T) {
 			endTime, _ := time.Parse("2006-01-02 15:04:05", strings.Split("2021-01-07 18:59:59", " +")[0])
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
-				ClusterID: testPackager.KMCfg.Status.ClusterID,
-				CRStatus:  testPackager.KMCfg.Status,
-				Version:   testPackager.KMCfg.Status.OperatorCommit,
+				ClusterID: testPackager.Cfg.Status.ClusterID,
+				CRStatus:  testPackager.Cfg.Status,
+				Version:   testPackager.Cfg.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
 				Files:     expectedFiles,
 				Start:     startTime.UTC(),
@@ -740,7 +740,7 @@ func TestWriteTarball(t *testing.T) {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
 			}
 			manifestName := tt.manifestName
-			testPackager.getManifest(csvFileNames, stagingDir, *testPackager.KMCfg)
+			testPackager.getManifest(csvFileNames, stagingDir, *testPackager.Cfg)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -1054,12 +1054,12 @@ func TestTrimPackages(t *testing.T) {
 			dirCfg := &dirconfig.DirectoryConfig{
 				Upload: dirconfig.Directory{Path: tmpDir2},
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
-			kmCfg.Spec.Packaging.MaxReports = tt.maxReports
+			cfg := &metricscfgv1beta1.MetricsConfig{}
+			cfg.Spec.Packaging.MaxReports = tt.maxReports
 			testPackager := FilePackager{
 				DirCfg: dirCfg,
 				Log:    testLogger,
-				KMCfg:  kmCfg,
+				Cfg:    cfg,
 			}
 			got := testPackager.TrimPackages()
 			if tt.want == nil && got != nil {
@@ -1077,8 +1077,8 @@ func TestTrimPackages(t *testing.T) {
 				if len(files) != tt.numFilesExpected {
 					t.Errorf("%s expected %d files got %d files", tt.name, tt.numFilesExpected, len(files))
 				}
-				if testPackager.KMCfg.Status.Packaging.ReportCount != nil && *testPackager.KMCfg.Status.Packaging.ReportCount != int64(tt.numReportsExpected) {
-					t.Errorf("%s expected %d number of reports got %d", tt.name, tt.numReportsExpected, *testPackager.KMCfg.Status.Packaging.ReportCount)
+				if testPackager.Cfg.Status.Packaging.ReportCount != nil && *testPackager.Cfg.Status.Packaging.ReportCount != int64(tt.numReportsExpected) {
+					t.Errorf("%s expected %d number of reports got %d", tt.name, tt.numReportsExpected, *testPackager.Cfg.Status.Packaging.ReportCount)
 				}
 			}
 		})

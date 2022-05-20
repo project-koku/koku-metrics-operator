@@ -16,7 +16,7 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 )
 
@@ -126,12 +126,12 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+func GenerateReports(cfg *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
 	log := c.Log.WithValues("kokumetricsconfig", "GenerateReports")
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
-	updateReportStatus(kmCfg, c.TimeSeries)
+	updateReportStatus(cfg, c.TimeSeries)
 
 	// ################################################################################################################
 	log.Info("querying for node metrics")
@@ -142,8 +142,8 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 
 	if len(nodeResults) <= 0 {
 		log.Info("no data to report")
-		kmCfg.Status.Reports.DataCollected = false
-		kmCfg.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
+		cfg.Status.Reports.DataCollected = false
+		cfg.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
@@ -282,8 +282,8 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 
 	//################################################################################################################
 
-	kmCfg.Status.Reports.DataCollected = true
-	kmCfg.Status.Reports.DataCollectionMessage = ""
+	cfg.Status.Reports.DataCollected = true
+	cfg.Status.Reports.DataCollectionMessage = ""
 
 	return nil
 }
@@ -306,7 +306,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, ts *promv1.Range) {
-	kmCfg.Status.Reports.ReportMonth = ts.Start.Format("01")
-	kmCfg.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
+func updateReportStatus(cfg *metricscfgv1beta1.MetricsConfig, ts *promv1.Range) {
+	cfg.Status.Reports.ReportMonth = ts.Start.Format("01")
+	cfg.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }
