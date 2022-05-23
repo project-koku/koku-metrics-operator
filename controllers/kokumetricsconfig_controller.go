@@ -611,7 +611,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log := r.Log.WithValues("MetricsConfig", req.NamespacedName)
 
 	// fetch the MetricsConfig instance
-	cfgOriginal := &metricscfgv1beta1.MetricsConfig{}
+	cfgOriginal := &metricscfgv1beta1.KokuMetricsConfig{}
 
 	if err := r.Get(ctx, req.NamespacedName, cfgOriginal); err != nil {
 		log.Info(fmt.Sprintf("unable to fetch MetricsConfigCR: %v", err))
@@ -620,7 +620,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	cfg := cfgOriginal.DeepCopy()
+	cfg := &metricscfgv1beta1.MetricsConfig{KokuMetricsConfig: cfgOriginal.DeepCopy()}
 	log.Info("reconciling custom resource", "MetricsConfig", cfg)
 
 	// reflect the spec values into status

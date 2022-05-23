@@ -7,7 +7,7 @@ package v1beta1
 
 // MetricsConfig inherits from KokuMetricsConfig to carry the configuration throughout the code.
 type MetricsConfig struct {
-	KokuMetricsConfig
+	*KokuMetricsConfig
 }
 
 type ACompletelyRandomType struct {
