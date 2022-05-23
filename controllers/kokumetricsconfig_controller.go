@@ -759,7 +759,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // SetupWithManager Setup reconciliation with manager object
 func (r *MetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&metricscfgv1beta1.MetricsConfig{}).
+		For(&metricscfgv1beta1.KokuMetricsConfig{}).
 		Complete(r)
 }
 
