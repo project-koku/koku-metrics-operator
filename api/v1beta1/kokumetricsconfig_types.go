@@ -472,6 +472,11 @@ type MetricsConfigStatus struct {
 	PersistentVolumeClaim *EmbeddedPersistentVolumeClaim `json:"persistent_volume_claim,omitempty"`
 }
 
+// MetricsConfig inherits from KokuMetricsConfig to carry the configuration throughout the code.
+type MetricsConfig struct {
+	KokuMetricsConfig
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
@@ -497,9 +502,4 @@ type KokuMetricsConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&KokuMetricsConfig{}, &KokuMetricsConfigList{})
-}
-
-// MetricsConfig inherits from KokuMetricsConfig to carry the configuration throughout the code.
-type MetricsConfig struct {
-	KokuMetricsConfig
 }
