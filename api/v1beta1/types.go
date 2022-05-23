@@ -9,3 +9,7 @@ package v1beta1
 type MetricsConfig struct {
 	KokuMetricsConfig
 }
+
+type ACompletelyRandomType struct {
+	Thisisastring string
+}
