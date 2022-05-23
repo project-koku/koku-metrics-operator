@@ -501,5 +501,5 @@ type KokuMetricsConfigList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&MetricsConfig{}, &KokuMetricsConfig{}, &KokuMetricsConfigList{})
+	SchemeBuilder.Register(&KokuMetricsConfig{}, &KokuMetricsConfigList{})
 }

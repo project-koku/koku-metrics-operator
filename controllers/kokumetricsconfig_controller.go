@@ -614,7 +614,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	cfgOriginal := &metricscfgv1beta1.KokuMetricsConfig{}
 
 	if err := r.Get(ctx, req.NamespacedName, cfgOriginal); err != nil {
-		log.Info(fmt.Sprintf("unable to fetch MetricsConfigCR: %v", err))
+		log.Info(fmt.Sprintf("unable to fetch KokuMetricsConfigCR: %v", err))
 		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
