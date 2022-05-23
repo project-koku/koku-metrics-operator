@@ -84,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.MetricsConfigReconciler{
+	if err = (&controllers.KokuMetricsConfigReconciler{
 		Client:    mgr.GetClient(),
 		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
