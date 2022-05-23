@@ -588,7 +588,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cfg *metricscfgv
 
 	if strings.Contains(cfg.Status.Storage.VolumeType, "EmptyDir") {
 		cfg.Status.Storage.VolumeMounted = false
-		if err := r.Status().Update(ctx, cfg.KokuMetricsConfig); err != nil {
+		if err := r.Status().Update(ctx, cfg); err != nil {
 			log.Error(err, "failed to update MetricsConfig status")
 		}
 		return &ctrl.Result{}, fmt.Errorf("PVC not mounted")
@@ -620,7 +620,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	cfg := &metricscfgv1beta1.MetricsConfig{KokuMetricsConfig: cfgOriginal.DeepCopy()}
+	cfg := &metricscfgv1beta1.MetricsConfig{cfgOriginal.DeepCopy()}
 	log.Info("reconciling custom resource", "MetricsConfig", cfg)
 
 	// reflect the spec values into status
@@ -636,7 +636,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, cfg); err != nil {
 		log.Error(err, "failed to obtain clusterID")
-		if err := r.Status().Update(ctx, cfg.KokuMetricsConfig); err != nil {
+		if err := r.Status().Update(ctx, cfg); err != nil {
 			log.Error(err, "failed to update MetricsConfig status")
 		}
 		return ctrl.Result{}, err
@@ -699,7 +699,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		// obtain credentials token/basic & return if there are authentication credential errors
 		if err := setAuthentication(r, authConfig, cfg, req.NamespacedName); err != nil {
-			if err := r.Status().Update(ctx, cfg.KokuMetricsConfig); err != nil {
+			if err := r.Status().Update(ctx, cfg); err != nil {
 				log.Error(err, "failed to update MetricsConfig status")
 			}
 			return ctrl.Result{}, err
@@ -746,7 +746,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	cfg.Status.Packaging.PackagedFiles = uploadFiles
 
-	if err := r.Status().Update(ctx, cfg.KokuMetricsConfig); err != nil {
+	if err := r.Status().Update(ctx, cfg); err != nil {
 		log.Error(err, "failed to update MetricsConfig status")
 		result = ctrl.Result{}
 		errors = append(errors, err)
