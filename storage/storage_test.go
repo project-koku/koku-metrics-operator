@@ -49,7 +49,7 @@ var (
 	// All the other definitions are boilerplate so that the deployment will be created successfully.
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "koku-metrics-operator",
 			Namespace: kokuMetricsCfgNamespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -80,7 +80,7 @@ var (
 	}
 	deploymentNoVolume = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "koku-metrics-operator",
 			Namespace: kokuMetricsCfgNamespace,
 		},
 		Spec: appsv1.DeploymentSpec{
