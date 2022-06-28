@@ -52,7 +52,7 @@ var (
 	useCluster         bool
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "costmanagement-metrics-controller-manager",
+			Name:      "costmanagement-metrics-operator",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -90,7 +90,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "costmanagement-metrics-controller-manager",
+			Name:      "costmanagement-metrics-operator",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
