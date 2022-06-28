@@ -9,8 +9,8 @@ namespace: costmanagement-metrics-operator
 namePrefix: costmanagement-metrics-
 
 # Labels to add to all resources and selectors.
-# commonLabels:
-#  application: costmanagement-metrics-operator
+commonLabels:
+  app: costmanagement-metrics-operator
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

@@ -132,7 +132,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 	deployment := &appsv1.Deployment{}
 	namespace := types.NamespacedName{
 		Namespace: s.Namespace,
-		Name:      "costmanagement-metrics-controller-manager"}
+		Name:      "costmanagement-metrics-operator"}
 	if err := s.Client.Get(ctx, namespace, deployment); err != nil {
 		return false, fmt.Errorf("unable to get Deployment: %v", err)
 	}

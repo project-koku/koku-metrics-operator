@@ -45,4 +45,5 @@ collector/test_files/test_reports/*
 
 bundle/
 community-operators/
+community-operators-prod/
 bundle.Dockerfile
