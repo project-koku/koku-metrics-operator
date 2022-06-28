@@ -8,7 +8,7 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: operator
   namespace: operator
   labels:
     control-plane: controller-manager
@@ -22,6 +22,16 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - koku-metrics-operator
+            topologyKey: kubernetes.io/hostname
       containers:
       - command:
         - /manager

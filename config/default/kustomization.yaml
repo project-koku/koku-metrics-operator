@@ -9,8 +9,8 @@ namespace: koku-metrics-operator
 namePrefix: koku-metrics-
 
 # Labels to add to all resources and selectors.
-# commonLabels:
-#  application: koku-metrics-operator
+commonLabels:
+  app: koku-metrics-operator
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
