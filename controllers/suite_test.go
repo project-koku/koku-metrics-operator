@@ -52,7 +52,7 @@ var (
 	useCluster         bool
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "koku-metrics-operator",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -90,7 +90,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-controller-manager",
+			Name:      "koku-metrics-operator",
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
