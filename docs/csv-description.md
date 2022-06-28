@@ -4,7 +4,6 @@ The `koku-metrics-operator` is a component of the [cost managment](https://acces
 
 This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
 
-For more information, reach out to <cost-mgmt@redhat.com>.
 ## Features and Capabilities
 #### Metrics collection:
 The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics required for cost management by:
@@ -96,11 +95,10 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/4.5/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `koku-metrics-operator` package.
+To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `koku-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
-For more information, reach out to <cost-mgmt@redhat.com>.
 ## Configure the koku-metrics-operator for a restricted network
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
@@ -154,7 +152,19 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
     metadata:
       name: volume-shell
       namespace: koku-metrics-operator
+      labels:
+        app: koku-metrics-operator
     spec:
+     affinity:
+       podAffinity:
+         requiredDuringSchedulingIgnoredDuringExecution:
+         - labelSelector:
+             matchExpressions:
+             - key: app
+               operator: In
+               values:
+               - koku-metrics-operator
+           topologyKey: kubernetes.io/hostname
       volumes:
       - name: koku-metrics-operator-reports
         persistentVolumeClaim:
