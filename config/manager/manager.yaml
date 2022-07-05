@@ -22,16 +22,6 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      affinity:
-        podAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - costmanagement-metrics-operator
-            topologyKey: kubernetes.io/hostname
       containers:
       - command:
         - /usr/bin/costmanagement-metrics-operator
