@@ -155,16 +155,6 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
       labels:
         app: koku-metrics-operator
     spec:
-     affinity:
-       podAffinity:
-         requiredDuringSchedulingIgnoredDuringExecution:
-         - labelSelector:
-             matchExpressions:
-             - key: app
-               operator: In
-               values:
-               - koku-metrics-operator
-           topologyKey: kubernetes.io/hostname
       volumes:
       - name: koku-metrics-operator-reports
         persistentVolumeClaim:
