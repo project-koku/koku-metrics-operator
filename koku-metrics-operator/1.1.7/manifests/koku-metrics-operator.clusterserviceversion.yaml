@@ -35,12 +35,12 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator@sha256:4bebd4f6a2bc65732c2d9b488931669312669387b196e64ef0c0afb4180d2c3f
-    createdAt: "2022-07-05T16:48:40Z"
+    createdAt: "2022-10-06T20:27:36Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     operatorframework.io/suggested-namespace: koku-metrics-operator
     operators.openshift.io/infrastructure-features: '["Disconnected"]'
-    operators.operatorframework.io/builder: operator-sdk-v1.10.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.23.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Management
@@ -299,7 +299,10 @@ spec:
           - get
         serviceAccountName: koku-metrics-controller-manager
       deployments:
-      - name: koku-metrics-operator
+      - label:
+          app: koku-metrics-operator
+          control-plane: controller-manager
+        name: koku-metrics-operator
         spec:
           replicas: 1
           selector:
