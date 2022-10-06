@@ -127,7 +127,7 @@ var (
 	podQueries = &querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
-			QueryString: "sum(kube_pod_container_resource_limits{resource='cpu',namespace!='',node!='',pod!=''} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) without (container, instance, uid)",
+			QueryString: "sum by (namespace, node, pod) (kube_pod_container_resource_limits{resource='cpu',namespace!='',node!='',pod!=''} * on(namespace, pod) group_left() max by (namespace, pod) (kube_pod_status_phase{phase='Running'}))",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
@@ -139,7 +139,7 @@ var (
 		},
 		query{
 			Name:        "pod-limit-memory-bytes",
-			QueryString: "sum(kube_pod_container_resource_limits{resource='memory',namespace!='',node!='',pod!=''} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) without (container, instance, uid)",
+			QueryString: "sum by (namespace, node, pod) (kube_pod_container_resource_limits{resource='memory',namespace!='',node!='',pod!=''} * on(namespace, pod) group_left() max by (namespace, pod) (kube_pod_status_phase{phase='Running'}))",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
@@ -151,7 +151,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-cpu-cores",
-			QueryString: "sum(kube_pod_container_resource_requests{resource='cpu',namespace!='',node!='',pod!=''} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) without (container, instance, uid)",
+			QueryString: "sum by (namespace, node, pod) (kube_pod_container_resource_requests{resource='cpu',namespace!='',node!='',pod!=''} * on(namespace, pod) group_left() max by (namespace, pod) (kube_pod_status_phase{phase='Running'}))",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
@@ -163,7 +163,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-memory-bytes",
-			QueryString: "sum(kube_pod_container_resource_requests{resource='memory',namespace!='',node!='',pod!=''} * on(pod, namespace) group_left kube_pod_status_phase{phase='Running'}) without (container, instance, uid)",
+			QueryString: "sum by (namespace, node, pod) (kube_pod_container_resource_requests{resource='memory',namespace!='',node!='',pod!=''} * on(namespace, pod) group_left() max by (namespace, pod) (kube_pod_status_phase{phase='Running'}))",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
