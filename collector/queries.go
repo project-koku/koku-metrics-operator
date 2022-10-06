@@ -175,7 +175,7 @@ var (
 		},
 		query{
 			Name:        "pod-usage-cpu-cores",
-			QueryString: "sum(rate(container_cpu_usage_seconds_total{container!='POD',container!='',namespace!='',node!='',pod!=''}[5m])) without (container, instance, uid)",
+			QueryString: "sum by (namespace, node, pod) (rate(container_cpu_usage_seconds_total{container!='POD',container!='',namespace!='',node!='',pod!=''}[5m]))",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-usage-cpu-cores",
@@ -187,7 +187,7 @@ var (
 		},
 		query{
 			Name:        "pod-usage-memory-bytes",
-			QueryString: "sum(container_memory_usage_bytes{container!='POD',container!='',namespace!='',node!='',pod!=''}) without (container, instance, uid)",
+			QueryString: "sum by (namespace, node, pod) (container_memory_usage_bytes{container!='POD',container!='',namespace!='',node!='',pod!=''})",
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-usage-memory-bytes",
