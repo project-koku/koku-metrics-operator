@@ -44,5 +44,5 @@ collector/test_files/test_reports/*
 .vscode
 
 bundle/
-community-operators/
+community-operators-prod/
 bundle.Dockerfile

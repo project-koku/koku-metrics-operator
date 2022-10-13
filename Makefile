@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 1.1.6
-VERSION ?= 1.1.7
+PREVIOUS_VERSION ?= 1.1.8
+VERSION ?= 1.1.9
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -38,6 +38,9 @@ IMAGE_SHA=$(shell docker inspect --format='{{index .RepoDigests 0}}' ${IMG})
 
 OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
+
+DOCKER := $(shell which docker 2>/dev/null)
+export DOCKER_DEFAULT_PLATFORM = linux/x86_64
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of:"
@@ -202,26 +205,26 @@ generate: controller-gen
 
 # Build the docker image
 docker-build: test
-	docker build -t ${IMG} .
+	$(DOCKER) build -t ${IMG} .
 
 # Build the docker image
 docker-build-no-test:
-	docker build -t ${IMG} .
+	$(DOCKER) build -t ${IMG} .
 
 # Push the docker image
 docker-push:
-	docker push ${IMG}
+	$(DOCKER) push ${IMG}
 
 # Build, push, and deploy the image
 build-deploy: docker-build docker-push deploy
 
 # Build the docker image
 docker-build-user: test
-	docker build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
+	$(DOCKER) build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
 
 # Push the docker image
 docker-push-user:
-	docker push quay.io/${USER}/koku-metrics-operator:v0.0.1
+	$(DOCKER) push quay.io/${USER}/koku-metrics-operator:v0.0.1
 
 # Build, push, and deploy the image
 build-deploy-user: docker-build-user docker-push-user deploy-user
@@ -272,11 +275,11 @@ bundle: manifests kustomize
 
 # Build the bundle image.
 bundle-build:
-	cd koku-metrics-operator/$(VERSION) && docker build -t $(BUNDLE_IMG) .
+	cd koku-metrics-operator/$(VERSION) && $(DOCKER) build -t $(BUNDLE_IMG) .
 
 # Push the bundle image.
 bundle-push:
-	docker push $(BUNDLE_IMG)
+	$(DOCKER) push $(BUNDLE_IMG)
 
 # Build a test-catalog
 test-catalog: opm
@@ -284,7 +287,7 @@ test-catalog: opm
 
 # Push the test-catalog
 test-catalog-push:
-	docker push ${CATALOG_IMG}
+	$(DOCKER) push ${CATALOG_IMG}
 
 .PHONY: opm
 OPM = ./bin/opm
@@ -294,7 +297,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$(OS)-$(ARCH)-opm ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.26.2/$(OS)-$(ARCH)-opm ;\
 	chmod +x $(OPM) ;\
 	}
 else
