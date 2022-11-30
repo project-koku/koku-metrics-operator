@@ -131,8 +131,10 @@ func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string,
 }
 
 func testPrometheusConnection(promConn prometheusConnection) error {
-	return wait.Poll(1*time.Second, 15*time.Second, func() (bool, error) {
-		_, _, err := promConn.Query(context.TODO(), "up", time.Now())
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	return wait.PollImmediate(1*time.Second, 15*time.Second, func() (bool, error) {
+		_, _, err := promConn.Query(ctx, "up", time.Now())
 		if err != nil {
 			return false, err
 		}
