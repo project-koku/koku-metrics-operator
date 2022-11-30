@@ -57,6 +57,27 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	return res.value, res.warnings, res.err
 }
 
+type mockPrometheusConnectionPolling struct {
+	mockPrometheusConnection
+
+	timeout int64
+}
+
+func sleepContext(ctx context.Context, delay time.Duration) error {
+	select {
+	case <-ctx.Done():
+		return ctxTimeout
+	case <-time.After(delay):
+		return nil
+	}
+}
+
+func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+	res := m.singleResult
+	err := sleepContext(ctx, time.Duration(m.timeout*int64(time.Second)))
+	return res.value, res.warnings, err
+}
+
 func TestGetQueryResultsSuccess(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
@@ -270,7 +291,6 @@ func TestTestPrometheusConnection(t *testing.T) {
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
-		wait        time.Duration
 		queryResult *mockPromResult
 		wantedError error
 	}{
@@ -291,6 +311,48 @@ func TestTestPrometheusConnection(t *testing.T) {
 				singleResult: tt.queryResult,
 				t:            t,
 			}
+			err := testPrometheusConnection(col.PromConn)
+			if tt.wantedError == nil && err != nil {
+				t.Errorf("%s got unexpected error: %v", tt.name, err)
+			}
+			if tt.wantedError != nil && err == nil {
+				t.Errorf("%s got: %v error, want: error", tt.name, err)
+			}
+		})
+	}
+}
+
+func TestTestPrometheusConnectionPolling(t *testing.T) {
+	col := PromCollector{
+		TimeSeries: &promv1.Range{},
+		Log:        testLogger,
+	}
+	testPrometheusConnectionTests := []struct {
+		name        string
+		wait        int64
+		queryResult *mockPromResult
+		wantedError error
+	}{
+		{
+			name:        "test query success",
+			wait:        1,
+			queryResult: &mockPromResult{err: nil},
+			wantedError: nil,
+		},
+		{
+			name:        "test query error",
+			wait:        16,
+			queryResult: &mockPromResult{err: ctxTimeout},
+			wantedError: errTest,
+		},
+	}
+	for _, tt := range testPrometheusConnectionTests {
+		t.Run(tt.name, func(t *testing.T) {
+			col.PromConn = mockPrometheusConnectionPolling{
+				mockPrometheusConnection: mockPrometheusConnection{
+					singleResult: tt.queryResult,
+					t:            t},
+				timeout: tt.wait}
 			err := testPrometheusConnection(col.PromConn)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
