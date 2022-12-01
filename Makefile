@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 1.1.8
-VERSION ?= 1.1.9
+PREVIOUS_VERSION ?= 1.1.9
+VERSION ?= 1.1.10
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
