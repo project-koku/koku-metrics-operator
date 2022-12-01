@@ -12,7 +12,10 @@ import (
 	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
 )
 
-var errTest = errors.New("test error")
+var (
+	ctxTimeout = errors.New("context timeout")
+	errTest    = errors.New("test error")
+)
 
 type badReader struct{}
 
