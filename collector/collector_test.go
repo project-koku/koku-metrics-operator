@@ -414,7 +414,6 @@ func TestIterateMatrix(t *testing.T) {
 				QueryValue: &saveQueryValue{
 					ValName:         "node-allocatable-cpu-cores",
 					Method:          "max",
-					Factor:          maxFactor,
 					TransformedName: "node-allocatable-cpu-core-seconds",
 				},
 				RowKey: []model.LabelName{"node"},
@@ -490,7 +489,6 @@ func TestIterateMatrix(t *testing.T) {
 				QueryValue: &saveQueryValue{
 					ValName:         "node-capacity-cpu-cores",
 					Method:          "max",
-					Factor:          maxFactor,
 					TransformedName: "node-capacity-cpu-core-seconds",
 				},
 				RowKey: []model.LabelName{"node"},
