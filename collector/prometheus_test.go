@@ -100,7 +100,6 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 					QueryValue: &saveQueryValue{
 						ValName:         "usage-cpu-cores",
 						Method:          "max",
-						Factor:          maxFactor,
 						TransformedName: "usage-cpu-core-seconds",
 					},
 					RowKey: []model.LabelName{"id"},
@@ -112,7 +111,6 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 					QueryValue: &saveQueryValue{
 						ValName:         "capacity-cpu-cores",
 						Method:          "max",
-						Factor:          maxFactor,
 						TransformedName: "capacity-cpu-core-seconds",
 					},
 					RowKey: []model.LabelName{"id"},

@@ -2,7 +2,7 @@
 	{
 		"metric": {
 			"namespace": "openshift-metering",
-			"node": "ip-10-0-189-61.us-east-2.compute.internal",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
 			"pod": "hive-server-0"
 		},
 		"values": [
