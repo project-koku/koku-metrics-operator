@@ -87,6 +87,7 @@ type nodeRow struct {
 	ModeCapacityCPUCoreSeconds    string `mapstructure:"node-capacity-cpu-core-seconds"`
 	NodeCapacityMemoryBytes       string `mapstructure:"node-capacity-memory-bytes"`
 	NodeCapacityMemoryByteSeconds string `mapstructure:"node-capacity-memory-byte-seconds"`
+	NodeRole                      string `mapstructure:"node-role"`
 	ResourceID                    string `mapstructure:"resource_id"`
 	NodeLabels                    string `mapstructure:"node_labels"`
 }
@@ -102,6 +103,7 @@ func (nodeRow) csvHeader() []string {
 		// "node_capacity_cpu_core_seconds",
 		// "node_capacity_memory_bytes",
 		// "node_capacity_memory_byte_seconds",
+		// "node_role",
 		// "resource_id",
 		"node_labels"}
 }
@@ -117,6 +119,7 @@ func (row nodeRow) csvRow() []string {
 		// row.ModeCapacityCPUCoreSeconds,
 		// row.NodeCapacityMemoryBytes,
 		// row.NodeCapacityMemoryByteSeconds,
+		// row.NodeRole,
 		// row.ResourceID,
 		row.NodeLabels,
 	}
@@ -157,6 +160,7 @@ func (podRow) csvHeader() []string {
 		"node_capacity_cpu_core_seconds",
 		"node_capacity_memory_bytes",
 		"node_capacity_memory_byte_seconds",
+		"node_role",
 		"resource_id",
 		"pod_labels"}
 }
@@ -180,6 +184,7 @@ func (row podRow) csvRow() []string {
 		row.ModeCapacityCPUCoreSeconds,
 		row.NodeCapacityMemoryBytes,
 		row.NodeCapacityMemoryByteSeconds,
+		row.NodeRole,
 		row.ResourceID,
 		row.PodLabels,
 	}

@@ -12,6 +12,9 @@ metadata:
   namespace: operator
   labels:
     control-plane: controller-manager
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: This deployment uses
+      1 pod as currently it supports only a single controller-manager
 spec:
   selector:
     matchLabels:
