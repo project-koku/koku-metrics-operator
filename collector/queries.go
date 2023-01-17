@@ -7,11 +7,6 @@ package collector
 
 import "github.com/prometheus/common/model"
 
-const (
-	maxFactor float64 = 60
-	sumFactor float64 = 60
-)
-
 var (
 	nodeQueries = &querys{
 		query{
@@ -21,7 +16,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-cpu-cores",
 				Method:          "max",
-				Factor:          maxFactor,
 				TransformedName: "node-allocatable-cpu-core-seconds",
 			},
 			RowKey: []model.LabelName{"node"},
@@ -33,7 +27,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-memory-bytes",
 				Method:          "max",
-				Factor:          maxFactor,
 				TransformedName: "node-allocatable-memory-byte-seconds",
 			},
 			RowKey: []model.LabelName{"node"},
@@ -45,7 +38,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-cpu-cores",
 				Method:          "max",
-				Factor:          maxFactor,
 				TransformedName: "node-capacity-cpu-core-seconds",
 			},
 			RowKey: []model.LabelName{"node"},
@@ -57,10 +49,15 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-memory-bytes",
 				Method:          "max",
-				Factor:          maxFactor,
 				TransformedName: "node-capacity-memory-byte-seconds",
 			},
 			RowKey: []model.LabelName{"node"},
+		},
+		query{
+			Name:        "node-role",
+			QueryString: "kube_node_role",
+			MetricKey:   staticFields{"node": "node", "node-role": "role"},
+			RowKey:      []model.LabelName{"node"},
 		},
 		query{
 			Name:           "node-labels",
@@ -82,7 +79,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
 				Method:          "max",
-				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
 			RowKey: []model.LabelName{"volumename"},
@@ -93,7 +89,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
 				Method:          "max",
-				Factor:          maxFactor,
 				TransformedName: "persistentvolumeclaim-request-byte-seconds",
 			},
 			RowKey: []model.LabelName{"volumename"},
@@ -104,7 +99,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-usage-bytes",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "persistentvolumeclaim-usage-byte-seconds",
 			},
 			RowKey: []model.LabelName{"volumename"},
@@ -132,7 +126,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "pod-limit-cpu-core-seconds",
 			},
 			RowKey: []model.LabelName{"pod", "namespace"},
@@ -144,7 +137,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "pod-limit-memory-byte-seconds",
 			},
 			RowKey: []model.LabelName{"pod", "namespace"},
@@ -156,7 +148,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "pod-request-cpu-core-seconds",
 			},
 			RowKey: []model.LabelName{"pod", "namespace"},
@@ -168,7 +159,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "pod-request-memory-byte-seconds",
 			},
 			RowKey: []model.LabelName{"pod", "namespace"},
@@ -180,7 +170,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-usage-cpu-cores",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "pod-usage-cpu-core-seconds",
 			},
 			RowKey: []model.LabelName{"pod", "namespace"},
@@ -192,7 +181,6 @@ var (
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-usage-memory-bytes",
 				Method:          "sum",
-				Factor:          sumFactor,
 				TransformedName: "pod-usage-memory-byte-seconds",
 			},
 			RowKey: []model.LabelName{"pod", "namespace"},
@@ -235,6 +223,5 @@ type regexFields map[string]string
 type saveQueryValue struct {
 	ValName         string
 	Method          string
-	Factor          float64
 	TransformedName string
 }

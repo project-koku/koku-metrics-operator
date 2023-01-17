@@ -6,7 +6,7 @@
 			"job": "kubelet",
 			"metrics_path": "/metrics",
 			"namespace": "openshift-metering",
-			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
 			"persistentvolumeclaim": "hive-metastore-db-data",
 			"prometheus": "openshift-monitoring/k8s",
 			"service": "kubelet",
