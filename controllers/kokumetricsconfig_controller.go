@@ -384,7 +384,7 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 	return nil
 }
 
-func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func setOperatorCommit(r *KokuMetricsConfigReconciler) {
 	log := r.Log.WithName("setOperatorCommit")
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
@@ -394,15 +394,6 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 			GitCommit = commit
 		}
 	}
-	if kmCfg.Status.OperatorCommit != GitCommit {
-		// If the commit is different, this is either a fresh install or the operator was upgraded.
-		// After an upgrade, the report structure may differ from the old report structure,
-		// so we need to package the old files before generating new reports.
-		// We set this packaging time to zero so that the next call to packageFiles
-		// will force file packaging to occur.
-		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-	}
-	kmCfg.Status.OperatorCommit = GitCommit
 }
 
 func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
@@ -513,7 +504,19 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	return nil
 }
 
-func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
+func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (time.Time, time.Time) {
+	timeUTC := metav1.Now().UTC()
+	t := metav1.Time{Time: timeUTC}
+	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location())
+	if kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() {
+		start = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+	}
+	end := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
+
+	return start, end
+}
+
+func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
 	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
@@ -527,20 +530,15 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 		log.Error(err, "failed to get prometheus connection")
 		return
 	}
-	timeUTC := metav1.Now().UTC()
-	t := metav1.Time{Time: timeUTC}
-	timeRange := promv1.Range{
-		Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
-		End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
-		Step:  time.Minute,
-	}
 	r.promCollector.TimeSeries = &timeRange
 	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
+	t := metav1.Time{Time: timeRange.Start}
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
 		return
 	}
+
 	kmCfg.Status.Prometheus.LastQueryStartTime = t
 	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
 	if err := collector.GenerateReports(kmCfg, dirCfg, r.promCollector); err != nil {
@@ -644,8 +642,17 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	log.Info("using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
 
-	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	setOperatorCommit(r, kmCfg)
+	// set the Operator git commit and reflect it in the upload status
+	setOperatorCommit(r)
+	if kmCfg.Status.OperatorCommit != GitCommit {
+		// If the commit is different, this is either a fresh install or the operator was upgraded.
+		// After an upgrade, the report structure may differ from the old report structure,
+		// so we need to package the old files before generating new reports.
+		// We set this packaging time to zero so that the next call to packageFiles
+		// will force file packaging to occur.
+		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		kmCfg.Status.OperatorCommit = GitCommit
+	}
 
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
@@ -674,7 +681,17 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
+	startTime, endTime := getTimeRange(r, kmCfg)
+	for startTime.Before(endTime) {
+		t := startTime
+		timeRange := promv1.Range{
+			Start: t,
+			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 59, 59, 0, t.Location()),
+			Step:  time.Minute,
+		}
+		collectPromStats(r, kmCfg, dirCfg, timeRange)
+		startTime = startTime.Add(1 * time.Hour)
+	}
 
 	// package report files
 	packageFiles(packager)
