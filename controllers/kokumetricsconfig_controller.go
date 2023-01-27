@@ -516,8 +516,7 @@ func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	return start, end
 }
 
-func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
-	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
+func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
 			Log:       r.Log,
@@ -525,13 +524,15 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 		}
 	}
 	r.promCollector.TimeSeries = nil
-
-	if err := r.promCollector.GetPromConn(kmCfg); err != nil {
-		log.Error(err, "failed to get prometheus connection")
-		return
-	}
-	r.promCollector.TimeSeries = &timeRange
 	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
+
+	return r.promCollector.GetPromConn(kmCfg)
+}
+
+func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
+	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
+
+	r.promCollector.TimeSeries = &timeRange
 
 	t := metav1.Time{Time: timeRange.Start}
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
@@ -681,6 +682,10 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// attempt to collect prometheus stats and create reports
+	if err := getPromCollector(r, kmCfg); err != nil {
+		log.Error(err, "failed to get prometheus connection")
+		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
+	}
 	startTime, endTime := getTimeRange(r, kmCfg)
 	for startTime.Before(endTime) {
 		t := startTime
