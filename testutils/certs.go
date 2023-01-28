@@ -76,7 +76,7 @@ func CreateCertificate(basePath, filename string) string {
 	return certOut.Name()
 }
 
-func publicKey(priv interface{}) interface{} {
+func publicKey(priv any) any {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &k.PublicKey

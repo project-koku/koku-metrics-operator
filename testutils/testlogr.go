@@ -16,10 +16,13 @@ import (
 // TestLogger is a logr.Logger that only prints the main msg.
 type TestLogger struct{}
 
-var _ logr.Logger = TestLogger{}
+var _ logr.LogSink = TestLogger{}
 var logger = log.New(os.Stdout, "test logger: ", 64) // log.Lmsgprefix == 64
 
-func (TestLogger) Info(msg string, args ...interface{}) {
+func (TestLogger) Init(logr.RuntimeInfo) {
+}
+
+func (TestLogger) Info(level int, msg string, args ...interface{}) {
 	str := ""
 	if len(args) > 0 {
 		str += fmt.Sprintf(": %v", args)
@@ -27,22 +30,18 @@ func (TestLogger) Info(msg string, args ...interface{}) {
 	logger.Printf("'%s'"+str, msg)
 }
 
-func (TestLogger) Enabled() bool {
+func (TestLogger) Enabled(level int) bool {
 	return false
 }
 
-func (log TestLogger) Error(err error, msg string, args ...interface{}) {
-	logger.Printf("'%s': %v -- %v", msg, err, args)
+func (log TestLogger) Error(err error, msg string, keysAndValues ...interface{}) {
+	logger.Printf("'%s': %v -- %v", msg, err, keysAndValues)
 }
 
-func (log TestLogger) V(level int) logr.InfoLogger {
+func (log TestLogger) WithName(name string) logr.LogSink {
 	return log
 }
 
-func (log TestLogger) WithName(_ string) logr.Logger {
-	return log
-}
-
-func (log TestLogger) WithValues(_ ...interface{}) logr.Logger {
+func (log TestLogger) WithValues(keysAndValues ...interface{}) logr.LogSink {
 	return log
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
@@ -49,7 +50,7 @@ func (mfi MockFileInfo) IsDir() bool {
 	return mfi.isDir
 }
 
-func (mfi MockFileInfo) Sys() interface{} {
+func (mfi MockFileInfo) Sys() any {
 	return nil
 }
 
@@ -296,7 +297,6 @@ func TestCheckExistsOrRecreate(t *testing.T) {
 		{name: "stat error", stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(nil), expected: nil},
 		{name: "create error", stat: statMock(fmt.Errorf("Not available")), createDir: createDirMock(fmt.Errorf(" :shocked: ")), expected: errTest},
 	}
-	lgr := testutils.TestLogger{}
 
 	for _, tc := range tcs {
 		dir := &Directory{
@@ -308,7 +308,7 @@ func TestCheckExistsOrRecreate(t *testing.T) {
 				CreateDirectory: tc.createDir,
 			},
 		}
-		err := CheckExistsOrRecreate(lgr, *dir)
+		err := CheckExistsOrRecreate(testr.New(t), *dir)
 		if tc.expected != nil && err == nil {
 			t.Errorf("%s expected error but got: %v", tc.name, err)
 		}

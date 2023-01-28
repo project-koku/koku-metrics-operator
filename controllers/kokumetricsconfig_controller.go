@@ -68,6 +68,7 @@ type KokuMetricsConfigReconciler struct {
 
 	cvClientBuilder cv.ClusterVersionBuilder
 	promCollector   *collector.PromCollector
+	crchttp         crhchttp.CRCHTTP
 }
 
 type previousAuthValidation struct {
@@ -342,7 +343,7 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	}
 }
 
-func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
+func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
 	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
@@ -354,18 +355,18 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 		previousValidation = &previousAuthValidation{}
 	}
 
-	if previousValidation.password == sSpec.Auth.BasicAuthPassword &&
-		previousValidation.username == sSpec.Auth.BasicAuthUser &&
+	if previousValidation.password == handler.Auth.BasicAuthPassword &&
+		previousValidation.username == handler.Auth.BasicAuthUser &&
 		!checkCycle(r.Log, cycle, previousValidation.timestamp, "credential verification") {
 		return previousValidation.err
 	}
 
 	log.Info("validating credentials")
-	client := crhchttp.GetClient(sSpec.Auth)
-	_, err := sources.GetSources(sSpec, client)
+	client := r.crchttp.GetClient(handler.Auth)
+	_, err := sources.GetSources(handler, client)
 
-	previousValidation.username = sSpec.Auth.BasicAuthUser
-	previousValidation.password = sSpec.Auth.BasicAuthPassword
+	previousValidation.username = handler.Auth.BasicAuthUser
+	previousValidation.password = handler.Auth.BasicAuthPassword
 	previousValidation.err = err
 	previousValidation.timestamp = metav1.Now()
 
@@ -405,7 +406,7 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 	kmCfg.Status.OperatorCommit = GitCommit
 }
 
-func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func checkSource(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
 	// check if the Source Spec has changed
 	updated := false
 	if sourceSpec != nil {
@@ -414,10 +415,10 @@ func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCf
 	sourceSpec = kmCfg.Spec.Source.DeepCopy()
 
 	log := r.Log.WithValues("KokuMetricsConfig", "checkSource")
-	if sSpec.Spec.SourceName != "" && (updated || checkCycle(r.Log, *sSpec.Spec.CheckCycle, sSpec.Spec.LastSourceCheckTime, "source check")) {
-		client := crhchttp.GetClient(sSpec.Auth)
+	if handler.Spec.SourceName != "" && (updated || checkCycle(r.Log, *handler.Spec.CheckCycle, handler.Spec.LastSourceCheckTime, "source check")) {
+		client := r.crchttp.GetClient(handler.Auth)
 		kmCfg.Status.Source.SourceError = ""
-		defined, lastCheck, err := sources.SourceGetOrCreate(sSpec, client)
+		defined, lastCheck, err := sources.SourceGetOrCreate(handler, client)
 		if err != nil {
 			kmCfg.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
@@ -483,13 +484,13 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 
 		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
-		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
+		body, contentType, err := r.crchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 		if err != nil {
 			log.Error(err, "failed to set multipart body and headers")
 			return err
 		}
 		ingressURL := kmCfg.Status.APIURL + kmCfg.Status.Upload.IngressAPIPath
-		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
+		uploadStatus, uploadTime, requestID, err := r.crchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
 		kmCfg.Status.Upload.LastUploadStatus = uploadStatus
 		kmCfg.Status.Upload.LastPayloadName = file
 		kmCfg.Status.Upload.LastPayloadFiles = manifestInfo.Files
@@ -684,12 +685,12 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
 	var errors []error
 
+	r.crchttp = crhchttp.NewCRCHTTP(r.Log)
 	if kmCfg.Spec.Upload.UploadToggle != nil && *kmCfg.Spec.Upload.UploadToggle {
 
 		log.Info("configuration is for connected cluster")
 
 		authConfig := &crhchttp.AuthConfig{
-			Log:            r.Log,
 			ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
 			Authentication: kmCfg.Status.Authentication.AuthType,
 			OperatorCommit: kmCfg.Status.OperatorCommit,
@@ -705,18 +706,19 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		sSpec := &sources.SourceSpec{
+		handler := &sources.SourceHandler{
 			APIURL: kmCfg.Status.APIURL,
 			Auth:   authConfig,
 			Spec:   kmCfg.Status.Source,
 			Log:    r.Log,
+			C:      r.crchttp,
 		}
 
-		if err := validateCredentials(r, sSpec, kmCfg, 1440); err == nil {
+		if err := validateCredentials(r, handler, kmCfg, 1440); err == nil {
 			// Block will run when creds are valid.
 
 			// Check if source is defined and update the status to confirmed/created
-			checkSource(r, sSpec, kmCfg)
+			checkSource(r, handler, kmCfg)
 
 			// attempt upload
 			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
@@ -726,7 +728,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 			// revalidate if an upload fails due to 401
 			if strings.Contains(kmCfg.Status.Upload.LastUploadStatus, "401") {
-				_ = validateCredentials(r, sSpec, kmCfg, 0)
+				_ = validateCredentials(r, handler, kmCfg, 0)
 			}
 		}
 	} else {

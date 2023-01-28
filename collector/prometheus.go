@@ -95,7 +95,7 @@ func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
 		BearerToken: cfg.BearerToken,
 		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
 	}
-	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf", false, false)
+	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf")
 	if err != nil {
 		return nil, fmt.Errorf("cannot create roundTripper: %v", err)
 	}

@@ -54,6 +54,14 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+type CRCHTTP struct {
+	Log logr.Logger
+}
+
+func NewCRCHTTP(log logr.Logger) CRCHTTP {
+	return CRCHTTP{Log: log}
+}
+
 func scrubAuthorization(b []byte) string {
 	str := strings.Split(string(b), "\r\n")
 	for i, s := range str {
@@ -68,7 +76,7 @@ func scrubAuthorization(b []byte) string {
 }
 
 // GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
-func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) {
+func (CRCHTTP) GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) {
 	// set the content and content type
 	buf := new(bytes.Buffer)
 	mw := multipart.NewWriter(buf)
@@ -92,8 +100,8 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 }
 
 // SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
-func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
-	log := authConfig.Log.WithValues("kokumetricsconfig", "SetupRequest")
+func (c CRCHTTP) SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
+	log := c.Log.WithValues("kokumetricsconfig", "SetupRequest")
 
 	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
 	if err != nil {
@@ -124,8 +132,8 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 }
 
 // GetClient Return client with certificate handling based on configuration
-func GetClient(authConfig *AuthConfig) HTTPClient {
-	log := authConfig.Log.WithValues("kokumetricsconfig", "GetClient")
+func (c CRCHTTP) GetClient(authConfig *AuthConfig) HTTPClient {
+	log := c.Log.WithValues("kokumetricsconfig", "GetClient")
 	transport := DefaultTransport
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
@@ -143,8 +151,8 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 }
 
 // ProcessResponse Log response for request and return valid
-func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
-	log := logger.WithValues("kokumetricsconfig", "ProcessResponse")
+func (c CRCHTTP) ProcessResponse(resp *http.Response) ([]byte, error) {
+	log := c.Log.WithValues("kokumetricsconfig", "ProcessResponse")
 	log.Info("request response",
 		"method", resp.Request.Method,
 		"status", resp.StatusCode,
@@ -174,15 +182,15 @@ func ProcessResponse(logger logr.Logger, resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to cloud.redhat.com
-func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
-	log := authConfig.Log.WithValues("kokumetricsconfig", "Upload")
+func (c CRCHTTP) Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
+	log := c.Log.WithValues("kokumetricsconfig", "Upload")
 	currentTime := metav1.Now()
-	req, err := SetupRequest(authConfig, contentType, method, uri, body)
+	req, err := c.SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
 		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
 
-	client := GetClient(authConfig)
+	client := c.GetClient(authConfig)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", currentTime, "", fmt.Errorf("could not send the request: %v", err)
@@ -192,7 +200,7 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 	uploadStatus := fmt.Sprintf("%d ", resp.StatusCode) + string(http.StatusText(resp.StatusCode))
 	uploadTime := metav1.Now()
 
-	resBody, err := ProcessResponse(log, resp)
+	resBody, err := c.ProcessResponse(resp)
 	log.Info("\n\n" + delimeter +
 		"\nmethod: " + resp.Request.Method +
 		"\nstatus: " + fmt.Sprint(resp.StatusCode) +

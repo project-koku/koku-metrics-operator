@@ -15,24 +15,24 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	auth  = &crhchttp.AuthConfig{ClusterID: "post-cluster-id", Log: testLogger}
-	sSpec = &SourceSpec{
+	auth    = &crhchttp.AuthConfig{ClusterID: "post-cluster-id"}
+	handler = &SourceHandler{
 		APIURL: "https://ci.cloud.redhat.com",
 		Auth:   auth,
 		Spec: kokumetricscfgv1beta1.CloudDotRedHatSourceStatus{
 			SourcesAPIPath: "/api/sources/v1.0/",
 			SourceName:     "post-source-name",
 		},
-		Log: testLogger,
+		Log: logr.New(testutils.TestLogger{}),
 	}
 	errSources = errors.New("test error")
-	testLogger = testutils.TestLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
@@ -158,7 +158,7 @@ func TestGetSourceTypeID(t *testing.T) {
 	for _, tt := range getSourceTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetSourceTypeID(sSpec, clt)
+			got, err := GetSourceTypeID(handler, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -208,7 +208,7 @@ func TestGetSources(t *testing.T) {
 	for _, tt := range getSourcesTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetSources(sSpec, clt)
+			got, err := GetSources(handler, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -365,7 +365,7 @@ func TestCheckSourceExists(t *testing.T) {
 	for _, tt := range checkSourceExistsTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := CheckSourceExists(sSpec, clt, tt.sourceTypeID, tt.queryname, tt.sourceRef)
+			got, err := CheckSourceExists(handler, clt, tt.sourceTypeID, tt.queryname, tt.sourceRef)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -463,7 +463,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 	for _, tt := range getApplicationTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetApplicationTypeID(sSpec, clt)
+			got, err := GetApplicationTypeID(handler, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -543,7 +543,7 @@ func TestPostSource(t *testing.T) {
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := PostSource(sSpec, clt, tt.sourceTypeID)
+			got, err := PostSource(handler, clt, tt.sourceTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -622,7 +622,7 @@ func TestPostApplication(t *testing.T) {
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			err := PostApplication(sSpec, clt, tt.source, tt.appTypeID)
+			err := PostApplication(handler, clt, tt.source, tt.appTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -748,7 +748,7 @@ func TestSourceCreate(t *testing.T) {
 	}
 	for _, tt := range sourceCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SourceCreate(sSpec, &tt.clts, tt.sourceTypeID)
+			got, err := SourceCreate(handler, &tt.clts, tt.sourceTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -1141,7 +1141,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 	}
 	for _, tt := range sourceGetOrCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := *sSpec
+			c := *handler
 			c.Spec.CreateSource = &tt.create
 			got, _, err := SourceGetOrCreate(&c, &tt.clts)
 			if tt.expectedErr != nil && err == nil {

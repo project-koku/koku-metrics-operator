@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -35,7 +36,7 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx = context.Background()
-var testLogger = testutils.TestLogger{}
+var testLogger = logr.New(testutils.TestLogger{})
 
 func TestStorage(t *testing.T) {
 	RegisterFailHandler(Fail)
