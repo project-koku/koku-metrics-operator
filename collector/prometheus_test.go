@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -82,7 +81,7 @@ func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string
 func TestGetQueryResultsSuccess(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        testr.New(t),
+		Log:        testLogger,
 	}
 	getQueryResultsErrorsTests := []struct {
 		name          string
@@ -208,7 +207,7 @@ func TestGetQueryResultsError(t *testing.T) {
 	col := PromCollector{
 		ContextTimeout: &defaultContextTimeout,
 		TimeSeries:     &promv1.Range{},
-		Log:            testr.New(t),
+		Log:            testLogger,
 	}
 	getQueryResultsErrorsTests := []struct {
 		name         string
@@ -286,7 +285,7 @@ func TestGetQueryResultsError(t *testing.T) {
 func TestTestPrometheusConnection(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        testr.New(t),
+		Log:        testLogger,
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
@@ -324,7 +323,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 func TestTestPrometheusConnectionPolling(t *testing.T) {
 	col := PromCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        testr.New(t),
+		Log:        testLogger,
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
@@ -551,7 +550,7 @@ func TestGetPromConn(t *testing.T) {
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
-				Log:      testr.New(t),
+				Log:      testLogger,
 			}
 			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
 			err := col.GetPromConn(kmCfg)
