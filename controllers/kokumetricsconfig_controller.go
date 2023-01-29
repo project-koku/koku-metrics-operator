@@ -16,15 +16,6 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/go-logr/logr"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
-	"github.com/project-koku/koku-metrics-operator/collector"
-	"github.com/project-koku/koku-metrics-operator/crhchttp"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/packaging"
-	"github.com/project-koku/koku-metrics-operator/sources"
-	"github.com/project-koku/koku-metrics-operator/storage"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +27,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
+	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
+	"github.com/project-koku/koku-metrics-operator/collector"
+	"github.com/project-koku/koku-metrics-operator/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/packaging"
+	"github.com/project-koku/koku-metrics-operator/sources"
+	"github.com/project-koku/koku-metrics-operator/storage"
 )
 
 var (

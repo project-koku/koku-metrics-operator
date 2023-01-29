@@ -12,10 +12,11 @@ import (
 	"net/http"
 	"strconv"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/crhchttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
+	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/crhchttp"
 )
 
 const (

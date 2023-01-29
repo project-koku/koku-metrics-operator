@@ -23,11 +23,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	logr "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // FilePackager struct for defining the packaging vars

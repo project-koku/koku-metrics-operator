@@ -13,11 +13,12 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
+	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
 )
 
 var (

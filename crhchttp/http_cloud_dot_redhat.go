@@ -22,9 +22,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/project-koku/koku-metrics-operator/packaging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/project-koku/koku-metrics-operator/packaging"
 )
 
 // Client is an http.Client
