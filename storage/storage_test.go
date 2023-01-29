@@ -204,7 +204,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}
@@ -226,7 +225,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}
@@ -246,7 +244,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client: k8sClient,
 					KMCfg:  kmCfg,
-					Log:    testLogger,
 					PVC:    pvc,
 				}
 
@@ -264,7 +261,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}
@@ -285,7 +281,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}
@@ -304,7 +299,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}
@@ -323,7 +317,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}
@@ -345,7 +338,6 @@ var _ = Describe("Storage Tests", func() {
 				s := &Storage{
 					Client:    k8sClient,
 					KMCfg:     kmCfg,
-					Log:       testLogger,
 					Namespace: kokuMetricsCfgNamespace,
 					PVC:       pvc,
 				}

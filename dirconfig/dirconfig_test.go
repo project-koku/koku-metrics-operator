@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
@@ -308,7 +307,7 @@ func TestCheckExistsOrRecreate(t *testing.T) {
 				CreateDirectory: tc.createDir,
 			},
 		}
-		err := CheckExistsOrRecreate(testr.New(t), *dir)
+		err := CheckExistsOrRecreate(*dir)
 		if tc.expected != nil && err == nil {
 			t.Errorf("%s expected error but got: %v", tc.name, err)
 		}

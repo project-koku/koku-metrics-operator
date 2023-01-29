@@ -16,13 +16,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/go-logr/logr"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
+	log   = logr.Log.WithName("storage")
 	tenGi = *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI)
 	// DefaultPVC is a basic PVC
 	DefaultPVC = kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
@@ -60,7 +60,6 @@ func (v *volume) isMounted() bool {
 type Storage struct {
 	Client    client.Client
 	KMCfg     *kokumetricscfgv1beta1.KokuMetricsConfig
-	Log       logr.Logger
 	Namespace string
 	PVC       *corev1.PersistentVolumeClaim
 
@@ -69,7 +68,7 @@ type Storage struct {
 
 func (s *Storage) getOrCreateVolume() error {
 	ctx := context.Background()
-	log := s.Log.WithValues("kokumetricsconfig", "getOrCreateVolume")
+	log := log.WithName("getOrCreateVolume")
 	namespace := types.NamespacedName{
 		Namespace: s.Namespace,
 		Name:      s.PVC.Name}
@@ -126,7 +125,7 @@ func (s *Storage) mountVolume(dep *appsv1.Deployment, depSpec *appsv1.Deployment
 // ConvertVolume converts the EmptyDir volume in deployment to PVC
 func (s *Storage) ConvertVolume() (bool, error) {
 	ctx := context.Background()
-	log := s.Log.WithValues("kokumetricsconfig", "ConvertVolume")
+	log := log.WithName("ConvertVolume")
 
 	log.Info("getting deployment")
 	deployment := &appsv1.Deployment{}

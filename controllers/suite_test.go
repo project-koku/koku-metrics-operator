@@ -205,7 +205,6 @@ var _ = BeforeSuite(func(done Done) {
 	if !useCluster {
 		err = (&KokuMetricsConfigReconciler{
 			Client:    k8sManager.GetClient(),
-			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
 			Scheme:    scheme.Scheme,
 			Clientset: clientset,
 			InCluster: true,

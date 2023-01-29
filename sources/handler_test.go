@@ -15,10 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-logr/logr"
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
-	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
@@ -30,7 +28,6 @@ var (
 			SourcesAPIPath: "/api/sources/v1.0/",
 			SourceName:     "post-source-name",
 		},
-		Log: logr.New(testutils.TestLogger{}),
 	}
 	errSources = errors.New("test error")
 )

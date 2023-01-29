@@ -14,7 +14,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/go-logr/logr"
 	promapi "github.com/prometheus/client_golang/api"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
@@ -38,7 +37,6 @@ type PromCollector struct {
 	PromCfg        *PrometheusConfig
 	TimeSeries     *promv1.Range
 	ContextTimeout *int64
-	Log            logr.Logger
 	InCluster      bool
 }
 
@@ -144,7 +142,7 @@ func testPrometheusConnection(promConn prometheusConnection) error {
 
 // GetPromConn returns the prometheus connection
 func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	log := c.Log.WithValues("kokumetricsconfig", "GetPromConn")
+	log := log.WithName("GetPromConn")
 	var err error
 
 	updated := true
@@ -183,7 +181,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 }
 
 func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
-	log := c.Log.WithValues("kokumetricsconfig", "getQueryResults")
+	log := log.WithName("getQueryResults")
 	timeout := int64(120)
 	if c.ContextTimeout != nil {
 		timeout = *c.ContextTimeout

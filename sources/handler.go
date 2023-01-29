@@ -12,11 +12,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -47,6 +46,8 @@ const (
 	// ApplicationsEndpoint The endpoint for associating a source with an application.
 	ApplicationsEndpoint string = "applications"
 )
+
+var log = logr.Log.WithName("source_handler")
 
 // GenericMeta A data structure for the meta data in a paginated response
 type GenericMeta struct {
@@ -111,14 +112,12 @@ type SourceHandler struct {
 	APIURL string
 	Auth   *crhchttp.AuthConfig
 	Spec   kokumetricscfgv1beta1.CloudDotRedHatSourceStatus
-	Log    logr.Logger
-	C      crhchttp.CRCHTTP
 }
 
 func (s *sourceGetReq) getRequest(handler *SourceHandler) ([]byte, error) {
-	log := handler.Log.WithName("getRequest")
+	log := log.WithName("getRequest")
 	uri := s.root + s.endpoint
-	req, err := handler.C.SetupRequest(handler.Auth, "", "GET", uri, &bytes.Buffer{})
+	req, err := crhchttp.SetupRequest(handler.Auth, "", "GET", uri, &bytes.Buffer{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct request for %s from Sources API: %v.", s.errKey, err)
 	}
@@ -134,13 +133,13 @@ func (s *sourceGetReq) getRequest(handler *SourceHandler) ([]byte, error) {
 }
 
 func (s *sourcePostReq) jsonRequest(handler *SourceHandler) ([]byte, error) {
-	log := handler.Log.WithName("jsonRequest")
+	log := log.WithName("jsonRequest")
 	uri := s.root + s.endpoint
 	jsonValue, err := json.Marshal(s.values)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct body for call to create a Source with the Sources API: %v.", err)
 	}
-	req, err := handler.C.SetupRequest(handler.Auth, "application/json", "POST", uri, bytes.NewBuffer(jsonValue))
+	req, err := crhchttp.SetupRequest(handler.Auth, "application/json", "POST", uri, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct request for %s from Sources API: %v.", s.errKey, err)
 	}
@@ -150,7 +149,7 @@ func (s *sourcePostReq) jsonRequest(handler *SourceHandler) ([]byte, error) {
 }
 
 func doRequest(handler *SourceHandler, r *http.Request, client crhchttp.HTTPClient, errKey string) ([]byte, error) {
-	log := handler.Log.WithName("doRequest")
+	log := log.WithName("doRequest")
 	resp, err := client.Do(r)
 	if err != nil {
 		return nil, fmt.Errorf("Failed request to Sources API (%s) for %s: %v.", r.URL.Path, errKey, err)
@@ -160,7 +159,7 @@ func doRequest(handler *SourceHandler, r *http.Request, client crhchttp.HTTPClie
 	respMsg := fmt.Sprintf("HTTP Response Status: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	log.Info(respMsg)
 
-	byteBody, err := handler.C.ProcessResponse(resp)
+	byteBody, err := crhchttp.ProcessResponse(resp)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to process the response for %s: %v.", errKey, err)
 	}
@@ -170,7 +169,7 @@ func doRequest(handler *SourceHandler, r *http.Request, client crhchttp.HTTPClie
 
 // GetSourceTypeID Request the source type ID for OpenShift
 func GetSourceTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (string, error) {
-	log := handler.Log.WithValues("kokumetricsconfig", "GetSourceTypeID")
+	log := log.WithName("GetSourceTypeID")
 	request := &sourceGetReq{
 		client:   client,
 		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
@@ -217,7 +216,7 @@ func GetSources(handler *SourceHandler, client crhchttp.HTTPClient) ([]byte, err
 
 // CheckSourceExists Determine if the source exists with given parameters
 func CheckSourceExists(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID, name, sourceRef string) (*SourceItem, error) {
-	log := handler.Log.WithValues("kokumetricsconfig", "CheckSourceExists")
+	log := log.WithName("CheckSourceExists")
 	request := &sourceGetReq{
 		client:   client,
 		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
@@ -259,7 +258,7 @@ func CheckSourceExists(handler *SourceHandler, client crhchttp.HTTPClient, sourc
 
 // GetApplicationTypeID Request the application type ID for Cost Management
 func GetApplicationTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (string, error) {
-	log := handler.Log.WithValues("kokumetricsconfig", "GetApplicationTypeID")
+	log := log.WithName("GetApplicationTypeID")
 	request := &sourceGetReq{
 		client:   client,
 		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
@@ -293,7 +292,7 @@ func GetApplicationTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (s
 
 // PostSource Creates a source with the provided name and cluster ID
 func PostSource(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
-	log := handler.Log.WithValues("kokumetricsconfig", "PostSource")
+	log := log.WithName("PostSource")
 	request := &sourcePostReq{
 		client:   client,
 		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
@@ -344,7 +343,7 @@ func PostApplication(handler *SourceHandler, client crhchttp.HTTPClient, source 
 
 // SourceCreate Creates a source with the provided name and cluster ID
 func SourceCreate(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
-	log := handler.Log.WithValues("kokumetricsconfig", "SourceGetOrCreate")
+	log := log.WithName("SourceGetOrCreate")
 
 	// Get App Type ID
 	appTypeID, err := GetApplicationTypeID(handler, client)
@@ -365,7 +364,7 @@ func SourceCreate(handler *SourceHandler, client crhchttp.HTTPClient, sourceType
 
 // SourceGetOrCreate Check if source exists, if not create the source if specified
 func SourceGetOrCreate(handler *SourceHandler, client crhchttp.HTTPClient) (bool, metav1.Time, error) {
-	log := handler.Log.WithValues("kokumetricsconfig", "SourceGetOrCreate")
+	log := log.WithName("SourceGetOrCreate")
 	currentTime := metav1.Now()
 
 	// Get Source Type ID
