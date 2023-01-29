@@ -23,9 +23,11 @@ import (
 
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var testingDir string
@@ -261,6 +263,7 @@ func shutdown() {
 }
 
 func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
 	code := 1 // default to failing code
 	err := setup()
 	if err != nil {

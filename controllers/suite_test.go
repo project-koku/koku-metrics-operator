@@ -27,9 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -136,12 +135,10 @@ func int32Ptr(i int32) *int32 { return &i }
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func() {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "ingress") {
 			w.WriteHeader(http.StatusAccepted)
@@ -155,7 +152,7 @@ var _ = BeforeSuite(func(done Done) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	logf.SetLogger(testutils.ZapLogger(true))
 	ctx := context.Background()
 
 	// Default to run locally
@@ -223,7 +220,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	clusterPrep(ctx)
 
-	close(done)
 }, 60)
 
 func createNamespace(ctx context.Context, namespace string) {

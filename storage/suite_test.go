@@ -14,15 +14,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -37,13 +36,12 @@ var ctx = context.Background()
 func TestStorage(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Storage Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Storage Suite")
+
 }
 
-var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+var _ = BeforeSuite(func() {
+	logf.SetLogger(testutils.ZapLogger(true))
 
 	By("bootstrapping test environment")
 	t := true
@@ -74,8 +72,6 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(k8sClient).ToNot(BeNil())
 
 	createNamespace(kokuMetricsCfgNamespace)
-
-	close(done)
 }, 60)
 
 var _ = AfterSuite(func() {

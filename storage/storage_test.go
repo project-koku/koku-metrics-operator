@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -15,8 +16,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
@@ -136,6 +139,12 @@ var (
 )
 
 func int32Ptr(i int32) *int32 { return &i }
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestIsMounted(t *testing.T) {
 	isMountedTests := []struct {

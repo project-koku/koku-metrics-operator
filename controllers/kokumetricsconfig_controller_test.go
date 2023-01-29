@@ -22,9 +22,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/storage"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
@@ -155,6 +157,12 @@ func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	}
 
 	return info, out.Close()
+}
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestGetClientset(t *testing.T) {

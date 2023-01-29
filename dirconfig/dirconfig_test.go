@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
@@ -51,6 +53,12 @@ func (mfi MockFileInfo) IsDir() bool {
 
 func (mfi MockFileInfo) Sys() any {
 	return nil
+}
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestGetFiles(t *testing.T) {

@@ -11,12 +11,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
@@ -78,6 +82,12 @@ func getReqBody(t *testing.T, req *http.Request) []byte {
 		t.Fatalf("failed to read response body: %v", err)
 	}
 	return bodyBytes
+}
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestGetSourceTypeID(t *testing.T) {

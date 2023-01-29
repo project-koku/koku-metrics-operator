@@ -16,10 +16,12 @@ import (
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 const epsilon = 0.00001
@@ -119,6 +121,12 @@ func compareFiles(expected, generated *os.File) error {
 	}
 
 	return nil
+}
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestGenerateReports(t *testing.T) {
