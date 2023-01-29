@@ -13,7 +13,6 @@ package controllers
 
 // // reconcilePrometheusRule reconciles the PrometheusRule
 // func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-// 	log := r.Log.WithValues("KokuMetricsConfig", "reconcilePrometheusRule")
 
 // 	promRule := newPrometheusRule(cr.Namespace, "koku-metrics-promrule")
 

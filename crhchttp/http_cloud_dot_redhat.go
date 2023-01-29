@@ -94,7 +94,7 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 
 // SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
 func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
-	log := log.WithValues("SetupRequest")
+	log := log.WithName("SetupRequest")
 
 	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
 	if err != nil {
@@ -126,7 +126,7 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
-	log := log.WithValues("GetClient")
+	log := log.WithName("GetClient")
 	transport := DefaultTransport
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
@@ -145,7 +145,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 
 // ProcessResponse Log response for request and return valid
 func ProcessResponse(resp *http.Response) ([]byte, error) {
-	log := log.WithValues("ProcessResponse")
+	log := log.WithName("ProcessResponse")
 	log.Info("request response",
 		"method", resp.Request.Method,
 		"status", resp.StatusCode,
@@ -176,7 +176,7 @@ func ProcessResponse(resp *http.Response) ([]byte, error) {
 
 // Upload Send data to cloud.redhat.com
 func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
-	log := log.WithValues("kokumetricsconfig", "Upload")
+	log := log.WithName("Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
