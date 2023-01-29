@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	gologr "github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -280,8 +281,9 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 	return nil
 }
 
-func checkCycle(cycle int64, lastExecution metav1.Time, action string) bool {
-	log := log.WithName("checkCycle")
+func checkCycle(log gologr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
+	log = log.WithName("checkCycle")
+
 	if lastExecution.IsZero() {
 		log.Info(fmt.Sprintf("there have been no prior successful %ss", action))
 		return true
@@ -344,12 +346,12 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 }
 
 func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
+	log := log.WithName("validateCredentials")
+
 	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
 	}
-
-	log := log.WithName("validateCredentials")
 
 	if previousValidation == nil {
 		previousValidation = &previousAuthValidation{}
@@ -357,7 +359,7 @@ func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.Source
 
 	if previousValidation.password == handler.Auth.BasicAuthPassword &&
 		previousValidation.username == handler.Auth.BasicAuthUser &&
-		!checkCycle(cycle, previousValidation.timestamp, "credential verification") {
+		!checkCycle(log, cycle, previousValidation.timestamp, "credential verification") {
 		return previousValidation.err
 	}
 
@@ -407,6 +409,8 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 }
 
 func checkSource(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+	log := log.WithName("checkSource")
+
 	// check if the Source Spec has changed
 	updated := false
 	if sourceSpec != nil {
@@ -414,8 +418,7 @@ func checkSource(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler,
 	}
 	sourceSpec = kmCfg.Spec.Source.DeepCopy()
 
-	log := log.WithName("checkSource")
-	if handler.Spec.SourceName != "" && (updated || checkCycle(*handler.Spec.CheckCycle, handler.Spec.LastSourceCheckTime, "source check")) {
+	if handler.Spec.SourceName != "" && (updated || checkCycle(log, *handler.Spec.CheckCycle, handler.Spec.LastSourceCheckTime, "source check")) {
 		client := crhchttp.GetClient(handler.Auth)
 		kmCfg.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(handler, client)
@@ -432,7 +435,7 @@ func packageFiles(p *packaging.FilePackager) {
 	log := log.WithName("packageAndUpload")
 
 	// if its time to package
-	if !checkCycle(*p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+	if !checkCycle(log, *p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
 		return
 	}
 
@@ -453,7 +456,7 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 		log.Info("operator is configured to not upload reports")
 		return nil
 	}
-	if !checkCycle(*kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
+	if !checkCycle(log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
 		return nil
 	}
 
