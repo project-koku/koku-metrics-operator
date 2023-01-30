@@ -11,8 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
@@ -20,6 +20,8 @@ var (
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
+
+	log = logr.Log.WithName("dirconfig")
 )
 
 type DirListFunc = func(path string) ([]os.FileInfo, error)
@@ -125,7 +127,7 @@ func (dir *Directory) Create() error {
 	return nil
 }
 
-func CheckExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
+func CheckExistsOrRecreate(dirs ...Directory) error {
 	for _, dir := range dirs {
 		if !dir.Exists() {
 			log.Info(fmt.Sprintf("recreating %s", dir.Path))

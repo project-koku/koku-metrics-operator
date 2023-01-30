@@ -6,7 +6,6 @@
 package crhchttp
 
 import (
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
@@ -22,5 +21,4 @@ type AuthConfig struct {
 	BasicAuthPassword string
 	ValidateCert      bool
 	OperatorCommit    string
-	Log               logr.Logger
 }

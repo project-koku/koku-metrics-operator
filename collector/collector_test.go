@@ -16,14 +16,13 @@ import (
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
-
-var testLogger = testutils.TestLogger{}
 
 const epsilon = 0.00001
 
@@ -124,6 +123,12 @@ func compareFiles(expected, generated *os.File) error {
 	return nil
 }
 
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
@@ -141,7 +146,6 @@ func TestGenerateReports(t *testing.T) {
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        testLogger,
 	}
 	if err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
@@ -179,7 +183,6 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        testLogger,
 	}
 
 	queryList := []*querys{nodeQueries, podQueries, volQueries}
@@ -243,7 +246,6 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        testLogger,
 	}
 	if err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
