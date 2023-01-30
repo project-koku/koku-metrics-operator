@@ -86,7 +86,6 @@ func main() {
 
 	if err = (&controllers.KokuMetricsConfigReconciler{
 		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
 		Clientset: clientset,
 		InCluster: inCluster,

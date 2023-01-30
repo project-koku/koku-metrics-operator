@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
+	gologr "github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
@@ -55,12 +56,13 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
+
+	log = logr.Log.WithName("controller_kokumetricsconfig")
 )
 
 // KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
 type KokuMetricsConfigReconciler struct {
 	client.Client
-	Log       logr.Logger
 	Scheme    *runtime.Scheme
 	Clientset *kubernetes.Clientset
 	InCluster bool
@@ -167,7 +169,7 @@ func GetClientset() (*kubernetes.Clientset, error) {
 
 // GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
 func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
-	log := r.Log.WithValues("KokuMetricsConfig", "GetClusterID")
+	log := log.WithName("GetClusterID")
 	// Get current ClusterVersion
 	cvClient := r.cvClientBuilder.New(r.Client)
 	clusterVersion, err := cvClient.GetClusterVersion()
@@ -187,7 +189,7 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
 func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
-	log := r.Log.WithValues("KokuMetricsConfig", "GetPullSecretToken")
+	log := log.WithName("GetPullSecretToken")
 
 	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
@@ -236,7 +238,7 @@ func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Aut
 // GetAuthSecret Obtain the username and password from the authentication secret provided in the current namespace
 func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
 	ctx := context.Background()
-	log := r.Log.WithValues("KokuMetricsConfig", "GetAuthSecret")
+	log := log.WithName("GetAuthSecret")
 
 	if previousValidation == nil || previousValidation.secretName != kmCfg.Status.Authentication.AuthenticationSecretName {
 		previousValidation = &previousAuthValidation{secretName: kmCfg.Status.Authentication.AuthenticationSecretName}
@@ -279,8 +281,9 @@ func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.
 	return nil
 }
 
-func checkCycle(logger logr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
-	log := logger.WithValues("KokuMetricsConfig", "checkCycle")
+func checkCycle(log gologr.Logger, cycle int64, lastExecution metav1.Time, action string) bool {
+	log = log.WithName("checkCycle")
+
 	if lastExecution.IsZero() {
 		log.Info(fmt.Sprintf("there have been no prior successful %ss", action))
 		return true
@@ -308,7 +311,7 @@ func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 }
 
 func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, reqNamespace types.NamespacedName) error {
-	log := r.Log.WithValues("KokuMetricsConfig", "setAuthentication")
+	log := log.WithName("setAuthentication")
 	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		kmCfg.Status.Authentication.ValidBasicAuth = nil
@@ -342,30 +345,30 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	}
 }
 
-func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
+func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
+	log := log.WithName("validateCredentials")
+
 	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
 	}
 
-	log := r.Log.WithValues("KokuMetricsConfig", "validateCredentials")
-
 	if previousValidation == nil {
 		previousValidation = &previousAuthValidation{}
 	}
 
-	if previousValidation.password == sSpec.Auth.BasicAuthPassword &&
-		previousValidation.username == sSpec.Auth.BasicAuthUser &&
-		!checkCycle(r.Log, cycle, previousValidation.timestamp, "credential verification") {
+	if previousValidation.password == handler.Auth.BasicAuthPassword &&
+		previousValidation.username == handler.Auth.BasicAuthUser &&
+		!checkCycle(log, cycle, previousValidation.timestamp, "credential verification") {
 		return previousValidation.err
 	}
 
 	log.Info("validating credentials")
-	client := crhchttp.GetClient(sSpec.Auth)
-	_, err := sources.GetSources(sSpec, client)
+	client := crhchttp.GetClient(handler.Auth)
+	_, err := sources.GetSources(handler, client)
 
-	previousValidation.username = sSpec.Auth.BasicAuthUser
-	previousValidation.password = sSpec.Auth.BasicAuthPassword
+	previousValidation.username = handler.Auth.BasicAuthUser
+	previousValidation.password = handler.Auth.BasicAuthPassword
 	previousValidation.err = err
 	previousValidation.timestamp = metav1.Now()
 
@@ -385,7 +388,7 @@ func validateCredentials(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSp
 }
 
 func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
-	log := r.Log.WithName("setOperatorCommit")
+	log := log.WithName("setOperatorCommit")
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
 		if exists {
@@ -405,7 +408,9 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 	kmCfg.Status.OperatorCommit = GitCommit
 }
 
-func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func checkSource(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+	log := log.WithName("checkSource")
+
 	// check if the Source Spec has changed
 	updated := false
 	if sourceSpec != nil {
@@ -413,11 +418,10 @@ func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCf
 	}
 	sourceSpec = kmCfg.Spec.Source.DeepCopy()
 
-	log := r.Log.WithValues("KokuMetricsConfig", "checkSource")
-	if sSpec.Spec.SourceName != "" && (updated || checkCycle(r.Log, *sSpec.Spec.CheckCycle, sSpec.Spec.LastSourceCheckTime, "source check")) {
-		client := crhchttp.GetClient(sSpec.Auth)
+	if handler.Spec.SourceName != "" && (updated || checkCycle(log, *handler.Spec.CheckCycle, handler.Spec.LastSourceCheckTime, "source check")) {
+		client := crhchttp.GetClient(handler.Auth)
 		kmCfg.Status.Source.SourceError = ""
-		defined, lastCheck, err := sources.SourceGetOrCreate(sSpec, client)
+		defined, lastCheck, err := sources.SourceGetOrCreate(handler, client)
 		if err != nil {
 			kmCfg.Status.Source.SourceError = err.Error()
 			log.Info("source get or create message", "error", err)
@@ -428,10 +432,10 @@ func checkSource(r *KokuMetricsConfigReconciler, sSpec *sources.SourceSpec, kmCf
 }
 
 func packageFiles(p *packaging.FilePackager) {
-	log := p.Log.WithValues("KokuMetricsConfig", "packageAndUpload")
+	log := log.WithName("packageAndUpload")
 
 	// if its time to package
-	if !checkCycle(p.Log, *p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+	if !checkCycle(log, *p.KMCfg.Status.Upload.UploadCycle, p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
 		return
 	}
 
@@ -445,14 +449,14 @@ func packageFiles(p *packaging.FilePackager) {
 }
 
 func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
-	log := r.Log.WithValues("kokumetricsconfig", "uploadFiles")
+	log := log.WithName("uploadFiles")
 
 	// if its time to upload/package
 	if !*kmCfg.Spec.Upload.UploadToggle {
 		log.Info("operator is configured to not upload reports")
 		return nil
 	}
-	if !checkCycle(r.Log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
+	if !checkCycle(log, *kmCfg.Status.Upload.UploadCycle, kmCfg.Status.Upload.LastSuccessfulUploadTime, "upload") {
 		return nil
 	}
 
@@ -514,10 +518,9 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 }
 
 func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
-	log := r.Log.WithValues("KokuMetricsConfig", "collectPromStats")
+	log := log.WithName("collectPromStats")
 	if r.promCollector == nil {
 		r.promCollector = &collector.PromCollector{
-			Log:       r.Log,
 			InCluster: r.InCluster,
 		}
 	}
@@ -555,7 +558,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 
 func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("kokumetricsconfig", "configurePVC")
+	log := log.WithName("configurePVC")
 	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
 	if pvcTemplate == nil {
 		pvcTemplate = &storage.DefaultPVC
@@ -564,7 +567,6 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 	stor := &storage.Storage{
 		Client:    r.Client,
 		KMCfg:     kmCfg,
-		Log:       r.Log,
 		Namespace: req.Namespace,
 		PVC:       storage.MakeVolumeClaimTemplate(*pvcTemplate, req.Namespace),
 	}
@@ -608,7 +610,6 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 // Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
 func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
-	log := r.Log.WithValues("KokuMetricsConfig", req.NamespacedName)
 
 	// fetch the KokuMetricsConfig instance
 	kmCfgOriginal := &kokumetricscfgv1beta1.KokuMetricsConfig{}
@@ -659,7 +660,6 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	packager := &packaging.FilePackager{
 		KMCfg:  kmCfg,
 		DirCfg: dirCfg,
-		Log:    r.Log,
 	}
 
 	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
@@ -689,7 +689,6 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.Info("configuration is for connected cluster")
 
 		authConfig := &crhchttp.AuthConfig{
-			Log:            r.Log,
 			ValidateCert:   *kmCfg.Status.Upload.ValidateCert,
 			Authentication: kmCfg.Status.Authentication.AuthType,
 			OperatorCommit: kmCfg.Status.OperatorCommit,
@@ -705,18 +704,17 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		sSpec := &sources.SourceSpec{
+		handler := &sources.SourceHandler{
 			APIURL: kmCfg.Status.APIURL,
 			Auth:   authConfig,
 			Spec:   kmCfg.Status.Source,
-			Log:    r.Log,
 		}
 
-		if err := validateCredentials(r, sSpec, kmCfg, 1440); err == nil {
+		if err := validateCredentials(r, handler, kmCfg, 1440); err == nil {
 			// Block will run when creds are valid.
 
 			// Check if source is defined and update the status to confirmed/created
-			checkSource(r, sSpec, kmCfg)
+			checkSource(r, handler, kmCfg)
 
 			// attempt upload
 			if err := uploadFiles(r, authConfig, kmCfg, dirCfg, packager); err != nil {
@@ -726,7 +724,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 			// revalidate if an upload fails due to 401
 			if strings.Contains(kmCfg.Status.Upload.LastUploadStatus, "401") {
-				_ = validateCredentials(r, sSpec, kmCfg, 0)
+				_ = validateCredentials(r, handler, kmCfg, 0)
 			}
 		}
 	} else {
