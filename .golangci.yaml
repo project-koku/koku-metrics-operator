@@ -21,7 +21,7 @@ linters:
     - typecheck
     - unused
 
-    # - goimports
+    - goimports
 
 issues:
   max-issues-per-linter: 0
