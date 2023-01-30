@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,14 +19,9 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 
 	promRule := newPrometheusRule(cr.Namespace, "koku-metrics-promrule")
 
+	patch := false
 	if err := r.Get(context.Background(), types.NamespacedName{Name: promRule.Name, Namespace: promRule.Namespace}, promRule); err == nil {
-
-		// if !cr.Spec.Monitoring.Enabled {
-		// 	// PrometheusRule exists but enabled flag has been set to false, delete the PrometheusRule
-		// 	log.Info("instance monitoring disabled, deleting component status tracking prometheusRule")
-		// 	return r.Client.Delete(context.TODO(), promRule)
-		// }
-		return nil // PrometheusRule found, do nothing
+		patch = true // PrometheusRule found, check spec and patch if required
 	}
 
 	ruleGroups := []monitoringv1.RuleGroup{
@@ -344,14 +340,26 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 	}
-	promRule.Spec.Groups = ruleGroups
+
+	if !patch {
+		promRule.Spec.Groups = ruleGroups
+	}
 
 	if err := controllerutil.SetControllerReference(cr, promRule, r.Scheme); err != nil {
 		return err
 	}
 
+	if patch {
+		if reflect.DeepEqual(promRule.Spec.Groups, ruleGroups) {
+			// if equal, nothing changed
+			return nil
+		}
+		promRule.Spec.Groups = ruleGroups
+		return r.Client.Update(context.Background(), promRule)
+	}
+
 	log.Info("instance monitoring enabled, creating component status tracking prometheusRule")
-	return r.Client.Create(context.Background(), promRule) // Create PrometheusRule
+	return r.Client.Create(context.Background(), promRule)
 }
 
 // newPrometheusRule returns the expected PrometheusRule
