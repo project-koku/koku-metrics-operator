@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/collector"
 )
 
 // reconcilePrometheusRule reconciles the PrometheusRule
@@ -29,13 +30,114 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 
 	ruleGroups := []monitoringv1.RuleGroup{
 		{
-			Name: "KokuMetricsPrometheusRecords",
+			Name: "cost_management:node",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:cost:node_allocatable_cpu_cores",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "kube_node_status_allocatable{resource='cpu'} * on(node) group_left(provider_id) max(kube_node_info) by (node, provider_id)",
+						StrVal: collector.QueryMap["koku_metrics:cost:node_allocatable_cpu_cores"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:node_capacity_cpu_cores",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:node_capacity_cpu_cores"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:node_allocatable_memory_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:node_allocatable_memory_bytes"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:node_capacity_memory_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:node_capacity_memory_bytes"],
+					},
+				},
+			},
+		},
+		{
+			Name: "cost_management:volume",
+			Rules: []monitoringv1.Rule{
+				{
+					Record: "koku_metrics:cost:persistentvolume_pod_info",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:persistentvolume_pod_info"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:persistentvolumeclaim_capacity_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:persistentvolumeclaim_capacity_bytes"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:persistentvolumeclaim_request_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:persistentvolumeclaim_request_bytes"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:persistentvolumeclaim_usage_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:persistentvolumeclaim_usage_bytes"],
+					},
+				},
+			},
+		},
+		{
+			Name: "cost_management:pod",
+			Rules: []monitoringv1.Rule{
+				{
+					Record: "koku_metrics:cost:pod_limit_cpu_cores",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:pod_limit_cpu_cores"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:pod_request_cpu_cores",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:pod_request_cpu_cores"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:pod_usage_cpu_cores",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:pod_usage_cpu_cores"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:pod_limit_memory_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:pod_limit_memory_bytes"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:pod_request_memory_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:pod_request_memory_bytes"],
+					},
+				},
+				{
+					Record: "koku_metrics:cost:pod_usage_memory_bytes",
+					Expr: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: collector.QueryMap["koku_metrics:cost:pod_usage_memory_bytes"],
 					},
 				},
 			},
@@ -47,14 +149,14 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:cpu_request_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_request_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_request_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_request_container_sum"],
 					},
 				},
 			},
@@ -66,14 +168,14 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:cpu_limit_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_limit_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_limit_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_limit_container_sum"],
 					},
 				},
 			},
@@ -85,28 +187,28 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:cpu_usage_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_usage_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_usage_container_min",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "min by(container, pod, namespace) (min_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_usage_container_min"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_usage_container_max",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "max by(container, pod, namespace) (max_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_usage_container_max"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_usage_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_usage_container_sum"],
 					},
 				},
 			},
@@ -118,21 +220,21 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:cpu_throttle_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_throttle_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_throttle_container_max",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "max by(container, pod, namespace) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_throttle_container_max"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:cpu_throttle_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:cpu_throttle_container_sum"],
 					},
 				},
 			},
@@ -144,14 +246,14 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:memory_request_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_request_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_request_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_request_container_sum"],
 					},
 				},
 			},
@@ -163,14 +265,14 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:memory_limit_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_limit_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_limit_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left() max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_limit_container_sum"],
 					},
 				},
 			},
@@ -182,28 +284,28 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:memory_usage_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_usage_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_usage_container_min",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "min by(container, pod, namespace) (min_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_usage_container_min"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_usage_container_max",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "max by(container, pod, namespace) (max_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_usage_container_max"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_usage_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_usage_container_sum"],
 					},
 				},
 			},
@@ -215,28 +317,28 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 					Record: "koku_metrics:ros:memory_rss_usage_container_avg",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "avg by(container, pod, namespace) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_rss_usage_container_avg"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_rss_usage_container_min",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "min by(container, pod, namespace) (min_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_rss_usage_container_min"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_rss_usage_container_max",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "max by(container, pod, namespace) (max_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_rss_usage_container_max"],
 					},
 				},
 				{
 					Record: "koku_metrics:ros:memory_rss_usage_container_sum",
 					Expr: intstr.IntOrString{
 						Type:   intstr.String,
-						StrVal: "sum by(container, pod, namespace) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+						StrVal: collector.QueryMap["koku_metrics:ros:memory_rss_usage_container_sum"],
 					},
 				},
 			},
