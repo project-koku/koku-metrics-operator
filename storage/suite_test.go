@@ -68,10 +68,9 @@ var _ = BeforeSuite(func() {
 
 	err = operatorsv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-	// Adding the operatorsv1alpha1 scheme
-	Expect(operatorsv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	// Adding the monitoringv1 scheme
-	Expect(monitoringv1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	err = monitoringv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
