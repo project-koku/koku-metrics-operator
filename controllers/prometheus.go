@@ -2,13 +2,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/collector"
@@ -16,17 +17,20 @@ import (
 
 // reconcilePrometheusRule reconciles the PrometheusRule
 func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+	log := log.WithName("reconcilePrometheusRule")
 
 	promRule := newPrometheusRule(cr.Namespace, "koku-metrics-promrule")
 
 	patch := false
+	log.Info("getting prom rule")
 	if err := r.Get(context.Background(), types.NamespacedName{Name: promRule.Name, Namespace: promRule.Namespace}, promRule); err == nil {
 		patch = true // PrometheusRule found, check spec and patch if required
 	}
+	log.Info(fmt.Sprintf("patch: %t", patch))
 
-	ruleGroups := []monitoringv1.RuleGroup{
+	ruleGroups := monitoringv1.PrometheusRuleSpec{Groups: []monitoringv1.RuleGroup{
 		{
-			Name: "cost_management:node",
+			Name: "cost_management.node",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:cost:node_allocatable_cpu_cores",
@@ -59,7 +63,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "cost_management:volume",
+			Name: "cost_management.volume",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:cost:persistentvolume_pod_info",
@@ -92,7 +96,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "cost_management:pod",
+			Name: "cost_management.pod",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:cost:pod_limit_cpu_cores",
@@ -139,7 +143,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:cpu_request_container",
+			Name: "resource_optimization.cpu_request_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:cpu_request_container_avg",
@@ -158,7 +162,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:cpu_limit_container",
+			Name: "resource_optimization.cpu_limit_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:cpu_limit_container_avg",
@@ -177,7 +181,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:cpu_usage_container",
+			Name: "resource_optimization.cpu_usage_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:cpu_usage_container_avg",
@@ -210,7 +214,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:cpu_throttle_container",
+			Name: "resource_optimization.cpu_throttle_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:cpu_throttle_container_avg",
@@ -236,7 +240,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:memory_request_container",
+			Name: "resource_optimization.memory_request_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:memory_request_container_avg",
@@ -255,7 +259,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:memory_limit_container",
+			Name: "resource_optimization.memory_limit_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:memory_limit_container_avg",
@@ -274,7 +278,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:memory_usage_container",
+			Name: "resource_optimization.memory_usage_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:memory_usage_container_avg",
@@ -307,7 +311,7 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 			},
 		},
 		{
-			Name: "resource_optimization:memory_rss_usage_container",
+			Name: "resource_optimization.memory_rss_usage_container",
 			Rules: []monitoringv1.Rule{
 				{
 					Record: "koku_metrics:ros:memory_rss_usage_container_avg",
@@ -339,24 +343,20 @@ func (r *KokuMetricsConfigReconciler) reconcilePrometheusRule(cr *kokumetricscfg
 				},
 			},
 		},
-	}
-
-	if !patch {
-		promRule.Spec.Groups = ruleGroups
-	}
-
-	if err := controllerutil.SetControllerReference(cr, promRule, r.Scheme); err != nil {
-		return err
-	}
+	}}
 
 	if patch {
 		if reflect.DeepEqual(promRule.Spec.Groups, ruleGroups) {
 			// if equal, nothing changed
 			return nil
 		}
-		promRule.Spec.Groups = ruleGroups
-		return r.Client.Update(context.Background(), promRule)
+		obj := promRule
+		patch := client.MergeFrom(promRule.DeepCopy())
+		promRule.Spec = ruleGroups
+		return r.Client.Patch(context.Background(), obj, patch)
 	}
+
+	promRule.Spec = ruleGroups
 
 	log.Info("instance monitoring enabled, creating component status tracking prometheusRule")
 	return r.Client.Create(context.Background(), promRule)

@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -67,6 +68,10 @@ var _ = BeforeSuite(func() {
 
 	err = operatorsv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
+	// Adding the operatorsv1alpha1 scheme
+	Expect(operatorsv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	// Adding the monitoringv1 scheme
+	Expect(monitoringv1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())

@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -599,8 +600,10 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 }
 
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operators.coreos.com,namespace=koku-metrics-operator,resources=clusterserviceversions,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules;prometheusrules/finalizers,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
@@ -756,6 +759,14 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.Error(err, "failed to update KokuMetricsConfig status")
 		result = ctrl.Result{}
 		errors = append(errors, err)
+	}
+
+	if len(errors) == 0 {
+		t := time.Now().Truncate(1 * time.Hour).Add(1 * time.Hour)
+		d := wait.Jitter(time.Until(t), 500)
+		log.Info("reconciliation complete")
+		log.Info(fmt.Sprintf("waiting %s until next reconciliation", d.String()))
+		return ctrl.Result{RequeueAfter: d}, nil
 	}
 
 	// Requeue for processing after 5 minutes
