@@ -449,7 +449,8 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 	}
 	for _, tt := range getPrometheusConnFromCfgTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getPrometheusConnFromCfg(tt.cfg)
+			c := PromCollector{PromCfg: tt.cfg}
+			err := setPrometheusConn(&c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -640,7 +641,8 @@ func TestGetPrometheusConfig(t *testing.T) {
 				os.Remove(filepath.Join(tt.basePath, tokenKey))
 				os.Remove(filepath.Join(tt.basePath, certKey))
 			}()
-			got, err := c.getPrometheusConfig(kmCfg)
+			err := setPrometheusConfig(kmCfg, c)
+			got := c.PromCfg
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}

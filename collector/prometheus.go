@@ -76,7 +76,7 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func (c *PromCollector) getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec) (*PrometheusConfig, error) {
+func setPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, c *PromCollector) error {
 
 	promCfg := &PrometheusConfig{
 		Address: kmCfg.SvcAddress,
@@ -87,30 +87,33 @@ func (c *PromCollector) getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.Prometh
 	tokenFile := filepath.Join(c.serviceaccountPath, tokenKey)
 	token, err := getBearerToken(tokenFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	promCfg.BearerToken = token
+	c.PromCfg = promCfg
 
-	return promCfg, nil
+	return nil
 }
 
-func getPrometheusConnFromCfg(cfg *PrometheusConfig) (promv1.API, error) {
+func setPrometheusConn(c *PromCollector) error {
+	cfg := c.PromCfg
 	promconf := config.HTTPClientConfig{
 		BearerToken: cfg.BearerToken,
 		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
 	}
 	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf")
 	if err != nil {
-		return nil, fmt.Errorf("cannot create roundTripper: %v", err)
+		return fmt.Errorf("cannot create roundTripper: %v", err)
 	}
 	client, err := promapi.NewClient(promapi.Config{
 		Address:      cfg.Address,
 		RoundTripper: roundTripper,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot create prometheus client: %v", err)
+		return fmt.Errorf("cannot create prometheus client: %v", err)
 	}
-	return promv1.NewAPI(client), nil
+	c.PromConn = promv1.NewAPI(client)
+	return nil
 }
 
 func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string, err error) {
@@ -159,7 +162,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 	if updated || c.PromCfg == nil || kmCfg.Status.Prometheus.ConfigError != "" {
 		log.Info("getting prometheus configuration")
-		c.PromCfg, err = c.getPrometheusConfig(&kmCfg.Spec.PrometheusConfig)
+		err = setPrometheusConfig(&kmCfg.Spec.PrometheusConfig, c)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
@@ -168,7 +171,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 	if updated || c.PromConn == nil || kmCfg.Status.Prometheus.ConnectionError != "" {
 		log.Info("getting prometheus connection")
-		c.PromConn, err = getPrometheusConnFromCfg(c.PromCfg)
+		err = setPrometheusConn(c)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return err
