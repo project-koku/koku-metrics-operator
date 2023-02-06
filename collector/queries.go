@@ -53,8 +53,7 @@ var (
 	nodeQueries = &querys{
 		query{
 			Name:        "node-allocatable-cpu-cores",
-			QueryString: "koku_metrics:cost:node_allocatable_cpu_cores",
-			BackupQuery: QueryMap["koku_metrics:cost:node_allocatable_cpu_cores"],
+			QueryString: QueryMap["koku_metrics:cost:node_allocatable_cpu_cores"],
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-cpu-cores",
@@ -65,8 +64,7 @@ var (
 		},
 		query{
 			Name:        "node-allocatable-memory-bytes",
-			QueryString: "koku_metrics:cost:node_allocatable_memory_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:node_allocatable_memory_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:node_allocatable_memory_bytes"],
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-allocatable-memory-bytes",
@@ -77,8 +75,7 @@ var (
 		},
 		query{
 			Name:        "node-capacity-cpu-cores",
-			QueryString: "koku_metrics:cost:node_capacity_cpu_cores",
-			BackupQuery: QueryMap["koku_metrics:cost:node_capacity_cpu_cores"],
+			QueryString: QueryMap["koku_metrics:cost:node_capacity_cpu_cores"],
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-cpu-cores",
@@ -89,8 +86,7 @@ var (
 		},
 		query{
 			Name:        "node-capacity-memory-bytes",
-			QueryString: "koku_metrics:cost:node_capacity_memory_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:node_capacity_memory_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:node_capacity_memory_bytes"],
 			MetricKey:   staticFields{"node": "node", "provider_id": "provider_id"},
 			QueryValue: &saveQueryValue{
 				ValName:         "node-capacity-memory-bytes",
@@ -115,15 +111,13 @@ var (
 	volQueries = &querys{
 		query{
 			Name:        "persistentvolume_pod_info",
-			QueryString: "koku_metrics:cost:persistentvolume_pod_info",
-			BackupQuery: QueryMap["koku_metrics:cost:persistentvolume_pod_info"],
+			QueryString: QueryMap["koku_metrics:cost:persistentvolume_pod_info"],
 			MetricKey:   staticFields{"namespace": "namespace", "pod": "pod"},
 			RowKey:      []model.LabelName{"volumename"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-capacity-bytes",
-			QueryString: "koku_metrics:cost:persistentvolumeclaim_capacity_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:persistentvolumeclaim_capacity_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:persistentvolumeclaim_capacity_bytes"],
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-capacity-bytes",
 				Method:          "max",
@@ -133,8 +127,7 @@ var (
 		},
 		query{
 			Name:        "persistentvolumeclaim-request-bytes",
-			QueryString: "koku_metrics:cost:persistentvolumeclaim_request_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:persistentvolumeclaim_request_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:persistentvolumeclaim_request_bytes"],
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-request-bytes",
 				Method:          "max",
@@ -144,8 +137,7 @@ var (
 		},
 		query{
 			Name:        "persistentvolumeclaim-usage-bytes",
-			QueryString: "koku_metrics:cost:persistentvolumeclaim_usage_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:persistentvolumeclaim_usage_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:persistentvolumeclaim_usage_bytes"],
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-usage-bytes",
 				Method:          "sum",
@@ -171,8 +163,7 @@ var (
 	podQueries = &querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
-			QueryString: "koku_metrics:cost:pod_limit_cpu_cores",
-			BackupQuery: QueryMap["koku_metrics:cost:pod_limit_cpu_cores"],
+			QueryString: QueryMap["koku_metrics:cost:pod_limit_cpu_cores"],
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-cpu-cores",
@@ -183,8 +174,7 @@ var (
 		},
 		query{
 			Name:        "pod-limit-memory-bytes",
-			QueryString: "koku_metrics:cost:pod_limit_memory_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:pod_limit_memory_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:pod_limit_memory_bytes"],
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-limit-memory-bytes",
@@ -195,8 +185,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-cpu-cores",
-			QueryString: "koku_metrics:cost:pod_request_cpu_cores",
-			BackupQuery: QueryMap["koku_metrics:cost:pod_request_cpu_cores"],
+			QueryString: QueryMap["koku_metrics:cost:pod_request_cpu_cores"],
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-cpu-cores",
@@ -207,8 +196,7 @@ var (
 		},
 		query{
 			Name:        "pod-request-memory-bytes",
-			QueryString: "koku_metrics:cost:pod_request_memory_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:pod_request_memory_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:pod_request_memory_bytes"],
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-request-memory-bytes",
@@ -219,8 +207,7 @@ var (
 		},
 		query{
 			Name:        "pod-usage-cpu-cores",
-			QueryString: "koku_metrics:cost:pod_usage_cpu_cores",
-			BackupQuery: QueryMap["koku_metrics:cost:pod_usage_cpu_cores"],
+			QueryString: QueryMap["koku_metrics:cost:pod_usage_cpu_cores"],
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-usage-cpu-cores",
@@ -231,8 +218,7 @@ var (
 		},
 		query{
 			Name:        "pod-usage-memory-bytes",
-			QueryString: "koku_metrics:cost:pod_usage_memory_bytes",
-			BackupQuery: QueryMap["koku_metrics:cost:pod_usage_memory_bytes"],
+			QueryString: QueryMap["koku_metrics:cost:pod_usage_memory_bytes"],
 			MetricKey:   staticFields{"pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "pod-usage-memory-bytes",
@@ -258,6 +244,238 @@ var (
 			RowKey:         []model.LabelName{"namespace"},
 		},
 	}
+	// resourceOptimizationQueries = &querys{
+	// 	query{
+	// 		Name:        "cpu-request-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_request_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-request-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-request-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_request_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-request-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-limit-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_limit_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-limit-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-limit-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_limit_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-limit-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-usage-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-usage-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-usage-container-min",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_min"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-usage-container-min",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-usage-container-max",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_max"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-usage-container-max",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-usage-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-usage-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-throttle-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_throttle_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-throttle-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-throttle-container-max",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_throttle_container_max"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-throttle-container-max",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "cpu-throttle-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:cpu_throttle_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "cpu-throttle-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-request-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_request_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-request-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-request-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_request_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-request-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-limit-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_limit_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-limit-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-limit-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_limit_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-limit-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-usage-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_usage_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-usage-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-usage-container-min",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_usage_container_min"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-usage-container-min",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-usage-container-max",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_usage_container_max"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-usage-container-max",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-usage-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_usage_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-usage-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-rss-usage-container-avg",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_avg"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-rss-usage-container-avg",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-rss-usage-container-min",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_min"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-rss-usage-container-min",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-rss-usage-container-max",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_max"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-rss-usage-container-max",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// 	query{
+	// 		Name:        "memory-rss-usage-container-sum",
+	// 		QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_sum"],
+	// 		MetricKey:   staticFields{"container": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
+	// 		QueryValue: &saveQueryValue{
+	// 			ValName: "memory-rss-usage-container-sum",
+	// 			Method:  "sum",
+	// 		},
+	// 		RowKey: []model.LabelName{"container", "pod", "namespace"},
+	// 	},
+	// }
 )
 
 type querys []query
@@ -265,7 +483,6 @@ type querys []query
 type query struct {
 	Name           string
 	QueryString    string
-	BackupQuery    string
 	MetricKey      staticFields
 	MetricKeyRegex regexFields
 	QueryValue     *saveQueryValue

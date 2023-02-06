@@ -247,3 +247,45 @@ func (row storageRow) csvRow() []string {
 }
 
 func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }
+
+// type resourceOptimizationRow struct {
+// 	*dateTimes
+// 	nodeRow
+// 	ContainerName               string `mapstructure:"container_name"`
+// 	Pod                         string `mapstructure:"pod"`
+// 	Namespace                   string `mapstructure:"namespace"`
+// 	PodUsageCPUCoreSeconds      string `mapstructure:"pod-usage-cpu-core-seconds"`
+// 	PodRequestCPUCoreSeconds    string `mapstructure:"pod-request-cpu-core-seconds"`
+// 	PodLimitCPUCoreSeconds      string `mapstructure:"pod-limit-cpu-core-seconds"`
+// 	PodUsageMemoryByteSeconds   string `mapstructure:"pod-usage-memory-byte-seconds"`
+// 	PodRequestMemoryByteSeconds string `mapstructure:"pod-request-memory-byte-seconds"`
+// 	PodLimitMemoryByteSeconds   string `mapstructure:"pod-limit-memory-byte-seconds"`
+// }
+
+// func (resourceOptimizationRow) csvHeader() []string {
+// 	return []string{
+// 		"report_period_start",
+// 		"report_period_end",
+// 		"interval_start",
+// 		"interval_end",
+// 		"container_name",
+// 		"pod",
+// 		"namespace",
+// 	}
+// }
+
+// func (row resourceOptimizationRow) csvRow() []string {
+// 	return []string{
+// 		row.ReportPeriodStart,
+// 		row.ReportPeriodEnd,
+// 		row.IntervalStart,
+// 		row.IntervalEnd,
+// 		row.ContainerName,
+// 		row.Pod,
+// 		row.Namespace,
+// 		row.Node,
+// 		row.ResourceID,
+// 	}
+// }
+
+// func (row resourceOptimizationRow) string() string { return strings.Join(row.csvRow(), ",") }

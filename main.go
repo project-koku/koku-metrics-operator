@@ -11,7 +11,7 @@ import (
 	"os"
 
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	// monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -42,7 +42,7 @@ func init() {
 	// Adding the operatorsv1alpha1 scheme
 	utilruntime.Must(operatorsv1alpha1.AddToScheme(scheme))
 	// Adding the monitoringv1 scheme
-	utilruntime.Must(monitoringv1.AddToScheme(scheme))
+	// utilruntime.Must(monitoringv1.AddToScheme(scheme))
 
 	// +kubebuilder:scaffold:scheme
 }

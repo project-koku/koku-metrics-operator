@@ -630,14 +630,6 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
 
-	if err := r.reconcilePrometheusRule(kmCfg); err != nil {
-		log.Error(err, "failed to reconcile PrometheusRule")
-		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
-		}
-		return ctrl.Result{}, err
-	}
-
 	if r.InCluster {
 		res, err := configurePVC(r, req, kmCfg)
 		if err != nil || res != nil {
