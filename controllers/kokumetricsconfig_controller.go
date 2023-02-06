@@ -696,7 +696,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		t := startTime
 		timeRange := promv1.Range{
 			Start: t,
-			End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 59, 59, 0, t.Location()),
+			End:   t.Add(59*time.Minute + 59*time.Second),
 			Step:  time.Minute,
 		}
 		collectPromStats(r, kmCfg, dirCfg, timeRange)
