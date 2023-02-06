@@ -79,7 +79,7 @@ func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string
 }
 
 func TestGetQueryResultsSuccess(t *testing.T) {
-	col := PromCollector{
+	col := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
 	getQueryResultsErrorsTests := []struct {
@@ -203,7 +203,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 }
 
 func TestGetQueryResultsError(t *testing.T) {
-	col := PromCollector{
+	col := PrometheusCollector{
 		ContextTimeout: &defaultContextTimeout,
 		TimeSeries:     &promv1.Range{},
 	}
@@ -281,7 +281,7 @@ func TestGetQueryResultsError(t *testing.T) {
 }
 
 func TestTestPrometheusConnection(t *testing.T) {
-	col := PromCollector{
+	col := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
 	testPrometheusConnectionTests := []struct {
@@ -318,7 +318,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 }
 
 func TestTestPrometheusConnectionPolling(t *testing.T) {
-	col := PromCollector{
+	col := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
 	testPrometheusConnectionTests := []struct {
@@ -449,8 +449,8 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 	}
 	for _, tt := range getPrometheusConnFromCfgTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := PromCollector{PromCfg: tt.cfg}
-			err := setPrometheusConn(&c)
+			c := PrometheusCollector{PromCfg: tt.cfg}
+			err := SetPrometheusConnection(&c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -544,14 +544,14 @@ func TestGetPromConn(t *testing.T) {
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
 			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
-			col := &PromCollector{
+			col := &PrometheusCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
 
 				serviceaccountPath: serviceaccountPath,
 			}
 			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
-			err := col.GetPromConn(kmCfg, TestPrometheusConnection)
+			err := col.GetPromConn(kmCfg, SetPrometheusConnection, TestPrometheusConnection)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}

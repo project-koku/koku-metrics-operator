@@ -129,7 +129,7 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
 	log := log.WithName("GenerateReports")
 
 	// yearMonth is used in filenames

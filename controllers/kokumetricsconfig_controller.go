@@ -56,7 +56,8 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
-	promConnTester     collector.PromConnectionTest = collector.TestPrometheusConnection
+	promConnSetter     collector.PrometheusConnectionSetter = collector.SetPrometheusConnection
+	promConnTester     collector.PrometheusConnectionTest   = collector.TestPrometheusConnection
 
 	log = logr.Log.WithName("controller_kokumetricsconfig")
 )
@@ -70,7 +71,7 @@ type KokuMetricsConfigReconciler struct {
 	Namespace string
 
 	cvClientBuilder               cv.ClusterVersionBuilder
-	promCollector                 *collector.PromCollector
+	promCollector                 *collector.PrometheusCollector
 	disablePreviousDataCollection bool
 	overrideSecretPath            bool
 }
@@ -534,7 +535,7 @@ func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 	r.promCollector.TimeSeries = nil
 	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
-	return r.promCollector.GetPromConn(kmCfg, promConnTester)
+	return r.promCollector.GetPromConn(kmCfg, promConnSetter, promConnTester)
 }
 
 func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {

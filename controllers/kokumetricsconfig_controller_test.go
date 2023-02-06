@@ -17,6 +17,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -132,6 +134,20 @@ var (
 )
 
 func MockPromConnTester(promconn collector.PrometheusConnection) error { return nil }
+func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
+	promcoll.PromConn = mockPrometheusConnection{}
+	return nil
+}
+
+type mockPrometheusConnection struct{}
+
+func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
+
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
@@ -303,6 +319,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 
 	GitCommit = "1234567"
 	promConnTester = MockPromConnTester
+	promConnSetter = MockPromConnSetter
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.

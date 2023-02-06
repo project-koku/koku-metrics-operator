@@ -31,9 +31,10 @@ var (
 	serviceaccountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 )
 
-type PromConnectionTest func(promconn PrometheusConnection) error
+type PrometheusConnectionTest func(promconn PrometheusConnection) error
+type PrometheusConnectionSetter func(promcoll *PrometheusCollector) error
 
-type PromCollector struct {
+type PrometheusCollector struct {
 	PromConn       PrometheusConnection
 	PromCfg        *PrometheusConfig
 	TimeSeries     *promv1.Range
@@ -59,11 +60,11 @@ type PrometheusConfig struct {
 	SkipTLS bool
 }
 
-func NewPromCollector(saPath string) *PromCollector {
+func NewPromCollector(saPath string) *PrometheusCollector {
 	if saPath == "" {
 		saPath = serviceaccountPath
 	}
-	return &PromCollector{
+	return &PrometheusCollector{
 		serviceaccountPath: saPath,
 	}
 }
@@ -76,7 +77,7 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func setPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, c *PromCollector) error {
+func setPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
 
 	promCfg := &PrometheusConfig{
 		Address: kmCfg.SvcAddress,
@@ -95,8 +96,8 @@ func setPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, c *PromCol
 	return nil
 }
 
-func setPrometheusConn(c *PromCollector) error {
-	cfg := c.PromCfg
+func SetPrometheusConnection(promcoll *PrometheusCollector) error {
+	cfg := promcoll.PromCfg
 	promconf := config.HTTPClientConfig{
 		BearerToken: cfg.BearerToken,
 		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
@@ -112,7 +113,7 @@ func setPrometheusConn(c *PromCollector) error {
 	if err != nil {
 		return fmt.Errorf("cannot create prometheus client: %v", err)
 	}
-	c.PromConn = promv1.NewAPI(client)
+	promcoll.PromConn = promv1.NewAPI(client)
 	return nil
 }
 
@@ -150,7 +151,7 @@ func TestPrometheusConnection(promConn PrometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, testPromConn PromConnectionTest) error {
+func (c *PrometheusCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, setter PrometheusConnectionSetter, tester PrometheusConnectionTest) error {
 	log := log.WithName("GetPromConn")
 	var err error
 
@@ -171,7 +172,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 	if updated || c.PromConn == nil || kmCfg.Status.Prometheus.ConnectionError != "" {
 		log.Info("getting prometheus connection")
-		err = setPrometheusConn(c)
+		err = setter(c)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return err
@@ -179,7 +180,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 	}
 
 	log.Info("testing the ability to query prometheus")
-	err = testPromConn(c.PromConn)
+	err = tester(c.PromConn)
 	statusHelper(kmCfg, "connection", err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)
@@ -189,7 +190,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 	return nil
 }
 
-func (c *PromCollector) getQueryResults(queries *querys, results *mappedResults) error {
+func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := log.WithName("getQueryResults")
 	timeout := int64(120)
 	if c.ContextTimeout != nil {
