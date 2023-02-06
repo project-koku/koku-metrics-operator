@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -32,15 +31,18 @@ var (
 	serviceaccountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 )
 
+type PromConnectionTest func(promconn PrometheusConnection) error
+
 type PromCollector struct {
-	PromConn       prometheusConnection
+	PromConn       PrometheusConnection
 	PromCfg        *PrometheusConfig
 	TimeSeries     *promv1.Range
 	ContextTimeout *int64
-	InCluster      bool
+
+	serviceaccountPath string
 }
 
-type prometheusConnection interface {
+type PrometheusConnection interface {
 	QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error)
 	Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error)
 }
@@ -57,6 +59,15 @@ type PrometheusConfig struct {
 	SkipTLS bool
 }
 
+func NewPromCollector(saPath string) *PromCollector {
+	if saPath == "" {
+		saPath = serviceaccountPath
+	}
+	return &PromCollector{
+		serviceaccountPath: saPath,
+	}
+}
+
 func getBearerToken(tokenFile string) (config.Secret, error) {
 	encodedSecret, err := ioutil.ReadFile(tokenFile)
 	if err != nil {
@@ -65,20 +76,15 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec, inCluster bool) (*PrometheusConfig, error) {
-	if !inCluster {
-		val, ok := os.LookupEnv("SECRET_ABSPATH")
-		if ok {
-			serviceaccountPath = val
-		}
-	}
+func (c *PromCollector) getPrometheusConfig(kmCfg *kokumetricscfgv1beta1.PrometheusSpec) (*PrometheusConfig, error) {
+
 	promCfg := &PrometheusConfig{
 		Address: kmCfg.SvcAddress,
-		CAFile:  filepath.Join(serviceaccountPath, certKey),
+		CAFile:  filepath.Join(c.serviceaccountPath, certKey),
 		SkipTLS: *kmCfg.SkipTLSVerification,
 	}
 
-	tokenFile := filepath.Join(serviceaccountPath, tokenKey)
+	tokenFile := filepath.Join(c.serviceaccountPath, tokenKey)
 	token, err := getBearerToken(tokenFile)
 	if err != nil {
 		return nil, err
@@ -128,7 +134,7 @@ func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string,
 	}
 }
 
-func testPrometheusConnection(promConn prometheusConnection) error {
+func TestPrometheusConnection(promConn PrometheusConnection) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return wait.PollImmediate(1*time.Second, 15*time.Second, func() (bool, error) {
@@ -141,7 +147,7 @@ func testPrometheusConnection(promConn prometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, testPromConn PromConnectionTest) error {
 	log := log.WithName("GetPromConn")
 	var err error
 
@@ -153,7 +159,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 
 	if updated || c.PromCfg == nil || kmCfg.Status.Prometheus.ConfigError != "" {
 		log.Info("getting prometheus configuration")
-		c.PromCfg, err = getPrometheusConfig(&kmCfg.Spec.PrometheusConfig, c.InCluster)
+		c.PromCfg, err = c.getPrometheusConfig(&kmCfg.Spec.PrometheusConfig)
 		statusHelper(kmCfg, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
@@ -170,7 +176,7 @@ func (c *PromCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConf
 	}
 
 	log.Info("testing the ability to query prometheus")
-	err = testPrometheusConnection(c.PromConn)
+	err = testPromConn(c.PromConn)
 	statusHelper(kmCfg, "connection", err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)

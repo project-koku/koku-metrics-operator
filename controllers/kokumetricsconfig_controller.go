@@ -56,6 +56,7 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
+	promConnTester     collector.PromConnectionTest = collector.TestPrometheusConnection
 
 	log = logr.Log.WithName("controller_kokumetricsconfig")
 )
@@ -68,8 +69,10 @@ type KokuMetricsConfigReconciler struct {
 	InCluster bool
 	Namespace string
 
-	cvClientBuilder cv.ClusterVersionBuilder
-	promCollector   *collector.PromCollector
+	cvClientBuilder               cv.ClusterVersionBuilder
+	promCollector                 *collector.PromCollector
+	disablePreviousDataCollection bool
+	overrideSecretPath            bool
 }
 
 type previousAuthValidation struct {
@@ -511,7 +514,7 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (time.Time, time.Time) {
 	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
-	if kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() {
+	if kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() && r.InCluster && !r.disablePreviousDataCollection {
 		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
 	}
 	return start, end
@@ -519,14 +522,19 @@ func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 
 func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	if r.promCollector == nil {
-		r.promCollector = &collector.PromCollector{
-			InCluster: r.InCluster,
+		var serviceaccountPath string
+		if r.overrideSecretPath {
+			val, ok := os.LookupEnv("SECRET_ABSPATH")
+			if ok {
+				serviceaccountPath = val
+			}
 		}
+		r.promCollector = collector.NewPromCollector(serviceaccountPath)
 	}
 	r.promCollector.TimeSeries = nil
 	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
-	return r.promCollector.GetPromConn(kmCfg)
+	return r.promCollector.GetPromConn(kmCfg, promConnTester)
 }
 
 func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {

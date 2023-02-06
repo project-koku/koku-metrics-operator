@@ -306,7 +306,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 				singleResult: tt.queryResult,
 				t:            t,
 			}
-			err := testPrometheusConnection(col.PromConn)
+			err := TestPrometheusConnection(col.PromConn)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -347,7 +347,7 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 					singleResult: tt.queryResult,
 					t:            t},
 				timeout: tt.wait}
-			err := testPrometheusConnection(col.PromConn)
+			err := TestPrometheusConnection(col.PromConn)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -466,7 +466,7 @@ func TestGetPromConn(t *testing.T) {
 		cfg          *PrometheusConfig
 		createTokCrt bool
 		cfgErr       string
-		con          prometheusConnection
+		con          PrometheusConnection
 		conErr       string
 		wantedError  error
 	}{
@@ -546,9 +546,11 @@ func TestGetPromConn(t *testing.T) {
 			col := &PromCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
+
+				serviceaccountPath: serviceaccountPath,
 			}
 			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
-			err := col.GetPromConn(kmCfg)
+			err := col.GetPromConn(kmCfg, TestPrometheusConnection)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -560,10 +562,6 @@ func TestGetPromConn(t *testing.T) {
 }
 
 func TestGetPrometheusConfig(t *testing.T) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get working dir: %v", err)
-	}
 	trueDef := true
 	kmCfg := &kokumetricscfgv1beta1.PrometheusSpec{
 		SvcAddress:          "svc-address",
@@ -580,11 +578,10 @@ func TestGetPrometheusConfig(t *testing.T) {
 		wantedError error
 	}{
 		{
-			name:      "successful config - in cluster",
-			inCluster: true,
-			basePath:  secretsPath,
-			certKey:   true,
-			tokenKey:  true,
+			name:     "successful config - in cluster",
+			basePath: secretsPath,
+			certKey:  true,
+			tokenKey: true,
 			want: &PrometheusConfig{
 				Address:     "svc-address",
 				SkipTLS:     true,
@@ -595,7 +592,6 @@ func TestGetPrometheusConfig(t *testing.T) {
 		},
 		{
 			name:        "missing token - in cluster",
-			inCluster:   true,
 			basePath:    secretsPath,
 			certKey:     true,
 			tokenKey:    false,
@@ -603,22 +599,20 @@ func TestGetPrometheusConfig(t *testing.T) {
 			wantedError: errTest,
 		},
 		{
-			name:      "successful config - local",
-			inCluster: false,
-			basePath:  secretsPath,
-			certKey:   true,
-			tokenKey:  true,
+			name:     "successful config - local",
+			basePath: secretsPath,
+			certKey:  true,
+			tokenKey: true,
 			want: &PrometheusConfig{
 				Address:     "svc-address",
 				SkipTLS:     true,
 				BearerToken: config.Secret([]byte("this-is-token-data")),
-				CAFile:      filepath.Join(cwd, secretsPath, certKey),
+				CAFile:      filepath.Join(secretsPath, certKey),
 			},
 			wantedError: nil,
 		},
 		{
 			name:        "missing token - local",
-			inCluster:   false,
 			basePath:    secretsPath,
 			certKey:     true,
 			tokenKey:    false,
@@ -627,7 +621,6 @@ func TestGetPrometheusConfig(t *testing.T) {
 		},
 		{
 			name:        "local - no path to secrets",
-			inCluster:   false,
 			basePath:    "",
 			tokenKey:    false,
 			want:        nil,
@@ -642,21 +635,12 @@ func TestGetPrometheusConfig(t *testing.T) {
 			if tt.tokenKey {
 				testutils.CreateToken(secretsPath, tokenKey)
 			}
-			tmpBase := serviceaccountPath
-			if tt.inCluster {
-				serviceaccountPath = tt.basePath
-			} else {
-				if err := os.Setenv("SECRET_ABSPATH", filepath.Join(cwd, tt.basePath)); err != nil {
-					t.Fatalf("failed to set SECRET_ABSPATH variable")
-				}
-			}
+			c := NewPromCollector(tt.basePath)
 			defer func() {
-				serviceaccountPath = tmpBase
-				os.Unsetenv("SECRET_ABSPATH")
-				os.Remove(filepath.Join(tt.basePath, "token"))
-				os.Remove(filepath.Join(tt.basePath, "service-ca.crt"))
+				os.Remove(filepath.Join(tt.basePath, tokenKey))
+				os.Remove(filepath.Join(tt.basePath, certKey))
 			}()
-			got, err := getPrometheusConfig(kmCfg, tt.inCluster)
+			got, err := c.getPrometheusConfig(kmCfg)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}

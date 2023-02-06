@@ -25,6 +25,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/storage"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
@@ -79,11 +80,6 @@ var (
 			},
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
-		Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{
-			Prometheus: kokumetricscfgv1beta1.PrometheusStatus{
-				LastQuerySuccessTime: metav1.NewTime(time.Now().Add(-3 * time.Hour)),
-			},
-		},
 	}
 	airGappedInstance = kokumetricscfgv1beta1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -115,11 +111,6 @@ var (
 			},
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
-		Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{
-			Prometheus: kokumetricscfgv1beta1.PrometheusStatus{
-				LastQuerySuccessTime: metav1.NewTime(time.Now().Add(-3 * time.Hour)),
-			},
-		},
 	}
 	differentPVC = &kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -139,6 +130,8 @@ var (
 		},
 	}
 )
+
+func MockPromConnTester(promconn collector.PrometheusConnection) error { return nil }
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
@@ -309,6 +302,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 
 	GitCommit = "1234567"
+	promConnTester = MockPromConnTester
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
