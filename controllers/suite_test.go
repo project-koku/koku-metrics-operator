@@ -162,6 +162,7 @@ var _ = BeforeSuite(func() {
 	useCluster = false
 	if useClusterEnv, ok = os.LookupEnv("USE_CLUSTER"); ok {
 		useCluster, err = strconv.ParseBool(useClusterEnv)
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	By("bootstrapping test environment")
