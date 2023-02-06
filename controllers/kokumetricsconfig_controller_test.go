@@ -133,7 +133,7 @@ var (
 	}
 )
 
-func MockPromConnTester(promconn collector.PrometheusConnection) error { return nil }
+func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
 func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
 	promcoll.PromConn = mockPrometheusConnection{}
 	return nil

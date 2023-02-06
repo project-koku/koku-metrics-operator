@@ -57,7 +57,7 @@ var (
 	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
 	promConnSetter     collector.PrometheusConnectionSetter = collector.SetPrometheusConnection
-	promConnTester     collector.PrometheusConnectionTest   = collector.TestPrometheusConnection
+	promConnTester     collector.PrometheusConnectionTester = collector.TestPrometheusConnection
 
 	log = logr.Log.WithName("controller_kokumetricsconfig")
 )

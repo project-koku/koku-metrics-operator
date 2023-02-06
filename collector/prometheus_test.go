@@ -306,7 +306,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 				singleResult: tt.queryResult,
 				t:            t,
 			}
-			err := TestPrometheusConnection(col.PromConn)
+			err := TestPrometheusConnection(&col)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -347,7 +347,7 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 					singleResult: tt.queryResult,
 					t:            t},
 				timeout: tt.wait}
-			err := TestPrometheusConnection(col.PromConn)
+			err := TestPrometheusConnection(&col)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}

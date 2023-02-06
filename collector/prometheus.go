@@ -31,7 +31,7 @@ var (
 	serviceaccountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 )
 
-type PrometheusConnectionTest func(promconn PrometheusConnection) error
+type PrometheusConnectionTester func(promcoll *PrometheusCollector) error
 type PrometheusConnectionSetter func(promcoll *PrometheusCollector) error
 
 type PrometheusCollector struct {
@@ -138,11 +138,11 @@ func statusHelper(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, status string,
 	}
 }
 
-func TestPrometheusConnection(promConn PrometheusConnection) error {
+func TestPrometheusConnection(promcoll *PrometheusCollector) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return wait.PollImmediate(1*time.Second, 15*time.Second, func() (bool, error) {
-		_, _, err := promConn.Query(ctx, "up", time.Now())
+		_, _, err := promcoll.PromConn.Query(ctx, "up", time.Now())
 		if err != nil {
 			return false, err
 		}
@@ -151,7 +151,7 @@ func TestPrometheusConnection(promConn PrometheusConnection) error {
 }
 
 // GetPromConn returns the prometheus connection
-func (c *PrometheusCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, setter PrometheusConnectionSetter, tester PrometheusConnectionTest) error {
+func (c *PrometheusCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, setter PrometheusConnectionSetter, tester PrometheusConnectionTester) error {
 	log := log.WithName("GetPromConn")
 	var err error
 
@@ -180,7 +180,7 @@ func (c *PrometheusCollector) GetPromConn(kmCfg *kokumetricscfgv1beta1.KokuMetri
 	}
 
 	log.Info("testing the ability to query prometheus")
-	err = tester(c.PromConn)
+	err = tester(c)
 	statusHelper(kmCfg, "connection", err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)
