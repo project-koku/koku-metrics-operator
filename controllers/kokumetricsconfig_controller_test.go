@@ -81,7 +81,7 @@ var (
 		},
 		Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{
 			Prometheus: kokumetricscfgv1beta1.PrometheusStatus{
-				LastQuerySuccessTime: metav1.Now(),
+				LastQuerySuccessTime: metav1.NewTime(time.Now().Add(-3 * time.Hour)),
 			},
 		},
 	}
@@ -117,7 +117,7 @@ var (
 		},
 		Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{
 			Prometheus: kokumetricscfgv1beta1.PrometheusStatus{
-				LastQuerySuccessTime: metav1.Now(),
+				LastQuerySuccessTime: metav1.NewTime(time.Now().Add(-3 * time.Hour)),
 			},
 		},
 	}
