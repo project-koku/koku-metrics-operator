@@ -509,14 +509,11 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 }
 
 func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (time.Time, time.Time) {
-	timeUTC := metav1.Now().UTC()
-	t := metav1.Time{Time: timeUTC}
-	start := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location())
+	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
+	end := start.Add(59*time.Minute + 59*time.Second)
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() {
-		start = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
 	}
-	end := time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location())
-
 	return start, end
 }
 

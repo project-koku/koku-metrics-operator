@@ -79,6 +79,11 @@ var (
 			},
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
+		Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{
+			Prometheus: kokumetricscfgv1beta1.PrometheusStatus{
+				LastQuerySuccessTime: metav1.Now(),
+			},
+		},
 	}
 	airGappedInstance = kokumetricscfgv1beta1.KokuMetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,6 +114,11 @@ var (
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
 			APIURL: "https://not-the-real-cloud.redhat.com",
+		},
+		Status: kokumetricscfgv1beta1.KokuMetricsConfigStatus{
+			Prometheus: kokumetricscfgv1beta1.PrometheusStatus{
+				LastQuerySuccessTime: metav1.Now(),
+			},
 		},
 	}
 	differentPVC = &kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
