@@ -516,10 +516,15 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (time.Time, time.Time) {
 	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
-	if kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() && r.InCluster && !r.disablePreviousDataCollection {
+	if kmCfg.Spec.PrometheusConfig.CollectPreviousData != nil &&
+		*kmCfg.Spec.PrometheusConfig.CollectPreviousData &&
+		kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
+		r.InCluster &&
+		!r.disablePreviousDataCollection {
 		// LastQuerySuccessTime is zero when the CR is first created. We wil only reset `start` to the first of the
 		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
 		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
+		kmCfg.Status.Prometheus.PreviousDataCollected = true
 	}
 	return start, end
 }
@@ -547,20 +552,23 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 	r.promCollector.TimeSeries = &timeRange
 
 	t := metav1.Time{Time: timeRange.Start}
+	formattedStart := timeRange.Start.Format(time.RFC3339)
+	formattedEnd := timeRange.End.Format(time.RFC3339)
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
-		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
+		log.Info("reports already generated for range", "start", formattedStart, "end", formattedEnd)
 		return
 	}
 
 	kmCfg.Status.Prometheus.LastQueryStartTime = t
-	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
+
+	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(kmCfg, dirCfg, r.promCollector); err != nil {
 		kmCfg.Status.Reports.DataCollected = false
 		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		log.Error(err, "failed to generate reports")
 		return
 	}
-	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
+	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
 }
 
@@ -695,7 +703,8 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.Error(err, "failed to get prometheus connection")
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
-	startTime, endTime := getTimeRange(r, kmCfg)
+	originalStartTime, endTime := getTimeRange(r, kmCfg)
+	startTime := originalStartTime
 	for startTime.Before(endTime) {
 		t := startTime
 		timeRange := promv1.Range{
@@ -704,6 +713,14 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			Step:  time.Minute,
 		}
 		collectPromStats(r, kmCfg, dirCfg, timeRange)
+		if startTime.Sub(originalStartTime) == 48*time.Hour {
+			// after collecting 48 hours of data, package the report to compress the files
+			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
+			// zero enables packaging to occur thruout this loop
+			kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+			packageFiles(packager)
+			originalStartTime = startTime
+		}
 		startTime = startTime.Add(1 * time.Hour)
 	}
 
