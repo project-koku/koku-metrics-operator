@@ -721,6 +721,12 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			originalStartTime = startTime
 		}
 		startTime = startTime.Add(1 * time.Hour)
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			// it's not critical to handle this error. We update the status here to show progress
+			// if this loop takes a long time to complete. A missed update here does not impact
+			// data collection here.
+			log.Info("failed to update KokuMetricsConfig status")
+		}
 	}
 
 	// package report files
