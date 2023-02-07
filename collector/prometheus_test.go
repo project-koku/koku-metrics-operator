@@ -362,35 +362,35 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		kmCfg  *kokumetricscfgv1beta1.KokuMetricsConfig
+		cr     *kokumetricscfgv1beta1.KokuMetricsConfig
 		status string
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
 			status: "configuration",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
 			status: "configuration",
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
 			status: "connection",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
 			status: "connection",
 			want:   false,
 			err:    errTest,
@@ -398,16 +398,16 @@ func TestStatusHelper(t *testing.T) {
 	}
 	for _, tt := range statusHelperTests {
 		t.Run(tt.name, func(t *testing.T) {
-			statusHelper(tt.kmCfg, tt.status, tt.err)
+			statusHelper(tt.cr, tt.status, tt.err)
 			var gotMsg string
 			var gotBool bool
 			switch tt.status {
 			case "configuration":
-				gotMsg = tt.kmCfg.Status.Prometheus.ConfigError
-				gotBool = tt.kmCfg.Status.Prometheus.PrometheusConfigured
+				gotMsg = tt.cr.Status.Prometheus.ConfigError
+				gotBool = tt.cr.Status.Prometheus.PrometheusConfigured
 			case "connection":
-				gotMsg = tt.kmCfg.Status.Prometheus.ConnectionError
-				gotBool = tt.kmCfg.Status.Prometheus.PrometheusConnected
+				gotMsg = tt.cr.Status.Prometheus.ConnectionError
+				gotBool = tt.cr.Status.Prometheus.PrometheusConnected
 			}
 			if tt.err != nil && gotMsg == "" {
 				t.Errorf("%s got '' want %v", tt.name, tt.err)
@@ -541,17 +541,17 @@ func TestGetPromConn(t *testing.T) {
 					os.Remove(toke)
 				}()
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
-			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
-			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
-			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
+			cr := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			cr.Status.Prometheus.ConfigError = tt.cfgErr
+			cr.Status.Prometheus.ConnectionError = tt.conErr
+			cr.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
 			c := &PrometheusCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
 
 				serviceaccountPath: serviceaccountPath,
 			}
-			err := c.GetPromConn(kmCfg, SetPrometheusConfig, SetPrometheusConnection, TestPrometheusConnection)
+			err := c.GetPromConn(cr, SetPrometheusConfig, SetPrometheusConnection, TestPrometheusConnection)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -564,7 +564,7 @@ func TestGetPromConn(t *testing.T) {
 
 func TestSetPrometheusConfig(t *testing.T) {
 	trueDef := true
-	kmCfg := &kokumetricscfgv1beta1.PrometheusSpec{
+	ps := &kokumetricscfgv1beta1.PrometheusSpec{
 		SvcAddress:          "svc-address",
 		SkipTLSVerification: &trueDef,
 	}
@@ -641,7 +641,7 @@ func TestSetPrometheusConfig(t *testing.T) {
 				os.Remove(filepath.Join(tt.basePath, tokenKey))
 				os.Remove(filepath.Join(tt.basePath, certKey))
 			}()
-			err := SetPrometheusConfig(kmCfg, c)
+			err := SetPrometheusConfig(ps, c)
 			got := c.PromCfg
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
