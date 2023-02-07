@@ -110,9 +110,10 @@ spec:
                     default: true
                     description: CollectPreviousData is a field of KokuMetricsConfig
                       to represent whether or not the operator will gather previous
-                      data upon KokuMetricsConfig creation. When `true`, the operator
-                      will gather all existing Prometheus data for the current month.
-                      The default is true.
+                      data upon KokuMetricsConfig creation. This toggle only changes
+                      operator behavior when a new KokuMetricsConfig is created. When
+                      `true`, the operator will gather all existing Prometheus data
+                      for the current month. The default is true.
                     type: boolean
                   context_timeout:
                     default: 120
@@ -765,7 +766,7 @@ spec:
                     default: false
                     description: PreviousDataCollected is a field of KokuMetricsConfigStatus
                       to represent whether or not the operator gathered the available
-                      Prometheus data data upon KokuMetricsConfig creation.
+                      Prometheus data upon KokuMetricsConfig creation.
                     type: boolean
                   prometheus_configured:
                     description: PrometheusConfigured is a field of KokuMetricsConfigStatus
