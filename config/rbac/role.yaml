@@ -28,17 +28,6 @@ rules:
   - secrets
   verbs:
   - get
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - prometheusrules
-  - prometheusrules/finalizers
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - watch
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -89,12 +78,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - koku-metrics-cfg.openshift.io
-  resources:
-  - kokumetricsconfigs/finalizers
-  verbs:
-  - update
 - apiGroups:
   - koku-metrics-cfg.openshift.io
   resources:
