@@ -23,7 +23,9 @@ import (
 )
 
 var (
-	promSpec *kokumetricscfgv1beta1.PrometheusSpec
+	ps *kokumetricscfgv1beta1.PrometheusSpec
+
+	pollingCtxTimeout = 15 * time.Second
 
 	certKey  = "service-ca.crt"
 	tokenKey = "token"
@@ -77,31 +79,31 @@ func statusHelper(cr *kokumetricscfgv1beta1.KokuMetricsConfig, status string, er
 	}
 }
 
-type PrometheusConfigurationSetter func(ps *kokumetricscfgv1beta1.PrometheusSpec, pc *PrometheusCollector) error
+type PrometheusConfigurationSetter func(ps *kokumetricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error
 
-func SetPrometheusConfig(ps *kokumetricscfgv1beta1.PrometheusSpec, pc *PrometheusCollector) error {
+func SetPrometheusConfig(ps *kokumetricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
 
-	promCfg := &PrometheusConfig{
+	pCfg := &PrometheusConfig{
 		Address: ps.SvcAddress,
-		CAFile:  filepath.Join(pc.serviceaccountPath, certKey),
+		CAFile:  filepath.Join(c.serviceaccountPath, certKey),
 		SkipTLS: *ps.SkipTLSVerification,
 	}
 
-	tokenFile := filepath.Join(pc.serviceaccountPath, tokenKey)
+	tokenFile := filepath.Join(c.serviceaccountPath, tokenKey)
 	token, err := getBearerToken(tokenFile)
 	if err != nil {
 		return err
 	}
-	promCfg.BearerToken = token
-	pc.PromCfg = promCfg
+	pCfg.BearerToken = token
+	c.PromCfg = pCfg
 
 	return nil
 }
 
-type PrometheusConnectionSetter func(pc *PrometheusCollector) error
+type PrometheusConnectionSetter func(c *PrometheusCollector) error
 
-func SetPrometheusConnection(pc *PrometheusCollector) error {
-	cfg := pc.PromCfg
+func SetPrometheusConnection(c *PrometheusCollector) error {
+	cfg := c.PromCfg
 	promconf := config.HTTPClientConfig{
 		BearerToken: cfg.BearerToken,
 		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
@@ -117,17 +119,17 @@ func SetPrometheusConnection(pc *PrometheusCollector) error {
 	if err != nil {
 		return fmt.Errorf("cannot create prometheus client: %v", err)
 	}
-	pc.PromConn = promv1.NewAPI(client)
+	c.PromConn = promv1.NewAPI(client)
 	return nil
 }
 
-type PrometheusConnectionTester func(pc *PrometheusCollector) error
+type PrometheusConnectionTester func(c *PrometheusCollector) error
 
-func TestPrometheusConnection(pc *PrometheusCollector) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+func TestPrometheusConnection(c *PrometheusCollector) error {
+	ctx, cancel := context.WithTimeout(context.Background(), pollingCtxTimeout)
 	defer cancel()
 	return wait.PollImmediate(1*time.Second, 15*time.Second, func() (bool, error) {
-		_, _, err := pc.PromConn.Query(ctx, "up", time.Now())
+		_, _, err := c.PromConn.Query(ctx, "up", time.Now())
 		if err != nil {
 			return false, err
 		}
@@ -154,7 +156,7 @@ func NewPromCollector(saPath string) *PrometheusCollector {
 }
 
 // GetPromConn returns the prometheus connection
-func (pc *PrometheusCollector) GetPromConn(
+func (c *PrometheusCollector) GetPromConn(
 	cr *kokumetricscfgv1beta1.KokuMetricsConfig,
 	pcfgs PrometheusConfigurationSetter,
 	pcs PrometheusConnectionSetter,
@@ -164,23 +166,23 @@ func (pc *PrometheusCollector) GetPromConn(
 	var err error
 
 	updated := true
-	if promSpec != nil {
-		updated = !reflect.DeepEqual(*promSpec, cr.Spec.PrometheusConfig)
+	if ps != nil {
+		updated = !reflect.DeepEqual(*ps, cr.Spec.PrometheusConfig)
 	}
-	promSpec = cr.Spec.PrometheusConfig.DeepCopy()
+	ps = cr.Spec.PrometheusConfig.DeepCopy()
 
-	if updated || pc.PromCfg == nil || cr.Status.Prometheus.ConfigError != "" {
+	if updated || c.PromCfg == nil || cr.Status.Prometheus.ConfigError != "" {
 		log.Info("getting prometheus configuration")
-		err = pcfgs(&cr.Spec.PrometheusConfig, pc)
+		err = pcfgs(&cr.Spec.PrometheusConfig, c)
 		statusHelper(cr, "configuration", err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
 		}
 	}
 
-	if updated || pc.PromConn == nil || cr.Status.Prometheus.ConnectionError != "" {
+	if updated || c.PromConn == nil || cr.Status.Prometheus.ConnectionError != "" {
 		log.Info("getting prometheus connection")
-		err = pcs(pc)
+		err = pcs(c)
 		statusHelper(cr, "configuration", err)
 		if err != nil {
 			return err
@@ -188,7 +190,7 @@ func (pc *PrometheusCollector) GetPromConn(
 	}
 
 	log.Info("testing the ability to query prometheus")
-	err = pct(pc)
+	err = pct(c)
 	statusHelper(cr, "connection", err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)
@@ -198,18 +200,18 @@ func (pc *PrometheusCollector) GetPromConn(
 	return nil
 }
 
-func (pc *PrometheusCollector) getQueryResults(queries *querys, results *mappedResults) error {
+func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := log.WithName("getQueryResults")
 	timeout := int64(120)
-	if pc.ContextTimeout != nil {
-		timeout = *pc.ContextTimeout
+	if c.ContextTimeout != nil {
+		timeout = *c.ContextTimeout
 	}
 	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", timeout))
 	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 		defer cancel()
 
-		queryResult, warnings, err := pc.PromConn.QueryRange(ctx, query.QueryString, *pc.TimeSeries)
+		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
 		if err != nil {
 			return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
 		}

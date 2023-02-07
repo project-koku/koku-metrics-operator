@@ -60,7 +60,7 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 type mockPrometheusConnectionPolling struct {
 	mockPrometheusConnection
 
-	timeout int64
+	timeout time.Duration
 }
 
 func sleepContext(ctx context.Context, delay time.Duration) error {
@@ -74,12 +74,12 @@ func sleepContext(ctx context.Context, delay time.Duration) error {
 
 func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
 	res := m.singleResult
-	err := sleepContext(ctx, time.Duration(m.timeout*int64(time.Second)))
+	err := sleepContext(ctx, m.timeout)
 	return res.value, res.warnings, err
 }
 
 func TestGetQueryResultsSuccess(t *testing.T) {
-	col := PrometheusCollector{
+	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
 	getQueryResultsErrorsTests := []struct {
@@ -186,12 +186,12 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 	}
 	for _, tt := range getQueryResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
+			c.PromConn = mockPrometheusConnection{
 				mappedResults: &tt.queriesResult,
 				t:             t,
 			}
 			got := mappedResults{}
-			err := col.getQueryResults(tt.queries, &got)
+			err := c.getQueryResults(tt.queries, &got)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("got unexpected error: %v", err)
 			}
@@ -203,7 +203,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 }
 
 func TestGetQueryResultsError(t *testing.T) {
-	col := PrometheusCollector{
+	c := PrometheusCollector{
 		ContextTimeout: &defaultContextTimeout,
 		TimeSeries:     &promv1.Range{},
 	}
@@ -264,12 +264,12 @@ func TestGetQueryResultsError(t *testing.T) {
 	}
 	for _, tt := range getQueryResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
+			c.PromConn = mockPrometheusConnection{
 				singleResult: tt.queryResult,
 				t:            t,
 			}
 			got := mappedResults{}
-			err := col.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
+			err := c.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
 			}
@@ -281,7 +281,7 @@ func TestGetQueryResultsError(t *testing.T) {
 }
 
 func TestTestPrometheusConnection(t *testing.T) {
-	col := PrometheusCollector{
+	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
 	testPrometheusConnectionTests := []struct {
@@ -302,11 +302,11 @@ func TestTestPrometheusConnection(t *testing.T) {
 	}
 	for _, tt := range testPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
+			c.PromConn = mockPrometheusConnection{
 				singleResult: tt.queryResult,
 				t:            t,
 			}
-			err := TestPrometheusConnection(&col)
+			err := TestPrometheusConnection(&c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -318,36 +318,37 @@ func TestTestPrometheusConnection(t *testing.T) {
 }
 
 func TestTestPrometheusConnectionPolling(t *testing.T) {
-	col := PrometheusCollector{
+	pollingCtxTimeout = 1 * time.Second
+	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
-		wait        int64
+		wait        time.Duration
 		queryResult *mockPromResult
 		wantedError error
 	}{
 		{
 			name:        "test query success",
-			wait:        1,
+			wait:        500 * time.Millisecond,
 			queryResult: &mockPromResult{err: nil},
 			wantedError: nil,
 		},
 		{
 			name:        "test query error",
-			wait:        16,
+			wait:        1500 * time.Millisecond,
 			queryResult: &mockPromResult{err: ctxTimeout},
 			wantedError: errTest,
 		},
 	}
 	for _, tt := range testPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnectionPolling{
+			c.PromConn = mockPrometheusConnectionPolling{
 				mockPrometheusConnection: mockPrometheusConnection{
 					singleResult: tt.queryResult,
 					t:            t},
 				timeout: tt.wait}
-			err := TestPrometheusConnection(&col)
+			err := TestPrometheusConnection(&c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -421,8 +422,8 @@ func TestStatusHelper(t *testing.T) {
 	}
 }
 
-func TestGetPrometheusConnFromCfg(t *testing.T) {
-	getPrometheusConnFromCfgTests := []struct {
+func TestSetPrometheusConnection(t *testing.T) {
+	setPrometheusConnectionTests := []struct {
 		name        string
 		cfg         *PrometheusConfig
 		wantedError error
@@ -447,10 +448,10 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 			wantedError: nil,
 		},
 	}
-	for _, tt := range getPrometheusConnFromCfgTests {
+	for _, tt := range setPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := PrometheusCollector{PromCfg: tt.cfg}
-			err := SetPrometheusConnection(&c)
+			c := &PrometheusCollector{PromCfg: tt.cfg}
+			err := SetPrometheusConnection(c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -544,14 +545,13 @@ func TestGetPromConn(t *testing.T) {
 			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
 			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
 			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
-			col := &PrometheusCollector{
+			c := &PrometheusCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
 
 				serviceaccountPath: serviceaccountPath,
 			}
-			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
-			err := col.GetPromConn(kmCfg, SetPrometheusConfig, SetPrometheusConnection, TestPrometheusConnection)
+			err := c.GetPromConn(kmCfg, SetPrometheusConfig, SetPrometheusConnection, TestPrometheusConnection)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -562,14 +562,14 @@ func TestGetPromConn(t *testing.T) {
 	}
 }
 
-func TestGetPrometheusConfig(t *testing.T) {
+func TestSetPrometheusConfig(t *testing.T) {
 	trueDef := true
 	kmCfg := &kokumetricscfgv1beta1.PrometheusSpec{
 		SvcAddress:          "svc-address",
 		SkipTLSVerification: &trueDef,
 	}
 	secretsPath := "./test_files/test_secrets"
-	getPromCfgTests := []struct {
+	setPrometheusConfigTests := []struct {
 		name        string
 		inCluster   bool
 		basePath    string
@@ -628,7 +628,7 @@ func TestGetPrometheusConfig(t *testing.T) {
 			wantedError: errTest,
 		},
 	}
-	for _, tt := range getPromCfgTests {
+	for _, tt := range setPrometheusConfigTests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.certKey {
 				testutils.CreateCertificate(secretsPath, certKey)
