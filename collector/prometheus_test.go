@@ -318,7 +318,7 @@ func TestTestPrometheusConnection(t *testing.T) {
 }
 
 func TestTestPrometheusConnectionPolling(t *testing.T) {
-	pollingCtxTimeout = 1 * time.Second
+	pollingCtxTimeout = 10 * time.Millisecond
 	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
@@ -330,13 +330,13 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 	}{
 		{
 			name:        "test query success",
-			wait:        500 * time.Millisecond,
+			wait:        5 * time.Millisecond,
 			queryResult: &mockPromResult{err: nil},
 			wantedError: nil,
 		},
 		{
 			name:        "test query error",
-			wait:        1500 * time.Millisecond,
+			wait:        15 * time.Millisecond,
 			queryResult: &mockPromResult{err: ctxTimeout},
 			wantedError: errTest,
 		},
