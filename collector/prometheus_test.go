@@ -551,7 +551,7 @@ func TestGetPromConn(t *testing.T) {
 				serviceaccountPath: serviceaccountPath,
 			}
 			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
-			err := col.GetPromConn(kmCfg, SetPrometheusConnection, TestPrometheusConnection)
+			err := col.GetPromConn(kmCfg, SetPrometheusConfig, SetPrometheusConnection, TestPrometheusConnection)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -641,7 +641,7 @@ func TestGetPrometheusConfig(t *testing.T) {
 				os.Remove(filepath.Join(tt.basePath, tokenKey))
 				os.Remove(filepath.Join(tt.basePath, certKey))
 			}()
-			err := setPrometheusConfig(kmCfg, c)
+			err := SetPrometheusConfig(kmCfg, c)
 			got := c.PromCfg
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)

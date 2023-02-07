@@ -56,8 +56,9 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
-	promConnSetter     collector.PrometheusConnectionSetter = collector.SetPrometheusConnection
-	promConnTester     collector.PrometheusConnectionTester = collector.TestPrometheusConnection
+	promCfgSetter      collector.PrometheusConfigurationSetter = collector.SetPrometheusConfig
+	promConnSetter     collector.PrometheusConnectionSetter    = collector.SetPrometheusConnection
+	promConnTester     collector.PrometheusConnectionTester    = collector.TestPrometheusConnection
 
 	log = logr.Log.WithName("controller_kokumetricsconfig")
 )
@@ -535,7 +536,7 @@ func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 	r.promCollector.TimeSeries = nil
 	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
-	return r.promCollector.GetPromConn(kmCfg, promConnSetter, promConnTester)
+	return r.promCollector.GetPromConn(kmCfg, promCfgSetter, promConnSetter, promConnTester)
 }
 
 func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
