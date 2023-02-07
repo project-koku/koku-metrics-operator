@@ -519,9 +519,8 @@ func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	if kmCfg.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*kmCfg.Spec.PrometheusConfig.CollectPreviousData &&
 		kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-		r.InCluster &&
 		!r.disablePreviousDataCollection {
-		// LastQuerySuccessTime is zero when the CR is first created. We wil only reset `start` to the first of the
+		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
 		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
 		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
 		kmCfg.Status.Prometheus.PreviousDataCollected = true
