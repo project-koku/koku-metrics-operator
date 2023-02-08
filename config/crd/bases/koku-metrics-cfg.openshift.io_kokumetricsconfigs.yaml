@@ -106,6 +106,15 @@ spec:
                 description: PrometheusConfig is a field of KokuMetricsConfig to represent
                   the configuration of Prometheus connection.
                 properties:
+                  collect_previous_data:
+                    default: true
+                    description: CollectPreviousData is a field of KokuMetricsConfig
+                      to represent whether or not the operator will gather previous
+                      data upon KokuMetricsConfig creation. This toggle only changes
+                      operator behavior when a new KokuMetricsConfig is created. When
+                      `true`, the operator will gather all existing Prometheus data
+                      for the current month. The default is true.
+                    type: boolean
                   context_timeout:
                     default: 120
                     description: ContextTimeout is a field of KokuMetricsConfig to
@@ -753,6 +762,12 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
+                  previous_data_collected:
+                    default: false
+                    description: PreviousDataCollected is a field of KokuMetricsConfigStatus
+                      to represent whether or not the operator gathered the available
+                      Prometheus data upon KokuMetricsConfig creation.
+                    type: boolean
                   prometheus_configured:
                     description: PrometheusConfigured is a field of KokuMetricsConfigStatus
                       to represent if the operator is configured to connect to prometheus.
@@ -774,6 +789,7 @@ spec:
                       validated.
                     type: boolean
                 required:
+                - previous_data_collected
                 - prometheus_configured
                 - prometheus_connected
                 type: object

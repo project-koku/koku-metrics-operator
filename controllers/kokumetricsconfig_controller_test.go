@@ -17,6 +17,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -25,6 +27,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/storage"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
@@ -129,6 +132,22 @@ var (
 		},
 	}
 )
+
+func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
+func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
+	promcoll.PromConn = mockPrometheusConnection{}
+	return nil
+}
+
+type mockPrometheusConnection struct{}
+
+func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
+
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
@@ -299,6 +318,8 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 
 	GitCommit = "1234567"
+	promConnTester = MockPromConnTester
+	promConnSetter = MockPromConnSetter
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
@@ -499,7 +520,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -553,7 +574,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -579,7 +600,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -606,7 +627,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -632,7 +653,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -658,7 +679,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -684,7 +705,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -710,7 +731,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -737,7 +758,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -764,7 +785,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -790,7 +811,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
@@ -816,7 +837,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -841,7 +862,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -891,7 +912,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -919,7 +940,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.DefaultAuthenticationType))
@@ -960,7 +981,7 @@ var _ = Describe("KokuMetricsConfigController - CRD Handling", func() {
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Authentication.AuthType).To(Equal(kokumetricscfgv1beta1.Basic))
