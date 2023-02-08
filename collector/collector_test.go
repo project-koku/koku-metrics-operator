@@ -31,7 +31,7 @@ func nearlyEqual(a, b float64) bool {
 	absB := math.Abs(b)
 	diff := math.Abs(a - b)
 
-	if a == b { // shortcut, handles infinities
+	if a == b || (math.IsNaN(a) && math.IsNaN(b)) { // shortcut, handles infinities
 		return true
 	} else if a == 0 || b == 0 || (absA+absB < math.SmallestNonzeroFloat64) {
 		// a or b is zero or both are extremely close to it
@@ -343,6 +343,12 @@ func TestGetValue(t *testing.T) {
 			query: saveQueryValue{Method: "avg"},
 			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
 			want:  math.Inf(1),
+		},
+		{
+			name:  "avg +/-inf",
+			query: saveQueryValue{Method: "avg"},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: model.SampleValue(math.Inf(-1))}},
+			want:  math.NaN(),
 		},
 		{
 			name:  "unknown",
