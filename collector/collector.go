@@ -63,6 +63,15 @@ func minSlice(array []model.SamplePair) float64 {
 	return float64(min)
 }
 
+func avgSlice(array []model.SamplePair) float64 {
+	length := len(array)
+	if length <= 0 {
+		return 0
+	}
+	sum := sumSlice(array)
+	return sum / float64(length)
+}
+
 func sumSlice(array []model.SamplePair) float64 {
 	var sum model.SampleValue
 	for _, v := range array {
@@ -79,6 +88,8 @@ func getValue(query *saveQueryValue, array []model.SamplePair) float64 {
 		return maxSlice(array)
 	case "min":
 		return minSlice(array)
+	case "avg":
+		return avgSlice(array)
 	default:
 		return 0
 	}

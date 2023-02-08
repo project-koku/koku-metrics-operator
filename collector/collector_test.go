@@ -321,6 +321,30 @@ func TestGetValue(t *testing.T) {
 			want:  math.Inf(1),
 		},
 		{
+			name:  "min",
+			query: saveQueryValue{Method: "min"},
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
+			want:  1.3,
+		},
+		{
+			name:  "min inf",
+			query: saveQueryValue{Method: "min"},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: model.SampleValue(math.Inf(-1))}},
+			want:  math.Inf(-1),
+		},
+		{
+			name:  "avg",
+			query: saveQueryValue{Method: "avg"},
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
+			want:  2.3,
+		},
+		{
+			name:  "avg inf",
+			query: saveQueryValue{Method: "avg"},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
+			want:  math.Inf(1),
+		},
+		{
 			name:  "unknown",
 			query: saveQueryValue{Method: "unknown"},
 			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
