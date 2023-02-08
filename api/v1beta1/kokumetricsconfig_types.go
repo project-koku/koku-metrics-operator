@@ -169,6 +169,12 @@ type PrometheusSpec struct {
 	// +kubebuilder:default=120
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
+	// CollectPreviousData is a field of KokuMetricsConfig to represent whether or not the operator will gather previous data upon KokuMetricsConfig
+	// creation. This toggle only changes operator behavior when a new KokuMetricsConfig is created. When `true`, the operator will gather all
+	// existing Prometheus data for the current month. The default is true.
+	// +kubebuilder:default=true
+	CollectPreviousData *bool `json:"collect_previous_data,omitempty"`
+
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
@@ -381,7 +387,7 @@ type PrometheusStatus struct {
 	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
-	//ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
+	// ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
 	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
@@ -394,6 +400,11 @@ type PrometheusStatus struct {
 	// LastQuerySuccessTime is a field of KokuMetricsConfigStatus to represent the last time queries were successful.
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
+
+	// PreviousDataCollected is a field of KokuMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
+	// data upon KokuMetricsConfig creation.
+	// +kubebuilder:default=false
+	PreviousDataCollected bool `json:"previous_data_collected"`
 
 	// SvcAddress is the internal thanos-querier address.
 	SvcAddress string `json:"service_address,omitempty"`

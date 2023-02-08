@@ -48,7 +48,10 @@ var (
 	k8sClient          client.Client
 	k8sManager         ctrl.Manager
 	testEnv            *envtest.Environment
+	ctx                context.Context
+	cancel             context.CancelFunc
 	useCluster         bool
+	secretsPath        = ""
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "koku-metrics-operator",
@@ -153,7 +156,7 @@ var _ = BeforeSuite(func() {
 	}))
 
 	logf.SetLogger(testutils.ZapLogger(true))
-	ctx := context.Background()
+	ctx, cancel = context.WithCancel(context.Background())
 
 	// Default to run locally
 	var useClusterEnv string
@@ -162,6 +165,7 @@ var _ = BeforeSuite(func() {
 	useCluster = false
 	if useClusterEnv, ok = os.LookupEnv("USE_CLUSTER"); ok {
 		useCluster, err = strconv.ParseBool(useClusterEnv)
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	By("bootstrapping test environment")
@@ -201,16 +205,18 @@ var _ = BeforeSuite(func() {
 
 	if !useCluster {
 		err = (&KokuMetricsConfigReconciler{
-			Client:    k8sManager.GetClient(),
-			Scheme:    scheme.Scheme,
-			Clientset: clientset,
-			InCluster: true,
+			Client:                        k8sManager.GetClient(),
+			Scheme:                        scheme.Scheme,
+			Clientset:                     clientset,
+			InCluster:                     true,
+			disablePreviousDataCollection: true,
+			overrideSecretPath:            true,
 		}).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
 	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred())
 	}()
 
@@ -370,13 +376,25 @@ func clusterPrep(ctx context.Context) {
 
 		// Create cluster version
 		createClusterVersion(ctx, clusterID, channel)
+
+		cwd, err := os.Getwd()
+		Expect(err).ToNot(HaveOccurred())
+		err = os.Setenv("SECRET_ABSPATH", filepath.Join(cwd, secretsPath))
+		Expect(err).ToNot(HaveOccurred())
+
+		testutils.CreateCertificate(secretsPath, "service-ca.crt")
+		testutils.CreateToken(secretsPath, "token")
 	}
 }
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
+
+	os.Remove(filepath.Join(secretsPath, "token"))
+	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
 
 	validTS.Close()
 	unauthorizedTS.Close()

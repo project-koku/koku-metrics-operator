@@ -56,6 +56,9 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
+	promCfgSetter      collector.PrometheusConfigurationSetter = collector.SetPrometheusConfig
+	promConnSetter     collector.PrometheusConnectionSetter    = collector.SetPrometheusConnection
+	promConnTester     collector.PrometheusConnectionTester    = collector.TestPrometheusConnection
 
 	log = logr.Log.WithName("controller_kokumetricsconfig")
 )
@@ -68,8 +71,10 @@ type KokuMetricsConfigReconciler struct {
 	InCluster bool
 	Namespace string
 
-	cvClientBuilder cv.ClusterVersionBuilder
-	promCollector   *collector.PromCollector
+	cvClientBuilder               cv.ClusterVersionBuilder
+	promCollector                 *collector.PrometheusCollector
+	disablePreviousDataCollection bool
+	overrideSecretPath            bool
 }
 
 type previousAuthValidation struct {
@@ -387,7 +392,7 @@ func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.Source
 	return nil
 }
 
-func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func setOperatorCommit(r *KokuMetricsConfigReconciler) {
 	log := log.WithName("setOperatorCommit")
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
@@ -397,15 +402,6 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 			GitCommit = commit
 		}
 	}
-	if kmCfg.Status.OperatorCommit != GitCommit {
-		// If the commit is different, this is either a fresh install or the operator was upgraded.
-		// After an upgrade, the report structure may differ from the old report structure,
-		// so we need to package the old files before generating new reports.
-		// We set this packaging time to zero so that the next call to packageFiles
-		// will force file packaging to occur.
-		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-	}
-	kmCfg.Status.OperatorCommit = GitCommit
 }
 
 func checkSource(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
@@ -517,42 +513,61 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	return nil
 }
 
-func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig) {
-	log := log.WithName("collectPromStats")
+func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (time.Time, time.Time) {
+	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
+	end := start.Add(59*time.Minute + 59*time.Second)
+	if kmCfg.Spec.PrometheusConfig.CollectPreviousData != nil &&
+		*kmCfg.Spec.PrometheusConfig.CollectPreviousData &&
+		kmCfg.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
+		!r.disablePreviousDataCollection {
+		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
+		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
+		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
+		kmCfg.Status.Prometheus.PreviousDataCollected = true
+	}
+	return start, end
+}
+
+func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
 	if r.promCollector == nil {
-		r.promCollector = &collector.PromCollector{
-			InCluster: r.InCluster,
+		var serviceaccountPath string
+		if r.overrideSecretPath {
+			val, ok := os.LookupEnv("SECRET_ABSPATH")
+			if ok {
+				serviceaccountPath = val
+			}
 		}
+		r.promCollector = collector.NewPromCollector(serviceaccountPath)
 	}
 	r.promCollector.TimeSeries = nil
-
-	if err := r.promCollector.GetPromConn(kmCfg); err != nil {
-		log.Error(err, "failed to get prometheus connection")
-		return
-	}
-	timeUTC := metav1.Now().UTC()
-	t := metav1.Time{Time: timeUTC}
-	timeRange := promv1.Range{
-		Start: time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 0, 0, 0, t.Location()),
-		End:   time.Date(t.Year(), t.Month(), t.Day(), t.Hour()-1, 59, 59, 0, t.Location()),
-		Step:  time.Minute,
-	}
-	r.promCollector.TimeSeries = &timeRange
 	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 
+	return r.promCollector.GetPromConn(kmCfg, promCfgSetter, promConnSetter, promConnTester)
+}
+
+func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
+	log := log.WithName("collectPromStats")
+
+	r.promCollector.TimeSeries = &timeRange
+
+	t := metav1.Time{Time: timeRange.Start}
+	formattedStart := timeRange.Start.Format(time.RFC3339)
+	formattedEnd := timeRange.End.Format(time.RFC3339)
 	if kmCfg.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
-		log.Info("reports already generated for range", "start", timeRange.Start, "end", timeRange.End)
+		log.Info("reports already generated for range", "start", formattedStart, "end", formattedEnd)
 		return
 	}
+
 	kmCfg.Status.Prometheus.LastQueryStartTime = t
-	log.Info("generating reports for range", "start", timeRange.Start, "end", timeRange.End)
+
+	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(kmCfg, dirCfg, r.promCollector); err != nil {
 		kmCfg.Status.Reports.DataCollected = false
 		kmCfg.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		log.Error(err, "failed to generate reports")
 		return
 	}
-	log.Info("reports generated for range", "start", timeRange.Start, "end", timeRange.End)
+	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
 }
 
@@ -645,8 +660,17 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	log.Info("using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
 
-	// set the Operator git commit and reflect it in the upload status & return if there are errors
-	setOperatorCommit(r, kmCfg)
+	// set the Operator git commit and reflect it in the upload status
+	setOperatorCommit(r)
+	if kmCfg.Status.OperatorCommit != GitCommit {
+		// If the commit is different, this is either a fresh install or the operator was upgraded.
+		// After an upgrade, the report structure may differ from the old report structure,
+		// so we need to package the old files before generating new reports.
+		// We set this packaging time to zero so that the next call to packageFiles
+		// will force file packaging to occur.
+		kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		kmCfg.Status.OperatorCommit = GitCommit
+	}
 
 	// Get or create the directory configuration
 	log.Info("getting directory configuration")
@@ -674,7 +698,36 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// attempt to collect prometheus stats and create reports
-	collectPromStats(r, kmCfg, dirCfg)
+	if err := getPromCollector(r, kmCfg); err != nil {
+		log.Error(err, "failed to get prometheus connection")
+		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
+	}
+	originalStartTime, endTime := getTimeRange(r, kmCfg)
+	startTime := originalStartTime
+	for startTime.Before(endTime) {
+		t := startTime
+		timeRange := promv1.Range{
+			Start: t,
+			End:   t.Add(59*time.Minute + 59*time.Second),
+			Step:  time.Minute,
+		}
+		collectPromStats(r, kmCfg, dirCfg, timeRange)
+		if startTime.Sub(originalStartTime) == 48*time.Hour {
+			// after collecting 48 hours of data, package the report to compress the files
+			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
+			// zero enables packaging to occur thruout this loop
+			kmCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+			packageFiles(packager)
+			originalStartTime = startTime
+		}
+		startTime = startTime.Add(1 * time.Hour)
+		if err := r.Status().Update(ctx, kmCfg); err != nil {
+			// it's not critical to handle this error. We update the status here to show progress
+			// if this loop takes a long time to complete. A missed update here does not impact
+			// data collection here.
+			log.Info("failed to update KokuMetricsConfig status")
+		}
+	}
 
 	// package report files
 	packageFiles(packager)

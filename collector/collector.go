@@ -129,12 +129,12 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PromCollector) error {
+func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
 	log := log.WithName("GenerateReports")
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
-	updateReportStatus(kmCfg, c.TimeSeries)
+	updateReportStatus(cr, c.TimeSeries)
 
 	// ################################################################################################################
 	log.Info("querying for node metrics")
@@ -145,8 +145,8 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 
 	if len(nodeResults) <= 0 {
 		log.Info("no data to report")
-		kmCfg.Status.Reports.DataCollected = false
-		kmCfg.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
+		cr.Status.Reports.DataCollected = false
+		cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 		// there is no data for the hour queried. Return nothing
 		return nil
 	}
@@ -285,8 +285,8 @@ func GenerateReports(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dir
 
 	//################################################################################################################
 
-	kmCfg.Status.Reports.DataCollected = true
-	kmCfg.Status.Reports.DataCollectionMessage = ""
+	cr.Status.Reports.DataCollected = true
+	cr.Status.Reports.DataCollectionMessage = ""
 
 	return nil
 }
@@ -309,7 +309,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, ts *promv1.Range) {
-	kmCfg.Status.Reports.ReportMonth = ts.Start.Format("01")
-	kmCfg.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
+func updateReportStatus(cr *kokumetricscfgv1beta1.KokuMetricsConfig, ts *promv1.Range) {
+	cr.Status.Reports.ReportMonth = ts.Start.Format("01")
+	cr.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }
