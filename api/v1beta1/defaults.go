@@ -24,15 +24,18 @@ const (
 	// DefaultValidateCert The default cert validation setting
 	DefaultValidateCert bool = CertIgnore
 
-	//DefaultUploadToggle The default upload toggle
+	// DefaultUploadToggle The default upload toggle
 	DefaultUploadToggle bool = UploadOn
 
-	//DefaultUploadCycle The default upload cycle
+	// DefaultUploadCycle The default upload cycle
 	DefaultUploadCycle int64 = UploadSchedule
 
-	//DefaultSourceCheckCycle The default source check cycle
+	// DefaultSourceCheckCycle The default source check cycle
 	DefaultSourceCheckCycle int64 = SourceCheckSchedule
 
-	//DefaultMaxSize The default max size for report files
+	// DefaultMaxSize The default max size for report files
 	DefaultMaxSize int64 = PackagingMaxSize
+
+	// DefaultPrometheusContextTimeout The default context timeout for Prometheus Queries
+	DefaultPrometheusContextTimeout int64 = 120
 )

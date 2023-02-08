@@ -141,7 +141,7 @@ type PrometheusCollector struct {
 	PromConn       PrometheusConnection
 	PromCfg        *PrometheusConfig
 	TimeSeries     *promv1.Range
-	ContextTimeout *int64
+	ContextTimeout time.Duration
 
 	serviceaccountPath string
 }
@@ -202,13 +202,9 @@ func (c *PrometheusCollector) GetPromConn(
 
 func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedResults) error {
 	log := log.WithName("getQueryResults")
-	timeout := int64(120)
-	if c.ContextTimeout != nil {
-		timeout = *c.ContextTimeout
-	}
-	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", timeout))
+
 	for _, query := range *queries {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
 
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)

@@ -335,6 +335,16 @@ func (in *PrometheusSpec) DeepCopyInto(out *PrometheusSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.DisableMetricsCollectionCostManagement != nil {
+		in, out := &in.DisableMetricsCollectionCostManagement, &out.DisableMetricsCollectionCostManagement
+		*out = new(bool)
+		**out = **in
+	}
+	if in.DisableMetricsCollectionResourceOptimization != nil {
+		in, out := &in.DisableMetricsCollectionResourceOptimization, &out.DisableMetricsCollectionResourceOptimization
+		*out = new(bool)
+		**out = **in
+	}
 	if in.SkipTLSVerification != nil {
 		in, out := &in.SkipTLSVerification, &out.SkipTLSVerification
 		*out = new(bool)
@@ -362,6 +372,16 @@ func (in *PrometheusStatus) DeepCopyInto(out *PrometheusStatus) {
 	}
 	in.LastQueryStartTime.DeepCopyInto(&out.LastQueryStartTime)
 	in.LastQuerySuccessTime.DeepCopyInto(&out.LastQuerySuccessTime)
+	if in.DisabledMetricsCollectionCostManagement != nil {
+		in, out := &in.DisabledMetricsCollectionCostManagement, &out.DisabledMetricsCollectionCostManagement
+		*out = new(bool)
+		**out = **in
+	}
+	if in.DisabledMetricsCollectionResourceOptimization != nil {
+		in, out := &in.DisabledMetricsCollectionResourceOptimization, &out.DisabledMetricsCollectionResourceOptimization
+		*out = new(bool)
+		**out = **in
+	}
 	if in.SkipTLSVerification != nil {
 		in, out := &in.SkipTLSVerification, &out.SkipTLSVerification
 		*out = new(bool)

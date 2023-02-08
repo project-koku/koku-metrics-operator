@@ -157,6 +157,8 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.Ko
 	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, kokumetricscfgv1beta1.DefaultPrometheusSvcAddress)
 	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
 	kmCfg.Status.Prometheus.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
+	kmCfg.Status.Prometheus.DisabledMetricsCollectionCostManagement = kmCfg.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement
+	kmCfg.Status.Prometheus.DisabledMetricsCollectionResourceOptimization = kmCfg.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization
 }
 
 // GetClientset returns a clientset based on rest.config
@@ -541,7 +543,11 @@ func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 		r.promCollector = collector.NewPromCollector(serviceaccountPath)
 	}
 	r.promCollector.TimeSeries = nil
-	r.promCollector.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
+	if kmCfg.Spec.PrometheusConfig.ContextTimeout == nil {
+		timeout := kokumetricscfgv1beta1.DefaultPrometheusContextTimeout
+		kmCfg.Spec.PrometheusConfig.ContextTimeout = &timeout
+	}
+	r.promCollector.ContextTimeout = time.Duration(*kmCfg.Spec.PrometheusConfig.ContextTimeout * int64(time.Second))
 
 	return r.promCollector.GetPromConn(kmCfg, promCfgSetter, promConnSetter, promConnTester)
 }

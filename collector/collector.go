@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	gologr "github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -26,6 +27,7 @@ var (
 	volFilePrefix       = "cm-openshift-storage-usage-"
 	nodeFilePrefix      = "cm-openshift-node-usage-"
 	namespaceFilePrefix = "cm-openshift-namespace-usage-"
+	rosFilePrefix       = "ros-openshift-"
 
 	statusTimeFormat = "2006-01-02 15:04:05"
 
@@ -51,6 +53,16 @@ func maxSlice(array []model.SamplePair) float64 {
 	return float64(max)
 }
 
+func minSlice(array []model.SamplePair) float64 {
+	min := array[0].Value
+	for _, v := range array {
+		if v.Value < min {
+			min = v.Value
+		}
+	}
+	return float64(min)
+}
+
 func sumSlice(array []model.SamplePair) float64 {
 	var sum model.SampleValue
 	for _, v := range array {
@@ -65,6 +77,8 @@ func getValue(query *saveQueryValue, array []model.SamplePair) float64 {
 		return sumSlice(array)
 	case "max":
 		return maxSlice(array)
+	case "min":
+		return minSlice(array)
 	default:
 		return 0
 	}
@@ -131,6 +145,7 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 // GenerateReports is responsible for querying prometheus and writing to report files
 func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
 	log := log.WithName("GenerateReports")
+	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", c.ContextTimeout))
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
@@ -162,6 +177,30 @@ func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dircon
 			return err
 		}
 	}
+
+	// ######## this actually generates the node report and the others for cost-management
+	if cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement {
+		if err := generateCostManagementReports(log, c, dirCfg, nodeRows, yearMonth); err != nil {
+			return err
+		}
+	}
+
+	// ######## generate resource-optimization reports
+	if cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization {
+		if err := generateResourceOpimizationReports(log, c, dirCfg, nodeRows, yearMonth); err != nil {
+			return err
+		}
+	}
+
+	//################################################################################################################
+
+	cr.Status.Reports.DataCollected = true
+	cr.Status.Reports.DataCollectionMessage = ""
+
+	return nil
+}
+
+func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
 	emptyNodeRow := newNodeRow(c.TimeSeries)
 	nodeReport := report{
 		file: &file{
@@ -283,11 +322,48 @@ func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dircon
 		return fmt.Errorf("failed to write namespace report: %v", err)
 	}
 
+	return nil
+}
+
+func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
 	//################################################################################################################
+	log.Info("querying for resource-optimization")
+	rosResults := mappedResults{}
+	if err := c.getQueryResults(resourceOptimizationQueries, &rosResults); err != nil {
+		return err
+	}
 
-	cr.Status.Reports.DataCollected = true
-	cr.Status.Reports.DataCollectionMessage = ""
-
+	rosRows := make(mappedCSVStruct)
+	for ros, val := range rosResults {
+		usage := newROSRow(c.TimeSeries)
+		if err := getStruct(val, &usage, rosRows, ros); err != nil {
+			return err
+		}
+		if node, ok := val["node"]; ok {
+			// Add the Node usage to the pod.
+			if row, ok := nodeRows[node.(string)]; ok {
+				usage.nodeRow = *row.(*nodeRow)
+			} else {
+				usage.nodeRow = newNodeRow(c.TimeSeries)
+			}
+		}
+	}
+	emptyROSRow := newROSRow(c.TimeSeries)
+	rosReport := report{
+		file: &file{
+			name: rosFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: rosRows,
+			headers:   emptyROSRow.csvHeader(),
+			prefix:    emptyROSRow.dateTimes.string(),
+		},
+	}
+	log.WithName("writeResults").Info("writing resource-optimization results to file", "filename", rosReport.file.getName())
+	if err := rosReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write resource-optimization report: %v", err)
+	}
 	return nil
 }
 
