@@ -812,7 +812,8 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if len(errors) == 0 {
 		t := time.Now().Truncate(1 * time.Hour).Add(1 * time.Hour)
-		d := wait.Jitter(time.Until(t), 500)
+		log.Info(fmt.Sprintf("now: %s", t.String()))
+		d := time.Until(t) + wait.Jitter(500*time.Millisecond, 1)
 		log.Info("reconciliation complete")
 		log.Info(fmt.Sprintf("waiting %s until next reconciliation", d.String()))
 		return ctrl.Result{RequeueAfter: d}, nil

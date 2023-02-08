@@ -156,7 +156,7 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 // GenerateReports is responsible for querying prometheus and writing to report files
 func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
 	log := log.WithName("GenerateReports")
-	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", c.ContextTimeout))
+	log.Info(fmt.Sprintf("prometheus query timeout set to: %.0f seconds", c.ContextTimeout.Seconds()))
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
