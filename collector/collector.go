@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	gologr "github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
@@ -121,6 +122,31 @@ func generateKey(metric model.Metric, keys []model.LabelName) string {
 	return strings.Join(result, ",")
 }
 
+func (r *mappedResults) iterateVector(vector model.Vector, q query) {
+	results := *r
+	for _, sample := range vector {
+		obj := generateKey(sample.Metric, q.RowKey)
+		if results[obj] == nil {
+			results[obj] = mappedValues{}
+		}
+		if q.MetricKey != nil {
+			for key, field := range q.MetricKey {
+				results[obj][key] = string(sample.Metric[field])
+			}
+		}
+		if q.MetricKeyRegex != nil {
+			for key, regexField := range q.MetricKeyRegex {
+				results[obj][key] = findFields(sample.Metric, regexField)
+			}
+		}
+		if q.QueryValue != nil {
+			saveStruct := q.QueryValue
+			value := float64(sample.Value)
+			results[obj][saveStruct.ValName] = floatToString(value)
+		}
+	}
+}
+
 func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 	results := *r
 	for _, stream := range matrix {
@@ -165,7 +191,7 @@ func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dircon
 	// ################################################################################################################
 	log.Info("querying for node metrics")
 	nodeResults := mappedResults{}
-	if err := c.getQueryResults(nodeQueries, &nodeResults); err != nil {
+	if err := c.getQueryRangeResults(nodeQueries, &nodeResults); err != nil {
 		return err
 	}
 
@@ -198,9 +224,26 @@ func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dircon
 
 	// ######## generate resource-optimization reports
 	if cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization {
-		if err := generateResourceOpimizationReports(log, c, dirCfg, nodeRows, yearMonth); err != nil {
-			return err
+		rosCollector := &PrometheusCollector{
+			PromConn:           c.PromConn,
+			PromCfg:            c.PromCfg,
+			ContextTimeout:     c.ContextTimeout,
+			serviceaccountPath: c.serviceaccountPath,
 		}
+		timeRange := c.TimeSeries
+		start := timeRange.Start.Add(1 * time.Second)
+		end := start.Add(14*time.Minute + 59*time.Second)
+		for i := 1; i < 5; i++ {
+			timeRange.Start = start
+			timeRange.End = end
+			rosCollector.TimeSeries = timeRange
+			if err := generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
+				return err
+			}
+			start = start.Add(15 * time.Minute)
+			end = end.Add(15 * time.Minute)
+		}
+
 	}
 
 	//################################################################################################################
@@ -233,7 +276,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 	log.Info("querying for pod metrics")
 	podResults := mappedResults{}
-	if err := c.getQueryResults(podQueries, &podResults); err != nil {
+	if err := c.getQueryRangeResults(podQueries, &podResults); err != nil {
 		return err
 	}
 
@@ -273,7 +316,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 	log.Info("querying for storage metrics")
 	volResults := mappedResults{}
-	if err := c.getQueryResults(volQueries, &volResults); err != nil {
+	if err := c.getQueryRangeResults(volQueries, &volResults); err != nil {
 		return err
 	}
 
@@ -305,7 +348,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 	log.Info("querying for namespaces")
 	namespaceResults := mappedResults{}
-	if err := c.getQueryResults(namespaceQueries, &namespaceResults); err != nil {
+	if err := c.getQueryRangeResults(namespaceQueries, &namespaceResults); err != nil {
 		return err
 	}
 
@@ -337,10 +380,10 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 }
 
 func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
-	//################################################################################################################
-	log.Info("querying for resource-optimization")
+	ts := c.TimeSeries.End
+	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
-	if err := c.getQueryResults(resourceOptimizationQueries, &rosResults); err != nil {
+	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults); err != nil {
 		return err
 	}
 

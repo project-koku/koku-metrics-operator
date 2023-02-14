@@ -200,8 +200,8 @@ func (c *PrometheusCollector) GetPromConn(
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedResults) error {
-	log := log.WithName("getQueryResults")
+func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *mappedResults) error {
+	log := log.WithName("getQueryRangeResults")
 
 	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
@@ -220,6 +220,30 @@ func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedRe
 		}
 
 		results.iterateMatrix(matrix, query)
+	}
+	return nil
+}
+
+func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, results *mappedResults) error {
+	log := log.WithName("getQueryResults")
+
+	for _, query := range *queries {
+		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
+		defer cancel()
+
+		queryResult, warnings, err := c.PromConn.Query(ctx, query.QueryString, ts)
+		if err != nil {
+			return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
+		}
+		if len(warnings) > 0 {
+			log.Info("query warnings", "Warnings", warnings)
+		}
+		vector, ok := queryResult.(model.Vector)
+		if !ok {
+			return fmt.Errorf("expected a vector in response to query, got a %v", queryResult.Type())
+		}
+
+		results.iterateVector(vector, query)
 	}
 	return nil
 }
