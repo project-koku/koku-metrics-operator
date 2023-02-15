@@ -18,7 +18,7 @@ import (
 	"github.com/prometheus/common/model"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
 	"github.com/project-koku/koku-metrics-operator/testutils"
@@ -61,7 +61,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeKMCfg  = &kokumetricscfgv1beta1.KokuMetricsConfig{}
+	fakeKMCfg  = &metricscfgv1beta1.MetricsConfig{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},

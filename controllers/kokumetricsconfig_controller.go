@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
 	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
@@ -54,7 +54,7 @@ var (
 	trueDef  = true
 
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-	sourceSpec         *kokumetricscfgv1beta1.CloudDotRedHatSourceSpec
+	sourceSpec         *metricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
 	promCfgSetter      collector.PrometheusConfigurationSetter = collector.SetPrometheusConfig
 	promConnSetter     collector.PrometheusConnectionSetter    = collector.SetPrometheusConnection
@@ -63,8 +63,8 @@ var (
 	log = logr.Log.WithName("controller_kokumetricsconfig")
 )
 
-// KokuMetricsConfigReconciler reconciles a KokuMetricsConfig object
-type KokuMetricsConfigReconciler struct {
+// MetricsConfigReconciler reconciles a MetricsConfig object
+type MetricsConfigReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
 	Clientset *kubernetes.Clientset
@@ -93,7 +93,7 @@ type serializedAuth struct {
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
-func StringReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, specItem *string, statusItem *string, defaultVal string) (string, bool) {
+func StringReflectSpec(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig, specItem *string, statusItem *string, defaultVal string) (string, bool) {
 	// Update statusItem if needed
 	changed := false
 	if *statusItem == "" || !reflect.DeepEqual(*specItem, *statusItem) {
@@ -111,9 +111,9 @@ func StringReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1be
 }
 
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
-func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func ReflectSpec(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig) {
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.APIURL, &kmCfg.Status.APIURL, kokumetricscfgv1beta1.DefaultAPIURL)
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.APIURL, &kmCfg.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
 	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Authentication.AuthenticationSecretName, &kmCfg.Status.Authentication.AuthenticationSecretName, "")
 
 	if !reflect.DeepEqual(kmCfg.Spec.Authentication.AuthType, kmCfg.Status.Authentication.AuthType) {
@@ -121,7 +121,7 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.Ko
 	}
 	kmCfg.Status.Upload.ValidateCert = kmCfg.Spec.Upload.ValidateCert
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Upload.IngressAPIPath, &kmCfg.Status.Upload.IngressAPIPath, kokumetricscfgv1beta1.DefaultIngressPath)
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Upload.IngressAPIPath, &kmCfg.Status.Upload.IngressAPIPath, metricscfgv1beta1.DefaultIngressPath)
 	kmCfg.Status.Upload.UploadToggle = kmCfg.Spec.Upload.UploadToggle
 
 	// set the default max file size for packaging
@@ -144,7 +144,7 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.Ko
 		kmCfg.Status.Upload.UploadCycle = kmCfg.Spec.Upload.UploadCycle
 	}
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourcesAPIPath, &kmCfg.Status.Source.SourcesAPIPath, kokumetricscfgv1beta1.DefaultSourcesPath)
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourcesAPIPath, &kmCfg.Status.Source.SourcesAPIPath, metricscfgv1beta1.DefaultSourcesPath)
 	StringReflectSpec(r, kmCfg, &kmCfg.Spec.Source.SourceName, &kmCfg.Status.Source.SourceName, "")
 
 	kmCfg.Status.Source.CreateSource = kmCfg.Spec.Source.CreateSource
@@ -153,7 +153,7 @@ func ReflectSpec(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.Ko
 		kmCfg.Status.Source.CheckCycle = kmCfg.Spec.Source.CheckCycle
 	}
 
-	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, kokumetricscfgv1beta1.DefaultPrometheusSvcAddress)
+	StringReflectSpec(r, kmCfg, &kmCfg.Spec.PrometheusConfig.SvcAddress, &kmCfg.Status.Prometheus.SvcAddress, metricscfgv1beta1.DefaultPrometheusSvcAddress)
 	kmCfg.Status.Prometheus.SkipTLSVerification = kmCfg.Spec.PrometheusConfig.SkipTLSVerification
 	kmCfg.Status.Prometheus.ContextTimeout = kmCfg.Spec.PrometheusConfig.ContextTimeout
 }
@@ -173,7 +173,7 @@ func GetClientset() (*kubernetes.Clientset, error) {
 }
 
 // GetClusterID Collects the cluster identifier and version from the Cluster Version custom resource object
-func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+func GetClusterID(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig) error {
 	log := log.WithName("GetClusterID")
 	// Get current ClusterVersion
 	cvClient := r.cvClientBuilder.New(r.Client)
@@ -192,7 +192,7 @@ func GetClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 }
 
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
-func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
+func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
 	log := log.WithName("GetPullSecretToken")
 
@@ -241,7 +241,7 @@ func GetPullSecretToken(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Aut
 }
 
 // GetAuthSecret Obtain the username and password from the authentication secret provided in the current namespace
-func GetAuthSecret(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
+func GetAuthSecret(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
 	ctx := context.Background()
 	log := log.WithName("GetAuthSecret")
 
@@ -306,7 +306,7 @@ func checkCycle(log gologr.Logger, cycle int64, lastExecution metav1.Time, actio
 
 }
 
-func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+func setClusterID(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig) error {
 	if kmCfg.Status.ClusterID == "" || kmCfg.Status.ClusterVersion == "" {
 		r.cvClientBuilder = cv.NewBuilder()
 		err := GetClusterID(r, kmCfg)
@@ -315,10 +315,10 @@ func setClusterID(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	return nil
 }
 
-func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, reqNamespace types.NamespacedName) error {
+func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
 	log := log.WithName("setAuthentication")
 	kmCfg.Status.Authentication.AuthenticationCredentialsFound = &trueDef
-	if kmCfg.Status.Authentication.AuthType == kokumetricscfgv1beta1.Token {
+	if kmCfg.Status.Authentication.AuthType == metricscfgv1beta1.Token {
 		kmCfg.Status.Authentication.ValidBasicAuth = nil
 		kmCfg.Status.Authentication.AuthErrorMessage = ""
 		kmCfg.Status.Authentication.LastVerificationTime = nil
@@ -350,10 +350,10 @@ func setAuthentication(r *KokuMetricsConfigReconciler, authConfig *crhchttp.Auth
 	}
 }
 
-func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, cycle int64) error {
+func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *metricscfgv1beta1.MetricsConfig, cycle int64) error {
 	log := log.WithName("validateCredentials")
 
-	if kmCfg.Spec.Authentication.AuthType == kokumetricscfgv1beta1.Token {
+	if kmCfg.Spec.Authentication.AuthType == metricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
 	}
@@ -392,7 +392,7 @@ func validateCredentials(r *KokuMetricsConfigReconciler, handler *sources.Source
 	return nil
 }
 
-func setOperatorCommit(r *KokuMetricsConfigReconciler) {
+func setOperatorCommit(r *MetricsConfigReconciler) {
 	log := log.WithName("setOperatorCommit")
 	if GitCommit == "" {
 		commit, exists := os.LookupEnv("GIT_COMMIT")
@@ -404,7 +404,7 @@ func setOperatorCommit(r *KokuMetricsConfigReconciler) {
 	}
 }
 
-func checkSource(r *KokuMetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) {
+func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, kmCfg *metricscfgv1beta1.MetricsConfig) {
 	log := log.WithName("checkSource")
 
 	// check if the Source Spec has changed
@@ -444,7 +444,7 @@ func packageFiles(p *packaging.FilePackager) {
 	}
 }
 
-func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
+func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, kmCfg *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
 	log := log.WithName("uploadFiles")
 
 	// if its time to upload/package
@@ -513,7 +513,7 @@ func uploadFiles(r *KokuMetricsConfigReconciler, authConfig *crhchttp.AuthConfig
 	return nil
 }
 
-func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (time.Time, time.Time) {
+func getTimeRange(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
 	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
 	if kmCfg.Spec.PrometheusConfig.CollectPreviousData != nil &&
@@ -528,7 +528,7 @@ func getTimeRange(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.K
 	return start, end
 }
 
-func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) error {
+func getPromCollector(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig) error {
 	if r.promCollector == nil {
 		var serviceaccountPath string
 		if r.overrideSecretPath {
@@ -545,7 +545,7 @@ func getPromCollector(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 	return r.promCollector.GetPromConn(kmCfg, promCfgSetter, promConnSetter, promConnTester)
 }
 
-func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
+func collectPromStats(r *MetricsConfigReconciler, kmCfg *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
 	log := log.WithName("collectPromStats")
 
 	r.promCollector.TimeSeries = &timeRange
@@ -571,7 +571,7 @@ func collectPromStats(r *KokuMetricsConfigReconciler, kmCfg *kokumetricscfgv1bet
 	kmCfg.Status.Prometheus.LastQuerySuccessTime = t
 }
 
-func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokumetricscfgv1beta1.KokuMetricsConfig) (*ctrl.Result, error) {
+func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, kmCfg *metricscfgv1beta1.MetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
 	log := log.WithName("configurePVC")
 	pvcTemplate := kmCfg.Spec.VolumeClaimTemplate
@@ -606,7 +606,7 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 	if strings.Contains(kmCfg.Status.Storage.VolumeType, "EmptyDir") {
 		kmCfg.Status.Storage.VolumeMounted = false
 		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
+			log.Error(err, "failed to update MetricsConfig status")
 		}
 		return &ctrl.Result{}, fmt.Errorf("PVC not mounted")
 	}
@@ -622,22 +622,22 @@ func configurePVC(r *KokuMetricsConfigReconciler, req ctrl.Request, kmCfg *kokum
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
-// Reconcile Process the KokuMetricsConfig custom resource based on changes or requeue
-func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile Process the MetricsConfig custom resource based on changes or requeue
+func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
 
-	// fetch the KokuMetricsConfig instance
-	kmCfgOriginal := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+	// fetch the MetricsConfig instance
+	kmCfgOriginal := &metricscfgv1beta1.MetricsConfig{}
 
 	if err := r.Get(ctx, req.NamespacedName, kmCfgOriginal); err != nil {
-		log.Info(fmt.Sprintf("unable to fetch KokuMetricsConfigCR: %v", err))
+		log.Info(fmt.Sprintf("unable to fetch MetricsConfigCR: %v", err))
 		// we'll ignore not-found errors, since they cannot be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	kmCfg := kmCfgOriginal.DeepCopy()
-	log.Info("reconciling custom resource", "KokuMetricsConfig", kmCfg)
+	log.Info("reconciling custom resource", "MetricsConfig", kmCfg)
 
 	// reflect the spec values into status
 	ReflectSpec(r, kmCfg)
@@ -653,12 +653,12 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err := setClusterID(r, kmCfg); err != nil {
 		log.Error(err, "failed to obtain clusterID")
 		if err := r.Status().Update(ctx, kmCfg); err != nil {
-			log.Error(err, "failed to update KokuMetricsConfig status")
+			log.Error(err, "failed to update MetricsConfig status")
 		}
 		return ctrl.Result{}, err
 	}
 
-	log.Info("using the following inputs", "KokuMetricsConfigConfig", kmCfg.Status)
+	log.Info("using the following inputs", "MetricsConfigConfig", kmCfg.Status)
 
 	// set the Operator git commit and reflect it in the upload status
 	setOperatorCommit(r)
@@ -725,7 +725,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			// it's not critical to handle this error. We update the status here to show progress
 			// if this loop takes a long time to complete. A missed update here does not impact
 			// data collection here.
-			log.Info("failed to update KokuMetricsConfig status")
+			log.Info("failed to update MetricsConfig status")
 		}
 	}
 
@@ -752,7 +752,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// obtain credentials token/basic & return if there are authentication credential errors
 		if err := setAuthentication(r, authConfig, kmCfg, req.NamespacedName); err != nil {
 			if err := r.Status().Update(ctx, kmCfg); err != nil {
-				log.Error(err, "failed to update KokuMetricsConfig status")
+				log.Error(err, "failed to update MetricsConfig status")
 			}
 			return ctrl.Result{}, err
 		}
@@ -798,7 +798,7 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	kmCfg.Status.Packaging.PackagedFiles = uploadFiles
 
 	if err := r.Status().Update(ctx, kmCfg); err != nil {
-		log.Error(err, "failed to update KokuMetricsConfig status")
+		log.Error(err, "failed to update MetricsConfig status")
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
@@ -808,9 +808,9 @@ func (r *KokuMetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 // SetupWithManager Setup reconciliation with manager object
-func (r *KokuMetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *MetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kokumetricscfgv1beta1.KokuMetricsConfig{}).
+		For(&metricscfgv1beta1.MetricsConfig{}).
 		Complete(r)
 }
 

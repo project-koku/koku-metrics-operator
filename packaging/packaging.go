@@ -26,14 +26,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg            *kokumetricscfgv1beta1.KokuMetricsConfig
+	KMCfg            *metricscfgv1beta1.MetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
 	manifest         manifestInfo
 	uid              string
@@ -72,15 +72,15 @@ type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string                                        `json:"uuid"`
-	ClusterID string                                        `json:"cluster_id"`
-	Version   string                                        `json:"version"`
-	Date      time.Time                                     `json:"date"`
-	Files     []string                                      `json:"files"`
-	Start     time.Time                                     `json:"start"`
-	End       time.Time                                     `json:"end"`
-	CRStatus  kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
-	Certified bool                                          `json:"certified"`
+	UUID      string                                `json:"uuid"`
+	ClusterID string                                `json:"cluster_id"`
+	Version   string                                `json:"version"`
+	Date      time.Time                             `json:"date"`
+	Files     []string                              `json:"files"`
+	Start     time.Time                             `json:"start"`
+	End       time.Time                             `json:"end"`
+	CRStatus  metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
+	Certified bool                                  `json:"certified"`
 }
 
 type FileInfoManifest manifest
@@ -114,7 +114,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc kokumetricscfgv1beta1.KokuMetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string

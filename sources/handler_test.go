@@ -18,7 +18,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
@@ -28,7 +28,7 @@ var (
 	handler = &SourceHandler{
 		APIURL: "https://ci.cloud.redhat.com",
 		Auth:   auth,
-		Spec: kokumetricscfgv1beta1.CloudDotRedHatSourceStatus{
+		Spec: metricscfgv1beta1.CloudDotRedHatSourceStatus{
 			SourcesAPIPath: "/api/sources/v1.0/",
 			SourceName:     "post-source-name",
 		},

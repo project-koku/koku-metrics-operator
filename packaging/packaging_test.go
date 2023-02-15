@@ -25,14 +25,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
-var kmCfg = &kokumetricscfgv1beta1.KokuMetricsConfig{}
+var kmCfg = &metricscfgv1beta1.MetricsConfig{}
 var testPackager = FilePackager{
 	DirCfg: dirCfg,
 	KMCfg:  kmCfg,
@@ -1053,7 +1053,7 @@ func TestTrimPackages(t *testing.T) {
 			dirCfg := &dirconfig.DirectoryConfig{
 				Upload: dirconfig.Directory{Path: tmpDir2},
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			kmCfg := &metricscfgv1beta1.MetricsConfig{}
 			kmCfg.Spec.Packaging.MaxReports = tt.maxReports
 			testPackager := FilePackager{
 				DirCfg: dirCfg,
