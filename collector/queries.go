@@ -26,29 +26,31 @@ var (
 		"koku_metrics:cost:pod_request_memory_bytes": "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"koku_metrics:cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
 
-		"koku_metrics:ros:cpu_request_container_avg":      "avg by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:cpu_request_container_sum":      "sum by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:cpu_limit_container_avg":        "avg by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:cpu_limit_container_sum":        "sum by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:cpu_usage_container_avg":        "avg by(container, pod, namespace) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:cpu_usage_container_min":        "min by(container, pod, namespace) (min_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:cpu_usage_container_max":        "max by(container, pod, namespace) (max_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:cpu_usage_container_sum":        "sum by(container, pod, namespace) (sum_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:cpu_throttle_container_avg":     "avg by(container, pod, namespace) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:cpu_throttle_container_max":     "max by(container, pod, namespace) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:cpu_throttle_container_sum":     "sum by(container, pod, namespace) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_request_container_avg":   "avg by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:memory_request_container_sum":   "sum by(container, pod, namespace) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:memory_limit_container_avg":     "avg by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:memory_limit_container_sum":     "sum by(container, pod, namespace) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"koku_metrics:ros:memory_usage_container_avg":     "avg by(container, pod, namespace) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_usage_container_min":     "min by(container, pod, namespace) (min_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_usage_container_max":     "max by(container, pod, namespace) (max_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_usage_container_sum":     "sum by(container, pod, namespace) (sum_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_rss_usage_container_avg": "avg by(container, pod, namespace) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_rss_usage_container_min": "min by(container, pod, namespace) (min_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_rss_usage_container_max": "max by(container, pod, namespace) (max_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
-		"koku_metrics:ros:memory_rss_usage_container_sum": "sum by(container, pod, namespace) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!=''}[15m]))",
+		"koku_metrics:ros:image_names":                    "kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}",
+		"koku_metrics:ros:deployment_names":               "label_replace(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}, 'replicaset', '$1', 'pod', '(.*)-.{5}') * on(replicaset) group_left(owner_name) kube_replicaset_owner",
+		"koku_metrics:ros:cpu_request_container_avg":      "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:cpu_request_container_sum":      "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:cpu_limit_container_avg":        "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:cpu_limit_container_sum":        "sum by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:cpu_usage_container_avg":        "avg by(container, pod, namespace, node) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:cpu_usage_container_min":        "min by(container, pod, namespace, node) (min_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:cpu_usage_container_max":        "max by(container, pod, namespace, node) (max_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:cpu_usage_container_sum":        "sum by(container, pod, namespace, node) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:cpu_throttle_container_avg":     "avg by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:cpu_throttle_container_max":     "max by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:cpu_throttle_container_sum":     "sum by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_request_container_avg":   "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:memory_request_container_sum":   "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:memory_limit_container_avg":     "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:memory_limit_container_sum":     "sum by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"koku_metrics:ros:memory_usage_container_avg":     "avg by(container, pod, namespace, node) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_usage_container_min":     "min by(container, pod, namespace, node) (min_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_usage_container_max":     "max by(container, pod, namespace, node) (max_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_usage_container_sum":     "sum by(container, pod, namespace, node) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_rss_usage_container_avg": "avg by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_rss_usage_container_min": "min by(container, pod, namespace, node) (min_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_rss_usage_container_max": "max by(container, pod, namespace, node) (max_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"koku_metrics:ros:memory_rss_usage_container_sum": "sum by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
 	}
 
 	nodeQueries = &querys{
@@ -247,9 +249,21 @@ var (
 	}
 	resourceOptimizationQueries = &querys{
 		query{
+			Name:        "container-image",
+			QueryString: QueryMap["koku_metrics:ros:image_names"],
+			MetricKey:   staticFields{"image_name": "image", "container_name": "container", "pod": "pod", "namespace": "namespace"},
+			RowKey:      []model.LabelName{"container", "pod", "namespace"},
+		},
+		query{
+			Name:        "replica-sets-deployment-name",
+			QueryString: QueryMap["koku_metrics:ros:deployment_names"],
+			MetricKey:   staticFields{"deployment_name": "owner_name", "container_name": "container", "pod": "pod", "namespace": "namespace"},
+			RowKey:      []model.LabelName{"container", "pod", "namespace"},
+		},
+		query{
 			Name:        "cpu-request-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:cpu_request_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-request-container-avg",
 			},
@@ -258,7 +272,7 @@ var (
 		query{
 			Name:        "cpu-request-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:cpu_request_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-request-container-sum",
 			},
@@ -267,7 +281,7 @@ var (
 		query{
 			Name:        "cpu-limit-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:cpu_limit_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-limit-container-avg",
 			},
@@ -276,7 +290,7 @@ var (
 		query{
 			Name:        "cpu-limit-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:cpu_limit_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-limit-container-sum",
 			},
@@ -285,7 +299,7 @@ var (
 		query{
 			Name:        "cpu-usage-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-usage-container-avg",
 				Method:  "sum",
@@ -295,7 +309,7 @@ var (
 		query{
 			Name:        "cpu-usage-container-min",
 			QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_min"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-usage-container-min",
 			},
@@ -304,7 +318,7 @@ var (
 		query{
 			Name:        "cpu-usage-container-max",
 			QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_max"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-usage-container-max",
 			},
@@ -313,7 +327,7 @@ var (
 		query{
 			Name:        "cpu-usage-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:cpu_usage_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-usage-container-sum",
 			},
@@ -322,7 +336,7 @@ var (
 		query{
 			Name:        "cpu-throttle-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:cpu_throttle_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-throttle-container-avg",
 			},
@@ -331,7 +345,7 @@ var (
 		query{
 			Name:        "cpu-throttle-container-max",
 			QueryString: QueryMap["koku_metrics:ros:cpu_throttle_container_max"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-throttle-container-max",
 			},
@@ -340,7 +354,7 @@ var (
 		query{
 			Name:        "cpu-throttle-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:cpu_throttle_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "cpu-throttle-container-sum",
 			},
@@ -349,7 +363,7 @@ var (
 		query{
 			Name:        "memory-request-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:memory_request_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-request-container-avg",
 			},
@@ -358,7 +372,7 @@ var (
 		query{
 			Name:        "memory-request-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:memory_request_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-request-container-sum",
 			},
@@ -367,7 +381,7 @@ var (
 		query{
 			Name:        "memory-limit-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:memory_limit_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-limit-container-avg",
 			},
@@ -376,7 +390,7 @@ var (
 		query{
 			Name:        "memory-limit-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:memory_limit_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-limit-container-sum",
 			},
@@ -385,7 +399,7 @@ var (
 		query{
 			Name:        "memory-usage-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:memory_usage_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-usage-container-avg",
 			},
@@ -394,7 +408,7 @@ var (
 		query{
 			Name:        "memory-usage-container-min",
 			QueryString: QueryMap["koku_metrics:ros:memory_usage_container_min"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-usage-container-min",
 			},
@@ -403,7 +417,7 @@ var (
 		query{
 			Name:        "memory-usage-container-max",
 			QueryString: QueryMap["koku_metrics:ros:memory_usage_container_max"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-usage-container-max",
 			},
@@ -412,7 +426,7 @@ var (
 		query{
 			Name:        "memory-usage-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:memory_usage_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-usage-container-sum",
 			},
@@ -421,7 +435,7 @@ var (
 		query{
 			Name:        "memory-rss-usage-container-avg",
 			QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_avg"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-rss-usage-container-avg",
 			},
@@ -430,7 +444,7 @@ var (
 		query{
 			Name:        "memory-rss-usage-container-min",
 			QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_min"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-rss-usage-container-min",
 			},
@@ -439,7 +453,7 @@ var (
 		query{
 			Name:        "memory-rss-usage-container-max",
 			QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_max"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-rss-usage-container-max",
 			},
@@ -448,23 +462,11 @@ var (
 		query{
 			Name:        "memory-rss-usage-container-sum",
 			QueryString: QueryMap["koku_metrics:ros:memory_rss_usage_container_sum"],
-			MetricKey:   staticFields{"container": "container_name", "pod": "pod", "namespace": "namespace", "node": "node"},
+			MetricKey:   staticFields{"container_name": "container", "pod": "pod", "namespace": "namespace", "node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName: "memory-rss-usage-container-sum",
 			},
 			RowKey: []model.LabelName{"container", "pod", "namespace"},
-		},
-		query{
-			Name:        "container-image",
-			QueryString: "kube_pod_container_info{container!='', container!='POD', pod!='', namespace!=''}",
-			MetricKey:   staticFields{"image": "image_name", "pod": "pod", "namespace": "namespace"},
-			RowKey:      []model.LabelName{"container", "pod", "namespace"},
-		},
-		query{
-			Name:        "replica-sets-deployment-name",
-			QueryString: "label_replace(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!=''}, 'replicaset', '$1', 'pod', '(.*)-.{5}') * on(replicaset) group_left(owner_name) kube_replicaset_owner",
-			MetricKey:   staticFields{"owner_name": "deployment_name", "pod": "pod", "namespace": "namespace"},
-			RowKey:      []model.LabelName{"container", "pod", "namespace"},
 		},
 	}
 )
