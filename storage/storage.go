@@ -60,7 +60,7 @@ func (v *volume) isMounted() bool {
 // Storage is a struct containing volume information
 type Storage struct {
 	Client    client.Client
-	KMCfg     *metricscfgv1beta1.MetricsConfig
+	CR        *metricscfgv1beta1.MetricsConfig
 	Namespace string
 	PVC       *corev1.PersistentVolumeClaim
 
@@ -86,10 +86,10 @@ func (s *Storage) getVolume(vols []corev1.Volume) error {
 		if v.Name == "koku-metrics-operator-reports" {
 			s.vol = &volume{index: i, volume: &v}
 			if v.EmptyDir != nil {
-				s.KMCfg.Status.Storage.VolumeType = v.EmptyDir.String()
+				s.CR.Status.Storage.VolumeType = v.EmptyDir.String()
 			}
 			if v.PersistentVolumeClaim != nil {
-				s.KMCfg.Status.Storage.VolumeType = v.PersistentVolumeClaim.String()
+				s.CR.Status.Storage.VolumeType = v.PersistentVolumeClaim.String()
 			}
 			return nil
 		}
@@ -160,7 +160,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 
 	if s.vol.isMounted() && s.vol.volume.PersistentVolumeClaim.ClaimName == s.PVC.Name {
 		log.Info(fmt.Sprintf("deployment volume is mounted to PVC name: %s", s.PVC.Name))
-		s.KMCfg.Status.Storage.VolumeMounted = true
+		s.CR.Status.Storage.VolumeMounted = true
 		return false, nil
 	}
 

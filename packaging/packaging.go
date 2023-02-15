@@ -33,7 +33,7 @@ import (
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg            *metricscfgv1beta1.MetricsConfig
+	CR               *metricscfgv1beta1.MetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
 	manifest         manifestInfo
 	uid              string
@@ -125,8 +125,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string,
 	p.manifest = manifestInfo{
 		manifest: manifest{
 			UUID:      p.uid,
-			ClusterID: p.KMCfg.Status.ClusterID,
-			Version:   p.KMCfg.Status.OperatorCommit,
+			ClusterID: p.CR.Status.ClusterID,
+			Version:   p.CR.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
 			Start:     p.start.UTC(),
@@ -362,7 +362,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	}
 
 	// remove all files from staging directory
-	if p.KMCfg.Status.Packaging.PackagingError == "" {
+	if p.CR.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
@@ -406,9 +406,9 @@ func (p *FilePackager) TrimPackages() error {
 
 	reportCount := int64(datetimesSet.Len())
 
-	if reportCount <= p.KMCfg.Spec.Packaging.MaxReports {
+	if reportCount <= p.CR.Spec.Packaging.MaxReports {
 		log.Info("number of stored reports within limit")
-		p.KMCfg.Status.Packaging.ReportCount = &reportCount
+		p.CR.Status.Packaging.ReportCount = &reportCount
 		return nil
 	}
 
@@ -420,7 +420,7 @@ func (p *FilePackager) TrimPackages() error {
 	}
 
 	sort.Strings(datetimes)
-	ind := len(datetimes) - int(p.KMCfg.Spec.Packaging.MaxReports)
+	ind := len(datetimes) - int(p.CR.Spec.Packaging.MaxReports)
 	filesToExclude := datetimes[0:ind]
 
 	for _, pre := range filesToExclude {
@@ -435,14 +435,14 @@ func (p *FilePackager) TrimPackages() error {
 		}
 	}
 
-	p.KMCfg.Status.Packaging.ReportCount = &p.KMCfg.Spec.Packaging.MaxReports
+	p.CR.Status.Packaging.ReportCount = &p.CR.Spec.Packaging.MaxReports
 	return nil
 }
 
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
 	log := log.WithName("PackageReports")
-	p.maxBytes = *p.KMCfg.Status.Packaging.MaxSize * megaByte
+	p.maxBytes = *p.CR.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
 	p.createdTimestamp = time.Now().Format(timestampFormat)
 
@@ -475,7 +475,7 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.KMCfg)
+	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.CR)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -506,7 +506,7 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("file packaging was successful")
-	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
+	p.CR.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
 
