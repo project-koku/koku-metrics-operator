@@ -60,7 +60,7 @@ var (
 	promConnSetter     collector.PrometheusConnectionSetter    = collector.SetPrometheusConnection
 	promConnTester     collector.PrometheusConnectionTester    = collector.TestPrometheusConnection
 
-	log = logr.Log.WithName("controller_kokumetricsconfig")
+	log = logr.Log.WithName("metricsconfig_controller")
 )
 
 // MetricsConfigReconciler reconciles a MetricsConfig object
