@@ -114,7 +114,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc metricscfgv1beta1.MetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, cr metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -132,7 +132,7 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string,
 			Start:     p.start.UTC(),
 			End:       p.end.UTC(),
 			Certified: isCertified,
-			CRStatus:  kmc.Status,
+			CRStatus:  cr.Status,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
