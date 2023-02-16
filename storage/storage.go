@@ -32,9 +32,9 @@ var (
 			Kind:       "PersistentVolumeClaim",
 		},
 		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
-			Name: "koku-metrics-operator-data",
+			Name: "costmanagement-metrics-operator-data",
 			Labels: map[string]string{
-				"application": "koku-metrics-operator",
+				"application": "costmanagement-metrics-operator",
 			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -83,7 +83,7 @@ func (s *Storage) getOrCreateVolume() error {
 
 func (s *Storage) getVolume(vols []corev1.Volume) error {
 	for i, v := range vols {
-		if v.Name == "koku-metrics-operator-reports" {
+		if v.Name == "costmanagement-metrics-operator-reports" {
 			s.vol = &volume{index: i, volume: &v}
 			if v.EmptyDir != nil {
 				s.CR.Status.Storage.VolumeType = v.EmptyDir.String()
@@ -132,7 +132,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 	deployment := &appsv1.Deployment{}
 	namespace := types.NamespacedName{
 		Namespace: s.Namespace,
-		Name:      "koku-metrics-operator"}
+		Name:      "costmanagement-metrics-operator"}
 	if err := s.Client.Get(ctx, namespace, deployment); err != nil {
 		return false, fmt.Errorf("unable to get Deployment: %v", err)
 	}

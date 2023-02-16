@@ -118,7 +118,8 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE_SHA}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default > out.yaml
+# $(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
 deploy-user: manifests kustomize

@@ -63,7 +63,7 @@ var maxSplits int64 = 1000
 var ErrNoReports = errors.New("reports not found")
 
 // Set boolean on whether community or certified
-var isCertified bool = false
+var isCertified bool = true
 
 var log = logr.Log.WithName("packaging")
 
