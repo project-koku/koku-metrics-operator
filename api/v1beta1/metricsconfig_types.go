@@ -13,10 +13,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// CertValidationType describes how the certificate validation will be handled.
-// Only one of the following certificate validation types may be specified.
-// If none of the following types are specified, the default one
-// is Token.
 const (
 	// CertIgnore allows certificate validation to be bypassed.
 	CertIgnore bool = false
