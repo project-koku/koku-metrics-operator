@@ -1,0 +1,254 @@
+[
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "eap-app",
+			"container_id": "cri-o://07d017277d2ac1bbca4db4b5cdddf49b81a5939542b29572b2558449c614b713",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"pod": "eap-app-9-hvcsb",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "ba4b557a-708b-48c4-891f-5eb4d0a755d2"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "eap-app",
+			"container_id": "cri-o://186497ceb61e495e3234bfa5639e215cf4bf9a3a9e0cb2b0e0bb67ce57283581",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"pod": "eap-app-6-mq5gt",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "407702cd-2a6c-49db-b04d-fc09d77c826d"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "eap-app",
+			"container_id": "cri-o://cdb47d99d0b4376339fe1c95cc57d8418b70cabec081d027812f982480568644",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"pod": "eap-app-6-7zxbk",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "480083fe-9ee5-449c-a704-2b9b35fcef56"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "eap-app",
+			"container_id": "cri-o://d700e47064fae3d6aa81f6b26c50cbb8e45cd1e3bc0d516461bc78d8da995e33",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"pod": "eap-app-9-z5pgs",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "e480a4e0-6268-4972-825d-ce2a3d9e96c6"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "manager",
+			"container_id": "cri-o://5f1917a09bcca544a494d57d1bfd37e1b3fc4cde6803e6d86311c88307469bb7",
+			"endpoint": "https-main",
+			"image": "quay.io/project-koku/koku-metrics-operator@sha256:4d60286deb439e81fad78056dd483393b28940b276f1a9dfc755c94558484b8b",
+			"image_id": "quay.io/project-koku/koku-metrics-operator@sha256:4d60286deb439e81fad78056dd483393b28940b276f1a9dfc755c94558484b8b",
+			"image_spec": "quay.io/project-koku/koku-metrics-operator@sha256:4d60286deb439e81fad78056dd483393b28940b276f1a9dfc755c94558484b8b",
+			"job": "kube-state-metrics",
+			"namespace": "koku-metrics-operator",
+			"pod": "koku-metrics-operator-86685d87c7-gr588",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "ed41b438-45a3-4c79-9113-b519164ff0ff"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "manager",
+			"container_id": "cri-o://fde45599fa24210ae568313e0e0efda8bb539e4132cf7257b62d5d859183f8ad",
+			"endpoint": "https-main",
+			"image": "registry.redhat.io/costmanagement/costmanagement-metrics-rhel8-operator@sha256:2ba8cbaa8232a3506c6f7d79360102a678091275a0138882df14c7da820ebb1b",
+			"image_id": "registry.redhat.io/costmanagement/costmanagement-metrics-rhel8-operator@sha256:2ba8cbaa8232a3506c6f7d79360102a678091275a0138882df14c7da820ebb1b",
+			"image_spec": "registry.redhat.io/costmanagement/costmanagement-metrics-rhel8-operator@sha256:2ba8cbaa8232a3506c6f7d79360102a678091275a0138882df14c7da820ebb1b",
+			"job": "kube-state-metrics",
+			"namespace": "costmanagement-metrics-operator",
+			"pod": "costmanagement-metrics-operator-6757c56ccf-qclzk",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "9bcd45b5-b52b-4d5a-a2ff-81f89d150fcd"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "nginx-sample",
+			"container_id": "cri-o://25974b1e357d8b49e94b4b7a3810f0965cb5243fa22b6613bf355f4e698fd707",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"pod": "nginx-sample-576c785f4-cmzqz",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "42e57e07-786c-453b-8cf7-9414891e5301"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "nginx-sample",
+			"container_id": "cri-o://2afdd7551d88191a026d134a0c0764306027024533fe0e4cfd9a67308d1f7962",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"pod": "nginx-sample-576c785f4-62h4n",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "1218682d-6d64-43ed-9976-c7abc94c1dc5"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "python-sample",
+			"container_id": "cri-o://152c80c834cf0c0840fe29ac16d760ddae9b238937d527eec60fd9fc9cd6f2f1",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"pod": "python-sample-675d6c79f5-w65pz",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "0e011cee-7f47-4f70-ba0c-4d1416edde48"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "python-sample",
+			"container_id": "cri-o://739ccb2de50a503c51abe21d0c72d67e0ccba293b7a032800a1e0dfa8ddb1bed",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"pod": "python-sample-675d6c79f5-97sr8",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "8f8f21ab-2ca4-4a39-829e-bbb0a97224d5"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "rhsso-operator",
+			"container_id": "cri-o://af94b44ac1f936c0c9d5f90db189ab087522dca0d4f6486f414fb8e4f37b1a86",
+			"endpoint": "https-main",
+			"image": "registry.redhat.io/rh-sso-7/sso7-rhel8-operator@sha256:6c1ee2243eb01cc422da28a3266639d90070f3ef7e7a903041f71dad780e33db",
+			"image_id": "registry.redhat.io/rh-sso-7/sso7-rhel8-operator@sha256:573329befa18f2f4b2811c49c415cf51ccdd174c55d4026852823b017562841b",
+			"image_spec": "registry.redhat.io/rh-sso-7/sso7-rhel8-operator@sha256:6c1ee2243eb01cc422da28a3266639d90070f3ef7e7a903041f71dad780e33db",
+			"job": "kube-state-metrics",
+			"namespace": "sso",
+			"pod": "rhsso-operator-5fbc4bb59b-qhsl7",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "2815c006-b15a-4ac3-8f0a-848698fba6a1"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"__name__": "kube_pod_container_info",
+			"container": "volume-shell",
+			"container_id": "cri-o://3365a4d753d2c012b2c504f2f3110e31dcb68f5dfa098513616ad4b28442320d",
+			"endpoint": "https-main",
+			"image": "docker.io/library/busybox:latest",
+			"image_id": "docker.io/library/busybox@sha256:7b3ccabffc97de872a30dfd234fd972a66d247c8cfc69b0550f276481852627c",
+			"image_spec": "busybox",
+			"job": "kube-state-metrics",
+			"namespace": "koku-metrics-operator-2",
+			"pod": "volume-shell",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "629c9a50-2885-4867-8744-5a02361180df"
+		},
+		"value": [
+			1676566800,
+			"1"
+		]
+	}
+]

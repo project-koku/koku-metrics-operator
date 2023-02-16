@@ -27,7 +27,7 @@ var (
 		"cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
 
 		"ros:image_names":                    "kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}",
-		"ros:deployment_names":               "label_replace(kube_pod_info, 'replicaset', '$1', 'created_by_name', '(.+)') * on(replicaset) group_left(owner_name) kube_replicaset_owner",
+		"ros:deployment_names":               "label_replace(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}, 'replicaset', '$1', 'pod', '(.*)-.{5}') * on(replicaset) group_left(owner_name) kube_replicaset_owner",
 		"ros:cpu_request_container_avg":      "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"ros:cpu_request_container_sum":      "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"ros:cpu_limit_container_avg":        "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
@@ -113,7 +113,7 @@ var (
 	}
 	volQueries = &querys{
 		query{
-			Name:        "persistentvolume_pod_info",
+			Name:        "persistentvolume-pod-info",
 			QueryString: QueryMap["cost:persistentvolume_pod_info"],
 			MetricKey:   staticFields{"namespace": "namespace", "pod": "pod"},
 			RowKey:      []model.LabelName{"volumename"},

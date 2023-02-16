@@ -54,7 +54,18 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 }
 
 func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
-	res := m.singleResult
+	var res *mockPromResult
+	var ok bool
+	if m.mappedResults != nil {
+		res, ok = (*m.mappedResults)[query]
+		if !ok {
+			m.t.Fatalf("Could not find test result!")
+		}
+	} else if m.singleResult != nil {
+		res = m.singleResult
+	} else {
+		m.t.Fatalf("Could not find test result!")
+	}
 	return res.value, res.warnings, res.err
 }
 

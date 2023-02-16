@@ -64,7 +64,7 @@ var (
 	fakeCR = &metricscfgv1beta1.MetricsConfig{Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
 		PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
 			DisableMetricsCollectionCostManagement:       &falseDef,
-			DisableMetricsCollectionResourceOptimization: &trueDef,
+			DisableMetricsCollectionResourceOptimization: &falseDef,
 		},
 	}}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
@@ -143,6 +143,11 @@ func TestGenerateReports(t *testing.T) {
 			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
+	}
+	for _, query := range *resourceOptimizationQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
 	fakeCollector := &PrometheusCollector{
