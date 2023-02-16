@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -809,15 +808,6 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "failed to update MetricsConfig status")
 		result = ctrl.Result{}
 		errors = append(errors, err)
-	}
-
-	if len(errors) == 0 {
-		t := time.Now().Truncate(1 * time.Hour).Add(1 * time.Hour)
-		log.Info(fmt.Sprintf("now: %s", t.String()))
-		d := time.Until(t) + wait.Jitter(500*time.Millisecond, 1)
-		log.Info("reconciliation complete")
-		log.Info(fmt.Sprintf("waiting %s until next reconciliation", d.String()))
-		return ctrl.Result{RequeueAfter: d}, nil
 	}
 
 	// Requeue for processing after 5 minutes
