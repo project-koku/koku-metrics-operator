@@ -7,6 +7,17 @@ import (
 	"os"
 )
 
+/*
+
+These funcs exist to generate the prometheus data for unit tests. In `getQueryResults` and `getQueryRangeResults`,
+we would add
+
+	testutils.Save(filepath.Join("test_files", "test_data", query.Name), {matrix|vector})
+
+The operator must be running locally.
+
+*/
+
 // Marshal is a function that marshals the object into an
 // io.Reader.
 // By default, it uses the JSON marshaller.

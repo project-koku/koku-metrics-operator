@@ -101,10 +101,12 @@ lint:
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
+SECRET_ABSPATH ?= "./testing"
+WATCH_NAMESPACE ?= koku-metrics-operator
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
 	kubectl apply -f testing/sa.yaml
-	GIT_COMMIT=${GIT_COMMIT} go run ./main.go
+	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run ./main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize
