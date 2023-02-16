@@ -17,7 +17,7 @@ import (
 	"github.com/prometheus/common/model"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 )
 
@@ -129,7 +129,7 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 }
 
 // GenerateReports is responsible for querying prometheus and writing to report files
-func GenerateReports(cr *kokumetricscfgv1beta1.KokuMetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
+func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
 	log := log.WithName("GenerateReports")
 
 	// yearMonth is used in filenames
@@ -309,7 +309,7 @@ func findFields(input model.Metric, str string) string {
 	}
 }
 
-func updateReportStatus(cr *kokumetricscfgv1beta1.KokuMetricsConfig, ts *promv1.Range) {
+func updateReportStatus(cr *metricscfgv1beta1.MetricsConfig, ts *promv1.Range) {
 	cr.Status.Reports.ReportMonth = ts.Start.Format("01")
 	cr.Status.Reports.LastHourQueried = ts.Start.Format(statusTimeFormat) + " - " + ts.End.Format(statusTimeFormat)
 }

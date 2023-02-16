@@ -20,7 +20,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -35,8 +35,8 @@ func init() {
 
 	// Adding the configv1 scheme
 	utilruntime.Must(configv1.AddToScheme(scheme))
-	// Adding the kokumetricscfgv1beta1 scheme
-	utilruntime.Must(kokumetricscfgv1beta1.AddToScheme(scheme))
+	// Adding the metricscfgv1beta1 scheme
+	utilruntime.Must(metricscfgv1beta1.AddToScheme(scheme))
 	// Adding the operatorsv1alpha1 scheme
 	utilruntime.Must(operatorsv1alpha1.AddToScheme(scheme))
 
@@ -84,14 +84,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.KokuMetricsConfigReconciler{
+	if err = (&controllers.MetricsConfigReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		Clientset: clientset,
 		InCluster: inCluster,
 		Namespace: watchNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
+		setupLog.Error(err, "unable to create controller", "controller", "MetricsConfig")
 		os.Exit(1)
 	}
 
