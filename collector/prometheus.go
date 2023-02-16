@@ -243,8 +243,6 @@ func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, res
 			return fmt.Errorf("expected a vector in response to query, got a %v", queryResult.Type())
 		}
 
-		// Save(filepath.Join("test_files", "test_data", query.Name), vector)
-
 		results.iterateVector(vector, query)
 	}
 	return nil
