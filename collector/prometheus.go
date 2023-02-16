@@ -19,11 +19,11 @@ import (
 	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
-	ps *kokumetricscfgv1beta1.PrometheusSpec
+	ps *metricscfgv1beta1.PrometheusSpec
 
 	pollingCtxTimeout = 15 * time.Second
 
@@ -58,7 +58,7 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func statusHelper(cr *kokumetricscfgv1beta1.KokuMetricsConfig, status string, err error) {
+func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status string, err error) {
 	switch status {
 	case "configuration":
 		if err != nil {
@@ -79,9 +79,9 @@ func statusHelper(cr *kokumetricscfgv1beta1.KokuMetricsConfig, status string, er
 	}
 }
 
-type PrometheusConfigurationSetter func(ps *kokumetricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error
+type PrometheusConfigurationSetter func(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error
 
-func SetPrometheusConfig(ps *kokumetricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
+func SetPrometheusConfig(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
 
 	pCfg := &PrometheusConfig{
 		Address: ps.SvcAddress,
@@ -157,7 +157,7 @@ func NewPromCollector(saPath string) *PrometheusCollector {
 
 // GetPromConn returns the prometheus connection
 func (c *PrometheusCollector) GetPromConn(
-	cr *kokumetricscfgv1beta1.KokuMetricsConfig,
+	cr *metricscfgv1beta1.MetricsConfig,
 	pcfgs PrometheusConfigurationSetter,
 	pcs PrometheusConnectionSetter,
 	pct PrometheusConnectionTester,

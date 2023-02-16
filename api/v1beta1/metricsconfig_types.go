@@ -529,3 +529,12 @@ type KokuMetricsConfigList struct {
 func init() {
 	SchemeBuilder.Register(&KokuMetricsConfig{}, &KokuMetricsConfigList{})
 }
+
+// +kubebuilder:object:generate:=false
+type MetricsConfig = KokuMetricsConfig
+
+// +kubebuilder:object:generate:=false
+type MetricsConfigSpec = KokuMetricsConfigSpec
+
+// +kubebuilder:object:generate:=false
+type MetricsConfigStatus = KokuMetricsConfigStatus

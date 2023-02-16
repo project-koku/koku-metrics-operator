@@ -18,19 +18,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
 	log   = logr.Log.WithName("storage")
 	tenGi = *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI)
 	// DefaultPVC is a basic PVC
-	DefaultPVC = kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
+	DefaultPVC = metricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "PersistentVolumeClaim",
 		},
-		EmbeddedObjectMetadata: kokumetricscfgv1beta1.EmbeddedObjectMetadata{
+		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
 			Name: "koku-metrics-operator-data",
 			Labels: map[string]string{
 				"application": "koku-metrics-operator",
@@ -59,7 +59,7 @@ func (v *volume) isMounted() bool {
 // Storage is a struct containing volume information
 type Storage struct {
 	Client    client.Client
-	KMCfg     *kokumetricscfgv1beta1.KokuMetricsConfig
+	CR        *metricscfgv1beta1.MetricsConfig
 	Namespace string
 	PVC       *corev1.PersistentVolumeClaim
 
@@ -85,10 +85,10 @@ func (s *Storage) getVolume(vols []corev1.Volume) error {
 		if v.Name == "koku-metrics-operator-reports" {
 			s.vol = &volume{index: i, volume: &v}
 			if v.EmptyDir != nil {
-				s.KMCfg.Status.Storage.VolumeType = v.EmptyDir.String()
+				s.CR.Status.Storage.VolumeType = v.EmptyDir.String()
 			}
 			if v.PersistentVolumeClaim != nil {
-				s.KMCfg.Status.Storage.VolumeType = v.PersistentVolumeClaim.String()
+				s.CR.Status.Storage.VolumeType = v.PersistentVolumeClaim.String()
 			}
 			return nil
 		}
@@ -159,7 +159,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 
 	if s.vol.isMounted() && s.vol.volume.PersistentVolumeClaim.ClaimName == s.PVC.Name {
 		log.Info(fmt.Sprintf("deployment volume is mounted to PVC name: %s", s.PVC.Name))
-		s.KMCfg.Status.Storage.VolumeMounted = true
+		s.CR.Status.Storage.VolumeMounted = true
 		return false, nil
 	}
 
@@ -173,7 +173,7 @@ func (s *Storage) ConvertVolume() (bool, error) {
 }
 
 // MakeVolumeClaimTemplate produces a template to create the PVC
-func MakeVolumeClaimTemplate(e kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim, namespace string) *corev1.PersistentVolumeClaim {
+func MakeVolumeClaimTemplate(e metricscfgv1beta1.EmbeddedPersistentVolumeClaim, namespace string) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: e.APIVersion,
@@ -190,13 +190,13 @@ func MakeVolumeClaimTemplate(e kokumetricscfgv1beta1.EmbeddedPersistentVolumeCla
 }
 
 // MakeEmbeddedPVC produces a template to create the PVC
-func MakeEmbeddedPVC(pvc *corev1.PersistentVolumeClaim) *kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim {
-	return &kokumetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
+func MakeEmbeddedPVC(pvc *corev1.PersistentVolumeClaim) *metricscfgv1beta1.EmbeddedPersistentVolumeClaim {
+	return &metricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: pvc.APIVersion,
 			Kind:       pvc.Kind,
 		},
-		EmbeddedObjectMetadata: kokumetricscfgv1beta1.EmbeddedObjectMetadata{
+		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
 			Name: pvc.Name,
 		},
 		Spec: pvc.Spec,

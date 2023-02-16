@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
 )
 
@@ -112,7 +112,7 @@ type sourcePostReq struct {
 type SourceHandler struct {
 	APIURL string
 	Auth   *crhchttp.AuthConfig
-	Spec   kokumetricscfgv1beta1.CloudDotRedHatSourceStatus
+	Spec   metricscfgv1beta1.CloudDotRedHatSourceStatus
 }
 
 func (s *sourceGetReq) getRequest(handler *SourceHandler) ([]byte, error) {

@@ -17,7 +17,7 @@ import (
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
@@ -363,35 +363,35 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		cr     *kokumetricscfgv1beta1.KokuMetricsConfig
+		cr     *metricscfgv1beta1.MetricsConfig
 		status string
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &metricscfgv1beta1.MetricsConfig{},
 			status: "configuration",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &metricscfgv1beta1.MetricsConfig{},
 			status: "configuration",
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &metricscfgv1beta1.MetricsConfig{},
 			status: "connection",
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			cr:     &kokumetricscfgv1beta1.KokuMetricsConfig{},
+			cr:     &metricscfgv1beta1.MetricsConfig{},
 			status: "connection",
 			want:   false,
 			err:    errTest,
@@ -542,7 +542,7 @@ func TestGetPromConn(t *testing.T) {
 					os.Remove(toke)
 				}()
 			}
-			cr := &kokumetricscfgv1beta1.KokuMetricsConfig{}
+			cr := &metricscfgv1beta1.MetricsConfig{}
 			cr.Status.Prometheus.ConfigError = tt.cfgErr
 			cr.Status.Prometheus.ConnectionError = tt.conErr
 			cr.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
@@ -565,7 +565,7 @@ func TestGetPromConn(t *testing.T) {
 
 func TestSetPrometheusConfig(t *testing.T) {
 	trueDef := true
-	ps := &kokumetricscfgv1beta1.PrometheusSpec{
+	ps := &metricscfgv1beta1.PrometheusSpec{
 		SvcAddress:          "svc-address",
 		SkipTLSVerification: &trueDef,
 	}
