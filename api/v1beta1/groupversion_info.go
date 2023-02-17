@@ -9,13 +9,18 @@
 package v1beta1
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 var (
+	// NamePrefix is the prefix used to distinguish upstream and downstream operators
+	NamePrefix = "costmanagement"
+
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "costmanagement-metrics-cfg.openshift.io", Version: "v1beta1"}
+	GroupVersion = schema.GroupVersion{Group: fmt.Sprintf("%s-metrics-cfg.openshift.io", NamePrefix), Version: "v1beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
