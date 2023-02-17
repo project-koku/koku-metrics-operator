@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -19,13 +20,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	kokuMetricsCfgNamespace = "koku-metrics-operator"
-	emptyDir                = &corev1.Volume{
-		Name:         "koku-metrics-operator-reports",
+	namespace = fmt.Sprintf("%s-metrics-operator", metricscfgv1beta1.NamePrefix)
+	emptyDir  = &corev1.Volume{
+		Name:         volumeMountName,
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
 	emptyDirWrong = &corev1.Volume{
@@ -33,27 +35,27 @@ var (
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
 	persistVC = &corev1.Volume{
-		Name: "koku-metrics-operator-reports",
+		Name: volumeMountName,
 		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeClaimName}}}
 	persistVCfake = &corev1.Volume{
-		Name: "koku-metrics-operator-reports",
+		Name: volumeMountName,
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "not-the-right-one"}}}
 	volMount = &corev1.VolumeMount{
-		Name:      "koku-metrics-operator-reports",
-		MountPath: "/tmp/koku-metrics-operator-reports",
+		Name:      volumeMountName,
+		MountPath: dirconfig.MountPath,
 	}
 	volMountWrong = &corev1.VolumeMount{
 		Name:      "wrong-mount",
-		MountPath: "/tmp/koku-metrics-operator-reports",
+		MountPath: dirconfig.MountPath,
 	}
 	// For the following deployments, the only things of importance are the ObjectMeta, Volumes, VolumeMounts.
 	// All the other definitions are boilerplate so that the deployment will be created successfully.
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator",
-			Namespace: kokuMetricsCfgNamespace,
+			Name:      deploymentName,
+			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -83,8 +85,8 @@ var (
 	}
 	deploymentNoVolume = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator",
-			Namespace: kokuMetricsCfgNamespace,
+			Name:      deploymentName,
+			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -113,7 +115,7 @@ var (
 	csv = &operatorsv1alpha1.ClusterServiceVersion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-csv",
-			Namespace: kokuMetricsCfgNamespace,
+			Namespace: namespace,
 		},
 		Spec: operatorsv1alpha1.ClusterServiceVersionSpec{
 			DisplayName: "test-csv",
@@ -175,7 +177,7 @@ func TestIsMounted(t *testing.T) {
 
 func TestMakeEmbeddedPVC(t *testing.T) {
 	t.Run("embedded PVC does not contain annotations", func(t *testing.T) {
-		pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+		pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 		got := MakeEmbeddedPVC(pvc)
 		if got.Labels != nil {
 			t.Errorf("embedded PVC should not have labels. got: %v", got.Labels)
@@ -190,9 +192,9 @@ var _ = Describe("Storage Tests", func() {
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
-		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(kokuMetricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(namespace))).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -209,11 +211,11 @@ var _ = Describe("Storage Tests", func() {
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
@@ -230,11 +232,11 @@ var _ = Describe("Storage Tests", func() {
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
@@ -249,7 +251,7 @@ var _ = Describe("Storage Tests", func() {
 		Describe("deployment does not exist", func() {
 			It("cannot find the deployment", func() {
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client: k8sClient,
 					CR:     cr,
@@ -266,11 +268,11 @@ var _ = Describe("Storage Tests", func() {
 				depCp := deployment.DeepCopy()
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
@@ -286,11 +288,11 @@ var _ = Describe("Storage Tests", func() {
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
@@ -304,11 +306,11 @@ var _ = Describe("Storage Tests", func() {
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
@@ -322,11 +324,11 @@ var _ = Describe("Storage Tests", func() {
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
@@ -335,7 +337,7 @@ var _ = Describe("Storage Tests", func() {
 				Expect(mountEst).To(BeFalse())
 			})
 			It("volume is already mounted but does not match spec", func() {
-				pvcCp := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvcCp := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				pvcCp.Name = "not-the-right-one"
 				Expect(k8sClient.Create(ctx, pvcCp)).Should(Succeed())
 				depCp := deployment.DeepCopy()
@@ -343,11 +345,11 @@ var _ = Describe("Storage Tests", func() {
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
 				cr := &metricscfgv1beta1.MetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, kokuMetricsCfgNamespace)
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, namespace)
 				s := &Storage{
 					Client:    k8sClient,
 					CR:        cr,
-					Namespace: kokuMetricsCfgNamespace,
+					Namespace: namespace,
 					PVC:       pvc,
 				}
 
