@@ -165,18 +165,18 @@ type PrometheusSpec struct {
 	// +kubebuilder:default=120
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
-	// CollectPreviousData is a field of KokuMetricsConfig to represent whether or not the operator will gather previous data upon KokuMetricsConfig
-	// creation. This toggle only changes operator behavior when a new KokuMetricsConfig is created. When `true`, the operator will gather all
+	// CollectPreviousData is a field of CostManagementMetricsConfig to represent whether or not the operator will gather previous data upon CostManagementMetricsConfig
+	// creation. This toggle only changes operator behavior when a new CostManagementMetricsConfig is created. When `true`, the operator will gather all
 	// existing Prometheus data for the current month. The default is true.
 	// +kubebuilder:default=true
 	CollectPreviousData *bool `json:"collect_previous_data,omitempty"`
 
-	// DisableMetricsCollectionCostManagement is a field of KokuMetricsConfig to represent whether or not the operator will generate
+	// DisableMetricsCollectionCostManagement is a field of CostManagementMetricsConfig to represent whether or not the operator will generate
 	// reports for cost-management metrics. The default is false.
 	// +kubebuilder:default=false
 	DisableMetricsCollectionCostManagement *bool `json:"disable_metrics_collection_cost_management,omitempty"`
 
-	// DisableMetricsCollectionResourceOptimization is a field of KokuMetricsConfig to represent whether or not the operator will generate
+	// DisableMetricsCollectionResourceOptimization is a field of CostManagementMetricsConfig to represent whether or not the operator will generate
 	// reports for resource-optimization metrics. The default is true.
 	// +kubebuilder:default=true
 	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
@@ -407,17 +407,17 @@ type PrometheusStatus struct {
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
 
-	// PreviousDataCollected is a field of KokuMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
-	// data upon KokuMetricsConfig creation.
+	// PreviousDataCollected is a field of CostManagementMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
+	// data upon CostManagementMetricsConfig creation.
 	// +kubebuilder:default=false
 	PreviousDataCollected bool `json:"previous_data_collected"`
 
-	// DisabledMetricsCollectionCostManagement is a field of KokuMetricsConfigStatus to represent whether or not collecting
+	// DisabledMetricsCollectionCostManagement is a field of CostManagementMetricsConfigStatus to represent whether or not collecting
 	// cost-management metrics is disabled. The default is false.
 	// +kubebuilder:default=false
 	DisabledMetricsCollectionCostManagement *bool `json:"disabled_metrics_collection_cost_management,omitempty"`
 
-	// DisabledMetricsCollectionResourceOptimization is a field of KokuMetricsConfigStatus to represent whether or not collecting
+	// DisabledMetricsCollectionResourceOptimization is a field of CostManagementMetricsConfigStatus to represent whether or not collecting
 	// resource-optimzation metrics is disabled. The default is true.
 	// +kubebuilder:default=true
 	DisabledMetricsCollectionResourceOptimization *bool `json:"disabled_metrics_collection_resource_optimization,omitempty"`
