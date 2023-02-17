@@ -35,6 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 	// +kubebuilder:scaffold:imports
 )
@@ -54,7 +55,7 @@ var (
 	secretsPath        = ""
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator",
+			Name:      deploymentName,
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -77,13 +78,13 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      volumeMountName,
+									MountPath: dirconfig.MountPath,
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: volumeMountName,
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
@@ -92,7 +93,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator",
+			Name:      deploymentName,
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -115,15 +116,15 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      volumeMountName,
+									MountPath: dirconfig.MountPath,
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: volumeMountName,
 						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}},
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeClaimName}}}},
 				},
 			},
 		},
