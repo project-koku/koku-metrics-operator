@@ -22,7 +22,8 @@ import (
 )
 
 var trueDef = true
-var defaultContextTimeout int64 = 90
+var falseDef = false
+var defaultContextTimeout = 90 * time.Second
 
 type mappedMockPromResult map[string]*mockPromResult
 type mockPromResult struct {
@@ -53,7 +54,18 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 }
 
 func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
-	res := m.singleResult
+	var res *mockPromResult
+	var ok bool
+	if m.mappedResults != nil {
+		res, ok = (*m.mappedResults)[query]
+		if !ok {
+			m.t.Fatalf("Could not find test result!")
+		}
+	} else if m.singleResult != nil {
+		res = m.singleResult
+	} else {
+		m.t.Fatalf("Could not find test result!")
+	}
 	return res.value, res.warnings, res.err
 }
 
@@ -191,7 +203,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 				t:             t,
 			}
 			got := mappedResults{}
-			err := c.getQueryResults(tt.queries, &got)
+			err := c.getQueryRangeResults(tt.queries, &got)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("got unexpected error: %v", err)
 			}
@@ -204,7 +216,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 
 func TestGetQueryResultsError(t *testing.T) {
 	c := PrometheusCollector{
-		ContextTimeout: &defaultContextTimeout,
+		ContextTimeout: defaultContextTimeout,
 		TimeSeries:     &promv1.Range{},
 	}
 	getQueryResultsErrorsTests := []struct {
@@ -269,7 +281,7 @@ func TestGetQueryResultsError(t *testing.T) {
 				t:            t,
 			}
 			got := mappedResults{}
-			err := c.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
+			err := c.getQueryRangeResults(&querys{query{QueryString: "fake-query"}}, &got)
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
 			}

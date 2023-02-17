@@ -11,7 +11,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	gologr "github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -26,6 +28,7 @@ var (
 	volFilePrefix       = "cm-openshift-storage-usage-"
 	nodeFilePrefix      = "cm-openshift-node-usage-"
 	namespaceFilePrefix = "cm-openshift-namespace-usage-"
+	rosFilePrefix       = "ros-openshift-"
 
 	statusTimeFormat = "2006-01-02 15:04:05"
 
@@ -51,6 +54,25 @@ func maxSlice(array []model.SamplePair) float64 {
 	return float64(max)
 }
 
+func minSlice(array []model.SamplePair) float64 {
+	min := array[0].Value
+	for _, v := range array {
+		if v.Value < min {
+			min = v.Value
+		}
+	}
+	return float64(min)
+}
+
+func avgSlice(array []model.SamplePair) float64 {
+	length := len(array)
+	if length <= 0 {
+		return 0
+	}
+	sum := sumSlice(array)
+	return sum / float64(length)
+}
+
 func sumSlice(array []model.SamplePair) float64 {
 	var sum model.SampleValue
 	for _, v := range array {
@@ -65,6 +87,10 @@ func getValue(query *saveQueryValue, array []model.SamplePair) float64 {
 		return sumSlice(array)
 	case "max":
 		return maxSlice(array)
+	case "min":
+		return minSlice(array)
+	case "avg":
+		return avgSlice(array)
 	default:
 		return 0
 	}
@@ -94,6 +120,31 @@ func generateKey(metric model.Metric, keys []model.LabelName) string {
 	sort.Strings(result)
 
 	return strings.Join(result, ",")
+}
+
+func (r *mappedResults) iterateVector(vector model.Vector, q query) {
+	results := *r
+	for _, sample := range vector {
+		obj := generateKey(sample.Metric, q.RowKey)
+		if results[obj] == nil {
+			results[obj] = mappedValues{}
+		}
+		if q.MetricKey != nil {
+			for key, field := range q.MetricKey {
+				results[obj][key] = string(sample.Metric[field])
+			}
+		}
+		if q.MetricKeyRegex != nil {
+			for key, regexField := range q.MetricKeyRegex {
+				results[obj][key] = findFields(sample.Metric, regexField)
+			}
+		}
+		if q.QueryValue != nil {
+			saveStruct := q.QueryValue
+			value := float64(sample.Value)
+			results[obj][saveStruct.ValName] = floatToString(value)
+		}
+	}
 }
 
 func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
@@ -131,6 +182,7 @@ func (r *mappedResults) iterateMatrix(matrix model.Matrix, q query) {
 // GenerateReports is responsible for querying prometheus and writing to report files
 func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, c *PrometheusCollector) error {
 	log := log.WithName("GenerateReports")
+	log.Info(fmt.Sprintf("prometheus query timeout set to: %.0f seconds", c.ContextTimeout.Seconds()))
 
 	// yearMonth is used in filenames
 	yearMonth := c.TimeSeries.Start.Format("200601") // this corresponds to YYYYMM format
@@ -139,7 +191,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	// ################################################################################################################
 	log.Info("querying for node metrics")
 	nodeResults := mappedResults{}
-	if err := c.getQueryResults(nodeQueries, &nodeResults); err != nil {
+	if err := c.getQueryRangeResults(nodeQueries, &nodeResults); err != nil {
 		return err
 	}
 
@@ -162,6 +214,47 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 			return err
 		}
 	}
+
+	// ######## this actually generates the node report and the others for cost-management
+	if cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement {
+		if err := generateCostManagementReports(log, c, dirCfg, nodeRows, yearMonth); err != nil {
+			return err
+		}
+	}
+
+	// ######## generate resource-optimization reports
+	if cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization {
+		rosCollector := &PrometheusCollector{
+			PromConn:           c.PromConn,
+			PromCfg:            c.PromCfg,
+			ContextTimeout:     c.ContextTimeout,
+			serviceaccountPath: c.serviceaccountPath,
+		}
+		timeRange := c.TimeSeries
+		start := timeRange.Start.Add(1 * time.Second)
+		end := start.Add(14*time.Minute + 59*time.Second)
+		for i := 1; i < 5; i++ {
+			timeRange.Start = start
+			timeRange.End = end
+			rosCollector.TimeSeries = timeRange
+			if err := generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
+				return err
+			}
+			start = start.Add(15 * time.Minute)
+			end = end.Add(15 * time.Minute)
+		}
+
+	}
+
+	//################################################################################################################
+
+	cr.Status.Reports.DataCollected = true
+	cr.Status.Reports.DataCollectionMessage = ""
+
+	return nil
+}
+
+func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
 	emptyNodeRow := newNodeRow(c.TimeSeries)
 	nodeReport := report{
 		file: &file{
@@ -183,7 +276,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 
 	log.Info("querying for pod metrics")
 	podResults := mappedResults{}
-	if err := c.getQueryResults(podQueries, &podResults); err != nil {
+	if err := c.getQueryRangeResults(podQueries, &podResults); err != nil {
 		return err
 	}
 
@@ -223,7 +316,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 
 	log.Info("querying for storage metrics")
 	volResults := mappedResults{}
-	if err := c.getQueryResults(volQueries, &volResults); err != nil {
+	if err := c.getQueryRangeResults(volQueries, &volResults); err != nil {
 		return err
 	}
 
@@ -255,7 +348,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 
 	log.Info("querying for namespaces")
 	namespaceResults := mappedResults{}
-	if err := c.getQueryResults(namespaceQueries, &namespaceResults); err != nil {
+	if err := c.getQueryRangeResults(namespaceQueries, &namespaceResults); err != nil {
 		return err
 	}
 
@@ -283,11 +376,48 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 		return fmt.Errorf("failed to write namespace report: %v", err)
 	}
 
-	//################################################################################################################
+	return nil
+}
 
-	cr.Status.Reports.DataCollected = true
-	cr.Status.Reports.DataCollectionMessage = ""
+func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
+	ts := c.TimeSeries.End
+	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
+	rosResults := mappedResults{}
+	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults); err != nil {
+		return err
+	}
 
+	rosRows := make(mappedCSVStruct)
+	for ros, val := range rosResults {
+		usage := newROSRow(c.TimeSeries)
+		if err := getStruct(val, &usage, rosRows, ros); err != nil {
+			return err
+		}
+		if node, ok := val["node"]; ok {
+			// Add the Node usage to the pod.
+			if row, ok := nodeRows[node.(string)]; ok {
+				usage.nodeRow = *row.(*nodeRow)
+			} else {
+				usage.nodeRow = newNodeRow(c.TimeSeries)
+			}
+		}
+	}
+	emptyROSRow := newROSRow(c.TimeSeries)
+	rosReport := report{
+		file: &file{
+			name: rosFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: rosRows,
+			headers:   emptyROSRow.csvHeader(),
+			prefix:    emptyROSRow.dateTimes.string(),
+		},
+	}
+	log.WithName("writeResults").Info("writing resource-optimization results to file", "filename", rosReport.file.getName())
+	if err := rosReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write resource-optimization report: %v", err)
+	}
 	return nil
 }
 

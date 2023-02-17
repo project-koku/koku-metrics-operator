@@ -141,7 +141,7 @@ type PrometheusCollector struct {
 	PromConn       PrometheusConnection
 	PromCfg        *PrometheusConfig
 	TimeSeries     *promv1.Range
-	ContextTimeout *int64
+	ContextTimeout time.Duration
 
 	serviceaccountPath string
 }
@@ -200,15 +200,11 @@ func (c *PrometheusCollector) GetPromConn(
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedResults) error {
-	log := log.WithName("getQueryResults")
-	timeout := int64(120)
-	if c.ContextTimeout != nil {
-		timeout = *c.ContextTimeout
-	}
-	log.Info(fmt.Sprintf("prometheus query timeout set to: %d seconds", timeout))
+func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *mappedResults) error {
+	log := log.WithName("getQueryRangeResults")
+
 	for _, query := range *queries {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
 
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
@@ -224,6 +220,30 @@ func (c *PrometheusCollector) getQueryResults(queries *querys, results *mappedRe
 		}
 
 		results.iterateMatrix(matrix, query)
+	}
+	return nil
+}
+
+func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, results *mappedResults) error {
+	log := log.WithName("getQueryResults")
+
+	for _, query := range *queries {
+		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
+		defer cancel()
+
+		queryResult, warnings, err := c.PromConn.Query(ctx, query.QueryString, ts)
+		if err != nil {
+			return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
+		}
+		if len(warnings) > 0 {
+			log.Info("query warnings", "Warnings", warnings)
+		}
+		vector, ok := queryResult.(model.Vector)
+		if !ok {
+			return fmt.Errorf("expected a vector in response to query, got a %v", queryResult.Type())
+		}
+
+		results.iterateVector(vector, query)
 	}
 	return nil
 }

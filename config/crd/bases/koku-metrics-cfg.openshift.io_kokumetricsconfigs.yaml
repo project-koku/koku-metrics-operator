@@ -124,6 +124,20 @@ spec:
                     maximum: 180
                     minimum: 10
                     type: integer
+                  disable_metrics_collection_cost_management:
+                    default: false
+                    description: DisableMetricsCollectionCostManagement is a field
+                      of KokuMetricsConfig to represent whether or not the operator
+                      will generate reports for cost-management metrics. The default
+                      is false.
+                    type: boolean
+                  disable_metrics_collection_resource_optimization:
+                    default: true
+                    description: DisableMetricsCollectionResourceOptimization is a
+                      field of KokuMetricsConfig to represent whether or not the operator
+                      will generate reports for resource-optimization metrics. The
+                      default is true.
+                    type: boolean
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: FOR DEVELOPMENT ONLY. SvcAddress is a field of KokuMetricsConfig
@@ -750,6 +764,19 @@ spec:
                       before timing out.
                     format: int64
                     type: integer
+                  disabled_metrics_collection_cost_management:
+                    default: false
+                    description: DisabledMetricsCollectionCostManagement is a field
+                      of KokuMetricsConfigStatus to represent whether or not collecting
+                      cost-management metrics is disabled. The default is false.
+                    type: boolean
+                  disabled_metrics_collection_resource_optimization:
+                    default: true
+                    description: DisabledMetricsCollectionResourceOptimization is
+                      a field of KokuMetricsConfigStatus to represent whether or not
+                      collecting resource-optimzation metrics is disabled. The default
+                      is true.
+                    type: boolean
                   last_query_start_time:
                     description: LastQueryStartTime is a field of KokuMetricsConfigStatus
                       to represent the last time queries were started.
