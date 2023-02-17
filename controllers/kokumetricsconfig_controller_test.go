@@ -28,13 +28,18 @@ import (
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/collector"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/storage"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	namespace                   = "koku-metrics-operator"
-	namePrefix                  = "cost-test-local-"
+	namespace       = fmt.Sprintf("%s-metrics-operator", metricscfgv1beta1.NamePrefix)
+	deploymentName  = fmt.Sprintf("%s-metrics-operator", metricscfgv1beta1.NamePrefix)
+	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
+	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
+
+	testNamePrefix              = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
@@ -52,6 +57,7 @@ var (
 	defaultUploadWait     int64 = 0
 	defaultMaxReports     int64 = 1
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
+	testingDir                  = dirconfig.MountPath
 	instance                    = metricscfgv1beta1.MetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -281,7 +287,6 @@ func setup() error {
 		},
 	}
 	// setup the initial testing directory
-	testingDir := "/tmp/koku-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			return fmt.Errorf("could not create %s directory: %v", testingDir, err)
@@ -306,7 +311,7 @@ func setup() error {
 
 func shutdown() {
 	previousValidation = nil
-	os.RemoveAll("/tmp/koku-metrics-operator-reports/")
+	os.RemoveAll(testingDir)
 }
 
 var _ = Describe("MetricsConfigController - CRD Handling", func() {
@@ -345,7 +350,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			createDeployment(ctx, emptyDep1)
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-1"
+			instCopy.ObjectMeta.Name = testNamePrefix + "no-pvc-spec-1"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			// wait until the deployment vol has changed
@@ -353,7 +358,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
-					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "koku-metrics-operator-data"
+					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == volumeClaimName
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
@@ -361,7 +366,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-2"
+			instCopy.ObjectMeta.Name = testNamePrefix + "no-pvc-spec-2"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -384,7 +389,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-3"
+			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-3"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -392,7 +397,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
-				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != "koku-metrics-operator-data"
+				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != volumeClaimName
 			}, timeout, interval).Should(BeTrue())
 
 			deleteDeployment(ctx, emptyDep1)
@@ -402,7 +407,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			createDeployment(ctx, emptyDep2)
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-4"
+			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-4"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -419,7 +424,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "pvc-spec-5"
+			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-5"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -447,7 +452,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			instCopy := airGappedInstance.DeepCopy()
 			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-basic"
+			instCopy.ObjectMeta.Name = testNamePrefix + "default-cr-air-gapped-basic"
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -479,7 +484,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("token auth works fine", func() {
 			instCopy := airGappedInstance.DeepCopy()
 			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-token"
+			instCopy.ObjectMeta.Name = testNamePrefix + "default-cr-air-gapped-token"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -510,7 +515,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	Context("Process CRD resource - post PVC mount - connected cluster", func() {
 		It("default CR works fine", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "default-cr"
+			instCopy.ObjectMeta.Name = testNamePrefix + "default-cr"
 			instCopy.Spec.APIURL = validTS.URL
 			instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -539,7 +544,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("upload set to false case", func() {
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "uploadfalse"
+			instCopy.ObjectMeta.Name = testNamePrefix + "uploadfalse"
 			instCopy.Spec.Upload.UploadToggle = &falseValue
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -563,7 +568,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should find basic auth creds for good basic auth CRD case", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood"
+			instCopy.ObjectMeta.Name = testNamePrefix + "basicauthgood"
 			instCopy.Spec.APIURL = validTS.URL
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -589,7 +594,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood-unauthorized"
+			instCopy.ObjectMeta.Name = testNamePrefix + "basicauthgood-unauthorized"
 			instCopy.Spec.APIURL = unauthorizedTS.URL
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -616,7 +621,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should find basic auth creds for mixedcase basic auth CRD case", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "mixed-case"
+			instCopy.ObjectMeta.Name = testNamePrefix + "mixed-case"
 			instCopy.Spec.APIURL = validTS.URL
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authMixedCaseName
@@ -643,7 +648,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
 			badAuth := "bad-auth"
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "basicauthbad"
+			instCopy.ObjectMeta.Name = testNamePrefix + "basicauthbad"
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuth
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -669,7 +674,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should reflect source name in status for source info CRD case", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "sourceinfo"
+			instCopy.ObjectMeta.Name = testNamePrefix + "sourceinfo"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			instCopy.Spec.Source.SourceName = sourceName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -694,7 +699,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should reflect source error when attempting to create source", func() {
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "sourcecreate"
+			instCopy.ObjectMeta.Name = testNamePrefix + "sourcecreate"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			instCopy.Spec.Source.SourceName = sourceName
 			instCopy.Spec.Source.CreateSource = &trueValue
@@ -720,7 +725,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should fail due to bad basic auth secret", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "badauthsecret"
+			instCopy.ObjectMeta.Name = testNamePrefix + "badauthsecret"
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -747,7 +752,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should fail due to missing pass in auth secret", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "badpass"
+			instCopy.ObjectMeta.Name = testNamePrefix + "badpass"
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthPassSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -774,7 +779,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should fail due to missing user in auth secret", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "baduser"
+			instCopy.ObjectMeta.Name = testNamePrefix + "baduser"
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthUserSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
@@ -801,7 +806,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 		It("should fail due to missing auth secret name with basic set", func() {
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "missingname"
+			instCopy.ObjectMeta.Name = testNamePrefix + "missingname"
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -828,7 +833,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should should fail due to deleted token secret", func() {
 			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "nopullsecret"
+			instCopy.ObjectMeta.Name = testNamePrefix + "nopullsecret"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -853,7 +858,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			createBadPullSecret(ctx, openShiftConfigNamespace)
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "nopulldata"
+			instCopy.ObjectMeta.Name = testNamePrefix + "nopulldata"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -877,7 +882,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should fail bc of missing cluster version", func() {
 			deleteClusterVersion(ctx)
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "missingcvfailure"
+			instCopy.ObjectMeta.Name = testNamePrefix + "missingcvfailure"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -903,7 +908,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "attemptupload"
+			instCopy.ObjectMeta.Name = testNamePrefix + "attemptupload"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
@@ -930,7 +935,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "attemptuploadsuccess"
+			instCopy.ObjectMeta.Name = testNamePrefix + "attemptuploadsuccess"
 			instCopy.Spec.APIURL = validTS.URL
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
@@ -969,7 +974,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}
 
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "attemptupload-unauthorized"
+			instCopy.ObjectMeta.Name = testNamePrefix + "attemptupload-unauthorized"
 			instCopy.Spec.APIURL = unauthorizedTS.URL
 			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -999,7 +1004,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(err, nil)
 			uploadTime := metav1.Now()
 			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = namePrefix + "checkuploadstatus"
+			instCopy.ObjectMeta.Name = testNamePrefix + "checkuploadstatus"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 

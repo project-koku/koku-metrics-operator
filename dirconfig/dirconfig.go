@@ -13,10 +13,13 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
-	parentDir    = "/tmp/koku-metrics-operator-reports/"
+	MountPath = filepath.Join("tmp", fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix))
+
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
@@ -153,7 +156,7 @@ func getOrCreatePath(directory string, dirFs *DirectoryFileSystem) (*Directory, 
 func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	var err error
 	dirMap := map[string]*Directory{}
-	dirMap["parent"], err = getOrCreatePath(parentDir, dirCfg.DirectoryFileSystem)
+	dirMap["parent"], err = getOrCreatePath(MountPath, dirCfg.DirectoryFileSystem)
 	if err != nil {
 		return fmt.Errorf("getDirectoryConfig: %v", err)
 	}
@@ -164,7 +167,7 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 		"upload":  uploadDir,
 	}
 	for name, folder := range folders {
-		d := filepath.Join(parentDir, folder)
+		d := filepath.Join(MountPath, folder)
 		dirMap[name], err = getOrCreatePath(d, dirCfg.DirectoryFileSystem)
 		if err != nil {
 			return fmt.Errorf("getDirectoryConfig: %v", err)
