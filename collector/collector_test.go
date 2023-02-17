@@ -31,7 +31,7 @@ func nearlyEqual(a, b float64) bool {
 	absB := math.Abs(b)
 	diff := math.Abs(a - b)
 
-	if a == b { // shortcut, handles infinities
+	if a == b || (math.IsNaN(a) && math.IsNaN(b)) { // shortcut, handles infinities
 		return true
 	} else if a == 0 || b == 0 || (absA+absB < math.SmallestNonzeroFloat64) {
 		// a or b is zero or both are extremely close to it
@@ -61,7 +61,12 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeCR     = &metricscfgv1beta1.MetricsConfig{}
+	fakeCR = &metricscfgv1beta1.MetricsConfig{Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+		PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+			DisableMetricsCollectionCostManagement:       &falseDef,
+			DisableMetricsCollectionResourceOptimization: &falseDef,
+		},
+	}}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},
@@ -139,6 +144,11 @@ func TestGenerateReports(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
+	for _, query := range *resourceOptimizationQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
 
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -175,6 +185,90 @@ func TestGenerateReports(t *testing.T) {
 	}
 }
 
+func TestGenerateReportsNoROS(t *testing.T) {
+	mapResults := make(mappedMockPromResult)
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+	for _, query := range *resourceOptimizationQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &fakeTimeRange,
+	}
+	noRosCR := fakeCR.DeepCopy()
+	noRosCR.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
+	if err := GenerateReports(noRosCR, fakeDirCfg, fakeCollector); err != nil {
+		t.Errorf("Failed to generate reports: %v", err)
+	}
+
+	// ####### everything below compares the generated reports to the expected reports #######
+	expectedMap := getFiles("expected_reports", t)
+	generatedMap := getFiles("test_reports", t)
+	expectedDiff := 1 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+
+	if len(expectedMap)-len(generatedMap) != expectedDiff {
+		t.Errorf("incorrect number of reports generated")
+	}
+	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
+		t.Fatal("failed to cleanup reports directory")
+	}
+}
+
+func TestGenerateReportsNoCost(t *testing.T) {
+	mapResults := make(mappedMockPromResult)
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+	for _, query := range *resourceOptimizationQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &fakeTimeRange,
+	}
+	noCostCR := fakeCR.DeepCopy()
+	noCostCR.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement = &trueDef
+	if err := GenerateReports(noCostCR, fakeDirCfg, fakeCollector); err != nil {
+		t.Errorf("Failed to generate reports: %v", err)
+	}
+
+	// ####### everything below compares the generated reports to the expected reports #######
+	expectedMap := getFiles("expected_reports", t)
+	generatedMap := getFiles("test_reports", t)
+	expectedDiff := 4 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+
+	if len(expectedMap)-len(generatedMap) != expectedDiff {
+		t.Errorf("incorrect number of reports generated")
+	}
+	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
+		t.Fatal("failed to cleanup reports directory")
+	}
+}
+
 func TestGenerateReportsQueryErrors(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	fakeCollector := &PrometheusCollector{
@@ -185,7 +279,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		TimeSeries: &fakeTimeRange,
 	}
 
-	queryList := []*querys{nodeQueries, podQueries, volQueries}
+	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -193,11 +287,26 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
+	for _, query := range *resourceOptimizationQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
+	resourceOptimizationError := "resourceOptimization error"
+	for _, q := range *resourceOptimizationQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(resourceOptimizationError)}
+	}
+	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), resourceOptimizationError) {
+		t.Errorf("GenerateReports %s was expected, got %v", resourceOptimizationError, err)
+	}
+
 	namespaceError := "namespace error"
 	for _, q := range *namespaceQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(namespaceError)}
 	}
-	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), namespaceError) {
 		t.Errorf("GenerateReports %s was expected, got %v", namespaceError, err)
 	}
@@ -312,6 +421,36 @@ func TestGetValue(t *testing.T) {
 			query: saveQueryValue{Method: "max"},
 			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
 			want:  math.Inf(1),
+		},
+		{
+			name:  "min",
+			query: saveQueryValue{Method: "min"},
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
+			want:  1.3,
+		},
+		{
+			name:  "min inf",
+			query: saveQueryValue{Method: "min"},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: model.SampleValue(math.Inf(-1))}},
+			want:  math.Inf(-1),
+		},
+		{
+			name:  "avg",
+			query: saveQueryValue{Method: "avg"},
+			array: []model.SamplePair{{Value: 1.3}, {Value: 2.3}, {Value: 3.3}},
+			want:  2.3,
+		},
+		{
+			name:  "avg inf",
+			query: saveQueryValue{Method: "avg"},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: 3.3}},
+			want:  math.Inf(1),
+		},
+		{
+			name:  "avg +/-inf",
+			query: saveQueryValue{Method: "avg"},
+			array: []model.SamplePair{{Value: model.SampleValue(math.Inf(1))}, {Value: 2.3}, {Value: model.SampleValue(math.Inf(-1))}},
+			want:  math.NaN(),
 		},
 		{
 			name:  "unknown",

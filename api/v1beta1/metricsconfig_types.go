@@ -13,10 +13,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// CertValidationType describes how the certificate validation will be handled.
-// Only one of the following certificate validation types may be specified.
-// If none of the following types are specified, the default one
-// is Token.
 const (
 	// CertIgnore allows certificate validation to be bypassed.
 	CertIgnore bool = false
@@ -174,6 +170,16 @@ type PrometheusSpec struct {
 	// existing Prometheus data for the current month. The default is true.
 	// +kubebuilder:default=true
 	CollectPreviousData *bool `json:"collect_previous_data,omitempty"`
+
+	// DisableMetricsCollectionCostManagement is a field of KokuMetricsConfig to represent whether or not the operator will generate
+	// reports for cost-management metrics. The default is false.
+	// +kubebuilder:default=false
+	DisableMetricsCollectionCostManagement *bool `json:"disable_metrics_collection_cost_management,omitempty"`
+
+	// DisableMetricsCollectionResourceOptimization is a field of KokuMetricsConfig to represent whether or not the operator will generate
+	// reports for resource-optimization metrics. The default is true.
+	// +kubebuilder:default=true
+	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
 
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of CostManagementMetricsConfig to represent the thanos-querier address.
@@ -405,6 +411,16 @@ type PrometheusStatus struct {
 	// data upon KokuMetricsConfig creation.
 	// +kubebuilder:default=false
 	PreviousDataCollected bool `json:"previous_data_collected"`
+
+	// DisabledMetricsCollectionCostManagement is a field of KokuMetricsConfigStatus to represent whether or not collecting
+	// cost-management metrics is disabled. The default is false.
+	// +kubebuilder:default=false
+	DisabledMetricsCollectionCostManagement *bool `json:"disabled_metrics_collection_cost_management,omitempty"`
+
+	// DisabledMetricsCollectionResourceOptimization is a field of KokuMetricsConfigStatus to represent whether or not collecting
+	// resource-optimzation metrics is disabled. The default is true.
+	// +kubebuilder:default=true
+	DisabledMetricsCollectionResourceOptimization *bool `json:"disabled_metrics_collection_resource_optimization,omitempty"`
 
 	// SvcAddress is the internal thanos-querier address.
 	SvcAddress string `json:"service_address,omitempty"`

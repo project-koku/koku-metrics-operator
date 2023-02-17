@@ -156,6 +156,8 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 	StringReflectSpec(r, cr, &cr.Spec.PrometheusConfig.SvcAddress, &cr.Status.Prometheus.SvcAddress, metricscfgv1beta1.DefaultPrometheusSvcAddress)
 	cr.Status.Prometheus.SkipTLSVerification = cr.Spec.PrometheusConfig.SkipTLSVerification
 	cr.Status.Prometheus.ContextTimeout = cr.Spec.PrometheusConfig.ContextTimeout
+	cr.Status.Prometheus.DisabledMetricsCollectionCostManagement = cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement
+	cr.Status.Prometheus.DisabledMetricsCollectionResourceOptimization = cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization
 }
 
 // GetClientset returns a clientset based on rest.config
@@ -540,7 +542,12 @@ func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 		r.promCollector = collector.NewPromCollector(serviceaccountPath)
 	}
 	r.promCollector.TimeSeries = nil
-	r.promCollector.ContextTimeout = cr.Spec.PrometheusConfig.ContextTimeout
+	if cr.Spec.PrometheusConfig.ContextTimeout == nil {
+		timeout := metricscfgv1beta1.DefaultPrometheusContextTimeout
+		cr.Spec.PrometheusConfig.ContextTimeout = &timeout
+	}
+	r.promCollector.ContextTimeout = time.Duration(*cr.Spec.PrometheusConfig.ContextTimeout * int64(time.Second))
+	// r.promCollector.ContextTimeout = cr.Spec.PrometheusConfig.ContextTimeout
 
 	return r.promCollector.GetPromConn(cr, promCfgSetter, promConnSetter, promConnTester)
 }
