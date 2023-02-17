@@ -35,6 +35,7 @@ import (
 
 var (
 	namespace       = fmt.Sprintf("%s-metrics-operator", metricscfgv1beta1.NamePrefix)
+	deploymentName  = fmt.Sprintf("%s-metrics-operator", metricscfgv1beta1.NamePrefix)
 	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
 	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
 
@@ -310,7 +311,7 @@ func setup() error {
 
 func shutdown() {
 	previousValidation = nil
-	os.RemoveAll(dirconfig.MountPath)
+	os.RemoveAll(testingDir)
 }
 
 var _ = Describe("MetricsConfigController - CRD Handling", func() {

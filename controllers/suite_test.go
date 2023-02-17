@@ -53,7 +53,6 @@ var (
 	cancel             context.CancelFunc
 	useCluster         bool
 	secretsPath        = ""
-	deploymentName     = fmt.Sprintf("%s-metrics-operator", testNamePrefix)
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
