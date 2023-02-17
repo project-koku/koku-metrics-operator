@@ -12,11 +12,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/crhchttp"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/crhchttp"
 )
 
 const (
@@ -47,6 +47,8 @@ const (
 	// ApplicationsEndpoint The endpoint for associating a source with an application.
 	ApplicationsEndpoint string = "applications"
 )
+
+var log = logr.Log.WithName("source_handler")
 
 // GenericMeta A data structure for the meta data in a paginated response
 type GenericMeta struct {
@@ -107,17 +109,16 @@ type sourcePostReq struct {
 	errKey   string
 }
 
-type SourceSpec struct {
+type SourceHandler struct {
 	APIURL string
 	Auth   *crhchttp.AuthConfig
-	Spec   costmanagementmetricscfgv1beta1.CloudDotRedHatSourceStatus
-	Log    logr.Logger
+	Spec   metricscfgv1beta1.CloudDotRedHatSourceStatus
 }
 
-func (s *sourceGetReq) getRequest(sSpec *SourceSpec) ([]byte, error) {
-	log := sSpec.Log.WithName("getRequest")
+func (s *sourceGetReq) getRequest(handler *SourceHandler) ([]byte, error) {
+	log := log.WithName("getRequest")
 	uri := s.root + s.endpoint
-	req, err := crhchttp.SetupRequest(sSpec.Auth, "", "GET", uri, &bytes.Buffer{})
+	req, err := crhchttp.SetupRequest(handler.Auth, "", "GET", uri, &bytes.Buffer{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct request for %s from Sources API: %v.", s.errKey, err)
 	}
@@ -129,26 +130,27 @@ func (s *sourceGetReq) getRequest(sSpec *SourceSpec) ([]byte, error) {
 	req.URL.RawQuery = q.Encode()
 
 	log.Info("GET Request - " + req.URL.Path)
-	return doRequest(log, req, s.client, s.errKey)
+	return doRequest(handler, req, s.client, s.errKey)
 }
 
-func (s *sourcePostReq) jsonRequest(sSpec *SourceSpec) ([]byte, error) {
-	log := sSpec.Log.WithName("jsonRequest")
+func (s *sourcePostReq) jsonRequest(handler *SourceHandler) ([]byte, error) {
+	log := log.WithName("jsonRequest")
 	uri := s.root + s.endpoint
 	jsonValue, err := json.Marshal(s.values)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct body for call to create a Source with the Sources API: %v.", err)
 	}
-	req, err := crhchttp.SetupRequest(sSpec.Auth, "application/json", "POST", uri, bytes.NewBuffer(jsonValue))
+	req, err := crhchttp.SetupRequest(handler.Auth, "application/json", "POST", uri, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to construct request for %s from Sources API: %v.", s.errKey, err)
 	}
 
 	log.Info("POST Request - " + req.URL.Path)
-	return doRequest(log, req, s.client, s.errKey)
+	return doRequest(handler, req, s.client, s.errKey)
 }
 
-func doRequest(log logr.Logger, r *http.Request, client crhchttp.HTTPClient, errKey string) ([]byte, error) {
+func doRequest(handler *SourceHandler, r *http.Request, client crhchttp.HTTPClient, errKey string) ([]byte, error) {
+	log := log.WithName("doRequest")
 	resp, err := client.Do(r)
 	if err != nil {
 		return nil, fmt.Errorf("Failed request to Sources API (%s) for %s: %v.", r.URL.Path, errKey, err)
@@ -158,7 +160,7 @@ func doRequest(log logr.Logger, r *http.Request, client crhchttp.HTTPClient, err
 	respMsg := fmt.Sprintf("HTTP Response Status: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	log.Info(respMsg)
 
-	byteBody, err := crhchttp.ProcessResponse(log, resp)
+	byteBody, err := crhchttp.ProcessResponse(resp)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to process the response for %s: %v.", errKey, err)
 	}
@@ -167,11 +169,11 @@ func doRequest(log logr.Logger, r *http.Request, client crhchttp.HTTPClient, err
 }
 
 // GetSourceTypeID Request the source type ID for OpenShift
-func GetSourceTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, error) {
-	log := sSpec.Log.WithValues("costmanagementmetricsconfig", "GetSourceTypeID")
+func GetSourceTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (string, error) {
+	log := log.WithName("GetSourceTypeID")
 	request := &sourceGetReq{
 		client:   client,
-		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
 		endpoint: SourceTypesEndpoint,
 		queries:  map[string]string{NameFilterQueryParam: OpenShiftSourceType},
 		errKey:   "OpenShift source type lookup",
@@ -179,7 +181,7 @@ func GetSourceTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, err
 
 	// Get Source Type ID
 	// https://cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift
-	bodyBytes, err := request.getRequest(sSpec)
+	bodyBytes, err := request.getRequest(handler)
 	if err != nil {
 		return "", err
 	}
@@ -201,24 +203,24 @@ func GetSourceTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, err
 }
 
 // GetSources does a basic get request to the sources endpoint
-func GetSources(sSpec *SourceSpec, client crhchttp.HTTPClient) ([]byte, error) {
+func GetSources(handler *SourceHandler, client crhchttp.HTTPClient) ([]byte, error) {
 	request := &sourceGetReq{
 		client:   client,
-		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
 		endpoint: SourcesEndpoint,
 		errKey:   "validating auth credentials",
 	}
 
 	// https://cloud.redhat.com/api/sources/v1.0/sources
-	return request.getRequest(sSpec)
+	return request.getRequest(handler)
 }
 
 // CheckSourceExists Determine if the source exists with given parameters
-func CheckSourceExists(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID, name, sourceRef string) (*SourceItem, error) {
-	log := sSpec.Log.WithValues("costmanagementmetricsconfig", "CheckSourceExists")
+func CheckSourceExists(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID, name, sourceRef string) (*SourceItem, error) {
+	log := log.WithName("CheckSourceExists")
 	request := &sourceGetReq{
 		client:   client,
-		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
 		endpoint: SourcesEndpoint,
 		errKey:   "obtaining the OpenShift source",
 	}
@@ -236,7 +238,7 @@ func CheckSourceExists(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceType
 
 	// Check if Source exists already
 	// https://cloud.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
-	bodyBytes, err := request.getRequest(sSpec)
+	bodyBytes, err := request.getRequest(handler)
 	if err != nil {
 		return nil, err
 	}
@@ -256,11 +258,11 @@ func CheckSourceExists(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceType
 }
 
 // GetApplicationTypeID Request the application type ID for Cost Management
-func GetApplicationTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string, error) {
-	log := sSpec.Log.WithValues("costmanagementmetricsconfig", "GetApplicationTypeID")
+func GetApplicationTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (string, error) {
+	log := log.WithName("GetApplicationTypeID")
 	request := &sourceGetReq{
 		client:   client,
-		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
 		endpoint: ApplicationTypesEndpoint,
 		queries:  map[string]string{NameFilterQueryParam: CostManagementAppType},
 		errKey:   "application type lookup",
@@ -268,7 +270,7 @@ func GetApplicationTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string
 
 	// Get Application Type ID
 	// https://cloud.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management
-	bodyBytes, err := request.getRequest(sSpec)
+	bodyBytes, err := request.getRequest(handler)
 	if err != nil {
 		return "", err
 	}
@@ -290,13 +292,13 @@ func GetApplicationTypeID(sSpec *SourceSpec, client crhchttp.HTTPClient) (string
 }
 
 // PostSource Creates a source with the provided name and cluster ID
-func PostSource(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
-	log := sSpec.Log.WithValues("costmanagementmetricsconfig", "PostSource")
+func PostSource(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
+	log := log.WithName("PostSource")
 	request := &sourcePostReq{
 		client:   client,
-		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
 		endpoint: SourcesEndpoint,
-		values:   map[string]string{"source_type_id": sourceTypeID, "name": sSpec.Spec.SourceName, "source_ref": sSpec.Auth.ClusterID},
+		values:   map[string]string{"source_type_id": sourceTypeID, "name": handler.Spec.SourceName, "source_ref": handler.Auth.ClusterID},
 		errKey:   "creating the OpenShift source",
 	}
 
@@ -304,7 +306,7 @@ func PostSource(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID stri
 	// https://cloud.redhat.com/api/sources/v1.0/sources
 	// BODY:
 	// {"source_type_id": "1", "name": "source_name", "source_ref": "clusterId"}
-	bodyBytes, err := request.jsonRequest(sSpec)
+	bodyBytes, err := request.jsonRequest(handler)
 	if err != nil {
 		return nil, err
 	}
@@ -319,10 +321,10 @@ func PostSource(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID stri
 }
 
 // PostApplication Associate a source with an application
-func PostApplication(sSpec *SourceSpec, client crhchttp.HTTPClient, source *SourceItem, appTypeID string) error {
+func PostApplication(handler *SourceHandler, client crhchttp.HTTPClient, source *SourceItem, appTypeID string) error {
 	request := &sourcePostReq{
 		client:   client,
-		root:     sSpec.APIURL + sSpec.Spec.SourcesAPIPath,
+		root:     handler.APIURL + handler.Spec.SourcesAPIPath,
 		endpoint: ApplicationsEndpoint,
 		values:   map[string]string{"source_id": source.ID, "application_type_id": appTypeID},
 		errKey:   "creating the OpenShift source with the Cost Management application",
@@ -332,7 +334,7 @@ func PostApplication(sSpec *SourceSpec, client crhchttp.HTTPClient, source *Sour
 	// https://cloud.redhat.com/api/sources/v1.0/applications
 	// BODY:
 	// {"source_id": "source", "application_type_id": "app_type"}
-	_, err := request.jsonRequest(sSpec)
+	_, err := request.jsonRequest(handler)
 	if err != nil {
 		return err
 	}
@@ -341,77 +343,77 @@ func PostApplication(sSpec *SourceSpec, client crhchttp.HTTPClient, source *Sour
 }
 
 // SourceCreate Creates a source with the provided name and cluster ID
-func SourceCreate(sSpec *SourceSpec, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
-	log := sSpec.Log.WithValues("costmanagementmetricsconfig", "SourceGetOrCreate")
+func SourceCreate(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID string) (*SourceItem, error) {
+	log := log.WithName("SourceGetOrCreate")
 
 	// Get App Type ID
-	appTypeID, err := GetApplicationTypeID(sSpec, client)
+	appTypeID, err := GetApplicationTypeID(handler, client)
 	if err != nil {
 		return nil, err
 	}
 	log.Info("cost Management application type is " + appTypeID)
 
 	// Create the source
-	s, err := PostSource(sSpec, client, sourceTypeID)
+	s, err := PostSource(handler, client, sourceTypeID)
 	if err == nil {
 		// Associate the source with Cost Management
-		err = PostApplication(sSpec, client, s, appTypeID)
+		err = PostApplication(handler, client, s, appTypeID)
 	}
 
 	return s, err
 }
 
 // SourceGetOrCreate Check if source exists, if not create the source if specified
-func SourceGetOrCreate(sSpec *SourceSpec, client crhchttp.HTTPClient) (bool, metav1.Time, error) {
-	log := sSpec.Log.WithValues("costmanagementmetricsconfig", "SourceGetOrCreate")
+func SourceGetOrCreate(handler *SourceHandler, client crhchttp.HTTPClient) (bool, metav1.Time, error) {
+	log := log.WithName("SourceGetOrCreate")
 	currentTime := metav1.Now()
 
 	// Get Source Type ID
-	openShiftSourceTypeID, err := GetSourceTypeID(sSpec, client)
+	openShiftSourceTypeID, err := GetSourceTypeID(handler, client)
 	if err != nil {
 		return false, currentTime, err
 	}
 	log.Info("OpenShift source type is " + openShiftSourceTypeID)
 
 	// Check if Source exists already
-	source, err := CheckSourceExists(sSpec, client, openShiftSourceTypeID, sSpec.Spec.SourceName, sSpec.Auth.ClusterID)
+	source, err := CheckSourceExists(handler, client, openShiftSourceTypeID, handler.Spec.SourceName, handler.Auth.ClusterID)
 	if err != nil {
 		return false, currentTime, err
 	}
 	if source != nil {
 		return true, metav1.Now(), nil
 	}
-	log.Info("create source = " + strconv.FormatBool(*sSpec.Spec.CreateSource))
-	msg := fmt.Sprintf("No OpenShift source registered with name %s and Cluster ID %s.", sSpec.Spec.SourceName, sSpec.Auth.ClusterID)
-	if !*sSpec.Spec.CreateSource {
+	log.Info("create source = " + strconv.FormatBool(*handler.Spec.CreateSource))
+	msg := fmt.Sprintf("No OpenShift source registered with name %s and Cluster ID %s.", handler.Spec.SourceName, handler.Auth.ClusterID)
+	if !*handler.Spec.CreateSource {
 		return false, metav1.Now(), fmt.Errorf(msg)
 	}
 	log.Info(msg)
 
 	// Check if cluster ID is registered
-	source, err = CheckSourceExists(sSpec, client, openShiftSourceTypeID, "", sSpec.Auth.ClusterID)
+	source, err = CheckSourceExists(handler, client, openShiftSourceTypeID, "", handler.Auth.ClusterID)
 	if err != nil {
 		return false, currentTime, err
 	}
 	if source != nil {
-		errMsg := fmt.Sprintf("This cluster may already be registered because an OpenShift source with Cluster ID %s is already registered with a different name.", sSpec.Auth.ClusterID)
+		errMsg := fmt.Sprintf("This cluster may already be registered because an OpenShift source with Cluster ID %s is already registered with a different name.", handler.Auth.ClusterID)
 		log.Info(errMsg)
 		return false, metav1.Now(), fmt.Errorf(errMsg)
 	}
 
 	// Check if source name is already in use
-	source, err = CheckSourceExists(sSpec, client, "", sSpec.Spec.SourceName, "")
+	source, err = CheckSourceExists(handler, client, "", handler.Spec.SourceName, "")
 	if err != nil {
 		return false, currentTime, err
 	}
 	if source != nil {
 		var errMsg string
 		if source.SourceTypeID != openShiftSourceTypeID {
-			errMsg = fmt.Sprintf("A non-OpenShift source with name %s is already registered. Source names must be unique.", sSpec.Spec.SourceName)
+			errMsg = fmt.Sprintf("A non-OpenShift source with name %s is already registered. Source names must be unique.", handler.Spec.SourceName)
 		} else {
 			errMsg = fmt.Sprintf("An OpenShift source with name %s is registered with a different cluster identifier of %s."+
 				" Another cluster may already be registered with this name. Source names must be unique.",
-				sSpec.Spec.SourceName, source.SourceRef)
+				handler.Spec.SourceName, source.SourceRef)
 		}
 		log.Info(errMsg)
 		return false, metav1.Now(), fmt.Errorf(errMsg)
@@ -419,10 +421,10 @@ func SourceGetOrCreate(sSpec *SourceSpec, client crhchttp.HTTPClient) (bool, met
 
 	// No source is registered with this name
 	// No OpenShift source is registered with this cluster ID
-	log.Info(fmt.Sprintf("attempting to create OpenShift source registered with name %s and clusterID %s.", sSpec.Spec.SourceName, sSpec.Auth.ClusterID))
+	log.Info(fmt.Sprintf("attempting to create OpenShift source registered with name %s and clusterID %s.", handler.Spec.SourceName, handler.Auth.ClusterID))
 
 	// Create the source
-	_, err = SourceCreate(sSpec, client, openShiftSourceTypeID)
+	_, err = SourceCreate(handler, client, openShiftSourceTypeID)
 	if err != nil {
 		return false, metav1.Now(), err
 	}

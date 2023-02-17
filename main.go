@@ -20,8 +20,8 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/controllers"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -35,8 +35,8 @@ func init() {
 
 	// Adding the configv1 scheme
 	utilruntime.Must(configv1.AddToScheme(scheme))
-	// Adding the costmanagementmetricscfgv1beta1 scheme
-	utilruntime.Must(costmanagementmetricscfgv1beta1.AddToScheme(scheme))
+	// Adding the metricscfgv1beta1 scheme
+	utilruntime.Must(metricscfgv1beta1.AddToScheme(scheme))
 	// Adding the operatorsv1alpha1 scheme
 	utilruntime.Must(operatorsv1alpha1.AddToScheme(scheme))
 
@@ -84,15 +84,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.CostManagementMetricsConfigReconciler{
+	if err = (&controllers.MetricsConfigReconciler{
 		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("CostManagementMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
 		Clientset: clientset,
 		InCluster: inCluster,
 		Namespace: watchNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CostManagementMetricsConfig")
+		setupLog.Error(err, "unable to create controller", "controller", "MetricsConfig")
 		os.Exit(1)
 	}
 

@@ -1,8 +1,8 @@
 # costmanagement-metrics-operator
 
-[![License: Apache-2.0](https://img.shields.io/github/license/project-costmanagement/costmanagement.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Docker Repository on Quay](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-costmanagement/costmanagement-metrics-operator)
-[![Unit Tests](https://github.com/project-costmanagement/costmanagement-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-costmanagement/costmanagement-metrics-operator/actions?query=branch%3Amain+workflow%3A%22Unit+Tests%22)
+[![License: Apache-2.0](https://img.shields.io/github/license/project-koku/koku-metrics-operator.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Docker Repository on Quay](https://quay.io/repository/project-koku/koku-metrics-operator/status "Docker Repository on Quay")](https://quay.io/repository/project-koku/koku-metrics-operator)
+[![Unit Tests](https://github.com/project-koku/koku-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-koku/koku-metrics-operator/actions?query=branch%3Amain+workflow%3A%22Unit+Tests%22)
 
 ## About
 
@@ -39,7 +39,7 @@ This project was generated using Operator SDK. For a more in depth understanding
 This project requires Go 1.13 or greater if you plan on running the operator locally. To get started developing against `costmanagement-metrics-operator` first clone a local copy of the git repository.
 
 ```
-git clone https://github.com/project-costmanagement/costmanagement-metrics-operator.git
+git clone https://github.com/project-koku/koku-metrics-operator.git
 ```
 
 Run the following command to prevent changes to `config/manager/kustomization.yaml` from being committed to the repo:

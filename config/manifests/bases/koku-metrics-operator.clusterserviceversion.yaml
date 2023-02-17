@@ -14,7 +14,7 @@ metadata:
     operators.openshift.io/infrastructure-features: '["Disconnected"]'
     operators.operatorframework.io/builder: operator-sdk-v0.19.4
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-    repository: https://github.com/project-costmanagement/costmanagement-metrics-operator
+    repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Management
   name: costmanagement-metrics-operator.vX.Y.Z
   namespace: placeholder

@@ -22,20 +22,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg            *costmanagementmetricscfgv1beta1.CostManagementMetricsConfig
+	CR               *metricscfgv1beta1.MetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
-	Log              logr.Logger
 	manifest         manifestInfo
 	uid              string
 	createdTimestamp string
@@ -66,20 +65,22 @@ var ErrNoReports = errors.New("reports not found")
 // Set boolean on whether community or certified
 var isCertified bool = true
 
+var log = logr.Log.WithName("packaging")
+
 // Manifest interface
 type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string                                                            `json:"uuid"`
-	ClusterID string                                                            `json:"cluster_id"`
-	Version   string                                                            `json:"version"`
-	Date      time.Time                                                         `json:"date"`
-	Files     []string                                                          `json:"files"`
-	Start     time.Time                                                         `json:"start"`
-	End       time.Time                                                         `json:"end"`
-	CRStatus  costmanagementmetricscfgv1beta1.CostManagementMetricsConfigStatus `json:"cr_status"`
-	Certified bool                                                              `json:"certified"`
+	UUID      string                                `json:"uuid"`
+	ClusterID string                                `json:"cluster_id"`
+	Version   string                                `json:"version"`
+	Date      time.Time                             `json:"date"`
+	Files     []string                              `json:"files"`
+	Start     time.Time                             `json:"start"`
+	End       time.Time                             `json:"end"`
+	CRStatus  metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
+	Certified bool                                  `json:"certified"`
 }
 
 type FileInfoManifest manifest
@@ -113,7 +114,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return csvList
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc costmanagementmetricscfgv1beta1.CostManagementMetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, cr metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var manifestFiles []string
@@ -124,21 +125,21 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string,
 	p.manifest = manifestInfo{
 		manifest: manifest{
 			UUID:      p.uid,
-			ClusterID: p.KMCfg.Status.ClusterID,
-			Version:   p.KMCfg.Status.OperatorCommit,
+			ClusterID: p.CR.Status.ClusterID,
+			Version:   p.CR.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
 			Files:     manifestFiles,
 			Start:     p.start.UTC(),
 			End:       p.end.UTC(),
 			Certified: isCertified,
-			CRStatus:  kmc.Status,
+			CRStatus:  cr.Status,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
 }
 
 func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "addFileToTarWriter")
+	log := log.WithName("addFileToTarWriter")
 	log.Info("adding file to tar.gz", "file", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -202,7 +203,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 // writePart writes a portion of a split file into a new file
 func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "writePart")
+	log := log.WithName("writePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
 	splitFileName := fileNamePart + strconv.FormatInt(num, 10) + ".csv"
@@ -288,7 +289,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 
 // splitFiles breaks larger files into smaller ones
 func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "splitFiles")
+	log := log.WithName("splitFiles")
 	if !p.needSplit(fileList) {
 		log.Info("files do not require splitting")
 		return fileList, false, nil
@@ -348,7 +349,7 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 
 // moveFiles moves files from reportsDirectory to stagingDirectory
 func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "moveFiles")
+	log := log.WithName("moveFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
@@ -361,7 +362,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 	}
 
 	// remove all files from staging directory
-	if p.KMCfg.Status.Packaging.PackagingError == "" {
+	if p.CR.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
@@ -389,7 +390,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 }
 
 func (p *FilePackager) TrimPackages() error {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "trimPackages")
+	log := log.WithName("trimPackages")
 
 	packages, err := p.DirCfg.Upload.GetFiles()
 	if err != nil {
@@ -405,9 +406,9 @@ func (p *FilePackager) TrimPackages() error {
 
 	reportCount := int64(datetimesSet.Len())
 
-	if reportCount <= p.KMCfg.Spec.Packaging.MaxReports {
+	if reportCount <= p.CR.Spec.Packaging.MaxReports {
 		log.Info("number of stored reports within limit")
-		p.KMCfg.Status.Packaging.ReportCount = &reportCount
+		p.CR.Status.Packaging.ReportCount = &reportCount
 		return nil
 	}
 
@@ -419,7 +420,7 @@ func (p *FilePackager) TrimPackages() error {
 	}
 
 	sort.Strings(datetimes)
-	ind := len(datetimes) - int(p.KMCfg.Spec.Packaging.MaxReports)
+	ind := len(datetimes) - int(p.CR.Spec.Packaging.MaxReports)
 	filesToExclude := datetimes[0:ind]
 
 	for _, pre := range filesToExclude {
@@ -434,19 +435,19 @@ func (p *FilePackager) TrimPackages() error {
 		}
 	}
 
-	p.KMCfg.Status.Packaging.ReportCount = &p.KMCfg.Spec.Packaging.MaxReports
+	p.CR.Status.Packaging.ReportCount = &p.CR.Spec.Packaging.MaxReports
 	return nil
 }
 
 // PackageReports is responsible for packing report files for upload
 func (p *FilePackager) PackageReports() error {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "PackageReports")
-	p.maxBytes = *p.KMCfg.Status.Packaging.MaxSize * megaByte
+	log := log.WithName("PackageReports")
+	p.maxBytes = *p.CR.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
 	p.createdTimestamp = time.Now().Format(timestampFormat)
 
 	// create reports/staging/upload directories if they do not exist
-	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
+	if err := dirconfig.CheckExistsOrRecreate(p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
 		return fmt.Errorf("PackageReports: could not check directory: %v", err)
 	}
 
@@ -474,7 +475,7 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.KMCfg)
+	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.CR)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -505,12 +506,12 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("file packaging was successful")
-	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
+	p.CR.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
 
 func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
-	log := p.Log.WithValues("costmanagementmetricsconfig", "getFileInfo")
+	log := log.WithName("getFileInfo")
 	fileInfo := FileInfoManifest{}
 	openFile, err := os.Open(file)
 	if err != nil {

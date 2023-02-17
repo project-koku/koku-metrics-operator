@@ -27,16 +27,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -49,10 +48,13 @@ var (
 	k8sClient          client.Client
 	k8sManager         ctrl.Manager
 	testEnv            *envtest.Environment
+	ctx                context.Context
+	cancel             context.CancelFunc
 	useCluster         bool
+	secretsPath        = ""
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "costmanagement-metrics-operator",
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -75,13 +77,13 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "costmanagement-metrics-operator-reports",
-									MountPath: "/tmp/costmanagement-metrics-operator-reports",
+									Name:      volumeName,
+									MountPath: testingDir,
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "costmanagement-metrics-operator-reports",
+						Name: volumeName,
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
@@ -90,7 +92,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "costmanagement-metrics-operator",
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -113,15 +115,15 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "costmanagement-metrics-operator-reports",
-									MountPath: "/tmp/costmanagement-metrics-operator-reports",
+									Name:      volumeName,
+									MountPath: testingDir,
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "costmanagement-metrics-operator-reports",
+						Name: volumeName,
 						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "costmanagement-metrics-operator-data"}}}},
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeClaimName}}}},
 				},
 			},
 		},
@@ -136,12 +138,10 @@ func int32Ptr(i int32) *int32 { return &i }
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func() {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "ingress") {
 			w.WriteHeader(http.StatusAccepted)
@@ -155,8 +155,8 @@ var _ = BeforeSuite(func(done Done) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	ctx := context.Background()
+	logf.SetLogger(testutils.ZapLogger(true))
+	ctx, cancel = context.WithCancel(context.Background())
 
 	// Default to run locally
 	var useClusterEnv string
@@ -165,6 +165,7 @@ var _ = BeforeSuite(func(done Done) {
 	useCluster = false
 	if useClusterEnv, ok = os.LookupEnv("USE_CLUSTER"); ok {
 		useCluster, err = strconv.ParseBool(useClusterEnv)
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	By("bootstrapping test environment")
@@ -179,7 +180,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = costmanagementmetricscfgv1beta1.AddToScheme(scheme.Scheme)
+	err = metricscfgv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = configv1.AddToScheme(scheme.Scheme)
@@ -203,18 +204,19 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&CostManagementMetricsConfigReconciler{
-			Client:    k8sManager.GetClient(),
-			Log:       ctrl.Log.WithName("controllers").WithName("CostManagementMetricsConfigReconciler"),
-			Scheme:    scheme.Scheme,
-			Clientset: clientset,
-			InCluster: true,
+		err = (&MetricsConfigReconciler{
+			Client:                        k8sManager.GetClient(),
+			Scheme:                        scheme.Scheme,
+			Clientset:                     clientset,
+			InCluster:                     true,
+			disablePreviousDataCollection: true,
+			overrideSecretPath:            true,
 		}).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
 	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred())
 	}()
 
@@ -224,7 +226,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	clusterPrep(ctx)
 
-	close(done)
 }, 60)
 
 func createNamespace(ctx context.Context, namespace string) {
@@ -375,13 +376,25 @@ func clusterPrep(ctx context.Context) {
 
 		// Create cluster version
 		createClusterVersion(ctx, clusterID, channel)
+
+		cwd, err := os.Getwd()
+		Expect(err).ToNot(HaveOccurred())
+		err = os.Setenv("SECRET_ABSPATH", filepath.Join(cwd, secretsPath))
+		Expect(err).ToNot(HaveOccurred())
+
+		testutils.CreateCertificate(secretsPath, "service-ca.crt")
+		testutils.CreateToken(secretsPath, "token")
 	}
 }
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
+
+	os.Remove(filepath.Join(secretsPath, "token"))
+	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
 
 	validTS.Close()
 	unauthorizedTS.Close()

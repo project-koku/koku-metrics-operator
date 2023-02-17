@@ -17,19 +17,25 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/storage"
-
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/collector"
+	"github.com/project-koku/koku-metrics-operator/storage"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	namespace                   = "costmanagement-metrics-operator"
+	metricsPrefix               = "costmanagement"
+	name                        = fmt.Sprintf("%s-metrics-operator", metricsPrefix)
+	namespace                   = fmt.Sprintf("%s-metrics-operator", metricsPrefix)
 	namePrefix                  = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                     = "4.8-stable"
@@ -39,6 +45,9 @@ var (
 	badAuthSecretName           = "baduserpass"
 	badAuthPassSecretName       = "badpass"
 	badAuthUserSecretName       = "baduser"
+	testingDir                  = fmt.Sprintf("/tmp/%s-metrics-operator-reports/", metricsPrefix)
+	volumeName                  = fmt.Sprintf("%s-metrics-operator-reports", metricsPrefix)
+	volumeClaimName             = fmt.Sprintf("%s-metrics-operator-data", metricsPrefix)
 	falseValue            bool  = false
 	trueValue             bool  = true
 	defaultContextTimeout int64 = 120
@@ -48,60 +57,61 @@ var (
 	defaultUploadWait     int64 = 0
 	defaultMaxReports     int64 = 1
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
-	instance                    = costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{
+	instance                    = metricscfgv1beta1.MetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 		},
-		Spec: costmanagementmetricscfgv1beta1.CostManagementMetricsConfigSpec{
-			Authentication: costmanagementmetricscfgv1beta1.AuthenticationSpec{
-				AuthType: costmanagementmetricscfgv1beta1.Token,
+		Spec: metricscfgv1beta1.MetricsConfigSpec{
+			Authentication: metricscfgv1beta1.AuthenticationSpec{
+				AuthType: metricscfgv1beta1.Token,
 			},
-			Packaging: costmanagementmetricscfgv1beta1.PackagingSpec{
+			Packaging: metricscfgv1beta1.PackagingSpec{
 				MaxSize:    100,
 				MaxReports: defaultMaxReports,
 			},
-			Upload: costmanagementmetricscfgv1beta1.UploadSpec{
+			Upload: metricscfgv1beta1.UploadSpec{
 				UploadCycle:    &defaultUploadCycle,
 				UploadToggle:   &trueValue,
 				IngressAPIPath: "/api/ingress/v1/upload",
 				ValidateCert:   &trueValue,
 			},
-			Source: costmanagementmetricscfgv1beta1.CloudDotRedHatSourceSpec{
+			Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
 				CreateSource:   &falseValue,
 				SourcesAPIPath: "/api/sources/v1.0/",
 				CheckCycle:     &defaultCheckCycle,
 			},
-			PrometheusConfig: costmanagementmetricscfgv1beta1.PrometheusSpec{
+			PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+				ContextTimeout:      &defaultContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 			},
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
-	airGappedInstance = costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{
+	airGappedInstance = metricscfgv1beta1.MetricsConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 		},
-		Spec: costmanagementmetricscfgv1beta1.CostManagementMetricsConfigSpec{
-			Authentication: costmanagementmetricscfgv1beta1.AuthenticationSpec{
-				AuthType: costmanagementmetricscfgv1beta1.Token,
+		Spec: metricscfgv1beta1.MetricsConfigSpec{
+			Authentication: metricscfgv1beta1.AuthenticationSpec{
+				AuthType: metricscfgv1beta1.Token,
 			},
-			Packaging: costmanagementmetricscfgv1beta1.PackagingSpec{
+			Packaging: metricscfgv1beta1.PackagingSpec{
 				MaxSize:    100,
 				MaxReports: defaultMaxReports,
 			},
-			Upload: costmanagementmetricscfgv1beta1.UploadSpec{
+			Upload: metricscfgv1beta1.UploadSpec{
 				UploadCycle:    &defaultUploadCycle,
 				UploadToggle:   &falseValue,
 				IngressAPIPath: "/api/ingress/v1/upload",
 				ValidateCert:   &trueValue,
 			},
-			Source: costmanagementmetricscfgv1beta1.CloudDotRedHatSourceSpec{
+			Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
 				CreateSource:   &falseValue,
 				SourcesAPIPath: "/api/sources/v1.0/",
 				CheckCycle:     &defaultCheckCycle,
 			},
-			PrometheusConfig: costmanagementmetricscfgv1beta1.PrometheusSpec{
+			PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
 				ContextTimeout:      &diffContextTimeout,
 				SkipTLSVerification: &trueValue,
 				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
@@ -109,12 +119,12 @@ var (
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
-	differentPVC = &costmanagementmetricscfgv1beta1.EmbeddedPersistentVolumeClaim{
+	differentPVC = &metricscfgv1beta1.EmbeddedPersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "PersistentVolumeClaim",
 		},
-		EmbeddedObjectMetadata: costmanagementmetricscfgv1beta1.EmbeddedObjectMetadata{
+		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
 			Name: "a-different-pvc",
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -127,6 +137,22 @@ var (
 		},
 	}
 )
+
+func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
+func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
+	promcoll.PromConn = mockPrometheusConnection{}
+	return nil
+}
+
+type mockPrometheusConnection struct{}
+
+func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
+
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
@@ -155,6 +181,12 @@ func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	}
 
 	return info, out.Close()
+}
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestGetClientset(t *testing.T) {
@@ -254,7 +286,6 @@ func setup() error {
 		},
 	}
 	// setup the initial testing directory
-	testingDir := "/tmp/costmanagement-metrics-operator-reports/"
 	if _, err := os.Stat(testingDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(testingDir, os.ModePerm); err != nil {
 			return fmt.Errorf("could not create %s directory: %v", testingDir, err)
@@ -279,10 +310,10 @@ func setup() error {
 
 func shutdown() {
 	previousValidation = nil
-	os.RemoveAll("/tmp/costmanagement-metrics-operator-reports/")
+	os.RemoveAll(testingDir)
 }
 
-var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() {
+var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
@@ -291,6 +322,8 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 
 	GitCommit = "1234567"
+	promConnTester = MockPromConnTester
+	promConnSetter = MockPromConnSetter
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
@@ -324,7 +357,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
-					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "costmanagement-metrics-operator-data"
+					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == volumeClaimName
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
@@ -335,7 +368,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.ObjectMeta.Name = namePrefix + "no-pvc-spec-2"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the deployment vol has changed
 			Eventually(func() bool {
@@ -363,7 +396,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
-				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != "costmanagement-metrics-operator-data"
+				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != volumeClaimName
 			}, timeout, interval).Should(BeTrue())
 
 			deleteDeployment(ctx, emptyDep1)
@@ -394,7 +427,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the deployment vol has changed
 			Eventually(func() bool {
@@ -419,11 +452,11 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy := airGappedInstance.DeepCopy()
 			instCopy.Spec.APIURL = unauthorizedTS.URL
 			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-basic"
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -431,7 +464,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
 
@@ -453,7 +486,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.ObjectMeta.Name = namePrefix + "default-cr-air-gapped-token"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -461,7 +494,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 
 			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
@@ -486,15 +519,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
 			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
@@ -515,7 +548,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -523,7 +556,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
@@ -536,19 +569,19 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood"
 			instCopy.Spec.APIURL = validTS.URL
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
@@ -562,19 +595,19 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "basicauthgood-unauthorized"
 			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
@@ -589,19 +622,19 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "mixed-case"
 			instCopy.Spec.APIURL = validTS.URL
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authMixedCaseName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authMixedCaseName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
@@ -615,19 +648,19 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			badAuth := "bad-auth"
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "basicauthbad"
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuth
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
@@ -645,15 +678,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Source.SourceName = sourceName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
@@ -671,15 +704,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Source.CreateSource = &trueValue
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
@@ -692,20 +725,20 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 		It("should fail due to bad basic auth secret", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "badauthsecret"
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
@@ -719,20 +752,20 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 		It("should fail due to missing pass in auth secret", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "badpass"
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthPassSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthPassSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
@@ -746,20 +779,20 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 		It("should fail due to missing user in auth secret", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "baduser"
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthUserSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthUserSecretName))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
@@ -773,19 +806,19 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 		It("should fail due to missing auth secret name with basic set", func() {
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "missingname"
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(""))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
@@ -803,15 +836,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
@@ -828,15 +861,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
@@ -850,11 +883,11 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "missingcvfailure"
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// check the CR was created ok
 			Eventually(func() bool {
@@ -878,15 +911,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
@@ -906,15 +939,15 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
@@ -942,20 +975,20 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = namePrefix + "attemptupload-unauthorized"
 			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.Spec.Authentication.AuthType = costmanagementmetricscfgv1beta1.Basic
+			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.Basic))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
@@ -974,7 +1007,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+			fetched := &metricscfgv1beta1.MetricsConfig{}
 
 			// wait until the cluster ID is set
 			Eventually(func() bool {
@@ -988,7 +1021,7 @@ var _ = Describe("CostManagementMetricsConfigController - CRD Handling", func() 
 				return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
 			}, timeout, interval).ShouldNot(BeTrue())
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(costmanagementmetricscfgv1beta1.DefaultAuthenticationType))
+			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))

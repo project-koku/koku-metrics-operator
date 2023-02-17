@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
+	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
 var (

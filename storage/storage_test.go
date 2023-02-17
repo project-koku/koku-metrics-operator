@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -15,14 +16,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	costmanagementMetricsCfgNamespace = "costmanagement-metrics-operator"
-	emptyDir                          = &corev1.Volume{
-		Name:         "costmanagement-metrics-operator-reports",
+	metricsCfgNamespace = "costmanagement-metrics-operator"
+	emptyDir            = &corev1.Volume{
+		Name:         volumeName,
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
 	emptyDirWrong = &corev1.Volume{
@@ -30,27 +34,27 @@ var (
 		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
 	persistVC = &corev1.Volume{
-		Name: "costmanagement-metrics-operator-reports",
+		Name: volumeName,
 		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "costmanagement-metrics-operator-data"}}}
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeClaimName}}}
 	persistVCfake = &corev1.Volume{
-		Name: "costmanagement-metrics-operator-reports",
+		Name: volumeName,
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "not-the-right-one"}}}
 	volMount = &corev1.VolumeMount{
-		Name:      "costmanagement-metrics-operator-reports",
-		MountPath: "/tmp/costmanagement-metrics-operator-reports",
+		Name:      volumeName,
+		MountPath: dirconfig.ParentDir,
 	}
 	volMountWrong = &corev1.VolumeMount{
 		Name:      "wrong-mount",
-		MountPath: "/tmp/costmanagement-metrics-operator-reports",
+		MountPath: dirconfig.ParentDir,
 	}
 	// For the following deployments, the only things of importance are the ObjectMeta, Volumes, VolumeMounts.
 	// All the other definitions are boilerplate so that the deployment will be created successfully.
 	deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "costmanagement-metrics-operator",
-			Namespace: costmanagementMetricsCfgNamespace,
+			Name:      deploymentName,
+			Namespace: metricsCfgNamespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -80,8 +84,8 @@ var (
 	}
 	deploymentNoVolume = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "costmanagement-metrics-operator",
-			Namespace: costmanagementMetricsCfgNamespace,
+			Name:      deploymentName,
+			Namespace: metricsCfgNamespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -110,7 +114,7 @@ var (
 	csv = &operatorsv1alpha1.ClusterServiceVersion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-csv",
-			Namespace: costmanagementMetricsCfgNamespace,
+			Namespace: metricsCfgNamespace,
 		},
 		Spec: operatorsv1alpha1.ClusterServiceVersionSpec{
 			DisplayName: "test-csv",
@@ -136,6 +140,12 @@ var (
 )
 
 func int32Ptr(i int32) *int32 { return &i }
+
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestIsMounted(t *testing.T) {
 	isMountedTests := []struct {
@@ -166,7 +176,7 @@ func TestIsMounted(t *testing.T) {
 
 func TestMakeEmbeddedPVC(t *testing.T) {
 	t.Run("embedded PVC does not contain annotations", func(t *testing.T) {
-		pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+		pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 		got := MakeEmbeddedPVC(pvc)
 		if got.Labels != nil {
 			t.Errorf("embedded PVC should not have labels. got: %v", got.Labels)
@@ -181,9 +191,9 @@ var _ = Describe("Storage Tests", func() {
 
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
-		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(costmanagementMetricsCfgNamespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(costmanagementMetricsCfgNamespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(costmanagementMetricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(metricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(metricsCfgNamespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &operatorsv1alpha1.ClusterServiceVersion{}, client.InNamespace(metricsCfgNamespace))).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -199,13 +209,12 @@ var _ = Describe("Storage Tests", func() {
 				depCp.OwnerReferences = []metav1.OwnerReference{owner}
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 
@@ -221,13 +230,12 @@ var _ = Describe("Storage Tests", func() {
 				depCp.OwnerReferences = []metav1.OwnerReference{owner}
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 
@@ -241,12 +249,11 @@ var _ = Describe("Storage Tests", func() {
 	Context("Deployment not owned by CSV", func() {
 		Describe("deployment does not exist", func() {
 			It("cannot find the deployment", func() {
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client: k8sClient,
-					KMCfg:  kmCfg,
-					Log:    testLogger,
+					CR:     cr,
 					PVC:    pvc,
 				}
 
@@ -259,13 +266,12 @@ var _ = Describe("Storage Tests", func() {
 			It("successfully establishes the mount", func() {
 				depCp := deployment.DeepCopy()
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 
@@ -280,13 +286,12 @@ var _ = Describe("Storage Tests", func() {
 				depCp.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{*volMountWrong}
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 
@@ -299,13 +304,12 @@ var _ = Describe("Storage Tests", func() {
 				depCp := deploymentNoVolume.DeepCopy()
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 
@@ -318,13 +322,12 @@ var _ = Describe("Storage Tests", func() {
 				depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVC}
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 
@@ -333,20 +336,19 @@ var _ = Describe("Storage Tests", func() {
 				Expect(mountEst).To(BeFalse())
 			})
 			It("volume is already mounted but does not match spec", func() {
-				pvcCp := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				pvcCp := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				pvcCp.Name = "not-the-right-one"
 				Expect(k8sClient.Create(ctx, pvcCp)).Should(Succeed())
 				depCp := deployment.DeepCopy()
 				depCp.Spec.Template.Spec.Volumes = []corev1.Volume{*persistVCfake}
 				Expect(k8sClient.Create(ctx, depCp)).Should(Succeed())
 
-				kmCfg := &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
-				pvc := MakeVolumeClaimTemplate(DefaultPVC, costmanagementMetricsCfgNamespace)
+				cr := &metricscfgv1beta1.MetricsConfig{}
+				pvc := MakeVolumeClaimTemplate(DefaultPVC, metricsCfgNamespace)
 				s := &Storage{
 					Client:    k8sClient,
-					KMCfg:     kmCfg,
-					Log:       testLogger,
-					Namespace: costmanagementMetricsCfgNamespace,
+					CR:        cr,
+					Namespace: metricsCfgNamespace,
 					PVC:       pvc,
 				}
 

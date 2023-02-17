@@ -16,14 +16,13 @@ import (
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	costmanagementmetricscfgv1beta1 "github.com/project-costmanagement/costmanagement-metrics-operator/api/v1beta1"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/dirconfig"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/strset"
-	"github.com/project-costmanagement/costmanagement-metrics-operator/testutils"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/strset"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 )
-
-var testLogger = testutils.TestLogger{}
 
 const epsilon = 0.00001
 
@@ -62,7 +61,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeKMCfg  = &costmanagementmetricscfgv1beta1.CostManagementMetricsConfig{}
+	fakeCR     = &metricscfgv1beta1.MetricsConfig{}
 	fakeDirCfg = &dirconfig.DirectoryConfig{
 		Parent:  dirconfig.Directory{Path: "."},
 		Reports: dirconfig.Directory{Path: "./test_files/test_reports"},
@@ -124,6 +123,12 @@ func compareFiles(expected, generated *os.File) error {
 	return nil
 }
 
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
@@ -135,15 +140,14 @@ func TestGenerateReports(t *testing.T) {
 		}
 	}
 
-	fakeCollector := &PromCollector{
+	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        testLogger,
 	}
-	if err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector); err != nil {
+	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
 
@@ -173,13 +177,12 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsQueryErrors(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	fakeCollector := &PromCollector{
+	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        testLogger,
 	}
 
 	queryList := []*querys{nodeQueries, podQueries, volQueries}
@@ -194,7 +197,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *namespaceQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(namespaceError)}
 	}
-	err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
+	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), namespaceError) {
 		t.Errorf("GenerateReports %s was expected, got %v", namespaceError, err)
 	}
@@ -202,7 +205,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *volQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(storageError)}
 	}
-	err = GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), storageError) {
 		t.Errorf("GenerateReports %s was expected, got %v", storageError, err)
 	}
@@ -210,7 +213,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *podQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(podError)}
 	}
-	err = GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), podError) {
 		t.Errorf("GenerateReports %s was expected, got %v", podError, err)
 	}
@@ -218,7 +221,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	for _, q := range *nodeQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(nodeError)}
 	}
-	err = GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector)
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), nodeError) {
 		t.Errorf("GenerateReports %s was expected, got %v", nodeError, err)
 	}
@@ -237,20 +240,19 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 		}
 	}
 
-	fakeCollector := &PromCollector{
+	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
 		TimeSeries: &fakeTimeRange,
-		Log:        testLogger,
 	}
-	if err := GenerateReports(fakeKMCfg, fakeDirCfg, fakeCollector); err != nil {
+	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
 	wanted := "No data to report for the hour queried."
-	if fakeKMCfg.Status.Reports.DataCollectionMessage != wanted {
-		t.Errorf("Status not updated correctly: got %s want %s", fakeKMCfg.Status.Reports.DataCollectionMessage, wanted)
+	if fakeCR.Status.Reports.DataCollectionMessage != wanted {
+		t.Errorf("Status not updated correctly: got %s want %s", fakeCR.Status.Reports.DataCollectionMessage, wanted)
 	}
 	filelist, err := ioutil.ReadDir(filepath.Join("test_files", "test_reports"))
 	if err != nil {
