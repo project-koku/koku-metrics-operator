@@ -61,7 +61,7 @@ func Load(path string, v interface{}, t *testing.T) {
 }
 
 var (
-	fakeCR = &metricscfgv1beta1.MetricsConfig{Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+	fakeCR = &metricscfgv1beta1.MetricsConfig{Spec: metricscfgv1beta1.MetricsConfigSpec{
 		PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
 			DisableMetricsCollectionCostManagement:       &falseDef,
 			DisableMetricsCollectionResourceOptimization: &falseDef,
