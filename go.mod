@@ -10,8 +10,8 @@ require (
 	github.com/onsi/gomega v1.26.0
 	github.com/openshift/api v0.0.0-20200117162508-e7ccdda6ba67
 	github.com/operator-framework/api v0.17.3
-	github.com/prometheus/client_golang v1.14.0
-	github.com/prometheus/common v0.40.0
+	github.com/prometheus/client_golang v1.12.2
+	github.com/prometheus/common v0.37.1
 	go.uber.org/zap v1.21.0
 	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4
@@ -28,7 +28,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
+	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
