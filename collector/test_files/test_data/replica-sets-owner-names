@@ -1,0 +1,233 @@
+[
+	{
+		"metric": {
+			"container": "python-sample",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "python-sample-675d6c79f5",
+			"pod": "python-sample-675d6c79f5-w65pz",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "e6fda588-9768-4647-afd7-22f37fa793dc",
+			"workload": "python-sample",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "python-sample",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "python-sample-675d6c79f5",
+			"pod": "python-sample-675d6c79f5-97sr8",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "a750328e-00c6-483e-b550-be0287c3cc78",
+			"workload": "python-sample",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-9",
+			"pod": "eap-app-9-hvcsb",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "1d2dff87-0685-46a3-99bd-dd59cdc2a05f",
+			"workload": "eap-app",
+			"workload_type": "deploymentconfig"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-9",
+			"pod": "eap-app-9-z5pgs",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "33f5f624-f4da-4086-8030-b6e49b9f2ba8",
+			"workload": "eap-app",
+			"workload_type": "deploymentconfig"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "manager",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "costmanagement-metrics-operator",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "costmanagement-metrics-operator-6757c56ccf",
+			"pod": "costmanagement-metrics-operator-6757c56ccf-qclzk",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "8b716e04-b524-44ba-aba9-88404f309462",
+			"workload": "costmanagement-metrics-operator",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "nginx-sample",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "nginx-sample-576c785f4",
+			"pod": "nginx-sample-576c785f4-62h4n",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "bdcfe66f-8406-41c4-9bc3-e1aa335e279e",
+			"workload": "nginx-sample",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "nginx-sample",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "nginx-sample-576c785f4",
+			"pod": "nginx-sample-576c785f4-cmzqz",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "e2f9cb45-e259-4f8a-98e0-e4b02d3ee7b8",
+			"workload": "nginx-sample",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-6",
+			"pod": "eap-app-6-mq5gt",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "51bd7f41-3e14-4a6b-b6a9-2f3e38220b48",
+			"workload": "eap-app",
+			"workload_type": "deploymentconfig"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-6",
+			"pod": "eap-app-6-7zxbk",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "d7a0bc48-a2b4-4677-a0e6-c9763bda002d",
+			"workload": "eap-app",
+			"workload_type": "deploymentconfig"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "manager",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "koku-metrics-operator",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "koku-metrics-operator-86685d87c7",
+			"pod": "koku-metrics-operator-86685d87c7-gr588",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "81dd0c63-9883-4d65-b7c7-618efdfc8528",
+			"workload": "koku-metrics-operator",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "rhsso-operator",
+			"endpoint": "https-main",
+			"job": "kube-state-metrics",
+			"namespace": "sso",
+			"owner_is_controller": "true",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "rhsso-operator-5fbc4bb59b",
+			"pod": "rhsso-operator-5fbc4bb59b-qhsl7",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "72173b25-e35f-413a-bef9-d51fbd42220f",
+			"workload": "rhsso-operator",
+			"workload_type": "deployment"
+		},
+		"value": [
+			1676923200,
+			"1"
+		]
+	}
+]
