@@ -257,7 +257,10 @@ type resourceOptimizationRow struct {
 	ContainerName              string `mapstructure:"container_name"`
 	ImageName                  string `mapstructure:"image_name"`
 	Pod                        string `mapstructure:"pod"`
-	DeploymentName             string `mapstructure:"deployment_name"`
+	OwnerName                  string `mapstructure:"owner_name"`
+	OwnerKind                  string `mapstructure:"owner_kind"`
+	Workload                   string `mapstructure:"workload"`
+	WorkloadType               string `mapstructure:"workload_type"`
 	Namespace                  string `mapstructure:"namespace"`
 	CPURequestContainerAvg     string `mapstructure:"cpu-request-container-avg"`
 	CPURequestContainerSum     string `mapstructure:"cpu-request-container-sum"`
@@ -293,7 +296,10 @@ func (resourceOptimizationRow) csvHeader() []string {
 		"container_name",
 		"image_name",
 		"pod",
-		"deployment_name",
+		"owner_name",
+		"owner_kind",
+		"workload",
+		"workload_type",
 		"namespace",
 		"node",
 		"resource_id",
@@ -332,7 +338,10 @@ func (row resourceOptimizationRow) csvRow() []string {
 		row.ContainerName,
 		row.ImageName,
 		row.Pod,
-		row.DeploymentName,
+		row.OwnerName,
+		row.OwnerKind,
+		row.Workload,
+		row.WorkloadType,
 		row.Namespace,
 		row.Node,
 		row.ResourceID,

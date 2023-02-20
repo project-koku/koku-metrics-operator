@@ -27,6 +27,7 @@ var (
 		"cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
 
 		"ros:image_names":                    "kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}",
+		"ros:owners":                         "(kube_pod_owner{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'} * on(pod) group_left(container) max by (container, pod) (kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'})) * on(pod) group_left(workload, workload_type) max by(pod, workload, workload_type) (namespace_workload_pod:kube_pod_owner:relabel{pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'})",
 		"ros:deployment_names":               "label_replace(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}, 'replicaset', '$1', 'pod', '(.*)-.{5}') * on(replicaset) group_left(owner_name) kube_replicaset_owner",
 		"ros:cpu_request_container_avg":      "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"ros:cpu_request_container_sum":      "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
@@ -255,9 +256,9 @@ var (
 			RowKey:      []model.LabelName{"container", "pod", "namespace"},
 		},
 		query{
-			Name:        "replica-sets-deployment-name",
-			QueryString: QueryMap["ros:deployment_names"],
-			MetricKey:   staticFields{"deployment_name": "owner_name", "container_name": "container", "pod": "pod", "namespace": "namespace"},
+			Name:        "replica-sets-owner-names",
+			QueryString: QueryMap["ros:owners"],
+			MetricKey:   staticFields{"owner_name": "owner_name", "owner_kind": "owner_kind", "workload": "workload", "workload_type": "workload_type", "container_name": "container", "pod": "pod", "namespace": "namespace"},
 			RowKey:      []model.LabelName{"container", "pod", "namespace"},
 		},
 		query{
