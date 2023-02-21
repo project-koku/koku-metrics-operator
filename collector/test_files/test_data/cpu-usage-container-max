@@ -3,12 +3,12 @@
 		"metric": {
 			"container": "eap-app",
 			"namespace": "america",
-			"node": "ip-10-0-146-115.us-east-2.compute.internal",
-			"pod": "eap-app-9-z5pgs"
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "eap-app-9-pfc5g"
 		},
 		"value": [
-			1676566800,
-			"0.08221742310000385"
+			1677009600,
+			"0.06643092790000082"
 		]
 	},
 	{
@@ -16,23 +16,35 @@
 			"container": "eap-app",
 			"namespace": "america",
 			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "eap-app-9-hvcsb"
+			"pod": "example-sxk9d"
 		},
 		"value": [
-			1676566800,
-			"0.06743996253333838"
+			1677009600,
+			"0.064418928699979"
 		]
 	},
 	{
 		"metric": {
 			"container": "eap-app",
-			"namespace": "europe",
+			"namespace": "america",
 			"node": "ip-10-0-146-115.us-east-2.compute.internal",
-			"pod": "eap-app-6-mq5gt"
+			"pod": "eap-app-9-4q2wz"
 		},
 		"value": [
-			1676566800,
-			"0.08137868130000546"
+			1677009600,
+			"0.06329250623333185"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "america",
+			"node": "ip-10-0-184-152.us-east-2.compute.internal",
+			"pod": "example-htgbh"
+		},
+		"value": [
+			1677009600,
+			"0.07866565240001364"
 		]
 	},
 	{
@@ -40,47 +52,47 @@
 			"container": "eap-app",
 			"namespace": "europe",
 			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "eap-app-6-7zxbk"
+			"pod": "eap-app-6-tvg28"
 		},
 		"value": [
-			1676566800,
-			"0.06435149920027605"
+			1677009600,
+			"0.08159114376664243"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "europe",
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "eap-app-6-g8p6p"
+		},
+		"value": [
+			1677009600,
+			"0.0796810680818466"
 		]
 	},
 	{
 		"metric": {
 			"container": "manager",
 			"namespace": "costmanagement-metrics-operator",
-			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "costmanagement-metrics-operator-6757c56ccf-qclzk"
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "costmanagement-metrics-operator-6757c56ccf-5mw2r"
 		},
 		"value": [
-			1676566800,
-			"0.0020696320333333535"
+			1677009600,
+			"0.002325333822352122"
 		]
 	},
 	{
 		"metric": {
 			"container": "manager",
 			"namespace": "koku-metrics-operator",
-			"node": "ip-10-0-146-115.us-east-2.compute.internal",
-			"pod": "koku-metrics-operator-86685d87c7-gr588"
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "koku-metrics-operator-86685d87c7-drthj"
 		},
 		"value": [
-			1676566800,
-			"0.002024883699999691"
-		]
-	},
-	{
-		"metric": {
-			"container": "nginx-sample",
-			"namespace": "europe",
-			"node": "ip-10-0-146-115.us-east-2.compute.internal",
-			"pod": "nginx-sample-576c785f4-62h4n"
-		},
-		"value": [
-			1676566800,
-			"0"
+			1677009600,
+			"0.0019883763333335006"
 		]
 	},
 	{
@@ -88,10 +100,22 @@
 			"container": "nginx-sample",
 			"namespace": "europe",
 			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "nginx-sample-576c785f4-cmzqz"
+			"pod": "nginx-sample-576c785f4-t2fs2"
 		},
 		"value": [
-			1676566800,
+			1677009600,
+			"0"
+		]
+	},
+	{
+		"metric": {
+			"container": "nginx-sample",
+			"namespace": "europe",
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "nginx-sample-576c785f4-wjsvc"
+		},
+		"value": [
+			1677009600,
 			"0"
 		]
 	},
@@ -99,24 +123,24 @@
 		"metric": {
 			"container": "python-sample",
 			"namespace": "america",
-			"node": "ip-10-0-146-115.us-east-2.compute.internal",
-			"pod": "python-sample-675d6c79f5-97sr8"
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "python-sample-675d6c79f5-ctd95"
 		},
 		"value": [
-			1676566800,
-			"0.00022425220000007093"
+			1677009600,
+			"0.00021331570000005702"
 		]
 	},
 	{
 		"metric": {
 			"container": "python-sample",
 			"namespace": "america",
-			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "python-sample-675d6c79f5-w65pz"
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "python-sample-675d6c79f5-7jzs2"
 		},
 		"value": [
-			1676566800,
-			"0.00017538149383124785"
+			1677009600,
+			"0.0001990000666665992"
 		]
 	},
 	{
@@ -124,22 +148,22 @@
 			"container": "rhsso-operator",
 			"namespace": "sso",
 			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "rhsso-operator-5fbc4bb59b-qhsl7"
+			"pod": "rhsso-operator-5fbc4bb59b-6mvtx"
 		},
 		"value": [
-			1676566800,
-			"0.017200809176328876"
+			1677009600,
+			"0.016599286900001668"
 		]
 	},
 	{
 		"metric": {
 			"container": "volume-shell",
 			"namespace": "koku-metrics-operator-2",
-			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
 			"pod": "volume-shell"
 		},
 		"value": [
-			1676566800,
+			1677009600,
 			"0"
 		]
 	}

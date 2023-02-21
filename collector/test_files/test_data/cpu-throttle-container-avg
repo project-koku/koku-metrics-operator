@@ -2,24 +2,24 @@
 	{
 		"metric": {
 			"container": "manager",
-			"namespace": "costmanagement-metrics-operator",
+			"namespace": "koku-metrics-operator",
 			"node": "ip-10-0-150-20.us-east-2.compute.internal",
-			"pod": "costmanagement-metrics-operator-6757c56ccf-qclzk"
+			"pod": "koku-metrics-operator-86685d87c7-drthj"
 		},
 		"value": [
-			1676566800,
+			1677009600,
 			"0"
 		]
 	},
 	{
 		"metric": {
 			"container": "manager",
-			"namespace": "koku-metrics-operator",
+			"namespace": "costmanagement-metrics-operator",
 			"node": "ip-10-0-146-115.us-east-2.compute.internal",
-			"pod": "koku-metrics-operator-86685d87c7-gr588"
+			"pod": "costmanagement-metrics-operator-6757c56ccf-5mw2r"
 		},
 		"value": [
-			1676566800,
+			1677009600,
 			"0"
 		]
 	}
