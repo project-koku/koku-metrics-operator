@@ -255,10 +255,13 @@ type resourceOptimizationRow struct {
 	*dateTimes
 	nodeRow
 	ContainerName              string `mapstructure:"container_name"`
-	ImageName                  string `mapstructure:"image_name"`
 	Pod                        string `mapstructure:"pod"`
-	DeploymentName             string `mapstructure:"deployment_name"`
+	OwnerName                  string `mapstructure:"owner_name"`
+	OwnerKind                  string `mapstructure:"owner_kind"`
+	Workload                   string `mapstructure:"workload"`
+	WorkloadType               string `mapstructure:"workload_type"`
 	Namespace                  string `mapstructure:"namespace"`
+	ImageName                  string `mapstructure:"image_name"`
 	CPURequestContainerAvg     string `mapstructure:"cpu-request-container-avg"`
 	CPURequestContainerSum     string `mapstructure:"cpu-request-container-sum"`
 	CPULimitContainerAvg       string `mapstructure:"cpu-limit-container-avg"`
@@ -291,10 +294,13 @@ func (resourceOptimizationRow) csvHeader() []string {
 		"interval_start",
 		"interval_end",
 		"container_name",
-		"image_name",
 		"pod",
-		"deployment_name",
+		"owner_name",
+		"owner_kind",
+		"workload",
+		"workload_type",
 		"namespace",
+		"image_name",
 		"node",
 		"resource_id",
 		"cpu_request_container_avg",
@@ -330,10 +336,13 @@ func (row resourceOptimizationRow) csvRow() []string {
 		row.IntervalStart,
 		row.IntervalEnd,
 		row.ContainerName,
-		row.ImageName,
 		row.Pod,
-		row.DeploymentName,
+		row.OwnerName,
+		row.OwnerKind,
+		row.Workload,
+		row.WorkloadType,
 		row.Namespace,
+		row.ImageName,
 		row.Node,
 		row.ResourceID,
 		row.CPURequestContainerAvg,
