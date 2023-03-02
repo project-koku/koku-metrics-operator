@@ -17,7 +17,6 @@ import (
 	"time"
 
 	gologr "github.com/go-logr/logr"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"gopkg.in/yaml.v2"
@@ -67,7 +66,11 @@ var (
 )
 
 type PrometheusK8s struct {
-	Retention monitoringv1.Duration
+	Retention string `yaml:"retention"`
+}
+
+type MonitoringConfig struct {
+	PrometheusK8s PrometheusK8s `yaml:"prometheusK8s"`
 }
 
 // MetricsConfigReconciler reconciles a MetricsConfig object
@@ -522,7 +525,7 @@ func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr
 	return nil
 }
 
-func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) (time.Duration, error) {
+func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) time.Duration {
 	defaultDuration := time.Duration(14 * 24 * time.Hour)
 	var configMap corev1.ConfigMap
 
@@ -530,21 +533,27 @@ func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) (time.D
 	err := r.Get(ctx, monitoringMeta, &configMap)
 	if err != nil {
 		log.Info(fmt.Sprintf("monitoring configMap not found. defaulting retention to: %s", defaultDuration))
-		return defaultDuration, nil
+		return defaultDuration
 	}
 
 	data, ok := configMap.Data["config.yaml"]
 	if !ok {
-		return defaultDuration, nil
+		log.Info(fmt.Sprintf("`config.yaml` not found: using default %s", defaultDuration))
+		return defaultDuration
 	}
 
-	t := PrometheusK8s{}
-	if err := yaml.Unmarshal([]byte(data), &t); err != nil {
-		return defaultDuration, nil
+	var mc MonitoringConfig
+	if err := yaml.Unmarshal([]byte(data), &mc); err != nil {
+		log.Info(fmt.Sprintf("error unmarshalling monitoring config: %v: using default %s", err, defaultDuration))
+		return defaultDuration
 	}
-	timeDuration, err := model.ParseDuration(string(t.Retention))
-	return time.Duration(timeDuration), err
 
+	timeDuration, err := model.ParseDuration(mc.PrometheusK8s.Retention)
+	if err != nil {
+		log.Info(fmt.Sprintf("error parsing retention time: %v: using default %s", err, defaultDuration))
+		return defaultDuration
+	}
+	return time.Duration(timeDuration)
 }
 
 func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
@@ -554,12 +563,11 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
 		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
 		!r.disablePreviousDataCollection {
-		// log.Info()
 		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
 		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
-		duration, err := getRetentionPeriod(ctx, r)
-		if err != nil {
-			log.Error(err, "what is this error")
+		duration := getRetentionPeriod(ctx, r)
+		if duration > time.Duration(90*24*time.Hour) {
+			duration = time.Duration(90 * 24 * time.Hour)
 		}
 		log.Info(fmt.Sprintf("duration used: %s", duration))
 		start = start.Add(-1 * duration)
@@ -672,6 +680,9 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
+
+	r.overrideSecretPath = true
+	r.disablePreviousDataCollection = false
 
 	// fetch the MetricsConfig instance
 	crOriginal := &metricscfgv1beta1.MetricsConfig{}
