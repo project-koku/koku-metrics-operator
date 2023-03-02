@@ -10,7 +10,6 @@ require (
 	github.com/onsi/gomega v1.26.0
 	github.com/openshift/api v0.0.0-20200117162508-e7ccdda6ba67
 	github.com/operator-framework/api v0.17.3
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.62.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.37.1
 	go.uber.org/zap v1.21.0
