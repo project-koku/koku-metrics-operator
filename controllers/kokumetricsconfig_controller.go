@@ -673,9 +673,6 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
 
-	r.overrideSecretPath = true
-	r.disablePreviousDataCollection = false
-
 	// fetch the MetricsConfig instance
 	crOriginal := &metricscfgv1beta1.MetricsConfig{}
 
