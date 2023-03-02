@@ -52,6 +52,9 @@ var (
 	authSecretPasswordKey    = "password"
 	promCompareFormat        = "2006-01-02T15"
 
+	fourteenDayDuration = time.Duration(14 * 24 * time.Hour)
+	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
+
 	falseDef = false
 	trueDef  = true
 
@@ -526,7 +529,7 @@ func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr
 }
 
 func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) time.Duration {
-	defaultDuration := time.Duration(14 * 24 * time.Hour)
+	defaultDuration := fourteenDayDuration
 	var configMap corev1.ConfigMap
 
 	monitoringMeta := types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
@@ -566,8 +569,8 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
 		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
 		duration := getRetentionPeriod(ctx, r)
-		if duration > time.Duration(90*24*time.Hour) {
-			duration = time.Duration(90 * 24 * time.Hour)
+		if duration > ninetyDayDuration {
+			duration = ninetyDayDuration
 		}
 		log.Info(fmt.Sprintf("duration used: %s", duration))
 		start = start.Add(-1 * duration)
