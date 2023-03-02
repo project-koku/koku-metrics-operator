@@ -20,7 +20,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,6 +65,10 @@ var (
 
 	log = logr.Log.WithName("metricsconfig_controller")
 )
+
+type PrometheusK8s struct {
+	Retention monitoringv1.Duration
+}
 
 // MetricsConfigReconciler reconciles a MetricsConfig object
 type MetricsConfigReconciler struct {
@@ -521,34 +525,24 @@ func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr
 func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) (time.Duration, error) {
 	defaultDuration := time.Duration(14 * 24 * time.Hour)
 	var configMap corev1.ConfigMap
-	// opts := []client.ListOption{client.InNamespace("openshift-monitoring")}
+
 	monitoringMeta := types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
 	err := r.Get(ctx, monitoringMeta, &configMap)
 	if err != nil {
 		log.Info(fmt.Sprintf("monitoring configMap not found. defaulting retention to: %s", defaultDuration))
 		return defaultDuration, nil
 	}
-	// var duration monitoringv1.Duration
-	// model.ParseDuration(string(duration))
-	type T struct {
-		PrometheusK8s struct {
-			Retention monitoringv1.Duration
-		}
-	}
-
-	log.Info("LOOOOKKKKEUEUHQWUFGKJHDSGFKHGKJADHFGKJSHDGFKJHSGDFKHJGSDFKJHGSDKJFHGKJHSADCLJBHQALSUFLJAUGEKJHDZGKJSDHGF")
-	log.Info(fmt.Sprintf("%+v", configMap.Data["config.yaml"]))
 
 	data, ok := configMap.Data["config.yaml"]
 	if !ok {
 		return defaultDuration, nil
 	}
 
-	t := T{}
+	t := PrometheusK8s{}
 	if err := yaml.Unmarshal([]byte(data), &t); err != nil {
 		return defaultDuration, nil
 	}
-	timeDuration, err := model.ParseDuration(string(t.PrometheusK8s.Retention))
+	timeDuration, err := model.ParseDuration(string(t.Retention))
 	return time.Duration(timeDuration), err
 
 }
