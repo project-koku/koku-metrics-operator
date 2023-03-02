@@ -17,7 +17,10 @@ import (
 	"time"
 
 	gologr "github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -515,16 +518,58 @@ func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr
 	return nil
 }
 
-func getTimeRange(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
+func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) (time.Duration, error) {
+	defaultDuration := time.Duration(14 * 24 * time.Hour)
+	var configMap corev1.ConfigMap
+	// opts := []client.ListOption{client.InNamespace("openshift-monitoring")}
+	monitoringMeta := types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
+	err := r.Get(ctx, monitoringMeta, &configMap)
+	if err != nil {
+		log.Info(fmt.Sprintf("monitoring configMap not found. defaulting retention to: %s", defaultDuration))
+		return defaultDuration, nil
+	}
+	// var duration monitoringv1.Duration
+	// model.ParseDuration(string(duration))
+	type T struct {
+		PrometheusK8s struct {
+			Retention monitoringv1.Duration
+		}
+	}
+
+	log.Info("LOOOOKKKKEUEUHQWUFGKJHDSGFKHGKJADHFGKJSHDGFKJHSGDFKHJGSDFKJHGSDKJFHGKJHSADCLJBHQALSUFLJAUGEKJHDZGKJSDHGF")
+	log.Info(fmt.Sprintf("%+v", configMap.Data["config.yaml"]))
+
+	data, ok := configMap.Data["config.yaml"]
+	if !ok {
+		return defaultDuration, nil
+	}
+
+	t := T{}
+	if err := yaml.Unmarshal([]byte(data), &t); err != nil {
+		return defaultDuration, nil
+	}
+	timeDuration, err := model.ParseDuration(string(t.PrometheusK8s.Retention))
+	return time.Duration(timeDuration), err
+
+}
+
+func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
 	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
 	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
 		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
 		!r.disablePreviousDataCollection {
+		// log.Info()
 		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
 		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
-		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
+		duration, err := getRetentionPeriod(ctx, r)
+		if err != nil {
+			log.Error(err, "what is this error")
+		}
+		log.Info(fmt.Sprintf("duration used: %s", duration))
+		start = start.Add(-1 * duration)
+		log.Info(fmt.Sprintf("start used: %s", start))
 		cr.Status.Prometheus.PreviousDataCollected = true
 	}
 	return start, end
@@ -626,12 +671,16 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	os.Setenv("TZ", "UTC")
+
+	r.overrideSecretPath = true
+	r.disablePreviousDataCollection = false
 
 	// fetch the MetricsConfig instance
 	crOriginal := &metricscfgv1beta1.MetricsConfig{}
@@ -709,7 +758,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "failed to get prometheus connection")
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
-	originalStartTime, endTime := getTimeRange(r, cr)
+	originalStartTime, endTime := getTimeRange(ctx, r, cr)
 	startTime := originalStartTime
 	for startTime.Before(endTime) {
 		t := startTime

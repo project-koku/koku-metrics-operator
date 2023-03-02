@@ -147,11 +147,11 @@ func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
 
 type mockPrometheusConnection struct{}
 
-func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	return model.Matrix{}, nil, nil
 }
 
-func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	return model.Matrix{}, nil, nil
 }
 

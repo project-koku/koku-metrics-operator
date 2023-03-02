@@ -34,8 +34,8 @@ var (
 )
 
 type PrometheusConnection interface {
-	QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error)
-	Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error)
+	QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error)
+	Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error)
 }
 
 // PrometheusConfig provides the configuration options to set up a Prometheus connections from a URL.
@@ -120,6 +120,7 @@ func SetPrometheusConnection(c *PrometheusCollector) error {
 		return fmt.Errorf("cannot create prometheus client: %v", err)
 	}
 	c.PromConn = promv1.NewAPI(client)
+
 	return nil
 }
 
