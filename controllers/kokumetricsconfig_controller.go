@@ -54,6 +54,7 @@ var (
 
 	fourteenDayDuration = time.Duration(14 * 24 * time.Hour)
 	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
+	retentionPeriod     time.Duration
 
 	falseDef = false
 	trueDef  = true
@@ -528,35 +529,35 @@ func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr
 	return nil
 }
 
-func getRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) time.Duration {
-	defaultDuration := fourteenDayDuration
+func setRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) {
+	retentionPeriod = fourteenDayDuration
 	var configMap corev1.ConfigMap
 
 	monitoringMeta := types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
 	err := r.Get(ctx, monitoringMeta, &configMap)
 	if err != nil {
-		log.Info(fmt.Sprintf("monitoring configMap not found. defaulting retention to: %s", defaultDuration))
-		return defaultDuration
+		log.Info(fmt.Sprintf("monitoring configMap not found. defaulting retention to: %s", retentionPeriod))
+		return
 	}
 
 	data, ok := configMap.Data["config.yaml"]
 	if !ok {
-		log.Info(fmt.Sprintf("`config.yaml` not found: using default %s", defaultDuration))
-		return defaultDuration
+		log.Info(fmt.Sprintf("`config.yaml` not found: using default %s", retentionPeriod))
+		return
 	}
 
 	var mc MonitoringConfig
 	if err := yaml.Unmarshal([]byte(data), &mc); err != nil {
-		log.Info(fmt.Sprintf("error unmarshalling monitoring config: %v: using default %s", err, defaultDuration))
-		return defaultDuration
+		log.Info(fmt.Sprintf("error unmarshalling monitoring config: %v: using default %s", err, retentionPeriod))
+		return
 	}
 
 	timeDuration, err := model.ParseDuration(mc.PrometheusK8s.Retention)
 	if err != nil {
-		log.Info(fmt.Sprintf("error parsing retention time: %v: using default %s", err, defaultDuration))
-		return defaultDuration
+		log.Info(fmt.Sprintf("error parsing retention time: %v: using default %s", err, retentionPeriod))
+		return
 	}
-	return time.Duration(timeDuration)
+	retentionPeriod = time.Duration(timeDuration)
 }
 
 func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
@@ -568,12 +569,12 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 		!r.disablePreviousDataCollection {
 		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
 		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
-		duration := getRetentionPeriod(ctx, r)
-		if duration > ninetyDayDuration {
-			duration = ninetyDayDuration
+		setRetentionPeriod(ctx, r)
+		if retentionPeriod > ninetyDayDuration {
+			retentionPeriod = ninetyDayDuration
 		}
-		log.Info(fmt.Sprintf("duration used: %s", duration))
-		start = start.Add(-1 * duration)
+		log.Info(fmt.Sprintf("duration used: %s", retentionPeriod))
+		start = start.Add(-1 * retentionPeriod)
 		log.Info(fmt.Sprintf("start used: %s", start))
 		cr.Status.Prometheus.PreviousDataCollected = true
 	}
