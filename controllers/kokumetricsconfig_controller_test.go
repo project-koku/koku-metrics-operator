@@ -1068,6 +1068,22 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			deleteObject(ctx, testConfigMap)
 		})
+		It("configMap is specified with mangled config.yaml - uses 14 days", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s\n  not-retention-period-string: 90d"}
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
 		It("configMap is specified with config.yaml with malformed retention period - uses 14 days", func() {
 			r := &MetricsConfigReconciler{Client: k8sClient}
 			retentionPeriod = time.Duration(0)
