@@ -162,7 +162,7 @@ func setClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 		return err
 	}
 
-	log.Info("cluster version found", "ClusterVersion", clusterVersion.Spec)
+	log.Info("cluster version found", "ClusterID", clusterVersion.Spec.ClusterID, "ClusterVersion", clusterVersion.Status.Desired.Version)
 	if clusterVersion.Spec.ClusterID != "" {
 		cr.Status.ClusterID = string(clusterVersion.Spec.ClusterID)
 	}
