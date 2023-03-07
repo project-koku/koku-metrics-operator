@@ -15,7 +15,7 @@ import (
 )
 
 type ClusterVersion interface {
-	GetClusterVersion() (*configv1.ClusterVersion, error)
+	GetClusterVersion(context.Context) (*configv1.ClusterVersion, error)
 }
 
 type clusterVersionClient struct{ client.Client }
@@ -25,9 +25,9 @@ func NewCVClient(c client.Client) ClusterVersion {
 }
 
 // GetClusterVersion gets the ClusterVersion CR
-func (c *clusterVersionClient) GetClusterVersion() (*configv1.ClusterVersion, error) {
+func (c *clusterVersionClient) GetClusterVersion(ctx context.Context) (*configv1.ClusterVersion, error) {
 	cvList := &configv1.ClusterVersionList{}
-	err := c.List(context.TODO(), cvList)
+	err := c.List(ctx, cvList)
 	if err != nil {
 		return nil, err
 	}

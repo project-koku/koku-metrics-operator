@@ -151,13 +151,13 @@ func reflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 	cr.Status.Prometheus.DisabledMetricsCollectionResourceOptimization = cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization
 }
 
-func setClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) error {
+func setClusterID(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) error {
 	if cr.Status.ClusterID != "" && cr.Status.ClusterVersion != "" {
 		return nil
 	}
 
 	cvClient := cv.NewCVClient(r.Client)
-	clusterVersion, err := cvClient.GetClusterVersion()
+	clusterVersion, err := cvClient.GetClusterVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// set the cluster ID & return if there are errors
-	if err := setClusterID(r, cr); err != nil {
+	if err := setClusterID(ctx, r, cr); err != nil {
 		log.Error(err, "failed to obtain clusterID")
 		if err := r.Status().Update(ctx, cr); err != nil {
 			log.Error(err, "failed to update MetricsConfig status")
