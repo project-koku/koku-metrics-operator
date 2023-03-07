@@ -18,32 +18,16 @@ type ClusterVersion interface {
 	GetClusterVersion() (*configv1.ClusterVersion, error)
 }
 
-type ClusterVersionBuilder interface {
-	New(client.Client) ClusterVersion
-}
-
-type clusterVersionClient struct {
-	client client.Client
-}
-
-type clusterVersionClientBuilder struct{}
+type clusterVersionClient struct{ client.Client }
 
 func NewCVClient(c client.Client) ClusterVersion {
 	return &clusterVersionClient{c}
 }
 
-func NewBuilder() ClusterVersionBuilder {
-	return &clusterVersionClientBuilder{}
-}
-
-func (cvb *clusterVersionClientBuilder) New(c client.Client) ClusterVersion {
-	return NewCVClient(c)
-}
-
 // GetClusterVersion gets the ClusterVersion CR
 func (c *clusterVersionClient) GetClusterVersion() (*configv1.ClusterVersion, error) {
 	cvList := &configv1.ClusterVersionList{}
-	err := c.client.List(context.TODO(), cvList)
+	err := c.List(context.TODO(), cvList)
 	if err != nil {
 		return nil, err
 	}
