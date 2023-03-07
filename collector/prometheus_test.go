@@ -37,7 +37,7 @@ type mockPrometheusConnection struct {
 	t             *testing.T
 }
 
-func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	var res *mockPromResult
 	var ok bool
 	if m.mappedResults != nil {
@@ -53,7 +53,7 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	return res.value, res.warnings, res.err
 }
 
-func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	var res *mockPromResult
 	var ok bool
 	if m.mappedResults != nil {
@@ -84,7 +84,7 @@ func sleepContext(ctx context.Context, delay time.Duration) error {
 	}
 }
 
-func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	res := m.singleResult
 	err := sleepContext(ctx, m.timeout)
 	return res.value, res.warnings, err

@@ -48,7 +48,6 @@ var (
 	pullSecretAuthKey        = "cloud.openshift.com"
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
-	promCompareFormat        = "2006-01-02T15"
 
 	falseDef = false
 	trueDef  = true
@@ -56,9 +55,6 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *metricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
-	promCfgSetter      collector.PrometheusConfigurationSetter = collector.SetPrometheusConfig
-	promConnSetter     collector.PrometheusConnectionSetter    = collector.SetPrometheusConnection
-	promConnTester     collector.PrometheusConnectionTester    = collector.TestPrometheusConnection
 
 	log = logr.Log.WithName("metricsconfig_controller")
 )
@@ -515,69 +511,6 @@ func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr
 	return nil
 }
 
-func getTimeRange(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
-	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
-	end := start.Add(59*time.Minute + 59*time.Second)
-	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
-		*cr.Spec.PrometheusConfig.CollectPreviousData &&
-		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-		!r.disablePreviousDataCollection {
-		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
-		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
-		start = time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
-		cr.Status.Prometheus.PreviousDataCollected = true
-	}
-	return start, end
-}
-
-func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) error {
-	if r.promCollector == nil {
-		var serviceaccountPath string
-		if r.overrideSecretPath {
-			val, ok := os.LookupEnv("SECRET_ABSPATH")
-			if ok {
-				serviceaccountPath = val
-			}
-		}
-		r.promCollector = collector.NewPromCollector(serviceaccountPath)
-	}
-	r.promCollector.TimeSeries = nil
-	if cr.Spec.PrometheusConfig.ContextTimeout == nil {
-		timeout := metricscfgv1beta1.DefaultPrometheusContextTimeout
-		cr.Spec.PrometheusConfig.ContextTimeout = &timeout
-	}
-	r.promCollector.ContextTimeout = time.Duration(*cr.Spec.PrometheusConfig.ContextTimeout * int64(time.Second))
-	// r.promCollector.ContextTimeout = cr.Spec.PrometheusConfig.ContextTimeout
-
-	return r.promCollector.GetPromConn(cr, promCfgSetter, promConnSetter, promConnTester)
-}
-
-func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
-	log := log.WithName("collectPromStats")
-
-	r.promCollector.TimeSeries = &timeRange
-
-	t := metav1.Time{Time: timeRange.Start}
-	formattedStart := timeRange.Start.Format(time.RFC3339)
-	formattedEnd := timeRange.End.Format(time.RFC3339)
-	if cr.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
-		log.Info("reports already generated for range", "start", formattedStart, "end", formattedEnd)
-		return
-	}
-
-	cr.Status.Prometheus.LastQueryStartTime = t
-
-	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
-	if err := collector.GenerateReports(cr, dirCfg, r.promCollector); err != nil {
-		cr.Status.Reports.DataCollected = false
-		cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
-		log.Error(err, "failed to generate reports")
-		return
-	}
-	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
-	cr.Status.Prometheus.LastQuerySuccessTime = t
-}
-
 func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1beta1.MetricsConfig) (*ctrl.Result, error) {
 	ctx := context.Background()
 	log := log.WithName("configurePVC")
@@ -626,6 +559,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 
@@ -709,7 +643,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "failed to get prometheus connection")
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
-	originalStartTime, endTime := getTimeRange(r, cr)
+	originalStartTime, endTime := getTimeRange(ctx, r, cr)
 	startTime := originalStartTime
 	for startTime.Before(endTime) {
 		t := startTime
