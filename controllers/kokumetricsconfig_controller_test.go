@@ -20,8 +20,6 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -120,23 +118,6 @@ var (
 			APIURL: "https://not-the-real-cloud.redhat.com",
 		},
 	}
-	differentPVC = &metricscfgv1beta1.EmbeddedPersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "PersistentVolumeClaim",
-		},
-		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
-			Name: "a-different-pvc",
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
-				},
-			},
-		},
-	}
 )
 
 func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
@@ -152,7 +133,7 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 }
 
 func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
-	return model.Matrix{}, nil, nil
+	return model.Vector{}, nil, nil
 }
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
@@ -347,7 +328,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				5. repeat of 2 -> again, Check storage status
 		*/
 		It("should create and mount PVC for CR without PVC spec", func() {
-			createDeployment(ctx, emptyDep1)
+			createObject(ctx, emptyDep1)
 
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = testNamePrefix + "no-pvc-spec-1"
@@ -400,11 +381,11 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				return fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName != volumeClaimName
 			}, timeout, interval).Should(BeTrue())
 
-			deleteDeployment(ctx, emptyDep1)
+			deleteObject(ctx, emptyDep1)
 			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
-			createDeployment(ctx, emptyDep2)
+			createObject(ctx, emptyDep2)
 			// reuse the old deployment
 			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-4"
@@ -441,14 +422,14 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
 
-			deleteDeployment(ctx, emptyDep2)
+			deleteObject(ctx, emptyDep2)
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 	})
 
 	Context("Process CRD resource - post PVC mount - disconnected cluster", func() {
 		It("basic auth works fine", func() {
-			createDeployment(ctx, pvcDeployment)
+			createObject(ctx, pvcDeployment)
 
 			instCopy := airGappedInstance.DeepCopy()
 			instCopy.Spec.APIURL = unauthorizedTS.URL
@@ -1029,5 +1010,183 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
+	})
+
+	Context("set the correct retention period for data gather on CR creation", func() {
+		It("configMap does not exist - uses 14 days", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+			setRetentionPeriod(ctx, r)
+			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+		})
+		It("no configMap is specified - uses 14 days", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
+		It("configMap is specified with empty config.yaml - uses 14 days", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			testConfigMap.Data = map[string]string{"config.yaml": ""}
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
+		It("configMap is specified with config.yaml without retention period - uses 14 days", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  not-retention-period-string: 90d"}
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
+		It("configMap is specified with config.yaml with malformed retention period - uses 14 days", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 90"}
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
+		It("configMap is specified with config.yaml with valid retention period", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 81d"}
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(time.Duration(81 * 24 * time.Hour)))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
+		It("configMap is specified with config.yaml with valid retention period greater than 90d", func() {
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap := configMapEmpty.DeepCopy()
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 91d"}
+			createObject(ctx, testConfigMap)
+
+			setRetentionPeriod(ctx, r)
+
+			Expect(retentionPeriod).To(Equal(ninetyDayDuration))
+			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
+
+			deleteObject(ctx, testConfigMap)
+		})
+
+		It("check the start time on new CR creation - previous data collection set to true", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
+			// !r.disablePreviousDataCollection
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &trueDef,
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).ToNot(Equal(original))
+			Expect(got).To(Equal(original.Add(-fourteenDayDuration)))
+		})
+
+		It("check the start time on old CR - previous data collection set to true", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
+			// !r.disablePreviousDataCollection
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &trueDef,
+					},
+				},
+				Status: metricscfgv1beta1.KokuMetricsConfigStatus{
+					Prometheus: metricscfgv1beta1.PrometheusStatus{
+						LastQuerySuccessTime: metav1.Now(),
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).To(Equal(original))
+			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
+		})
+
+		It("check the start time on new CR - previous data collection set to false", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
+			// !r.disablePreviousDataCollection
+			r := &MetricsConfigReconciler{Client: k8sClient}
+			retentionPeriod = time.Duration(0)
+			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &falseDef,
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).To(Equal(original))
+			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
+		})
+
 	})
 })

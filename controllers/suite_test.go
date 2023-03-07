@@ -25,6 +25,7 @@ import (
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -127,6 +128,33 @@ var (
 							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeClaimName}}}},
 				},
 			},
+		},
+	}
+	differentPVC = &metricscfgv1beta1.EmbeddedPersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "PersistentVolumeClaim",
+		},
+		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
+			Name: "a-different-pvc",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
+				},
+			},
+		},
+	}
+	configMapEmpty = &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      monitoringMeta.Name,
+			Namespace: monitoringMeta.Namespace,
 		},
 	}
 
@@ -298,6 +326,7 @@ func createAuthSecret(ctx context.Context, namespace string) {
 		}}
 	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 }
+
 func createMixedCaseAuthSecret(ctx context.Context, namespace string) {
 	secret := &corev1.Secret{Data: map[string][]byte{
 		"UserName": []byte("user1"),
@@ -351,18 +380,19 @@ func deleteClusterVersion(ctx context.Context) {
 	Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
 }
 
-func createDeployment(ctx context.Context, deployment *appsv1.Deployment) {
-	Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
+func createObject(ctx context.Context, obj client.Object) {
+	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 }
 
-func deleteDeployment(ctx context.Context, deployment *appsv1.Deployment) {
-	Expect(k8sClient.Delete(ctx, deployment)).Should(Succeed())
+func deleteObject(ctx context.Context, obj client.Object) {
+	Expect(k8sClient.Delete(ctx, obj)).Should(Succeed())
 }
 
 func clusterPrep(ctx context.Context) {
 	if !useCluster {
 		// Create operator namespace
 		createNamespace(ctx, namespace)
+		createNamespace(ctx, "openshift-monitoring")
 
 		// Create auth secret in operator namespace
 		createAuthSecret(ctx, namespace)
