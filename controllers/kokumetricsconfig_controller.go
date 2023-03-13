@@ -67,6 +67,7 @@ type MetricsConfigReconciler struct {
 	InCluster bool
 	Namespace string
 
+	apiReader                     client.Reader
 	cvClientBuilder               cv.ClusterVersionBuilder
 	promCollector                 *collector.PrometheusCollector
 	disablePreviousDataCollection bool
@@ -750,6 +751,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 // SetupWithManager Setup reconciliation with manager object
 func (r *MetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metricscfgv1beta1.MetricsConfig{}).
 		Complete(r)

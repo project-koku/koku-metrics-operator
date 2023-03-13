@@ -461,13 +461,18 @@ func (p *FilePackager) PackageReports() error {
 	// get the start and end dates from the report
 	log.Info("getting the start and end intervals for the manifest")
 	for _, file := range filesToPackage {
-		if strings.Contains(file.Name(), "pod") {
-			absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+		absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+		if strings.Contains(file.Name(), "cm-openshift-pod") {
+			if err := p.getStartEnd(absPath); err != nil {
+				return fmt.Errorf("PackageReports: %v", err)
+			}
+		} else if p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift") {
 			if err := p.getStartEnd(absPath); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	}
+
 	// check if the files need to be split
 	log.Info("checking to see if the report files need to be split")
 	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)

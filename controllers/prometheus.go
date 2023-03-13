@@ -44,7 +44,13 @@ func setRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) {
 	retentionPeriod = fourteenDayDuration
 
 	var configMap corev1.ConfigMap
-	if err := r.Get(ctx, monitoringMeta, &configMap); err != nil {
+	// Here we use k8s APIReader to read the k8s object by making the
+	// direct call to k8s apiserver instead of using k8sClient.
+	// The reason is that k8sClient uses a cache and we cant populate the cache
+	// with openshift-monitoring resources without some custom cache func.
+	// It is okay to make direct call to k8s apiserver because we are only
+	// making single read call once per CR installation.
+	if err := r.apiReader.Get(ctx, monitoringMeta, &configMap); err != nil {
 		log.Info(fmt.Sprintf("monitoring configMap not found. defaulting retention to: %s", retentionPeriod))
 		return
 	}
