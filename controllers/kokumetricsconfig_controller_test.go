@@ -1013,19 +1013,18 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("set the correct retention period for data gather on CR creation", func() {
-		It("configMap does not exist - uses 14 days", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
+		var r *MetricsConfigReconciler
+		BeforeEach(func() {
+			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
 			retentionPeriod = time.Duration(0)
 			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+		})
+		It("configMap does not exist - uses 14 days", func() {
 			setRetentionPeriod(ctx, r)
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
 		})
 		It("no configMap is specified - uses 14 days", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			createObject(ctx, testConfigMap)
 
@@ -1037,10 +1036,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with empty config.yaml - uses 14 days", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": ""}
 			createObject(ctx, testConfigMap)
@@ -1053,10 +1048,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml without retention period - uses 14 days", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  not-retention-period-string: 90d"}
 			createObject(ctx, testConfigMap)
@@ -1069,10 +1060,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with mangled config.yaml - uses 14 days", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s\n  not-retention-period-string: 90d"}
 			createObject(ctx, testConfigMap)
@@ -1085,10 +1072,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with malformed retention period - uses 14 days", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 90"}
 			createObject(ctx, testConfigMap)
@@ -1101,10 +1084,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with valid retention period", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 81d"}
 			createObject(ctx, testConfigMap)
@@ -1117,10 +1096,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with valid retention period greater than 90d", func() {
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
-			Expect(retentionPeriod).To(Equal(time.Duration(0)))
-
 			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 91d"}
 			createObject(ctx, testConfigMap)
@@ -1138,8 +1113,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
 			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
 			// !r.disablePreviousDataCollection
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -1160,8 +1133,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
 			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
 			// !r.disablePreviousDataCollection
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -1187,8 +1158,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
 			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
 			// !r.disablePreviousDataCollection
-			r := &MetricsConfigReconciler{Client: k8sClient}
-			retentionPeriod = time.Duration(0)
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{

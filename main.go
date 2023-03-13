@@ -18,7 +18,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
@@ -78,7 +77,6 @@ func main() {
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "91c624a5.openshift.io",
 		Namespace:          watchNamespace,
-		NewCache:           cache.MultiNamespacedCacheBuilder([]string{"openshift-monitoring", watchNamespace}),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
