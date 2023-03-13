@@ -20,6 +20,7 @@ import (
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -41,11 +42,7 @@ var (
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
-	authSecretName              = "cloud-dot-redhat"
-	authMixedCaseName           = "mixed-case"
-	badAuthSecretName           = "baduserpass"
-	badAuthPassSecretName       = "badpass"
-	badAuthUserSecretName       = "baduser"
+	authSecretName              = "basic-auth-secret"
 	falseValue            bool  = false
 	trueValue             bool  = true
 	defaultContextTimeout int64 = 120
@@ -56,68 +53,6 @@ var (
 	defaultMaxReports     int64 = 1
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
 	testingDir                  = dirconfig.MountPath
-	instance                    = metricscfgv1beta1.MetricsConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-		},
-		Spec: metricscfgv1beta1.MetricsConfigSpec{
-			Authentication: metricscfgv1beta1.AuthenticationSpec{
-				AuthType: metricscfgv1beta1.Token,
-			},
-			Packaging: metricscfgv1beta1.PackagingSpec{
-				MaxSize:    100,
-				MaxReports: defaultMaxReports,
-			},
-			Upload: metricscfgv1beta1.UploadSpec{
-				UploadCycle:    &defaultUploadCycle,
-				UploadToggle:   &trueValue,
-				IngressAPIPath: "/api/ingress/v1/upload",
-				ValidateCert:   &trueValue,
-			},
-			Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
-				CreateSource:   &falseValue,
-				SourcesAPIPath: "/api/sources/v1.0/",
-				CheckCycle:     &defaultCheckCycle,
-			},
-			PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
-				ContextTimeout:      &defaultContextTimeout,
-				SkipTLSVerification: &trueValue,
-				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-			},
-			APIURL: "https://not-the-real-cloud.redhat.com",
-		},
-	}
-	airGappedInstance = metricscfgv1beta1.MetricsConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-		},
-		Spec: metricscfgv1beta1.MetricsConfigSpec{
-			Authentication: metricscfgv1beta1.AuthenticationSpec{
-				AuthType: metricscfgv1beta1.Token,
-			},
-			Packaging: metricscfgv1beta1.PackagingSpec{
-				MaxSize:    100,
-				MaxReports: defaultMaxReports,
-			},
-			Upload: metricscfgv1beta1.UploadSpec{
-				UploadCycle:    &defaultUploadCycle,
-				UploadToggle:   &falseValue,
-				IngressAPIPath: "/api/ingress/v1/upload",
-				ValidateCert:   &trueValue,
-			},
-			Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
-				CreateSource:   &falseValue,
-				SourcesAPIPath: "/api/sources/v1.0/",
-				CheckCycle:     &defaultCheckCycle,
-			},
-			PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
-				ContextTimeout:      &diffContextTimeout,
-				SkipTLSVerification: &trueValue,
-				SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-			},
-			APIURL: "https://not-the-real-cloud.redhat.com",
-		},
-	}
 )
 
 func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
@@ -299,24 +234,81 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
+
+	var instCopy *metricscfgv1beta1.KokuMetricsConfig
+	var testPVC *corev1.PersistentVolumeClaim
+	var checkPVC bool = true
+
 	ctx := context.Background()
 	emptyDep1 := emptyDirDeployment.DeepCopy()
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 
-	GitCommit = "1234567"
-	promConnTester = MockPromConnTester
-	promConnSetter = MockPromConnSetter
-
 	BeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
 		shutdown()
+
+		setupRequired(ctx)
+		GitCommit = "1234567"
+		promConnTester = MockPromConnTester
+		promConnSetter = MockPromConnSetter
+
+		instCopy = &metricscfgv1beta1.MetricsConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+			},
+			Spec: metricscfgv1beta1.MetricsConfigSpec{
+				Authentication: metricscfgv1beta1.AuthenticationSpec{
+					AuthType: metricscfgv1beta1.Token,
+				},
+				Packaging: metricscfgv1beta1.PackagingSpec{
+					MaxSize:    100,
+					MaxReports: defaultMaxReports,
+				},
+				Upload: metricscfgv1beta1.UploadSpec{
+					UploadCycle:    &defaultUploadCycle,
+					UploadToggle:   &trueValue,
+					IngressAPIPath: "/api/ingress/v1/upload",
+					ValidateCert:   &trueValue,
+				},
+				Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
+					CreateSource:   &falseValue,
+					SourcesAPIPath: "/api/sources/v1.0/",
+					CheckCycle:     &defaultCheckCycle,
+				},
+				PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+					ContextTimeout:      &defaultContextTimeout,
+					SkipTLSVerification: &trueValue,
+					SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
+				},
+				APIURL: "https://not-the-real-cloud.redhat.com",
+			},
+		}
+
+		if checkPVC {
+			testPVC = storage.MakeVolumeClaimTemplate(storage.DefaultPVC, namespace)
+			pvckey := types.NamespacedName{Name: testPVC.ObjectMeta.Name, Namespace: testPVC.ObjectMeta.Namespace}
+
+			ensureObjectExists(ctx, pvckey, testPVC)
+			createObject(ctx, pvcDeployment)
+		}
+
 	})
 
 	AfterEach(func() {
 		shutdown()
+
+		tearDownRequired(ctx)
+		deleteAllOfObject(ctx, &metricscfgv1beta1.MetricsConfig{})
+
+		// if checkPVC {
+		// 	deleteObject(ctx, pvcDeployment)
+		// }
 	})
 
 	Context("Process CRD resource - prior PVC mount", func() {
+		BeforeEach(func() {
+			checkPVC = false
+		})
 		/*
 			All tests within this Context are only checking the functionality of mounting the PVC
 			All other reconciler tests, post PVC mount, are performed in the following Context
@@ -330,29 +322,22 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should create and mount PVC for CR without PVC spec", func() {
 			createObject(ctx, emptyDep1)
 
-			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = testNamePrefix + "no-pvc-spec-1"
 			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			// wait until the deployment vol has changed
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
 					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == volumeClaimName
 			}, timeout, interval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
-			// reuse the old deployment
-			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = testNamePrefix + "no-pvc-spec-2"
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+			createObject(ctx, instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
 
-			// wait until the deployment vol has changed
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 				return fetched.Status.ClusterID != ""
@@ -362,19 +347,13 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			// Expect(fetched.Status.ClusterVersion).To(Equal(channel)) // That *Status* of ClusterVersion is not available in testing
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
-			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
-			// reuse the old deployment
-			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-3"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+			createObject(ctx, instCopy)
 
-			// wait until the deployment vol has changed
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep1.Name, Namespace: namespace}, fetched)
@@ -382,36 +361,28 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			deleteObject(ctx, emptyDep1)
-			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
 			createObject(ctx, emptyDep2)
-			// reuse the old deployment
-			instCopy := instance.DeepCopy()
+
 			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-4"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+			createObject(ctx, instCopy)
 
-			// wait until the deployment vol has changed
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: emptyDep2.Name, Namespace: namespace}, fetched)
 				return fetched.Spec.Template.Spec.Volumes[0].EmptyDir == nil &&
 					fetched.Spec.Template.Spec.Volumes[0].PersistentVolumeClaim.ClaimName == "a-different-pvc"
 			}, timeout, interval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, instCopy)).To(Succeed())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
-			// reuse the old deployment
-			instCopy := instance.DeepCopy()
 			instCopy.ObjectMeta.Name = testNamePrefix + "pvc-spec-5"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+			createObject(ctx, instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
 
-			// wait until the deployment vol has changed
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 				return fetched.Status.ClusterID != ""
@@ -423,592 +394,569 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(differentPVC.Name))
 
 			deleteObject(ctx, emptyDep2)
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
 		})
 	})
 
-	Context("Process CRD resource - post PVC mount - disconnected cluster", func() {
-		It("basic auth works fine", func() {
-			createObject(ctx, pvcDeployment)
+	Context("Process CRD resource - post PVC mount", func() {
 
-			instCopy := airGappedInstance.DeepCopy()
-			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.ObjectMeta.Name = testNamePrefix + "default-cr-air-gapped-basic"
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
-
-			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-
-			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
-
-			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
-			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
-			Expect(fetched.Status.Source.SourceError).To(Equal(""))
-
-			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
-			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
-
+		BeforeEach(func() {
+			// checkPVC = true
 		})
-		It("token auth works fine", func() {
-			instCopy := airGappedInstance.DeepCopy()
-			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.ObjectMeta.Name = testNamePrefix + "default-cr-air-gapped-token"
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-
-			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-
-			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
-
-			Expect(fetched.Status.Source.SourceDefined).To(BeNil())
-			Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
-			Expect(fetched.Status.Source.SourceError).To(Equal(""))
-
-			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
-			Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
-
+		AfterEach(func() {
+			// deleteObject(ctx, pvcDeployment)
 		})
-	})
 
-	Context("Process CRD resource - post PVC mount - connected cluster", func() {
-		It("default CR works fine", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "default-cr"
-			instCopy.Spec.APIURL = validTS.URL
-			instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
+		When("cluster is disconnected", func() {
+			BeforeEach(func() {
+				instCopy = &metricscfgv1beta1.MetricsConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+					},
+					Spec: metricscfgv1beta1.MetricsConfigSpec{
+						Authentication: metricscfgv1beta1.AuthenticationSpec{
+							AuthType: metricscfgv1beta1.Token,
+						},
+						Packaging: metricscfgv1beta1.PackagingSpec{
+							MaxSize:    100,
+							MaxReports: defaultMaxReports,
+						},
+						Upload: metricscfgv1beta1.UploadSpec{
+							UploadCycle:    &defaultUploadCycle,
+							UploadToggle:   &falseValue,
+							IngressAPIPath: "/api/ingress/v1/upload",
+							ValidateCert:   &trueValue,
+						},
+						Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
+							CreateSource:   &falseValue,
+							SourcesAPIPath: "/api/sources/v1.0/",
+							CheckCycle:     &defaultCheckCycle,
+						},
+						PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+							ContextTimeout:      &diffContextTimeout,
+							SkipTLSVerification: &trueValue,
+							SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
+						},
+						APIURL: "https://not-the-real-cloud.redhat.com",
+					},
+				}
+			})
+			It("basic auth works fine", func() {
+				createObject(ctx, pvcDeployment)
 
-			fetched := &metricscfgv1beta1.MetricsConfig{}
+				instCopy.Spec.APIURL = unauthorizedTS.URL
+				instCopy.ObjectMeta.Name = testNamePrefix + "default-cr-air-gapped-basic"
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
+				createObject(ctx, instCopy)
 
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
+				fetched := &metricscfgv1beta1.MetricsConfig{}
 
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
-			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
-			Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
-			Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
-			Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
-			Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.ClusterID != ""
+				}, timeout, interval).Should(BeTrue())
 
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
+				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+
+				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+
+				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
+
+				Expect(fetched.Status.Source.SourceDefined).To(BeNil())
+				Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
+				Expect(fetched.Status.Source.SourceError).To(Equal(""))
+
+				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+				Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
+			})
+			It("token auth works fine", func() {
+				instCopy.Spec.APIURL = unauthorizedTS.URL
+				instCopy.ObjectMeta.Name = testNamePrefix + "default-cr-air-gapped-token"
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.ClusterID != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
+
+				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+
+				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
+
+				Expect(fetched.Status.Source.SourceDefined).To(BeNil())
+				Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
+				Expect(fetched.Status.Source.SourceError).To(Equal(""))
+
+				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+				Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
+			})
 		})
-		It("upload set to false case", func() {
-
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "uploadfalse"
-			instCopy.Spec.Upload.UploadToggle = &falseValue
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should find basic auth creds for good basic auth CRD case", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "basicauthgood"
-			instCopy.Spec.APIURL = validTS.URL
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "basicauthgood-unauthorized"
-			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should find basic auth creds for mixedcase basic auth CRD case", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "mixed-case"
-			instCopy.Spec.APIURL = validTS.URL
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = authMixedCaseName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authMixedCaseName))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should fail for missing basic auth token for bad basic auth CRD case", func() {
-			badAuth := "bad-auth"
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "basicauthbad"
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = badAuth
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuth))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should reflect source name in status for source info CRD case", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "sourceinfo"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			instCopy.Spec.Source.SourceName = sourceName
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should reflect source error when attempting to create source", func() {
-
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "sourcecreate"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			instCopy.Spec.Source.SourceName = sourceName
-			instCopy.Spec.Source.CreateSource = &trueValue
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
-			Expect(fetched.Status.Source.SourceError).NotTo(BeNil())
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should fail due to bad basic auth secret", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "badauthsecret"
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthSecretName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthSecretName))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should fail due to missing pass in auth secret", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "badpass"
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthPassSecretName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthPassSecretName))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should fail due to missing user in auth secret", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "baduser"
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = badAuthUserSecretName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(badAuthUserSecretName))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should fail due to missing auth secret name with basic set", func() {
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "missingname"
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(""))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should should fail due to deleted token secret", func() {
-			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "nopullsecret"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should should fail token secret wrong data", func() {
-			createBadPullSecret(ctx, openShiftConfigNamespace)
-
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "nopulldata"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should fail bc of missing cluster version", func() {
-			deleteClusterVersion(ctx)
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "missingcvfailure"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// check the CR was created ok
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Storage.VolumeMounted
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.ClusterID).To(Equal(""))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should attempt upload due to tar.gz being present", func() {
-			err := setup()
-			Expect(err, nil)
-			createClusterVersion(ctx, clusterID, channel)
-			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "attemptupload"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
-			Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("tar.gz being present - upload attempt should 'succeed'", func() {
-			err := setup()
-			Expect(err, nil)
-			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "attemptuploadsuccess"
-			instCopy.Spec.APIURL = validTS.URL
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadError).To(Equal(""))
-			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("202"))
-			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeFalse())
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
-			err := setup()
-			Expect(err, nil)
-			deletePullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-			createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-
-			hourAgo := metav1.Now().Time.Add(-time.Hour)
-
-			previousValidation = &previousAuthValidation{
-				secretName: authSecretName,
-				username:   "user1",
-				password:   "password1",
-				err:        nil,
-				timestamp:  metav1.Time{Time: hourAgo},
-			}
-
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "attemptupload-unauthorized"
-			instCopy.Spec.APIURL = unauthorizedTS.URL
-			instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-			instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-			Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
-			Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			Expect(fetched.Status.Upload.UploadError).NotTo(Equal(""))
-			Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
-		})
-		It("should check the last upload time in the upload status", func() {
-			err := setup()
-			Expect(err, nil)
-			uploadTime := metav1.Now()
-			instCopy := instance.DeepCopy()
-			instCopy.ObjectMeta.Name = testNamePrefix + "checkuploadstatus"
-			instCopy.Spec.Upload.UploadWait = &defaultUploadWait
-			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			// wait until the cluster ID is set
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
-			}, timeout, interval).Should(BeTrue())
-
-			fetched.Status.Upload.LastSuccessfulUploadTime = uploadTime
-			Eventually(func() bool {
-				_ = k8sClient.Status().Update(ctx, fetched)
-				return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
-			}, timeout, interval).ShouldNot(BeTrue())
-
-			Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-			Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-
-			Expect(k8sClient.Delete(ctx, fetched)).To(Succeed())
+
+		When("cluster is connected", func() {
+			BeforeEach(func() {
+				// checkPVC = true
+			})
+			It("default CR works fine", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "default-cr"
+				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
+				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
+				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
+				Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
+				Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
+
+				// deleteObject(ctx, fetched)
+			})
+			It("upload set to false case", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "uploadfalse"
+				instCopy.Spec.Upload.UploadToggle = &falseValue
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.ClusterID != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should find basic auth creds for good basic auth CRD case", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "basicauthgood"
+				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "basicauthgood-unauthorized"
+				instCopy.Spec.APIURL = unauthorizedTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should find basic auth creds for mixedcase basic auth CRD case", func() {
+				mixedCaseData := map[string][]byte{
+					"UserName": []byte("user1"),
+					"PassWord": []byte("password1"),
+				}
+				replaceAuthSecretData(ctx, mixedCaseData)
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "mixed-case"
+				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should fail for missing basic auth token for bad basic auth CRD case", func() {
+				deleteAuthSecret(ctx)
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "basicauthbad"
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should reflect source name in status for source info CRD case", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "sourceinfo"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				instCopy.Spec.Source.SourceName = sourceName
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should reflect source error when attempting to create source", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "sourcecreate"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				instCopy.Spec.Source.SourceName = sourceName
+				instCopy.Spec.Source.CreateSource = &trueValue
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
+				Expect(fetched.Status.Source.SourceError).NotTo(BeNil())
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should fail due to bad basic auth secret", func() {
+				replaceAuthSecretData(ctx, map[string][]byte{})
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "badauthsecret"
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should fail due to missing pass in auth secret", func() {
+				replaceAuthSecretData(ctx, map[string][]byte{authSecretUserKey: []byte("user1")})
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "badpass"
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should fail due to missing user in auth secret", func() {
+				replaceAuthSecretData(ctx, map[string][]byte{authSecretPasswordKey: []byte("password1")})
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "baduser"
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should fail due to missing auth secret name with basic set", func() {
+				instCopy.ObjectMeta.Name = testNamePrefix + "missingname"
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(""))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
+			})
+			It("should should fail due to deleted token secret", func() {
+				deletePullSecret(ctx)
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "nopullsecret"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			})
+			It("should should fail token secret wrong data", func() {
+				deletePullSecret(ctx)
+				createPullSecret(ctx, map[string][]byte{}) // create a bad pullsecret
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "nopulldata"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			})
+			It("should fail bc of missing cluster version", func() {
+				deleteClusterVersion(ctx)
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "missingcvfailure"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Storage.VolumeMounted
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.ClusterID).To(Equal(""))
+			})
+			It("should attempt upload due to tar.gz being present", func() {
+				Expect(setup()).Should(Succeed())
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "attemptupload"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
+				Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
+			})
+			It("tar.gz being present - upload attempt should 'succeed'", func() {
+				Expect(setup()).Should(Succeed())
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "attemptuploadsuccess"
+				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadError).To(Equal(""))
+				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("202"))
+				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeFalse())
+			})
+			It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
+				Expect(setup()).Should(Succeed())
+
+				hourAgo := metav1.Now().Time.Add(-time.Hour)
+
+				previousValidation = &previousAuthValidation{
+					secretName: authSecretName,
+					username:   "user1",
+					password:   "password1",
+					err:        nil,
+					timestamp:  metav1.Time{Time: hourAgo},
+				}
+
+				instCopy.ObjectMeta.Name = testNamePrefix + "attemptupload-unauthorized"
+				instCopy.Spec.APIURL = unauthorizedTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+				Expect(fetched.Status.Upload.UploadError).NotTo(Equal(""))
+				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
+			})
+			It("should check the last upload time in the upload status", func() {
+				Expect(setup()).Should(Succeed())
+
+				uploadTime := metav1.Now()
+				instCopy.ObjectMeta.Name = testNamePrefix + "checkuploadstatus"
+				instCopy.Spec.Upload.UploadWait = &defaultUploadWait
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.ClusterID != ""
+				}, timeout, interval).Should(BeTrue())
+
+				fetched.Status.Upload.LastSuccessfulUploadTime = uploadTime
+				Eventually(func() bool {
+					_ = k8sClient.Status().Update(ctx, fetched)
+					return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
+				}, timeout, interval).ShouldNot(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			})
 		})
 	})
 

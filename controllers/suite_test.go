@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
@@ -25,8 +26,10 @@ import (
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -260,124 +263,94 @@ var _ = BeforeSuite(func() {
 }, 60)
 
 func createNamespace(ctx context.Context, namespace string) {
-	instance := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	createObject(ctx, ns)
 }
 
-func createClusterVersion(ctx context.Context, clusterID string, channel string) {
-	instance := &configv1.ClusterVersion{
-		ObjectMeta: metav1.ObjectMeta{Name: "version"},
+func createClusterVersion(ctx context.Context) {
+	key := types.NamespacedName{Name: "version"}
+	cv := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{Name: key.Name},
 		Spec: configv1.ClusterVersionSpec{
 			ClusterID: configv1.ClusterID(clusterID),
 			Channel:   channel,
 		},
 	}
-	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+
+	emptyCV := &configv1.ClusterVersion{}
+	if err := k8sClient.Get(ctx, key, emptyCV); errors.IsNotFound(err) {
+		log.Info(fmt.Sprintf("IS THIS WHERE WE ARE BOMBING??? %#v | %#v", cv, err))
+		createObject(ctx, cv)
+	}
 }
 
-func fakeDockerConfig() []byte {
+func deleteClusterVersion(ctx context.Context) {
+	cv := &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}}
+	deleteObject(ctx, cv)
+}
+
+func fakeDockerConfig() map[string][]byte {
 	d, _ := json.Marshal(
 		serializedAuthMap{
 			Auths: map[string]serializedAuth{pullSecretAuthKey: {Auth: ".."}},
 		})
-	return d
+	return map[string][]byte{pullSecretDataKey: d}
 }
 
-func createPullSecret(ctx context.Context, namespace string, data []byte) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		pullSecretDataKey: data,
-	},
+func createSecret(ctx context.Context, name, namespace string, data map[string][]byte) {
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName,
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: data,
+	}
+	createObject(ctx, secret)
+}
+
+func deleteSecret(ctx context.Context, name, namespace string) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
 			Namespace: namespace,
 		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+	deleteObject(ctx, secret)
 }
 
-func deletePullSecret(ctx context.Context, namespace string, data []byte) {
-	oldsecret := &corev1.Secret{Data: map[string][]byte{
-		pullSecretDataKey: data,
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName,
-			Namespace: namespace,
-		}}
-
-	Expect(k8sClient.Delete(ctx, oldsecret)).Should(Succeed())
+func createPullSecret(ctx context.Context, data map[string][]byte) {
+	createSecret(ctx, pullSecretName, openShiftConfigNamespace, data)
 }
 
-func createBadPullSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+func deletePullSecret(ctx context.Context) {
+	deleteSecret(ctx, pullSecretName, openShiftConfigNamespace)
 }
 
-func createAuthSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
+func createAuthSecret(ctx context.Context) {
+	secretData := map[string][]byte{
 		authSecretUserKey:     []byte("user1"),
 		authSecretPasswordKey: []byte("password1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      authSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createMixedCaseAuthSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		"UserName": []byte("user1"),
-		"PassWord": []byte("password1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      authMixedCaseName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createBadAuthSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      badAuthSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createBadAuthPassSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		authSecretUserKey: []byte("user1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      badAuthPassSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createBadAuthUserSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		authSecretPasswordKey: []byte("password1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      badAuthUserSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func deleteClusterVersion(ctx context.Context) {
-	instance := &configv1.ClusterVersion{
-		ObjectMeta: metav1.ObjectMeta{Name: "version"},
-		Spec: configv1.ClusterVersionSpec{
-			ClusterID: configv1.ClusterID(clusterID),
-		},
 	}
-	Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
+	createSecret(ctx, authSecretName, namespace, secretData)
+}
+
+func deleteAuthSecret(ctx context.Context) {
+	deleteSecret(ctx, authSecretName, namespace)
+}
+
+func replaceAuthSecretData(ctx context.Context, data map[string][]byte) {
+	key := types.NamespacedName{
+		Name:      authSecretName,
+		Namespace: namespace,
+	}
+	secret := &corev1.Secret{}
+	Expect(k8sClient.Get(ctx, key, secret)).Should(Succeed())
+
+	secret.Data = data
+	Expect(k8sClient.Update(ctx, secret)).Should(Succeed())
+
+	secret = &corev1.Secret{}
+	Expect(k8sClient.Get(ctx, key, secret)).Should(Succeed())
+	Expect(secret.Data).To(BeComparableTo(data, cmpopts.EquateEmpty()))
 }
 
 func createObject(ctx context.Context, obj client.Object) {
@@ -385,7 +358,30 @@ func createObject(ctx context.Context, obj client.Object) {
 }
 
 func deleteObject(ctx context.Context, obj client.Object) {
-	Expect(k8sClient.Delete(ctx, obj)).Should(Succeed())
+	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
+}
+
+func deleteAllOfObject(ctx context.Context, obj client.Object) {
+	Expect(k8sClient.DeleteAllOf(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
+}
+
+func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {
+	if err := k8sClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+		log.Info(fmt.Sprintf("WHAT ARE WE CREATING??? %+v", obj))
+		createObject(ctx, obj)
+	}
+}
+
+func setupRequired(ctx context.Context) {
+	createClusterVersion(ctx)
+	createPullSecret(ctx, fakeDockerConfig())
+	createAuthSecret(ctx)
+}
+
+func tearDownRequired(ctx context.Context) {
+	deleteClusterVersion(ctx)
+	deletePullSecret(ctx)
+	deleteAuthSecret(ctx)
 }
 
 func clusterPrep(ctx context.Context) {
@@ -393,22 +389,7 @@ func clusterPrep(ctx context.Context) {
 		// Create operator namespace
 		createNamespace(ctx, namespace)
 		createNamespace(ctx, "openshift-monitoring")
-
-		// Create auth secret in operator namespace
-		createAuthSecret(ctx, namespace)
-		createMixedCaseAuthSecret(ctx, namespace)
-
-		// Create an empty auth secret
-		createBadAuthSecret(ctx, namespace)
-		createBadAuthPassSecret(ctx, namespace)
-		createBadAuthUserSecret(ctx, namespace)
-
-		// Create openshift config namespace and secret
 		createNamespace(ctx, openShiftConfigNamespace)
-		createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
-
-		// Create cluster version
-		createClusterVersion(ctx, clusterID, channel)
 
 		cwd, err := os.Getwd()
 		Expect(err).ToNot(HaveOccurred())
