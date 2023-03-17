@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 1.1.9
-VERSION ?= 1.2.0
+PREVIOUS_VERSION ?= 1.2.0
+VERSION ?= 2.0.0
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -120,6 +120,7 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE_SHA}
+	# $(KUSTOMIZE) build config/default > out.yaml
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
@@ -129,6 +130,9 @@ deploy-user: manifests kustomize
 
 deploy-branch:
 	IMG=${GITBRANCH_IMG} $(MAKE) deploy
+
+external-prom-route:
+	echo $(EXTERNAL_PROM_ROUTE)
 
 # replaces the username and password with your base64 encoded username and password and looks up the token value for you
 setup-auth:
