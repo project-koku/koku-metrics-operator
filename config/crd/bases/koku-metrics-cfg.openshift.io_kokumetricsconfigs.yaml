@@ -816,7 +816,6 @@ spec:
                       validated.
                     type: boolean
                 required:
-                - previous_data_collected
                 - prometheus_configured
                 - prometheus_connected
                 type: object
