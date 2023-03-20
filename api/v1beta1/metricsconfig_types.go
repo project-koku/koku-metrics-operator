@@ -410,7 +410,7 @@ type PrometheusStatus struct {
 	// PreviousDataCollected is a field of KokuMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
 	// data upon KokuMetricsConfig creation.
 	// +kubebuilder:default=false
-	PreviousDataCollected bool `json:"previous_data_collected"`
+	PreviousDataCollected bool `json:"previous_data_collected,omitempty"`
 
 	// DisabledMetricsCollectionCostManagement is a field of KokuMetricsConfigStatus to represent whether or not collecting
 	// cost-management metrics is disabled. The default is false.
