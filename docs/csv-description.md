@@ -12,6 +12,8 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Packaging the CSV report files into tarballs.
 
 #### Additional Capabilities:
+* Resource Optimization metrics collection (the default is to not collect these metrics).
+* The operator can be configured to gather all previous data within the configured retention period or a maximum of 90 days. The default data collection period is the 14 previous days. This setting is only applicable to newly created KokuMetricsConfigs.
 * The operator can be configured to automatically upload the packaged reports to cost management through Red Hat Insights Ingress service.
 * The operator can create a source in console.redhat.com. A source is required for cost management to process the uploaded packages.
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
@@ -47,6 +49,27 @@ To use the default specification, the follow assumptions must be met:
 2. Dynamic provisioning for that default StorageClass is enabled.
 
 If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. After configuring storage, a valid PVC template should be supplied in the `volume_claim_template` spec of the KokuMetricsConfig CR.
+
+## Configrable parameters:
+* ### authentication:
+  * `type: choice (basic, token)` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` is used when the openshift-config pull-secret does not contain a token for `cloud.redhat.com`.
+  * `secret_name` -> The Secret used by the operator when the authentication type is `basic`.
+* ### packaging:
+  * `max_reports_to_store` -> The number of reports to store when configured in air-gapped mode. The default is 30, with a minimum of 1 and no maximum. When the operator is not configured in air-gapped mode, this parameter has no effect. Reports are removed as soon as they are uploaded.
+  * `max_size` -> The maximum size for packaged files in Megabytes prior to compression. The default is 100, with a minimum of 1 and maximum of 100.
+* ### prometheus_config:
+  * `collect_previous_data` -> Toggle for collecting all available data in Prometheus **upon KokuMetricsConfig creation** (This parameter will start to appear in KokuMetricsConfigs that were created prior to v2.0.0 but will not have any effect unless the KokuMetricsConfig is deleted and recreated). The default is `true`. The operator will first look for a `retention` period in the `cluster-monitoring-config` ConfigMap in the `openshift-monitoring` namespace and gather data over this time period up to a maximum of 90 days. If this configuration is not set, the default is 14 days. (New in v2.0.0)
+  * `disable_metrics_collection_cost_management` -> Toggle for disabling the collection of metrics for Cost Management. The default is false. (New in v2.0.0)
+  * `disable_metrics_collection_resource_optimization` -> Toggle for disabling the collection of metrics for Resource Optimization. The default is true. (New in v2.0.0)
+  * `context_timeout` -> The time in seconds before Prometheus queries timeout due to exceeding context timeout. The default is 120, with a minimum of 10 and maximum of 180.
+* ### source:
+  * `name`: -> The name of the Source the operator will create in `console.redhat.com`. The default is `INSERT_SOURCE_NAME` which is a placeholder.
+  * `create_source` -> Toggle for whether or not the operator will create the Source in `console.redhat.com`. The default is False. This parameter should be switched to True when a Source does not already exist in `console.redhat.com` for this cluster.
+  * `check_cycle` -> The time in minutes to wait between checking if a Source exists for this cluster. The default is 1440 minutes (24 hrs).
+* ### upload:
+  * `upload_cycle` -> The time in minutes between payload uploads. The default is 360 (6 hours).
+  * `upload_toggle` -> Toggle to turn upload on or off -> true means upload, false means do not upload (false == air-gapped mode). The default is `true`.
+  * `upload_wait` -> The amount of time (in seconds) to pause before uploading a payload. The default is a random number between 0 and 35. This is used to decrease service load, but may be set to `0` if desired.
 
 ## Configure the koku-metrics-operator
 **Note** There are separate instructions for configuring the `koku-metrics-operator` to run in a restricted network.
