@@ -19,6 +19,9 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v2.0.0:
+*
+
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
 * A source **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
