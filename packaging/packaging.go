@@ -198,9 +198,11 @@ func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter
 
 // writeTarball packages the files into tar balls
 func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error {
+	tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
+	log.Info("generating tar.gz", "tarFile", tarFilePath)
 
 	// create the tarfile
-	tarFile, err := os.Create(tarFileName)
+	tarFile, err := os.Create(tarFilePath)
 	if err != nil {
 		return fmt.Errorf("writeTarball: error creating tar file: %v", err)
 	}
@@ -518,17 +520,13 @@ func (p *FilePackager) PackageReports() error {
 		for idx, fileName := range tracker.allfiles {
 			fileMap := map[int]string{idx: fileName}
 			tarFileName := filenameBase + "-" + strconv.Itoa(idx) + ".tar.gz"
-			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-			log.Info("generating tar.gz", "tarFile", tarFilePath)
-			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileMap); err != nil {
+			if err := p.writeTarball(tarFileName, p.manifest.filename, fileMap); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	} else {
 		tarFileName := filenameBase + ".tar.gz"
-		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-		log.Info("generating tar.gz", "tarFile", tarFilePath)
-		if err := p.writeTarball(tarFilePath, p.manifest.filename, tracker.allfiles); err != nil {
+		if err := p.writeTarball(tarFileName, p.manifest.filename, tracker.allfiles); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
