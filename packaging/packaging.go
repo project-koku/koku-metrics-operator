@@ -91,14 +91,14 @@ type manifestInfo struct {
 }
 type fileTracker struct {
 	costfiles map[int]string
-	rosfile   map[int]string
+	rosfiles  map[int]string
 	allfiles  map[int]string
 }
 
 func newFileTracker() fileTracker {
 	return fileTracker{
 		costfiles: make(map[int]string, 4),
-		rosfile:   make(map[int]string, 1),
+		rosfiles:  make(map[int]string, 1),
 		allfiles:  make(map[int]string, 5),
 	}
 }
@@ -125,7 +125,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 		}
 		csvFilePath := filepath.Join(stagingDirectory, file.Name())
 		if strings.HasPrefix(file.Name(), "ros") {
-			tracker.rosfile[idx] = csvFilePath
+			tracker.rosfiles[idx] = csvFilePath
 		} else {
 			tracker.costfiles[idx] = csvFilePath
 		}
@@ -143,7 +143,7 @@ func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr
 		costFiles = append(costFiles, uploadName)
 	}
 	var rosFiles []string
-	for idx := range archiveFiles.rosfile {
+	for idx := range archiveFiles.rosfiles {
 		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 		rosFiles = append(rosFiles, uploadName)
 	}

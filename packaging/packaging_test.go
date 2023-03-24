@@ -573,7 +573,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 				expectedCostFiles = append(expectedCostFiles, uploadName)
 			}
 			var expectedRosFiles []string
-			for idx := range csvFileNames.rosfile {
+			for idx := range csvFileNames.rosfiles {
 				uploadName := testPackager.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
 				expectedRosFiles = append(expectedRosFiles, uploadName)
 			}
