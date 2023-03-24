@@ -124,7 +124,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 			continue
 		}
 		csvFilePath := filepath.Join(stagingDirectory, file.Name())
-		if strings.HasPrefix(file.Name(), "ros") {
+		if strings.Contains(file.Name(), "ros-openshift") {
 			tracker.rosfiles[idx] = csvFilePath
 		} else {
 			tracker.costfiles[idx] = csvFilePath
