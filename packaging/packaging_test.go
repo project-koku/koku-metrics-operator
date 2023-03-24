@@ -141,7 +141,7 @@ func setup() error {
 		dirMode  os.FileMode
 		fileMode os.FileMode
 	}
-	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt", "ocp_pod_label.csv"}
+	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt", "ocp_pod_label.csv", "ros-openshift.csv"}
 	dirInfoList := []dirInfo{
 		{
 			dirName:  "large",
@@ -330,17 +330,16 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			got := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
-			want := make(map[int]string)
+			want := newFileTracker()
 			for idx, file := range tt.fileList {
 				// generate the expected file list
 				if strings.HasSuffix(file.Name(), ".csv") {
-					want[idx] = filepath.Join(tt.dirName, file.Name())
+					want.allfiles[idx] = filepath.Join(tt.dirName, file.Name())
 				}
 			}
-			if !reflect.DeepEqual(got, want) {
-				t.Errorf("%s expected %v but got %v", tt.name, got, want)
+			if !reflect.DeepEqual(want.allfiles, got.allfiles) {
+				t.Errorf("%s expected %v but got %v", tt.name, want.allfiles, got.allfiles)
 			}
-
 		})
 	}
 }
@@ -568,10 +567,15 @@ func TestGetAndRenderManifest(t *testing.T) {
 				t.Errorf("Error unmarshaling manifest")
 			}
 			// Define the expected manifest
-			var expectedFiles []string
-			for idx := range csvFileNames {
+			var expectedCostFiles []string
+			for idx := range csvFileNames.costfiles {
 				uploadName := testPackager.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
-				expectedFiles = append(expectedFiles, uploadName)
+				expectedCostFiles = append(expectedCostFiles, uploadName)
+			}
+			var expectedRosFiles []string
+			for idx := range csvFileNames.rosfiles {
+				uploadName := testPackager.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+				expectedRosFiles = append(expectedRosFiles, uploadName)
 			}
 			manifestDate := metav1.Now()
 
@@ -584,7 +588,8 @@ func TestGetAndRenderManifest(t *testing.T) {
 				CRStatus:  testPackager.CR.Status,
 				Version:   testPackager.CR.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
-				Files:     expectedFiles,
+				Files:     expectedCostFiles,
+				ROSFiles:  expectedRosFiles,
 				Start:     startTime.UTC(),
 				End:       endTime.UTC(),
 			}
@@ -608,7 +613,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 			if foundManifest.CRStatus.Upload.UploadToggle != expectedManifest.CRStatus.Upload.UploadToggle {
 				t.Errorf(errorMsg, expectedManifest.End, foundManifest.End)
 			}
-			for _, file := range expectedFiles {
+			for _, file := range expectedCostFiles {
 				found := false
 				for _, foundFile := range foundManifest.Files {
 					if file == foundFile {
@@ -619,8 +624,22 @@ func TestGetAndRenderManifest(t *testing.T) {
 					t.Errorf(errorMsg, file, foundManifest.Files)
 				}
 			}
-			if len(foundManifest.Files) != len(expectedFiles) {
-				t.Errorf("%s manifest filelist length does not match. Expected %d, got %d", tt.name, len(foundManifest.Files), len(expectedFiles))
+			if len(foundManifest.Files) != len(expectedCostFiles) {
+				t.Errorf("%s manifest filelist length does not match. Expected %d, got %d", tt.name, len(expectedCostFiles), len(foundManifest.Files))
+			}
+			for _, file := range expectedRosFiles {
+				found := false
+				for _, foundFile := range foundManifest.ROSFiles {
+					if file == foundFile {
+						found = true
+					}
+				}
+				if !found {
+					t.Errorf(errorMsg, file, foundManifest.ROSFiles)
+				}
+			}
+			if len(foundManifest.ROSFiles) != len(expectedRosFiles) {
+				t.Errorf("%s manifest filelist length does not match. Expected %d, got %d", tt.name, len(expectedRosFiles), len(foundManifest.ROSFiles))
 			}
 		})
 	}
@@ -688,7 +707,7 @@ func TestWriteTarball(t *testing.T) {
 			dirName:      testDirs.tar.directory,
 			fileList:     testDirs.tar.files,
 			manifestName: "",
-			tarFileName:  filepath.Join(filepath.Join(testDirs.tar.directory, "upload"), "cost.tar.gz"),
+			tarFileName:  "cost.tar.gz",
 			genCSVs:      true,
 			expectedErr:  false,
 		},
@@ -697,7 +716,7 @@ func TestWriteTarball(t *testing.T) {
 			dirName:      testDirs.large.directory,
 			fileList:     testDirs.large.files,
 			manifestName: "",
-			tarFileName:  filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
+			tarFileName:  "cost.tar.gz",
 			genCSVs:      true,
 			expectedErr:  true,
 		},
@@ -706,7 +725,7 @@ func TestWriteTarball(t *testing.T) {
 			dirName:      testDirs.empty.directory,
 			fileList:     testDirs.empty.files,
 			manifestName: "",
-			tarFileName:  filepath.Join(filepath.Join(testDirs.empty.directory, "upload"), "cost.tar.gz"),
+			tarFileName:  "cost.tar.gz",
 			genCSVs:      true,
 			expectedErr:  false,
 		},
@@ -715,7 +734,7 @@ func TestWriteTarball(t *testing.T) {
 			dirName:      testDirs.large.directory,
 			fileList:     testDirs.large.files,
 			manifestName: testPackager.manifest.filename + "nonexistent",
-			tarFileName:  filepath.Join(filepath.Join(testDirs.large.directory, "upload"), "cost.tar.gz"),
+			tarFileName:  "cost.tar.gz",
 			genCSVs:      false,
 			expectedErr:  true,
 		},
@@ -724,7 +743,7 @@ func TestWriteTarball(t *testing.T) {
 			dirName:      testDirs.large.directory,
 			fileList:     testDirs.large.files,
 			manifestName: "",
-			tarFileName:  filepath.Join(filepath.Join(filepath.Join(uuid.New().String(), testDirs.large.directory), "upload"), "cost-mgmt.tar.gz"),
+			tarFileName:  filepath.Join(uuid.New().String(), "cost-mgmt.tar.gz"),
 			genCSVs:      true,
 			expectedErr:  true,
 		},
@@ -734,7 +753,7 @@ func TestWriteTarball(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			stagingDir := testPackager.DirCfg.Reports.Path
-			csvFileNames := make(map[int]string)
+			csvFileNames := fileTracker{}
 			if tt.genCSVs {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
 			}
@@ -746,22 +765,23 @@ func TestWriteTarball(t *testing.T) {
 			if tt.manifestName == "" {
 				manifestName = testPackager.manifest.filename
 			}
-			err := testPackager.writeTarball(tt.tarFileName, manifestName, csvFileNames)
+			err := testPackager.writeTarball(tt.tarFileName, manifestName, csvFileNames.allfiles)
 			// ensure the tarfile was created if we expect it to be
 			if !tt.expectedErr {
-				if _, err := os.Stat(tt.tarFileName); os.IsNotExist(err) {
+				filePath := filepath.Join(testPackager.DirCfg.Upload.Path, tt.tarFileName)
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
 					t.Errorf("Tar file was not created")
 				}
 				// the only testcases that should generate tars are the normal use case
 				// and the empty use case
-				// if the regular test case, there should be a manifest and 2 csv files
-				numFiles := 3
+				// if the regular test case, there should be a manifest and 3 csv files
+				numFiles := 4
 				if strings.Contains(tt.name, "empty") {
 					// if the test case is the empty dir, there should only be a manifest
 					numFiles = 1
 				}
 				// check the contents of the tarball
-				file, err := os.Open(tt.tarFileName)
+				file, err := os.Open(filePath)
 				if err != nil {
 					t.Errorf("Can not open tarfile generated by %s", tt.name)
 				}
