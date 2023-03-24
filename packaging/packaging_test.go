@@ -141,7 +141,7 @@ func setup() error {
 		dirMode  os.FileMode
 		fileMode os.FileMode
 	}
-	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt", "ocp_pod_label.csv", "ros-file.csv"}
+	testFiles := []string{"ocp_node_label.csv", "nonCSV.txt", "ocp_pod_label.csv", "ros-openshift.csv"}
 	dirInfoList := []dirInfo{
 		{
 			dirName:  "large",
