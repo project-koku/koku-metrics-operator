@@ -12,7 +12,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Packaging the CSV report files into tarballs.
 
 #### Additional Capabilities:
-* Resource Optimization metrics collection (the default is to not collect these metrics).
+* Resource Optimization metrics collection.
 * The operator can be configured to gather all previous data within the configured retention period or a maximum of 90 days. The default data collection period is the 14 previous days. This setting is only applicable to newly created KokuMetricsConfigs.
 * The operator can be configured to automatically upload the packaged reports to cost management through Red Hat Insights Ingress service.
 * The operator can create a source in console.redhat.com. A source is required for cost management to process the uploaded packages.
@@ -20,7 +20,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v2.0.0:
-* Adds metrics and report generation for resource optimization. This feature will collect additional usage metrics and create a new report in the payload. These metrics are disabled by default, but can be enabled by setting `disable_metrics_collection_resource_optimization` to `false`.
+* Adds metrics and report generation for resource optimization. This feature will collect additional usage metrics and create a new report in the payload. These metrics are enabled by default, but can be disabled by setting `disable_metrics_collection_resource_optimization` to `true`.
 * Collect all available Prometheus data upon CR creation. This feature only applies to newly created KokuMetricsConfigs. The operator will check the monitoring stack configuration in the `openshift-monitoring` namespace. The operator will use the `retention` period set in the `cluster-monitoring-config` ConfigMap if defined, up to a maximum of 90 days. Otherwise it will fall back to collecting 14 days of data, if available. This data collection may be disabled by setting `collect_previous_data` to `false`. Turning this feature off results in the operator collecting metrics from the time the KokuMetricsConfig is created, forward.
 
 ## Limitations and Pre-Requisites
@@ -64,7 +64,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
   * `prometheus_config`:
     * `collect_previous_data: true` -> Toggle for collecting all available data in Prometheus **upon KokuMetricsConfig creation** (This parameter will start to appear in KokuMetricsConfigs that were created prior to v2.0.0 but will not have any effect unless the KokuMetricsConfig is deleted and recreated). The default is `true`. The operator will first look for a `retention` period in the `cluster-monitoring-config` ConfigMap in the `openshift-monitoring` namespace and gather data over this time period up to a maximum of 90 days. If this configuration is not set, the default is 14 days. (New in v2.0.0)
     * `disable_metrics_collection_cost_management: false` -> Toggle for disabling the collection of metrics for Cost Management. The default is false. (New in v2.0.0)
-    * `disable_metrics_collection_resource_optimization: true` -> Toggle for disabling the collection of metrics for Resource Optimization. The default is true. (New in v2.0.0)
+    * `disable_metrics_collection_resource_optimization: false` -> Toggle for disabling the collection of metrics for Resource Optimization. The default is false. (New in v2.0.0)
     * `context_timeout: 120` -> The time in seconds before Prometheus queries timeout due to exceeding context timeout. The default is 120, with a minimum of 10 and maximum of 180.
   * `source`:
     * `name: INSERT_SOURCE_NAME` -> The name of the Source the operator will create in `console.redhat.com`. The default is `INSERT_SOURCE_NAME` which is a placeholder.
