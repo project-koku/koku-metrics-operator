@@ -132,11 +132,11 @@ spec:
                       is false.
                     type: boolean
                   disable_metrics_collection_resource_optimization:
-                    default: true
+                    default: false
                     description: DisableMetricsCollectionResourceOptimization is a
                       field of KokuMetricsConfig to represent whether or not the operator
                       will generate reports for resource-optimization metrics. The
-                      default is true.
+                      default is false.
                     type: boolean
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
