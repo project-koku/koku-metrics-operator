@@ -20,7 +20,8 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v2.0.0:
-*
+* Adds metrics and report generation for resource optimization. This feature will collect additional usage metrics and create a new report in the payload. These metrics are disabled by default, but can be enabled by setting `disable_metrics_collection_resource_optimization` to `false`.
+* Collect all available Prometheus data upon CR creation. This feature only applies to newly created KokuMetricsConfigs. The operator will check the monitoring stack configuration in the `openshift-monitoring` namespace. The operator will use the `retention` period set in the `cluster-monitoring-config` ConfigMap if defined, up to a maximum of 90 days. Otherwise it will fall back to collecting 14 days of data, if available. This data collection may be disabled by setting `collect_previous_data` to `false`. Turning this feature off results in the operator collecting metrics from the time the KokuMetricsConfig is created, forward.
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
@@ -53,7 +54,7 @@ To use the default specification, the follow assumptions must be met:
 
 If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. After configuring storage, a valid PVC template should be supplied in the `volume_claim_template` spec of the KokuMetricsConfig CR.
 
-## Configrable parameters:
+## Configurable parameters:
 * ### authentication:
   * `type: choice (basic, token)` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` is used when the openshift-config pull-secret does not contain a token for `cloud.redhat.com`.
   * `secret_name` -> The Secret used by the operator when the authentication type is `basic`.
