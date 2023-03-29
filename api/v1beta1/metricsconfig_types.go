@@ -177,8 +177,8 @@ type PrometheusSpec struct {
 	DisableMetricsCollectionCostManagement *bool `json:"disable_metrics_collection_cost_management,omitempty"`
 
 	// DisableMetricsCollectionResourceOptimization is a field of KokuMetricsConfig to represent whether or not the operator will generate
-	// reports for resource-optimization metrics. The default is true.
-	// +kubebuilder:default=true
+	// reports for resource-optimization metrics. The default is false.
+	// +kubebuilder:default=false
 	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
 
 	// FOR DEVELOPMENT ONLY.
