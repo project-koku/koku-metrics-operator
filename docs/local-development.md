@@ -8,7 +8,7 @@
 * [Openshift-CLI](https://docs.openshift.com/container-platform/4.5/cli_reference/openshift_cli/getting-started-cli.html) (preferably a version that matches your Openshift cluster version)
 * [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-* [kustomize](https://kubernetes-sigs.github.io/kustomize/installation/) (before installing this separately, check that it was not already installed along with kubectl)
+* [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/) (before installing this separately, check that it was not already installed along with kubectl)
 * [Docker Desktop](https://www.docker.com/products/docker-desktop)
 * [quay.io](quay.io) account
 
