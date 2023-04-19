@@ -1116,7 +1116,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
-				Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
 					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
 						CollectPreviousData: &trueDef,
 					},
@@ -1136,12 +1136,12 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
-				Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
 					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
 						CollectPreviousData: &trueDef,
 					},
 				},
-				Status: metricscfgv1beta1.KokuMetricsConfigStatus{
+				Status: metricscfgv1beta1.MetricsConfigStatus{
 					Prometheus: metricscfgv1beta1.PrometheusStatus{
 						LastQuerySuccessTime: metav1.Now(),
 					},
@@ -1161,7 +1161,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
-				Spec: metricscfgv1beta1.KokuMetricsConfigSpec{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
 					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
 						CollectPreviousData: &falseDef,
 					},
