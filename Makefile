@@ -101,7 +101,7 @@ lint:
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
-SECRET_ABSPATH ?= "./testing"
+SECRET_ABSPATH ?= ./testing
 WATCH_NAMESPACE ?= koku-metrics-operator
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
@@ -188,6 +188,11 @@ ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
 	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+
+SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
+get-token-and-cert:
+	oc whoami --show-token > $(SECRET_ABSPATH)/token
+	oc get -o template $(SECRET_NAME) -o go-template=='{{index .data "service-ca.crt"|base64decode}}' > $(SECRET_ABSPATH)/service-ca.crt
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
