@@ -320,3 +320,27 @@ catalog-build: opm
 .PHONY: catalog-push
 catalog-push: ## Push the catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+
+REMOVE_FILES = koku-metrics-operator/
+UPSTREAM_LOWERCASE = koku
+UPSTREAM_UPPERCASE = Koku
+DOWNSTREAM_LOWERCASE = costmanagement
+DOWNSTREAM_UPPERCASE = CostManagement
+downstream:
+	rm -rf $(REMOVE_FILES)
+	# sed replace everything but the Makefile
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	$(MAKE) generate
+	go mod tidy
+	go mod vendor
+	# fix the cert
+	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
+	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' packaging/packaging.go
+	# clean up the other files
+	- git clean -fx
+	# mv the sample to the correctly named file
+	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	$(MAKE) generate
+	$(MAKE) manifests

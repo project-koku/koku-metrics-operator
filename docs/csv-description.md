@@ -1,34 +1,34 @@
-# Koku Metrics Operator
+# CostManagement Metrics Operator
 ## Introduction
-The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift, used to gather the required information from the cluster. It is recommended to be installed in OpenShift 4.5+. This operator obtains OpenShift usage data by querying Prometheus and uploads it to cost management to be processed. The Operator queries Prometheus every hour to create metric reports, which are then packaged and uploaded to cost management at [console.redhat.com](https://console.redhat.com). For more information, reach out to <costmanagement@redhat.com>.
+The `costmanagement-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift, used to gather the required information from the cluster. It is recommended to be installed in OpenShift 4.5+. This operator obtains OpenShift usage data by querying Prometheus and uploads it to cost management to be processed. The Operator queries Prometheus every hour to create metric reports, which are then packaged and uploaded to cost management at [console.redhat.com](https://console.redhat.com). For more information, reach out to <costmanagement@redhat.com>.
 
 This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
 
 ## Features and Capabilities
 #### Metrics collection:
-The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics required for cost management by:
+The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for cost management by:
 * Querying Prometheus to gather the necessary metrics for cost management.
 * Writing Prometheus queries to CSV report files.
 * Packaging the CSV report files into tarballs.
 
 #### Additional Capabilities:
 * Resource Optimization metrics collection.
-* The operator can be configured to gather all previous data within the configured retention period or a maximum of 90 days. The default data collection period is the 14 previous days. This setting is only applicable to newly created KokuMetricsConfigs.
+* The operator can be configured to gather all previous data within the configured retention period or a maximum of 90 days. The default data collection period is the 14 previous days. This setting is only applicable to newly created CostManagementMetricsConfigs.
 * The operator can be configured to automatically upload the packaged reports to cost management through Red Hat Insights Ingress service.
 * The operator can create a source in console.redhat.com. A source is required for cost management to process the uploaded packages.
-* PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
+* PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v2.0.0:
 * Adds metrics and report generation for resource optimization. This feature will collect additional usage metrics and create a new report in the payload. These metrics are enabled by default, but can be disabled by setting `disable_metrics_collection_resource_optimization` to `true`.
-* Collect all available Prometheus data upon CR creation. This feature only applies to newly created KokuMetricsConfigs. The operator will check the monitoring stack configuration in the `openshift-monitoring` namespace. The operator will use the `retention` period set in the `cluster-monitoring-config` ConfigMap if defined, up to a maximum of 90 days. Otherwise it will fall back to collecting 14 days of data, if available. This data collection may be disabled by setting `collect_previous_data` to `false`. Turning this feature off results in the operator collecting metrics from the time the KokuMetricsConfig is created, forward.
+* Collect all available Prometheus data upon CR creation. This feature only applies to newly created CostManagementMetricsConfigs. The operator will check the monitoring stack configuration in the `openshift-monitoring` namespace. The operator will use the `retention` period set in the `cluster-monitoring-config` ConfigMap if defined, up to a maximum of 90 days. Otherwise it will fall back to collecting 14 days of data, if available. This data collection may be disabled by setting `collect_previous_data` to `false`. Turning this feature off results in the operator collecting metrics from the time the CostManagementMetricsConfig is created, forward.
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
 * A source **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
 
 **Note** The following limitations are specific to operators configured to run in a restricted network:
-* The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
+* The `costmanagement-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
 * The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to console.redhat.com every week, or they will be deleted and the data will be lost.
 
 #### Storage configuration prerequisite
@@ -38,7 +38,7 @@ The operator will attempt to create and use the following PVC when installed:
         apiVersion: v1
         kind: PersistentVolumeClaim
         metadata:
-          name: koku-metrics-operator-data
+          name: costmanagement-metrics-operator-data
         spec:
           accessModes:
             - ReadWriteOnce
@@ -46,13 +46,13 @@ The operator will attempt to create and use the following PVC when installed:
             requests:
               storage: 10Gi
 
-If a different PVC should be utilized, a valid PVC should be specified in the KokuMetricsConfig CR as described in the appropriate section below. The PVC to be used may exist already, or the operator will attempt to create it.
+If a different PVC should be utilized, a valid PVC should be specified in the CostManagementMetricsConfig CR as described in the appropriate section below. The PVC to be used may exist already, or the operator will attempt to create it.
 
 To use the default specification, the follow assumptions must be met:
 1. A default StorageClass is defined.
 2. Dynamic provisioning for that default StorageClass is enabled.
 
-If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. After configuring storage, a valid PVC template should be supplied in the `volume_claim_template` spec of the KokuMetricsConfig CR.
+If these assumptions are not met, the operator will not deploy correctly. In these cases, storage must be manually configured. After configuring storage, a valid PVC template should be supplied in the `volume_claim_template` spec of the CostManagementMetricsConfig CR.
 
 ## Configurable parameters:
   * `authentication`:
@@ -62,7 +62,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
     * `max_reports_to_store: 30` -> The number of reports to store when configured in air-gapped mode. The default is 30, with a minimum of 1 and no maximum. When the operator is not configured in air-gapped mode, this parameter has no effect. Reports are removed as soon as they are uploaded.
     * `max_size: 100` -> The maximum size for packaged files in Megabytes prior to compression. The default is 100, with a minimum of 1 and maximum of 100.
   * `prometheus_config`:
-    * `collect_previous_data: true` -> Toggle for collecting all available data in Prometheus **upon KokuMetricsConfig creation** (This parameter will start to appear in KokuMetricsConfigs that were created prior to v2.0.0 but will not have any effect unless the KokuMetricsConfig is deleted and recreated). The default is `true`. The operator will first look for a `retention` period in the `cluster-monitoring-config` ConfigMap in the `openshift-monitoring` namespace and gather data over this time period up to a maximum of 90 days. If this configuration is not set, the default is 14 days. (New in v2.0.0)
+    * `collect_previous_data: true` -> Toggle for collecting all available data in Prometheus **upon CostManagementMetricsConfig creation** (This parameter will start to appear in CostManagementMetricsConfigs that were created prior to v2.0.0 but will not have any effect unless the CostManagementMetricsConfig is deleted and recreated). The default is `true`. The operator will first look for a `retention` period in the `cluster-monitoring-config` ConfigMap in the `openshift-monitoring` namespace and gather data over this time period up to a maximum of 90 days. If this configuration is not set, the default is 14 days. (New in v2.0.0)
     * `disable_metrics_collection_cost_management: false` -> Toggle for disabling the collection of metrics for Cost Management. The default is false. (New in v2.0.0)
     * `disable_metrics_collection_resource_optimization: false` -> Toggle for disabling the collection of metrics for Resource Optimization. The default is false. (New in v2.0.0)
     * `context_timeout: 120` -> The time in seconds before Prometheus queries timeout due to exceeding context timeout. The default is 120, with a minimum of 10 and maximum of 180.
@@ -76,16 +76,16 @@ If these assumptions are not met, the operator will not deploy correctly. In the
     * `upload_wait` -> The amount of time (in seconds) to pause before uploading a payload. The default is a random number between 0 and 35. This is used to decrease service load, but may be set to `0` if desired.
   * `volume_claim_template` -> see the "Storage configuration prerequisite" section above.
 
-## Configure the koku-metrics-operator
-**Note** There are separate instructions for configuring the `koku-metrics-operator` to run in a restricted network.
+## Configure the costmanagement-metrics-operator
+**Note** There are separate instructions for configuring the `costmanagement-metrics-operator` to run in a restricted network.
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
-1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
+1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `costmanagement-metrics-operator` -> `Create` -> `Key/Value Secret`
 2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to console.redhat.com credentials.
 3. Select `Create`.
-##### Create the KokuMetricsConfig
-Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
-1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
+##### Create the CostManagementMetricsConfig
+Configure the costmanagement-metrics-operator by creating a `CostManagementMetricsConfig`.
+1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `costmanagement-metrics-operator` -> `CostManagementMetricsConfig` -> `Create Instance`.
 2. For `basic` authentication, edit the following values in the spec:
     * Replace `authentication: type:` with `basic`.
     * Add the `secret_name` field under `authentication`, and set it equal to the name of the authentication Secret that was created above. The spec should look similar to the following:
@@ -96,12 +96,12 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
             type: basic
         ```
 
-3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `source` field:
+3. To configure the costmanagement-metrics-operator to create a cost management source, edit the following values in the `source` field:
     * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
     * Replace the `create_source` field value with `true`.
 
     **Note:** if the source already exists, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
-4. If not specified, the operator will create a default PersistentVolumeClaim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
+4. If not specified, the operator will create a default PersistentVolumeClaim called `costmanagement-metrics-operator-data` with 10Gi of storage. To configure the costmanagement-metrics-operator to use or create a different PVC, edit the following in the spec:
     * Add the desired configuration to the `volume_claim_template` field in the spec:
 
       ```
@@ -123,15 +123,15 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `koku-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `koku-metrics-operator` package.
+To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
-## Configure the koku-metrics-operator for a restricted network
-##### Create the KokuMetricsConfig
-Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
-1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
-2. Specify the desired storage. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
+## Configure the costmanagement-metrics-operator for a restricted network
+##### Create the CostManagementMetricsConfig
+Configure the costmanagement-metrics-operator by creating a `CostManagementMetricsConfig`.
+1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `costmanagement-metrics-operator` -> `CostManagementMetricsConfig` -> `Create Instance`.
+2. Specify the desired storage. If not specified, the operator will create a default Persistent Volume Claim called `costmanagement-metrics-operator-data` with 10Gi of storage. To configure the costmanagement-metrics-operator to use or create a different PVC, edit the following in the spec:
     * Add the desired configuration to the `volume_claim_template` field in the spec:
 
       ```
@@ -171,7 +171,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 5. Select `Create`.
 
 ## Download reports from the Operator & clean up the PVC
-If the `koku-metrics-operator` is configured to run in a restricted network, the metric reports will not automatically upload to cost managment. Instead, they need to be manually copied from the PVC for upload to [console.redhat.com](https://console.redhat.com). The default configuration saves one week of reports which means the process of downloading and uploading reports should be repeated weekly to prevent loss of metrics data. To download the reports, complete the following steps:
+If the `costmanagement-metrics-operator` is configured to run in a restricted network, the metric reports will not automatically upload to cost managment. Instead, they need to be manually copied from the PVC for upload to [console.redhat.com](https://console.redhat.com). The default configuration saves one week of reports which means the process of downloading and uploading reports should be repeated weekly to prevent loss of metrics data. To download the reports, complete the following steps:
 1. Create the following Pod, ensuring the `claimName` matches the PVC containing the report data:
 
   ```
@@ -179,34 +179,34 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
     apiVersion: v1
     metadata:
       name: volume-shell
-      namespace: koku-metrics-operator
+      namespace: costmanagement-metrics-operator
       labels:
-        app: koku-metrics-operator
+        app: costmanagement-metrics-operator
     spec:
       volumes:
-      - name: koku-metrics-operator-reports
+      - name: costmanagement-metrics-operator-reports
         persistentVolumeClaim:
-          claimName: koku-metrics-operator-data
+          claimName: costmanagement-metrics-operator-data
       containers:
       - name: volume-shell
         image: busybox
         command: ['sleep', 'infinity']
         volumeMounts:
-        - name: koku-metrics-operator-reports
-          mountPath: /tmp/koku-metrics-operator-reports
+        - name: costmanagement-metrics-operator-reports
+          mountPath: /tmp/costmanagement-metrics-operator-reports
   ```
 
 2. Use rsync to copy all of the files ready for upload from the PVC to a local folder:
 
   ```
-  $ oc rsync volume-shell:/tmp/koku-metrics-operator-reports/upload local/path/to/save/folder
+  $ oc rsync volume-shell:/tmp/costmanagement-metrics-operator-reports/upload local/path/to/save/folder
   ```
 
 3. Once confirming that the files have been successfully copied, use rsh to connect to the pod and delete the contents of the upload folder so that they are no longer in storage:
 
   ```
   $ oc rsh volume-shell
-  $ rm /tmp/koku-metrics-operator-reports/upload/*
+  $ rm /tmp/costmanagement-metrics-operator-reports/upload/*
   ```
 
 4. (Optional) Delete the pod that was used to connect to the PVC:
@@ -216,10 +216,10 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   ```
 
 ## Create a source
-In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
+In a restricted network, the `costmanagement-metrics-operator` cannot automatically create a source. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
 
 Prerequisites:
-* The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
+* The cluster identifier which can be found in the CostManagementMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
 
 Create source:
 1. Navigate to the Sources menu
