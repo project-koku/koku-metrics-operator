@@ -8,7 +8,11 @@ spec:
   packaging:
     max_reports_to_store: 30
     max_size_MB: 100
-  prometheus_config: {}
+  prometheus_config:
+    collect_previous_data: true
+    context_timeout: 120
+    disable_metrics_collection_cost_management: false
+    disable_metrics_collection_resource_optimization: false
   source:
     name: INSERT-SOURCE-NAME
     check_cycle: 1440

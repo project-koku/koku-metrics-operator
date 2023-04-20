@@ -177,8 +177,8 @@ type PrometheusSpec struct {
 	DisableMetricsCollectionCostManagement *bool `json:"disable_metrics_collection_cost_management,omitempty"`
 
 	// DisableMetricsCollectionResourceOptimization is a field of KokuMetricsConfig to represent whether or not the operator will generate
-	// reports for resource-optimization metrics. The default is true.
-	// +kubebuilder:default=true
+	// reports for resource-optimization metrics. The default is false.
+	// +kubebuilder:default=false
 	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
 
 	// FOR DEVELOPMENT ONLY.
@@ -410,7 +410,7 @@ type PrometheusStatus struct {
 	// PreviousDataCollected is a field of KokuMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
 	// data upon KokuMetricsConfig creation.
 	// +kubebuilder:default=false
-	PreviousDataCollected bool `json:"previous_data_collected"`
+	PreviousDataCollected bool `json:"previous_data_collected,omitempty"`
 
 	// DisabledMetricsCollectionCostManagement is a field of KokuMetricsConfigStatus to represent whether or not collecting
 	// cost-management metrics is disabled. The default is false.

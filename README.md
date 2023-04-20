@@ -37,7 +37,7 @@ Now install and configure pre-commit. You can choose your installation steps for
 pre-commit install
 ```
 
-Next, install the Operator SDK CLI using the following [documentation](https://sdk.operatorframework.io/docs/installation/install-operator-sdk/). The operator is currently being built with the v0.19 release of the operator-sdk.
+Next, install the Operator SDK CLI using the following [documentation](https://sdk.operatorframework.io/docs/installation/). The operator is currently being built with the v0.19 release of the operator-sdk.
 
 To build the manager binary you can execute the following make command:
 

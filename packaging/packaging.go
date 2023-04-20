@@ -77,6 +77,7 @@ type manifest struct {
 	Version   string                                `json:"version"`
 	Date      time.Time                             `json:"date"`
 	Files     []string                              `json:"files"`
+	ROSFiles  []string                              `json:"resource_optimization_files"`
 	Start     time.Time                             `json:"start"`
 	End       time.Time                             `json:"end"`
 	CRStatus  metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
@@ -87,6 +88,19 @@ type FileInfoManifest manifest
 type manifestInfo struct {
 	manifest Manifest
 	filename string
+}
+type fileTracker struct {
+	costfiles map[int]string
+	rosfiles  map[int]string
+	allfiles  map[int]string
+}
+
+func newFileTracker() fileTracker {
+	return fileTracker{
+		costfiles: make(map[int]string, 4),
+		rosfiles:  make(map[int]string, 1),
+		allfiles:  make(map[int]string, 5),
+	}
 }
 
 // renderManifest writes the manifest
@@ -103,24 +117,35 @@ func (m *manifestInfo) renderManifest() error {
 }
 
 // buildLocalCSVFileList gets the list of files in the staging directory
-func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string {
-	csvList := make(map[int]string)
+func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) fileTracker {
+	tracker := newFileTracker()
 	for idx, file := range fileList {
-		if strings.HasSuffix(file.Name(), ".csv") {
-			csvFilePath := filepath.Join(stagingDirectory, file.Name())
-			csvList[idx] = csvFilePath
+		if !strings.HasSuffix(file.Name(), ".csv") {
+			continue
 		}
+		csvFilePath := filepath.Join(stagingDirectory, file.Name())
+		if strings.Contains(file.Name(), "ros-openshift") {
+			tracker.rosfiles[idx] = csvFilePath
+		} else {
+			tracker.costfiles[idx] = csvFilePath
+		}
+		tracker.allfiles[idx] = csvFilePath
 	}
-	return csvList
+	return tracker
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, cr metricscfgv1beta1.MetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
-	var manifestFiles []string
-	for idx := range archiveFiles {
+	var costFiles []string
+	for idx := range archiveFiles.costfiles {
 		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
-		manifestFiles = append(manifestFiles, uploadName)
+		costFiles = append(costFiles, uploadName)
+	}
+	var rosFiles []string
+	for idx := range archiveFiles.rosfiles {
+		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+		rosFiles = append(rosFiles, uploadName)
 	}
 	p.manifest = manifestInfo{
 		manifest: manifest{
@@ -128,7 +153,8 @@ func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string,
 			ClusterID: p.CR.Status.ClusterID,
 			Version:   p.CR.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
-			Files:     manifestFiles,
+			Files:     costFiles,
+			ROSFiles:  rosFiles,
 			Start:     p.start.UTC(),
 			End:       p.end.UTC(),
 			Certified: isCertified,
@@ -172,9 +198,11 @@ func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter
 
 // writeTarball packages the files into tar balls
 func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error {
+	tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
+	log.Info("generating tar.gz", "tarFile", tarFilePath)
 
 	// create the tarfile
-	tarFile, err := os.Create(tarFileName)
+	tarFile, err := os.Create(tarFilePath)
 	if err != nil {
 		return fmt.Errorf("writeTarball: error creating tar file: %v", err)
 	}
@@ -461,21 +489,26 @@ func (p *FilePackager) PackageReports() error {
 	// get the start and end dates from the report
 	log.Info("getting the start and end intervals for the manifest")
 	for _, file := range filesToPackage {
-		if strings.Contains(file.Name(), "pod") {
-			absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+		absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+		if strings.Contains(file.Name(), "cm-openshift-pod") {
+			if err := p.getStartEnd(absPath); err != nil {
+				return fmt.Errorf("PackageReports: %v", err)
+			}
+		} else if p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift") {
 			if err := p.getStartEnd(absPath); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	}
+
 	// check if the files need to be split
 	log.Info("checking to see if the report files need to be split")
 	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)
 	if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
-	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.CR)
+	tracker := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
+	p.getManifest(tracker, p.DirCfg.Staging.Path, *p.CR)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -484,23 +517,16 @@ func (p *FilePackager) PackageReports() error {
 	filenameBase := p.createdTimestamp + "-cost-mgmt"
 
 	if split {
-		for idx, fileName := range fileList {
-			if !strings.HasSuffix(fileName, ".csv") {
-				continue
-			}
-			fileList = map[int]string{idx: fileName}
+		for idx, fileName := range tracker.allfiles {
+			fileMap := map[int]string{idx: fileName}
 			tarFileName := filenameBase + "-" + strconv.Itoa(idx) + ".tar.gz"
-			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-			log.Info("generating tar.gz", "tarFile", tarFilePath)
-			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
+			if err := p.writeTarball(tarFileName, p.manifest.filename, fileMap); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	} else {
 		tarFileName := filenameBase + ".tar.gz"
-		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-		log.Info("generating tar.gz", "tarFile", tarFilePath)
-		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
+		if err := p.writeTarball(tarFileName, p.manifest.filename, tracker.allfiles); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
