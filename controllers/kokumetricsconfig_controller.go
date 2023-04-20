@@ -65,7 +65,6 @@ type MetricsConfigReconciler struct {
 	Namespace string
 
 	apiReader                     client.Reader
-	cvClientBuilder               cv.ClusterVersionBuilder
 	promCollector                 *collector.PrometheusCollector
 	disablePreviousDataCollection bool
 	overrideSecretPath            bool
