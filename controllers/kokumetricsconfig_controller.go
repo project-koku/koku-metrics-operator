@@ -648,12 +648,12 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	startTime, endTime := getTimeRange(ctx, r, cr)
 	for start := startTime; !start.After(endTime); start = start.AddDate(0, 0, 1) {
 		t := start
-		points := int(endTime.Sub(t).Hours())
-		if points > 23 {
+		hours := int(endTime.Sub(t).Hours())
+		if hours > 23 {
 			// use 23 instead of 24 because we start counting at 0, not 1.
-			points = 23
+			hours = 23
 		}
-		for i := 0; i <= points; i++ {
+		for i := 0; i <= hours; i++ {
 			timeRange := promv1.Range{
 				Start: t,
 				End:   t.Add(59*time.Minute + 59*time.Second),
