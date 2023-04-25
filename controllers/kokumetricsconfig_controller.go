@@ -650,6 +650,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		t := start
 		points := int(endTime.Sub(t).Hours())
 		if points > 23 {
+			// use 23 instead of 24 because we start counting at 0, not 1.
 			points = 23
 		}
 		for i := 0; i <= points; i++ {
