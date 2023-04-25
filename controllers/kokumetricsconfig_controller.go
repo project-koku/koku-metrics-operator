@@ -660,8 +660,8 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				Step:  time.Minute,
 			}
 			if err := collectPromStats(r, cr, dirCfg, timeRange); err != nil {
-				if err == collector.ErrNoData {
-					// if there is no data at the start of the hour, skip to the next day
+				if err == collector.ErrNoData && t.Hour() == 0 {
+					// if there is no data at the start of the dat, skip to the next day
 					// so that we do not collect partial data for a full day
 					break
 				}
