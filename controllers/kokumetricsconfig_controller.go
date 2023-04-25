@@ -648,7 +648,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	startTime, endTime := getTimeRange(ctx, r, cr)
 	for start := startTime; !start.After(endTime); start = start.AddDate(0, 0, 1) {
 		t := start
-		points := int(endTime.Sub(startTime).Hours())
+		points := int(endTime.Sub(t).Hours())
 		if points > 23 {
 			points = 23
 		}
