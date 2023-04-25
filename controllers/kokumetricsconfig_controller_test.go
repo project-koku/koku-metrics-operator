@@ -1125,7 +1125,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			got, _ := getTimeRange(ctx, r, cr)
 			Expect(got).ToNot(Equal(original))
-			Expect(got).To(Equal(original.Add(-fourteenDayDuration)))
+			Expect(got).To(Equal(original.Add(-fourteenDayDuration).Truncate(24 * time.Hour)))
 		})
 
 		It("check the start time on old CR - previous data collection set to true", func() {
