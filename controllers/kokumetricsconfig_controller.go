@@ -71,6 +71,7 @@ type MetricsConfigReconciler struct {
 	cvClientBuilder               cv.ClusterVersionBuilder
 	promCollector                 *collector.PrometheusCollector
 	disablePreviousDataCollection bool
+	initialDataCollection         bool
 	overrideSecretPath            bool
 }
 
@@ -645,13 +646,13 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
 	startTime, endTime := getTimeRange(ctx, r, cr)
-	for t := startTime; !t.After(endTime); t = t.AddDate(0, 0, 1) {
-		points := 24
-		if endTime.Sub(startTime) == time.Hour {
-			points = 1
+	for start := startTime; !start.After(endTime); start = start.AddDate(0, 0, 1) {
+		t := start
+		points := int(endTime.Sub(startTime).Hours())
+		if points > 23 {
+			points = 23
 		}
-		for i := 0; i < points; i++ {
-			t = t.Add(time.Duration(i) * time.Hour)
+		for i := 0; i <= points; i++ {
 			timeRange := promv1.Range{
 				Start: t,
 				End:   t.Add(59*time.Minute + 59*time.Second),
@@ -664,22 +665,27 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					break
 				}
 			}
+			t = t.Add(1 * time.Hour)
 		}
 
-		// after collecting 24 hours of data, package the report to compress the files
-		// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
-		// zero enables packaging to occur thruout this loop
-		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-		packageFiles(packager)
+		if r.initialDataCollection {
+			// only perform these steps during the initial data collection.
+			// after collecting 24 hours of data, package the report to compress the files
+			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
+			// zero enables packaging to occur thruout this loop
+			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+			packageFiles(packager)
 
-		if err := r.Status().Update(ctx, cr); err != nil {
-			// it's not critical to handle this error. We update the status here to show progress
-			// if this loop takes a long time to complete. A missed update here does not impact
-			// data collection.
-			log.Info("failed to update MetricsConfig status")
+			if err := r.Status().Update(ctx, cr); err != nil {
+				// it's not critical to handle this error. We update the status here to show progress
+				// if this loop takes a long time to complete. A missed update here does not impact
+				// data collection.
+				log.Info("failed to update MetricsConfig status")
+			}
 		}
 
 	}
+	r.initialDataCollection = false
 
 	// package report files
 	packageFiles(packager)
