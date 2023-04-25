@@ -676,14 +676,14 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// zero enables packaging to occur thruout this loop
 			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 			packageFiles(packager)
-
-			if err := r.Status().Update(ctx, cr); err != nil {
-				// it's not critical to handle this error. We update the status here to show progress
-				// if this loop takes a long time to complete. A missed update here does not impact
-				// data collection.
-				log.Info("failed to update MetricsConfig status")
-			}
 			startTime = t
+		}
+
+		if err := r.Status().Update(ctx, cr); err != nil {
+			// it's not critical to handle this error. We update the status here to show progress
+			// if this loop takes a long time to complete. A missed update here does not impact
+			// data collection.
+			log.Info("failed to update MetricsConfig status")
 		}
 
 	}
