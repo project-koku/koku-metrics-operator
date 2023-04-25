@@ -668,9 +668,9 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			t = t.Add(1 * time.Hour)
 		}
 
-		if r.initialDataCollection {
+		if r.initialDataCollection && t.Sub(startTime).Hours() == 96 {
 			// only perform these steps during the initial data collection.
-			// after collecting 24 hours of data, package the report to compress the files
+			// after collecting 96 hours of data, package the report to compress the files
 			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
 			// zero enables packaging to occur thruout this loop
 			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
@@ -682,6 +682,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				// data collection.
 				log.Info("failed to update MetricsConfig status")
 			}
+			startTime = t
 		}
 
 	}
