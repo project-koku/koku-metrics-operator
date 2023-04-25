@@ -644,31 +644,41 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "failed to get prometheus connection")
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
-	originalStartTime, endTime := getTimeRange(ctx, r, cr)
-	startTime := originalStartTime
-	for startTime.Before(endTime) {
-		t := startTime
-		timeRange := promv1.Range{
-			Start: t,
-			End:   t.Add(59*time.Minute + 59*time.Second),
-			Step:  time.Minute,
+	startTime, endTime := getTimeRange(ctx, r, cr)
+	for t := startTime; !t.After(endTime); t = t.AddDate(0, 0, 1) {
+		points := 24
+		if endTime.Sub(startTime) == time.Hour {
+			points = 1
 		}
-		collectPromStats(r, cr, dirCfg, timeRange)
-		if startTime.Sub(originalStartTime) == 48*time.Hour {
-			// after collecting 48 hours of data, package the report to compress the files
-			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
-			// zero enables packaging to occur thruout this loop
-			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-			packageFiles(packager)
-			originalStartTime = startTime
+		for i := 0; i < points; i++ {
+			t = t.Add(time.Duration(i) * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			if err := collectPromStats(r, cr, dirCfg, timeRange); err != nil {
+				if err == collector.ErrNoData {
+					// if there is no data at the start of the hour, skip to the next day
+					// so that we do not collect partial data for a full day
+					break
+				}
+			}
 		}
-		startTime = startTime.Add(1 * time.Hour)
+
+		// after collecting 24 hours of data, package the report to compress the files
+		// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
+		// zero enables packaging to occur thruout this loop
+		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		packageFiles(packager)
+
 		if err := r.Status().Update(ctx, cr); err != nil {
 			// it's not critical to handle this error. We update the status here to show progress
 			// if this loop takes a long time to complete. A missed update here does not impact
-			// data collection here.
+			// data collection.
 			log.Info("failed to update MetricsConfig status")
 		}
+
 	}
 
 	// package report files

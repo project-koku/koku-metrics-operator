@@ -120,7 +120,7 @@ func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	return r.promCollector.GetPromConn(cr, promCfgSetter, promConnSetter, promConnTester)
 }
 
-func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
+func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) error {
 	log := log.WithName("collectPromStats")
 
 	r.promCollector.TimeSeries = &timeRange
@@ -130,7 +130,7 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	formattedEnd := timeRange.End.Format(time.RFC3339)
 	if cr.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
 		log.Info("reports already generated for range", "start", formattedStart, "end", formattedEnd)
-		return
+		return nil
 	}
 
 	cr.Status.Prometheus.LastQueryStartTime = t
@@ -140,8 +140,9 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 		cr.Status.Reports.DataCollected = false
 		cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		log.Error(err, "failed to generate reports")
-		return
+		return err
 	}
 	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
 	cr.Status.Prometheus.LastQuerySuccessTime = t
+	return nil
 }
