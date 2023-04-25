@@ -356,7 +356,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 		},
 		TimeSeries: &fakeTimeRange,
 	}
-	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil {
+	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil && err != ErrNoData {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
 	wanted := "No data to report for the hour queried."

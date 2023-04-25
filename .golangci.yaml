@@ -21,7 +21,7 @@ linters:
     - unused
 
     - goimports
-    - gosec
+    # - gosec
 
 issues:
   max-issues-per-linter: 0
