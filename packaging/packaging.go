@@ -35,6 +35,7 @@ import (
 type FilePackager struct {
 	CR               *metricscfgv1beta1.MetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
+	FilesAction      FilesAction
 	manifest         manifestInfo
 	uid              string
 	createdTimestamp string
@@ -42,6 +43,13 @@ type FilePackager struct {
 	start            time.Time
 	end              time.Time
 }
+
+type FilesAction int
+
+const (
+	MoveFiles FilesAction = iota
+	CopyFiles
+)
 
 const timestampFormat = "20060102T150405"
 
@@ -116,6 +124,53 @@ func (m *manifestInfo) renderManifest() error {
 		return fmt.Errorf("renderManifest: failed to write manifest: %v", err)
 	}
 	return nil
+}
+
+func copyFiles(src, dst string, BUFFERSIZE int64) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	_, err = os.Stat(dst)
+	if err == nil {
+		return fmt.Errorf("file %s already exists", dst)
+	}
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	if err != nil {
+		panic(err)
+	}
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
+	return err
 }
 
 // buildLocalCSVFileList gets the list of files in the staging directory
@@ -377,55 +432,8 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	return false
 }
 
-func copyFiles(src, dst string, BUFFERSIZE int64) error {
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file", src)
-	}
-
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	_, err = os.Stat(dst)
-	if err == nil {
-		return fmt.Errorf("file %s already exists", dst)
-	}
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-
-	if err != nil {
-		panic(err)
-	}
-	buf := make([]byte, BUFFERSIZE)
-	for {
-		n, err := source.Read(buf)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		if n == 0 {
-			break
-		}
-
-		if _, err := destination.Write(buf[:n]); err != nil {
-			return err
-		}
-	}
-	return err
-}
-
 // moveOrCopyFiles moves files from reportsDirectory to stagingDirectory
-func (p *FilePackager) moveOrCopyFiles(action string) ([]os.FileInfo, error) {
+func (p *FilePackager) moveOrCopyFiles() ([]os.FileInfo, error) {
 	log := log.WithName("moveOrCopyFiles")
 	var movedFiles []os.FileInfo
 
@@ -454,8 +462,8 @@ func (p *FilePackager) moveOrCopyFiles(action string) ([]os.FileInfo, error) {
 		}
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
-		switch action {
-		case "copy":
+		switch p.FilesAction {
+		case CopyFiles:
 			if err := copyFiles(from, to, BUFFERSIZE); err != nil {
 				return nil, fmt.Errorf("moveOrCopyFiles: failed to copy files: %v", err)
 			}
@@ -525,7 +533,7 @@ func (p *FilePackager) TrimPackages() error {
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports(action string) error {
+func (p *FilePackager) PackageReports() error {
 	log := log.WithName("PackageReports")
 	p.maxBytes = *p.CR.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
@@ -537,7 +545,7 @@ func (p *FilePackager) PackageReports(action string) error {
 	}
 
 	// move CSV reports from data directory to staging directory
-	filesToPackage, err := p.moveOrCopyFiles(action)
+	filesToPackage, err := p.moveOrCopyFiles()
 	if err == ErrNoReports {
 		return nil
 	} else if err != nil {

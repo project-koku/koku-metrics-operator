@@ -34,8 +34,9 @@ var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var cr = &metricscfgv1beta1.MetricsConfig{}
 var testPackager = FilePackager{
-	DirCfg: dirCfg,
-	CR:     cr,
+	DirCfg:      dirCfg,
+	CR:          cr,
+	FilesAction: MoveFiles,
 }
 var errTest = errors.New("test error")
 
@@ -373,7 +374,7 @@ func TestMoveFiles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			testPackager.uid = tt.fileUUID
-			got, err := testPackager.moveOrCopyFiles("move")
+			got, err := testPackager.moveOrCopyFiles()
 			if tt.want == nil && got != nil {
 				t.Errorf("Expected moved files to be nil")
 			} else if tt.want != nil && got == nil {
@@ -463,7 +464,7 @@ func TestPackagingReports(t *testing.T) {
 			testPackager.DirCfg = tt.dirCfg
 			testPackager.CR.Spec.Packaging.MaxReports = tt.maxReports
 			testPackager.CR.Status.Packaging.MaxSize = &tt.maxSize
-			err := testPackager.PackageReports("move")
+			err := testPackager.PackageReports()
 			if tt.want != nil && err == nil {
 				t.Errorf("%s wanted error got %v", tt.name, err)
 			}

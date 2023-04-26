@@ -427,7 +427,7 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
-func packageFiles(p *packaging.FilePackager, action string) {
+func packageFiles(p *packaging.FilePackager) {
 	log := log.WithName("packageAndUpload")
 
 	// if its time to package
@@ -437,7 +437,7 @@ func packageFiles(p *packaging.FilePackager, action string) {
 
 	// Package and split the payload if necessary
 	p.CR.Status.Packaging.PackagingError = ""
-	if err := p.PackageReports(action); err != nil {
+	if err := p.PackageReports(); err != nil {
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
 		p.CR.Status.Packaging.PackagingError = err.Error()
@@ -627,8 +627,9 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	startTime, endTime := getTimeRange(ctx, r, cr)
 
 	packager := &packaging.FilePackager{
-		CR:     cr,
-		DirCfg: dirCfg,
+		CR:          cr,
+		DirCfg:      dirCfg,
+		FilesAction: packaging.MoveFiles,
 	}
 
 	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
@@ -638,7 +639,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
 			log.Info("packaging files from an old operator version")
-			packageFiles(packager, "move")
+			packageFiles(packager)
 			// after packaging files after an upgrade, truncate the start time so we recollect
 			// all of today's data
 			startTime = startTime.Truncate(24 * time.Hour)
@@ -680,7 +681,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
 			// zero enables packaging to occur thruout this loop
 			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-			packageFiles(packager, "move")
+			packageFiles(packager)
 			startTime = t
 		}
 
@@ -693,15 +694,15 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	r.initialDataCollection = false
-	action := "copy"
+	packager.FilesAction = packaging.CopyFiles
 	if endTime.Hour() == 23 {
 		// when we've reached the end of the day, force packaging to occur to generate the daily report
 		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-		action = "move"
+		packager.FilesAction = packaging.MoveFiles
 	}
 
 	// package report files
-	packageFiles(packager, action)
+	packageFiles(packager)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
