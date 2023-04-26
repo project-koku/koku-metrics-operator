@@ -59,6 +59,8 @@ const variance float64 = 0.03
 // if we're creating more than 1k files, something is probably wrong.
 var maxSplits int64 = 1000
 
+var BUFFERSIZE int64 = 1000000
+
 // ErrNoReports a "no reports" Error type
 var ErrNoReports = errors.New("reports not found")
 
@@ -375,15 +377,62 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	return false
 }
 
-// moveFiles moves files from reportsDirectory to stagingDirectory
-func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := log.WithName("moveFiles")
+func copyFiles(src, dst string, BUFFERSIZE int64) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	_, err = os.Stat(dst)
+	if err == nil {
+		return fmt.Errorf("file %s already exists", dst)
+	}
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	if err != nil {
+		panic(err)
+	}
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+// moveOrCopyFiles moves files from reportsDirectory to stagingDirectory
+func (p *FilePackager) moveOrCopyFiles(action string) ([]os.FileInfo, error) {
+	log := log.WithName("moveOrCopyFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
 	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
 	if err != nil {
-		return nil, fmt.Errorf("moveFiles: could not read reports directory: %v", err)
+		return nil, fmt.Errorf("moveOrCopyFiles: could not read reports directory: %v", err)
 	}
 	if len(fileList) <= 0 {
 		return nil, ErrNoReports
@@ -394,7 +443,7 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
-			return nil, fmt.Errorf("moveFiles: could not clear staging: %v", err)
+			return nil, fmt.Errorf("moveOrCopyFiles: could not clear staging: %v", err)
 		}
 	}
 
@@ -405,12 +454,20 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 		}
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
-		if err := os.Rename(from, to); err != nil {
-			return nil, fmt.Errorf("moveFiles: failed to move files: %v", err)
+		switch action {
+		case "copy":
+			if err := copyFiles(from, to, BUFFERSIZE); err != nil {
+				return nil, fmt.Errorf("moveOrCopyFiles: failed to copy files: %v", err)
+			}
+		default:
+			if err := os.Rename(from, to); err != nil {
+				return nil, fmt.Errorf("moveOrCopyFiles: failed to move files: %v", err)
+			}
 		}
+
 		newFile, err := os.Stat(to)
 		if err != nil {
-			return nil, fmt.Errorf("moveFiles: failed to get new file stats: %v", err)
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to get new file stats: %v", err)
 		}
 		movedFiles = append(movedFiles, newFile)
 	}
@@ -468,7 +525,7 @@ func (p *FilePackager) TrimPackages() error {
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports() error {
+func (p *FilePackager) PackageReports(action string) error {
 	log := log.WithName("PackageReports")
 	p.maxBytes = *p.CR.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
@@ -480,7 +537,7 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	// move CSV reports from data directory to staging directory
-	filesToPackage, err := p.moveFiles()
+	filesToPackage, err := p.moveOrCopyFiles(action)
 	if err == ErrNoReports {
 		return nil
 	} else if err != nil {
@@ -490,11 +547,7 @@ func (p *FilePackager) PackageReports() error {
 	log.Info("getting the start and end intervals for the manifest")
 	for _, file := range filesToPackage {
 		absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
-		if strings.Contains(file.Name(), "cm-openshift-pod") {
-			if err := p.getStartEnd(absPath); err != nil {
-				return fmt.Errorf("PackageReports: %v", err)
-			}
-		} else if p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift") {
+		if strings.Contains(file.Name(), "cm-openshift-pod") || (p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift")) {
 			if err := p.getStartEnd(absPath); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}

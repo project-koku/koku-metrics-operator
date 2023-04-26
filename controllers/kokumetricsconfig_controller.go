@@ -427,7 +427,7 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
-func packageFiles(p *packaging.FilePackager) {
+func packageFiles(p *packaging.FilePackager, action string) {
 	log := log.WithName("packageAndUpload")
 
 	// if its time to package
@@ -437,7 +437,7 @@ func packageFiles(p *packaging.FilePackager) {
 
 	// Package and split the payload if necessary
 	p.CR.Status.Packaging.PackagingError = ""
-	if err := p.PackageReports(); err != nil {
+	if err := p.PackageReports(action); err != nil {
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
 		p.CR.Status.Packaging.PackagingError = err.Error()
@@ -624,6 +624,8 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
+	startTime, endTime := getTimeRange(ctx, r, cr)
+
 	packager := &packaging.FilePackager{
 		CR:     cr,
 		DirCfg: dirCfg,
@@ -636,7 +638,10 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
 			log.Info("packaging files from an old operator version")
-			packageFiles(packager)
+			packageFiles(packager, "move")
+			// after packaging files after an upgrade, truncate the start time so we recollect
+			// all of today's data
+			startTime = startTime.Truncate(24 * time.Hour)
 		}
 	}
 
@@ -645,7 +650,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "failed to get prometheus connection")
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
-	startTime, endTime := getTimeRange(ctx, r, cr)
+
 	for start := startTime; !start.After(endTime); start = start.AddDate(0, 0, 1) {
 		t := start
 		hours := int(endTime.Sub(t).Hours())
@@ -675,7 +680,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
 			// zero enables packaging to occur thruout this loop
 			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-			packageFiles(packager)
+			packageFiles(packager, "move")
 			startTime = t
 		}
 
@@ -685,12 +690,18 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// data collection.
 			log.Info("failed to update MetricsConfig status")
 		}
-
 	}
+
 	r.initialDataCollection = false
+	action := "copy"
+	if endTime.Hour() == 23 {
+		// when we've reached the end of the day, force packaging to occur to generate the daily report
+		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		action = "move"
+	}
 
 	// package report files
-	packageFiles(packager)
+	packageFiles(packager, action)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
