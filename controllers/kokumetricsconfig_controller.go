@@ -641,7 +641,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Info("packaging files from an old operator version")
 			packageFiles(packager)
 			// after packaging files after an upgrade, truncate the start time so we recollect
-			// all of today's data
+			// all of today's data. This ensures that today's report contains any new report changes.
 			startTime = startTime.Truncate(24 * time.Hour)
 		}
 	}
