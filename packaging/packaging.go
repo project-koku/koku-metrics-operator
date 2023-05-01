@@ -153,9 +153,6 @@ func copyFiles(src, dst string, BUFFERSIZE int64) error {
 	}
 	defer destination.Close()
 
-	if err != nil {
-		panic(err)
-	}
 	buf := make([]byte, BUFFERSIZE)
 	for {
 		n, err := source.Read(buf)
