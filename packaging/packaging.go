@@ -44,38 +44,39 @@ type FilePackager struct {
 	end              time.Time
 }
 
-type FilesAction int
+type FilesAction func(src, dst string) error
 
 const (
-	MoveFiles FilesAction = iota
-	CopyFiles
+	timestampFormat = "20060102T150405"
+
+	megaByte int64 = 1024 * 1024
+
+	// the csv module does not expose the bytes-offset of the
+	// underlying file object.
+	// instead, the script estimates the size of the data as VARIANCE percent larger than a
+	// naïve string concatenation of the CSV fields to cover the overhead of quoting
+	// and delimiters. This gets close enough for now.
+	// VARIANCE := 0.03
+	variance float64 = 0.03
 )
 
-const timestampFormat = "20060102T150405"
+var (
+	MoveFiles FilesAction = os.Rename
+	CopyFiles FilesAction = copyFiles
 
-// Define the global variables
-const megaByte int64 = 1024 * 1024
+	// if we're creating more than 1k files, something is probably wrong.
+	maxSplits int64 = 1000
 
-// the csv module does not expose the bytes-offset of the
-// underlying file object.
-// instead, the script estimates the size of the data as VARIANCE percent larger than a
-// naïve string concatenation of the CSV fields to cover the overhead of quoting
-// and delimiters. This gets close enough for now.
-// VARIANCE := 0.03
-const variance float64 = 0.03
+	BUFFERSIZE int64 = 10 * megaByte
 
-// if we're creating more than 1k files, something is probably wrong.
-var maxSplits int64 = 1000
+	// ErrNoReports a "no reports" Error type
+	ErrNoReports = errors.New("reports not found")
 
-var BUFFERSIZE int64 = 1000000
+	// Set boolean on whether community or certified
+	isCertified bool = false
 
-// ErrNoReports a "no reports" Error type
-var ErrNoReports = errors.New("reports not found")
-
-// Set boolean on whether community or certified
-var isCertified bool = false
-
-var log = logr.Log.WithName("packaging")
+	log = logr.Log.WithName("packaging")
+)
 
 // Manifest interface
 type Manifest interface{}
@@ -126,7 +127,7 @@ func (m *manifestInfo) renderManifest() error {
 	return nil
 }
 
-func copyFiles(src, dst string, BUFFERSIZE int64) error {
+func copyFiles(src, dst string) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -457,17 +458,12 @@ func (p *FilePackager) moveOrCopyFiles() ([]os.FileInfo, error) {
 		if !strings.HasSuffix(file.Name(), ".csv") {
 			continue
 		}
+
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
-		switch p.FilesAction {
-		case CopyFiles:
-			if err := copyFiles(from, to, BUFFERSIZE); err != nil {
-				return nil, fmt.Errorf("moveOrCopyFiles: failed to copy files: %v", err)
-			}
-		default:
-			if err := os.Rename(from, to); err != nil {
-				return nil, fmt.Errorf("moveOrCopyFiles: failed to move files: %v", err)
-			}
+
+		if err := p.FilesAction(from, to); err != nil {
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to copy/move files: %v", err)
 		}
 
 		newFile, err := os.Stat(to)
