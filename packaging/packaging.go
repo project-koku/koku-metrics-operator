@@ -67,6 +67,8 @@ var (
 	// if we're creating more than 1k files, something is probably wrong.
 	maxSplits int64 = 1000
 
+	BUFFERSIZE int64 = 10 * megaByte
+
 	// ErrNoReports a "no reports" Error type
 	ErrNoReports = errors.New("reports not found")
 
@@ -143,7 +145,20 @@ func copyFile(src, dst string) error {
 	}
 	defer destination.Close()
 
-	_, err = io.Copy(source, destination)
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
 	return err
 }
 

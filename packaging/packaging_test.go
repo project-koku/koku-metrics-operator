@@ -66,23 +66,11 @@ type testDirMap struct {
 var testDirs testDirMap
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
-	in, err := os.Open(src)
+	err := copyFile(src, dst)
 	if err != nil {
 		return nil, err
 	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return nil, err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return nil, err
-	}
-	info, err := out.Stat()
+	out, err := os.Open(dst)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +79,7 @@ func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 		return nil, err
 	}
 
-	return info, out.Close()
+	return out.Stat()
 }
 
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
@@ -548,7 +536,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			if err := testPackager.getStartEnd(filepath.Join(testPackager.DirCfg.Reports.Path, tt.podReportName)); err != nil {
 				if !tt.expectErr {
-					log.Info("This error occurred %v", err)
+					log.Info("This error occurred", "error", err)
 					t.Fatal("could not set start/end times")
 				}
 			}
