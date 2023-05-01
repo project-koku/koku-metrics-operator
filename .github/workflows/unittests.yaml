@@ -48,7 +48,6 @@ jobs:
           go test ./... -v -coverprofile cover.out -covermode=atomic
 
       - name: Upload test coverage file
-        if: steps.unit_tests_run.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: coverage
