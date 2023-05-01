@@ -8,12 +8,12 @@ on:
       - main
 
 jobs:
-  unit-tests:
-    runs-on: ubuntu-latest
+  units:
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.1.0
         with:
           fetch-depth: 0
 
@@ -47,8 +47,34 @@ jobs:
           make generate manifests
           go test ./... -v -coverprofile cover.out -covermode=atomic
 
+      - name: Upload test coverage file
+        if: steps.unit_tests_run.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: cover.out
+
+  coverage:
+    name: Coverage
+    needs: units
+    runs-on: ubuntu-22.04
+    steps:
+
+      - name: Checkout
+        # this checkout is required for the coverage report. If we don't do this, then
+        # the uploaded report is invalid and codecov doesn't know how to process it.
+        uses: actions/checkout@v3.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage result from units
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage
+
       - name: Upload coverage
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3.1.1
         with:
           file: ./cover.out
           flags: unittests
+          fail_ci_if_error: true
