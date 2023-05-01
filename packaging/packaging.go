@@ -62,12 +62,10 @@ const (
 
 var (
 	MoveFiles FilesAction = os.Rename
-	CopyFiles FilesAction = copyFiles
+	CopyFiles FilesAction = copyFile
 
 	// if we're creating more than 1k files, something is probably wrong.
 	maxSplits int64 = 1000
-
-	BUFFERSIZE int64 = 10 * megaByte
 
 	// ErrNoReports a "no reports" Error type
 	ErrNoReports = errors.New("reports not found")
@@ -127,16 +125,7 @@ func (m *manifestInfo) renderManifest() error {
 	return nil
 }
 
-func copyFiles(src, dst string) error {
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file", src)
-	}
-
+func copyFile(src, dst string) error {
 	source, err := os.Open(src)
 	if err != nil {
 		return err
@@ -154,20 +143,7 @@ func copyFiles(src, dst string) error {
 	}
 	defer destination.Close()
 
-	buf := make([]byte, BUFFERSIZE)
-	for {
-		n, err := source.Read(buf)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		if n == 0 {
-			break
-		}
-
-		if _, err := destination.Write(buf[:n]); err != nil {
-			return err
-		}
-	}
+	_, err = io.Copy(source, destination)
 	return err
 }
 
