@@ -355,14 +355,13 @@ func deleteObject(ctx context.Context, obj client.Object) {
 	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
 }
 
-func deleteAllOfObject(ctx context.Context, obj client.Object) {
-	log.Info(fmt.Sprintf("DELETING??? %+v", obj))
-	Expect(k8sClient.DeleteAllOf(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
-}
+// func deleteAllOfObject(ctx context.Context, obj client.Object) {
+// 	log.Info(fmt.Sprintf("DELETING??? %+v", obj))
+// 	Expect(k8sClient.DeleteAllOf(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
+// }
 
 func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {
 	if err := k8sClient.Get(ctx, key, obj); errors.IsNotFound(err) {
-		log.Info(fmt.Sprintf("WHAT ARE WE CREATING??? %+v", obj))
 		createObject(ctx, obj)
 	}
 }
