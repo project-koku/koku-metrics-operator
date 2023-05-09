@@ -403,37 +403,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 		When("cluster is disconnected", func() {
 			JustBeforeEach(func() {
-				instCopy = metricscfgv1beta1.MetricsConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-					},
-					Spec: metricscfgv1beta1.MetricsConfigSpec{
-						Authentication: metricscfgv1beta1.AuthenticationSpec{
-							AuthType: metricscfgv1beta1.Token,
-						},
-						Packaging: metricscfgv1beta1.PackagingSpec{
-							MaxSize:    100,
-							MaxReports: defaultMaxReports,
-						},
-						Upload: metricscfgv1beta1.UploadSpec{
-							UploadCycle:    &defaultUploadCycle,
-							UploadToggle:   &falseValue,
-							IngressAPIPath: "/api/ingress/v1/upload",
-							ValidateCert:   &trueValue,
-						},
-						Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
-							CreateSource:   &falseValue,
-							SourcesAPIPath: "/api/sources/v1.0/",
-							CheckCycle:     &defaultCheckCycle,
-						},
-						PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
-							ContextTimeout:      &diffContextTimeout,
-							SkipTLSVerification: &trueValue,
-							SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
-						},
-						APIURL: "https://not-the-real-cloud.redhat.com",
-					},
-				}
+				instCopy.Spec.Upload.UploadToggle = &falseValue
+				instCopy.Spec.PrometheusConfig.ContextTimeout = &diffContextTimeout
 			})
 			It("basic auth works fine", func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
