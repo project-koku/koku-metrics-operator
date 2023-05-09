@@ -214,7 +214,6 @@ var _ = BeforeSuite(func() {
 
 	err = metricscfgv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-
 	err = operatorsv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = configv1.AddToScheme(scheme.Scheme)
@@ -276,12 +275,7 @@ func createClusterVersion(ctx context.Context) {
 			Channel:   channel,
 		},
 	}
-
-	emptyCV := &configv1.ClusterVersion{}
-	if err := k8sClient.Get(ctx, key, emptyCV); errors.IsNotFound(err) {
-		log.Info(fmt.Sprintf("IS THIS WHERE WE ARE BOMBING??? %#v | %#v", cv, err))
-		createObject(ctx, cv)
-	}
+	createObject(ctx, cv)
 }
 
 func deleteClusterVersion(ctx context.Context) {
@@ -362,6 +356,7 @@ func deleteObject(ctx context.Context, obj client.Object) {
 }
 
 func deleteAllOfObject(ctx context.Context, obj client.Object) {
+	log.Info(fmt.Sprintf("DELETING??? %+v", obj))
 	Expect(k8sClient.DeleteAllOf(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
 }
 
