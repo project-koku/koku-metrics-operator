@@ -57,6 +57,8 @@ var (
 	previousValidation *previousAuthValidation
 
 	log = logr.Log.WithName("metricsconfig_controller")
+
+	HOURS_IN_DAY int = 23
 )
 
 // MetricsConfigReconciler reconciles a MetricsConfig object
@@ -655,9 +657,8 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	for start := startTime; !start.After(endTime); start = start.AddDate(0, 0, 1) {
 		t := start
 		hours := int(endTime.Sub(t).Hours())
-		if hours > 23 {
-			// use 23 instead of 24 because we start counting at 0, not 1.
-			hours = 23
+		if hours > HOURS_IN_DAY {
+			hours = HOURS_IN_DAY
 		}
 		for i := 0; i <= hours; i++ {
 			timeRange := promv1.Range{
