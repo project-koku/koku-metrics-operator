@@ -301,20 +301,11 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		shutdown()
 
 		tearDownRequired(ctx)
-		// deleteAllOfObject(ctx, &instCopy)
-
-		// if checkPVC {
-		// 	deleteObject(ctx, pvcDeployment)
-		// }
 	})
 
 	Context("Process CRD resource - prior PVC mount", func() {
 		BeforeEach(func() {
 			checkPVC = false
-			// deleteAllOfObject(ctx, &instCopy)
-		})
-		AfterEach(func() {
-			// deleteAllOfObject(ctx, &instCopy)
 		})
 		/*
 			All tests within this Context are only checking the functionality of mounting the PVC
@@ -351,7 +342,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.ClusterID).To(Equal(clusterID))
-			// Expect(fetched.Status.ClusterVersion).To(Equal(channel)) // That *Status* of ClusterVersion is not available in testing
+			Expect(fetched.Status.ClusterVersion).To(Equal(channel))
 			Expect(fetched.Status.Storage).ToNot(BeNil())
 			Expect(fetched.Status.Storage.VolumeMounted).To(BeTrue())
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
@@ -408,10 +399,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 		BeforeEach(func() {
 			checkPVC = true
-		})
-
-		AfterEach(func() {
-			// deleteObject(ctx, pvcDeployment)
 		})
 
 		When("cluster is disconnected", func() {
