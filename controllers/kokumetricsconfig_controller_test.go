@@ -866,7 +866,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Upload.UploadError).ToNot(Equal(""))
 				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
 			})
-			FIt("should check the last upload time in the upload status", func() {
+			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
 
 				uploadTime := metav1.Now()
