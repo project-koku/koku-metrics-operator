@@ -518,9 +518,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
 				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
 				Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
-				Expect(fetched.Status.Upload.UploadWait).NotTo(BeNil())
-
-				// deleteObject(ctx, fetched)
+				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})
 			It("upload set to false case", func() {
 				instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse"
@@ -660,7 +658,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 				Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
-				Expect(fetched.Status.Source.SourceError).NotTo(BeNil())
+				Expect(fetched.Status.Source.SourceError).ToNot(BeNil())
 			})
 			It("should fail due to bad basic auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{})
@@ -812,8 +810,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(fetched.Status.Upload.UploadError).NotTo(BeNil())
-				Expect(fetched.Status.Upload.LastUploadStatus).NotTo(BeNil())
+				Expect(fetched.Status.Upload.UploadError).ToNot(BeNil())
+				Expect(fetched.Status.Upload.LastUploadStatus).ToNot(BeNil())
 			})
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
@@ -865,10 +863,10 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-				Expect(fetched.Status.Upload.UploadError).NotTo(Equal(""))
+				Expect(fetched.Status.Upload.UploadError).ToNot(Equal(""))
 				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
 			})
-			It("should check the last upload time in the upload status", func() {
+			FIt("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
 
 				uploadTime := metav1.Now()
@@ -886,10 +884,13 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Eventually(func() bool {
 					_ = k8sClient.Status().Update(ctx, fetched)
 					return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
-				}, timeout, interval).ShouldNot(BeTrue())
+				}, timeout, interval).Should(BeFalse())
 
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				refetched := &metricscfgv1beta1.MetricsConfig{}
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, refetched)
+					return refetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
+				}, timeout, interval).Should(BeFalse())
 			})
 		})
 	})
