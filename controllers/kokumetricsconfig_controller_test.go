@@ -41,7 +41,7 @@ var (
 	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
 	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
 
-	testObjectNamePrefix        = "cost-test-local-"
+	testObjectNamePrefix        = "cost-test-local"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
@@ -309,6 +309,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	JustAfterEach(func() {
 		deleteObject(ctx, &instCopy)
+		mockpconn = nil
 	})
 
 	AfterEach(func() {
@@ -334,7 +335,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should create and mount PVC for CR without PVC spec", func() {
 			createObject(ctx, emptyDep1)
 
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "no-pvc-spec-1"
 			Expect(k8sClient.Create(ctx, &instCopy)).Should(Succeed())
 
 			Eventually(func() bool {
@@ -345,7 +345,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "no-pvc-spec-2"
 			createObject(ctx, &instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -362,7 +361,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-3"
+			// instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-3"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			createObject(ctx, &instCopy)
 
@@ -377,7 +376,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
 			createObject(ctx, emptyDep2)
 
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-4"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			createObject(ctx, &instCopy)
 
@@ -389,7 +387,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-5"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			createObject(ctx, &instCopy)
 
@@ -422,7 +419,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			})
 			It("basic auth works fine", func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "default-cr-air-gapped-basic"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
 				createObject(ctx, &instCopy)
@@ -451,7 +447,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			})
 			It("token auth works fine", func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "default-cr-air-gapped-token"
 				createObject(ctx, &instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -482,7 +477,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				checkPVC = true
 			})
 			It("default CR works fine", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "default-cr"
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
 				createObject(ctx, &instCopy)
@@ -506,7 +500,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})
 			It("upload set to false case", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse"
 				instCopy.Spec.Upload.UploadToggle = &falseValue
 				createObject(ctx, &instCopy)
 
@@ -521,7 +514,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 			})
 			It("should find basic auth creds for good basic auth CRD case", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "basicauthgood"
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -542,7 +534,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			})
 			It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "basicauthgood-unauthorized"
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -568,7 +559,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				}
 				replaceAuthSecretData(ctx, mixedCaseData)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "mixed-case"
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -589,7 +579,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail for missing basic auth token for bad basic auth CRD case", func() {
 				deleteAuthSecret(ctx)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "basicauthbad"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, &instCopy)
@@ -608,7 +597,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			})
 			It("should reflect source name in status for source info CRD case", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "sourceinfo"
 				instCopy.Spec.Source.SourceName = sourceName
 				createObject(ctx, &instCopy)
 
@@ -622,7 +610,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 			})
 			It("should reflect source error when attempting to create source", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "sourcecreate"
 				instCopy.Spec.Source.SourceName = sourceName
 				instCopy.Spec.Source.CreateSource = &trueValue
 				createObject(ctx, &instCopy)
@@ -644,7 +631,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail due to bad basic auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{})
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "badauthsecret"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, &instCopy)
@@ -667,7 +653,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail due to missing pass in auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{authSecretUserKey: []byte("user1")})
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "badpass"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, &instCopy)
@@ -688,7 +673,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail due to missing user in auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{authSecretPasswordKey: []byte("password1")})
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "baduser"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, &instCopy)
@@ -707,7 +691,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			})
 			It("should fail due to missing auth secret name with basic set", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "missingname"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				createObject(ctx, &instCopy)
 
@@ -727,7 +710,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should should fail due to deleted token secret", func() {
 				deletePullSecret(ctx)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "nopullsecret"
 				createObject(ctx, &instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -746,7 +728,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				deletePullSecret(ctx)
 				createPullSecret(ctx, map[string][]byte{}) // create a bad pullsecret
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "nopulldata"
 				createObject(ctx, &instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -764,7 +745,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail bc of missing cluster version", func() {
 				deleteClusterVersion(ctx)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "missingcvfailure"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, &instCopy)
@@ -781,7 +761,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should attempt upload due to tar.gz being present", func() {
 				Expect(setup()).Should(Succeed())
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "attemptupload"
 				createObject(ctx, &instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -797,7 +776,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "attemptuploadsuccess"
 				instCopy.Spec.APIURL = validTS.URL
 				createObject(ctx, &instCopy)
 
@@ -826,7 +804,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					timestamp:  metav1.Time{Time: hourAgo},
 				}
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "attemptupload-unauthorized"
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
@@ -850,8 +827,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
 
-				uploadTime := metav1.Now()
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "checkuploadstatus"
 				createObject(ctx, &instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -861,7 +836,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					return fetched.Status.ClusterID != ""
 				}, timeout, interval).Should(BeTrue())
 
-				fetched.Status.Upload.LastSuccessfulUploadTime = uploadTime
+				fetched.Status.Upload.LastSuccessfulUploadTime = metav1.Now()
 				Eventually(func() bool {
 					_ = k8sClient.Status().Update(ctx, fetched)
 					return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
@@ -1061,7 +1036,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}
 			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
 
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse-again"
 			instCopy.Spec.Upload.UploadToggle = &falseValue
 			createObject(ctx, &instCopy)
 
