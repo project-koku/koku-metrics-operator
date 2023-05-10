@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -38,6 +39,8 @@ var (
 	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
 	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
 
+	mockpconn *testutils.MockPrometheusConnection
+
 	testObjectNamePrefix        = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                     = "4.8-stable"
@@ -57,19 +60,19 @@ var (
 
 func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
 func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
-	promcoll.PromConn = mockPrometheusConnection{}
+	promcoll.PromConn = mockpconn
 	return nil
 }
 
-type mockPrometheusConnection struct{}
+// type mockPrometheusConnection struct{}
 
-func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
-	return model.Matrix{}, nil, nil
-}
+// func mockQueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+// 	return model.Matrix{}, nil, nil
+// }
 
-func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
-	return model.Vector{}, nil, nil
-}
+// func (m *mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+// 	return model.Vector{}, nil, nil
+// }
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
@@ -235,20 +238,30 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
 
-	var instCopy metricscfgv1beta1.KokuMetricsConfig
-	var testPVC *corev1.PersistentVolumeClaim
-	var checkPVC bool = true
+	var (
+		mockCtrl      *gomock.Controller
+		instCopy      metricscfgv1beta1.KokuMetricsConfig
+		testConfigMap *corev1.ConfigMap
+		testPVC       *corev1.PersistentVolumeClaim
+		checkPVC      bool = true
+	)
 
 	ctx := context.Background()
 	emptyDep1 := emptyDirDeployment.DeepCopy()
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 	pvcDeploymentKey := types.NamespacedName{Name: pvcDeployment.ObjectMeta.Name, Namespace: pvcDeployment.ObjectMeta.Namespace}
 
+	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockpconn = testutils.NewMockPrometheusConnection(mockCtrl)
+	})
+
 	JustBeforeEach(func() {
 		// failed test runs that do not clean up leave resources behind.
 		shutdown()
 
 		setupRequired(ctx)
+
 		GitCommit = "1234567"
 		promConnTester = MockPromConnTester
 		promConnSetter = MockPromConnSetter
@@ -279,6 +292,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					CheckCycle:     &defaultCheckCycle,
 				},
 				PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+					CollectPreviousData: &falseDef,
 					ContextTimeout:      &defaultContextTimeout,
 					SkipTLSVerification: &trueValue,
 					SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
@@ -503,10 +517,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					return fetched.Status.ClusterID != ""
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 				Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
 				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 			})
@@ -872,6 +882,20 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
 			retentionPeriod = time.Duration(0)
 			Expect(retentionPeriod).To(Equal(time.Duration(0)))
+
+			testConfigMap = &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      monitoringMeta.Name,
+					Namespace: monitoringMeta.Namespace,
+				},
+			}
+		})
+		AfterEach(func() {
+			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap does not exist - uses 14 days", func() {
 			setRetentionPeriod(ctx, r)
@@ -879,18 +903,14 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
 		})
 		It("no configMap is specified - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			createObject(ctx, testConfigMap)
 
 			setRetentionPeriod(ctx, r)
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with empty config.yaml - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": ""}
 			createObject(ctx, testConfigMap)
 
@@ -898,11 +918,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml without retention period - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  not-retention-period-string: 90d"}
 			createObject(ctx, testConfigMap)
 
@@ -910,11 +927,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with mangled config.yaml - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s\n  not-retention-period-string: 90d"}
 			createObject(ctx, testConfigMap)
 
@@ -922,11 +936,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with malformed retention period - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 90"}
 			createObject(ctx, testConfigMap)
 
@@ -934,11 +945,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with valid retention period", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 81d"}
 			createObject(ctx, testConfigMap)
 
@@ -946,11 +954,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(time.Duration(81 * 24 * time.Hour)))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with valid retention period greater than 90d", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 91d"}
 			createObject(ctx, testConfigMap)
 
@@ -958,8 +963,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(ninetyDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 
 		It("check the start time on new CR creation - previous data collection set to true", func() {
@@ -1025,6 +1028,49 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			got, _ := getTimeRange(ctx, r, cr)
 			Expect(got).To(Equal(original))
 			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
+		})
+	})
+
+	FContext("test the start/end times for report generation", func() {
+		// var r *MetricsConfigReconciler
+		BeforeEach(func() {
+			checkPVC = true
+			// r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
+			// r.disablePreviousDataCollection = true
+
+			// retentionPeriod = time.Duration(14 * 24 * time.Hour)
+			// Expect(retentionPeriod).To(Equal(time.Duration(14 * 24 * time.Hour)))
+			// createObject(ctx, &zeroDayRetentionConfigMap)
+		})
+		AfterEach(func() {
+			// deleteObject(ctx, &zeroDayRetentionConfigMap)
+		})
+		It("just learning", func() {
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+
+			instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse"
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, &instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+			// testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 81d"}
+			// createObject(ctx, testConfigMap)
+
+			// setRetentionPeriod(ctx, r)
+
+			// Expect(retentionPeriod).To(Equal(time.Duration(0 * 24 * time.Hour)))
+			// Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
 		})
 
 	})

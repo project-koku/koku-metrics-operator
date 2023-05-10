@@ -149,16 +149,6 @@ var (
 			},
 		},
 	}
-	configMapEmpty = &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      monitoringMeta.Name,
-			Namespace: monitoringMeta.Namespace,
-		},
-	}
 
 	validTS        *httptest.Server
 	unauthorizedTS *httptest.Server
