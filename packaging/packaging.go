@@ -31,6 +31,12 @@ import (
 	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
+type FilePackagerInterface interface {
+	GetFileInfo(file string) (FileInfoManifest, error)
+	PackageReports() error
+	TrimPackages() error
+}
+
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
 	CR               *metricscfgv1beta1.MetricsConfig

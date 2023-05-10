@@ -29,6 +29,7 @@ import (
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/mocks"
 	"github.com/project-koku/koku-metrics-operator/storage"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
@@ -39,7 +40,7 @@ var (
 	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
 	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
 
-	mockpconn *testutils.MockPrometheusConnection
+	mockpconn *mocks.MockPrometheusConnection
 
 	testObjectNamePrefix        = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
@@ -253,7 +254,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
-		mockpconn = testutils.NewMockPrometheusConnection(mockCtrl)
+		mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
 	})
 
 	JustBeforeEach(func() {
