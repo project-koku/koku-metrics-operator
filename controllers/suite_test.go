@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -223,7 +222,7 @@ var _ = BeforeSuite(func() {
 
 	// make the metrics listen address different for each parallel thread to avoid clashes when running with -p
 	var metricsAddr string
-	metricsPort := 8090 + config.GinkgoConfig.ParallelNode
+	metricsPort := 8090 + GinkgoParallelProcess()
 	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%d", metricsPort), "The address the metric endpoint binds to.")
 	flag.Parse()
 
@@ -259,7 +258,7 @@ var _ = BeforeSuite(func() {
 
 	clusterPrep(ctx)
 
-}, 60)
+})
 
 func createNamespace(ctx context.Context, namespace string) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
