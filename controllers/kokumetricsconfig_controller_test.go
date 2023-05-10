@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
@@ -39,8 +40,6 @@ var (
 	deploymentName  = fmt.Sprintf("%s-metrics-operator", metricscfgv1beta1.NamePrefix)
 	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
 	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
-
-	mockpconn *mocks.MockPrometheusConnection
 
 	testObjectNamePrefix        = "cost-test-local-"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
@@ -58,12 +57,6 @@ var (
 	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
 	testingDir                  = dirconfig.MountPath
 )
-
-func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
-func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
-	promcoll.PromConn = mockpconn
-	return nil
-}
 
 // type mockPrometheusConnection struct{}
 
@@ -240,7 +233,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	const interval = time.Second * 1
 
 	var (
-		mockCtrl      *gomock.Controller
+		mockCtrl  *gomock.Controller
+		mockpconn *mocks.MockPrometheusConnection
+
 		instCopy      metricscfgv1beta1.KokuMetricsConfig
 		testConfigMap *corev1.ConfigMap
 		testPVC       *corev1.PersistentVolumeClaim
@@ -250,22 +245,23 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	ctx := context.Background()
 	emptyDep1 := emptyDirDeployment.DeepCopy()
 	emptyDep2 := emptyDirDeployment.DeepCopy()
-	pvcDeploymentKey := types.NamespacedName{Name: pvcDeployment.ObjectMeta.Name, Namespace: pvcDeployment.ObjectMeta.Namespace}
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
+		mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
+
+		GitCommit = "1234567"
+
+		setupRequired(ctx)
 	})
 
 	JustBeforeEach(func() {
-		// failed test runs that do not clean up leave resources behind.
-		shutdown()
-
-		setupRequired(ctx)
-
-		GitCommit = "1234567"
-		promConnTester = MockPromConnTester
-		promConnSetter = MockPromConnSetter
+		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
+		promConnSetter = func(promcoll *collector.PrometheusCollector) error {
+			promcoll.PromConn = mockpconn
+			return nil
+		}
 
 		instCopy = metricscfgv1beta1.MetricsConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -304,12 +300,15 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 		if checkPVC {
 			testPVC = storage.MakeVolumeClaimTemplate(storage.DefaultPVC, namespace)
-			pvckey := types.NamespacedName{Name: testPVC.ObjectMeta.Name, Namespace: testPVC.ObjectMeta.Namespace}
 
-			ensureObjectExists(ctx, pvckey, testPVC)
-			ensureObjectExists(ctx, pvcDeploymentKey, pvcDeployment)
+			ensureObjectExists(ctx, client.ObjectKeyFromObject(testPVC), testPVC)
+			ensureObjectExists(ctx, client.ObjectKeyFromObject(pvcDeployment), pvcDeployment)
 		}
 
+	})
+
+	JustAfterEach(func() {
+		deleteObject(ctx, &instCopy)
 	})
 
 	AfterEach(func() {
@@ -1034,8 +1033,15 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	Context("test the start/end times for report generation", func() {
 		// var r *MetricsConfigReconciler
+		// var (
+		// 	mockCtrl  *gomock.Controller
+		// 	mockpconn *mocks.MockPrometheusConnection
+		// )
 		BeforeEach(func() {
 			checkPVC = true
+
+			mockCtrl = gomock.NewController(GinkgoT())
+			mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
 			// r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
 			// r.disablePreviousDataCollection = true
 
@@ -1055,7 +1061,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}
 			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
 
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse"
+			instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse-again"
 			instCopy.Spec.Upload.UploadToggle = &falseValue
 			createObject(ctx, &instCopy)
 

@@ -341,7 +341,9 @@ func createObject(ctx context.Context, obj client.Object) {
 }
 
 func deleteObject(ctx context.Context, obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
 	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
+	Eventually(func() bool { return errors.IsNotFound(k8sClient.Get(ctx, key, obj)) }, 60, 1).Should(BeTrue())
 }
 
 func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {
