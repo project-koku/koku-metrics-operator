@@ -1003,7 +1003,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 	})
 
-	FContext("test the start/end times for report generation", func() {
+	Context("test the start/end times for report generation", func() {
 		BeforeEach(func() {
 			checkPVC = true
 
