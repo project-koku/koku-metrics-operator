@@ -361,7 +361,12 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("getStartEnd: error reading file: %v", err)
 	}
-	lastLine := allLines[len(allLines)-1]
+	var lastLine []string
+	if len(allLines) > 0 {
+		lastLine = allLines[len(allLines)-1]
+	} else {
+		lastLine = firstLine
+	}
 	endInterval := lastLine[endIndex]
 	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
 	return nil

@@ -1106,7 +1106,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			timeROS2 := timeROS1.Add(15 * time.Minute)
 			timeROS3 := timeROS2.Add(15 * time.Minute)
 			timeROS4 := timeROS3.Add(15 * time.Minute)
-			// this mock is tightly coupled to the order in which the node queries are run
+			// this mock is tightly coupled to the order in which the node queries are run and the first pod query
 			gomock.InOrder(
 				// node-allocatable-cpu-cores
 				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil),
@@ -1120,6 +1120,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, noderole), nil, nil),
 				// node-labels
 				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodelabels), nil, nil),
+				// pod-limit-cpu-cores
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, podlimitcpucores), nil, nil),
 			)
 			// mock the rest of the Queries Anytimes
 			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
@@ -1133,6 +1135,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
 
 			instCopy.Spec.Upload.UploadToggle = &falseValue
+			instCopy.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 			createObject(ctx, &instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}

@@ -18,7 +18,8 @@ var metricjson string = `
 	"namespace": "openshift-monitoring",
 	"node": "ip-10-0-146-115.us-east-2.compute.internal",
 	"provider_id": "aws:///us-east-2a/i-0eb3a4cb7807fb144",
-	"role": "worker"
+	"role": "worker",
+	"pod": "hive-server-0"
 }
 `
 var nodeallocatablecpucores string = `
@@ -68,6 +69,14 @@ var nodelabels string = `
 		"1"
 	]
 ]`
+var podlimitcpucores string = `
+[
+	[
+		1604685600,
+		"1"
+	]
+]
+`
 
 func asModelMatrix(metric, value string) model.Matrix {
 	var m model.Metric
