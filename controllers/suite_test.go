@@ -226,15 +226,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&MetricsConfigReconciler{
-			Client:                        k8sManager.GetClient(),
-			Scheme:                        scheme.Scheme,
-			Clientset:                     clientset,
-			InCluster:                     true,
-			disablePreviousDataCollection: true,
-			overrideSecretPath:            true,
-		}).SetupWithManager(k8sManager)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(resetReconciler()).ToNot(HaveOccurred())
 	}
 
 	go func() {
@@ -249,6 +241,17 @@ var _ = BeforeSuite(func() {
 	clusterPrep(ctx)
 
 })
+
+func resetReconciler() error {
+	return (&MetricsConfigReconciler{
+		Client:                        k8sManager.GetClient(),
+		Scheme:                        scheme.Scheme,
+		Clientset:                     clientset,
+		InCluster:                     true,
+		disablePreviousDataCollection: true,
+		overrideSecretPath:            true,
+	}).SetupWithManager(k8sManager)
+}
 
 func createNamespace(ctx context.Context, namespace string) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}

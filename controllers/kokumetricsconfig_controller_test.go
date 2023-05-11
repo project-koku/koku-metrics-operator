@@ -58,15 +58,15 @@ var (
 	testingDir                  = dirconfig.MountPath
 )
 
-// type mockPrometheusConnection struct{}
+type mockPrometheusConnection struct{}
 
-// func mockQueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
-// 	return model.Matrix{}, nil, nil
-// }
+func (m *mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+	return model.Matrix{}, nil, nil
+}
 
-// func (m *mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
-// 	return model.Vector{}, nil, nil
-// }
+func (m *mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+	return model.Vector{}, nil, nil
+}
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 	in, err := os.Open(src)
@@ -247,21 +247,19 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 
 	BeforeEach(func() {
-		mockCtrl = gomock.NewController(GinkgoT())
-		mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
-		mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
 
 		GitCommit = "1234567"
 
 		setupRequired(ctx)
+
+		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
+		promConnSetter = func(promcoll *collector.PrometheusCollector) error {
+			promcoll.PromConn = &mockPrometheusConnection{}
+			return nil
+		}
 	})
 
 	JustBeforeEach(func() {
-		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
-		promConnSetter = func(promcoll *collector.PrometheusCollector) error {
-			promcoll.PromConn = mockpconn
-			return nil
-		}
 
 		instCopy = metricscfgv1beta1.MetricsConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -309,7 +307,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	JustAfterEach(func() {
 		deleteObject(ctx, &instCopy)
-		mockpconn = nil
 	})
 
 	AfterEach(func() {
@@ -1008,26 +1005,25 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	Context("test the start/end times for report generation", func() {
 		// var r *MetricsConfigReconciler
-		// var (
-		// 	mockCtrl  *gomock.Controller
-		// 	mockpconn *mocks.MockPrometheusConnection
-		// )
 		BeforeEach(func() {
 			checkPVC = true
 
 			mockCtrl = gomock.NewController(GinkgoT())
 			mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
-			// r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
-			// r.disablePreviousDataCollection = true
 
-			// retentionPeriod = time.Duration(14 * 24 * time.Hour)
-			// Expect(retentionPeriod).To(Equal(time.Duration(14 * 24 * time.Hour)))
-			// createObject(ctx, &zeroDayRetentionConfigMap)
 		})
 		AfterEach(func() {
 			// deleteObject(ctx, &zeroDayRetentionConfigMap)
 		})
+		JustBeforeEach(func() {
+			promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
+			promConnSetter = func(promcoll *collector.PrometheusCollector) error {
+				promcoll.PromConn = mockpconn
+				return nil
+			}
+		})
 		It("just learning", func() {
+			Expect(resetReconciler()).ToNot(HaveOccurred())
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
 				Start: t,
