@@ -359,7 +359,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
-			// instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-3"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
 			createObject(ctx, &instCopy)
 
@@ -1004,11 +1003,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 	})
 
-	Context("test the start/end times for report generation", func() {
+	FContext("test the start/end times for report generation", func() {
 		BeforeEach(func() {
 			checkPVC = true
-
-			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader(), overrideSecretPath: true}
 
 			mockCtrl = gomock.NewController(GinkgoT())
 			mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
@@ -1021,8 +1018,32 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				return nil
 			}
 		})
+		It("sdakjhdsakjlsdfalkjfdsalkj learning", func() {
+			resetReconciler(WithSecretOverride(false))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).Times(0)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, &instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Prometheus.ConfigError != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("failed to get token"))
+		})
 		It("just learning", func() {
-			Expect(resetReconciler(r)).ToNot(HaveOccurred())
+			resetReconciler(WithSecretOverride(true))
+
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
 				Start: t,
@@ -1040,13 +1061,10 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 				return fetched.Status.ClusterID != ""
 			}, timeout, interval).Should(BeTrue())
-			// testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 81d"}
-			// createObject(ctx, testConfigMap)
 
-			// setRetentionPeriod(ctx, r)
+			Expect(fetched.Status.Reports.DataCollected).To(BeFalse())
+			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("No data to report for the hour queried."))
 
-			// Expect(retentionPeriod).To(Equal(time.Duration(0 * 24 * time.Hour)))
-			// Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
 		})
 
 	})

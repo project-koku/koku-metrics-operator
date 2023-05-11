@@ -52,6 +52,7 @@ var (
 	k8sClient          client.Client
 	k8sManager         ctrl.Manager
 	testEnv            *envtest.Environment
+	defaultReconciler  *MetricsConfigReconciler
 	ctx                context.Context
 	cancel             context.CancelFunc
 	useCluster         bool
@@ -226,14 +227,15 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		r := &MetricsConfigReconciler{
+		defaultReconciler = &MetricsConfigReconciler{
 			Client:             k8sManager.GetClient(),
 			Scheme:             scheme.Scheme,
 			Clientset:          clientset,
 			InCluster:          true,
 			overrideSecretPath: true,
 		}
-		Expect(resetReconciler(r)).ToNot(HaveOccurred())
+		err := (defaultReconciler).SetupWithManager(k8sManager)
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	go func() {
@@ -249,8 +251,20 @@ var _ = BeforeSuite(func() {
 
 })
 
-func resetReconciler(r *MetricsConfigReconciler) error {
-	return (r).SetupWithManager(k8sManager)
+type Option func(f *MetricsConfigReconciler)
+
+func WithSecretOverride(overrideSecretPath bool) Option {
+	return func(r *MetricsConfigReconciler) {
+		r.overrideSecretPath = overrideSecretPath
+	}
+}
+
+func resetReconciler(opts ...Option) {
+	defaultReconciler.promCollector = nil
+	defaultReconciler.overrideSecretPath = true
+	for _, opt := range opts {
+		opt(defaultReconciler)
+	}
 }
 
 func createNamespace(ctx context.Context, namespace string) {

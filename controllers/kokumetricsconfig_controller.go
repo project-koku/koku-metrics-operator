@@ -549,9 +549,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 
 	if strings.Contains(cr.Status.Storage.VolumeType, "EmptyDir") {
 		cr.Status.Storage.VolumeMounted = false
-		if err := r.Status().Update(ctx, cr); err != nil {
-			log.Error(err, "failed to update MetricsConfig status")
-		}
+		r.updateStatusAndLogError(ctx, cr)
 		return &ctrl.Result{}, fmt.Errorf("PVC not mounted")
 	}
 	return nil, nil
@@ -597,9 +595,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// set the cluster ID & return if there are errors
 	if err := setClusterID(r, cr); err != nil {
 		log.Error(err, "failed to obtain clusterID")
-		if err := r.Status().Update(ctx, cr); err != nil {
-			log.Error(err, "failed to update MetricsConfig status")
-		}
+		r.updateStatusAndLogError(ctx, cr)
 		return ctrl.Result{}, err
 	}
 
@@ -650,7 +646,8 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// attempt to collect prometheus stats and create reports
 	if err := getPromCollector(r, cr); err != nil {
-		log.Error(err, "failed to get prometheus connection")
+		log.Info("failed to get prometheus connection", "error", err)
+		r.updateStatusAndLogError(ctx, cr)
 		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
 	}
 
@@ -688,12 +685,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			startTime = t
 		}
 
-		if err := r.Status().Update(ctx, cr); err != nil {
-			// it's not critical to handle this error. We update the status here to show progress
-			// if this loop takes a long time to complete. A missed update here does not impact
-			// data collection.
-			log.Info("failed to update MetricsConfig status")
-		}
+		r.updateStatusAndLogError(ctx, cr)
 	}
 
 	r.initialDataCollection = false
@@ -726,9 +718,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		// obtain credentials token/basic & return if there are authentication credential errors
 		if err := setAuthentication(r, authConfig, cr, req.NamespacedName); err != nil {
-			if err := r.Status().Update(ctx, cr); err != nil {
-				log.Error(err, "failed to update MetricsConfig status")
-			}
+			r.updateStatusAndLogError(ctx, cr)
 			return ctrl.Result{}, err
 		}
 
@@ -773,7 +763,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	cr.Status.Packaging.PackagedFiles = uploadFiles
 
 	if err := r.Status().Update(ctx, cr); err != nil {
-		log.Error(err, "failed to update MetricsConfig status")
+		log.Info("failed to update MetricsConfig status", "error", err)
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
@@ -788,6 +778,12 @@ func (r *MetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metricscfgv1beta1.MetricsConfig{}).
 		Complete(r)
+}
+
+func (r *MetricsConfigReconciler) updateStatusAndLogError(ctx context.Context, cr *metricscfgv1beta1.MetricsConfig) {
+	if err := r.Status().Update(ctx, cr); err != nil {
+		log.Info("failed to update MetricsConfig status", "error", err)
+	}
 }
 
 // concatErrs combines all the errors into one error

@@ -138,8 +138,8 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 
 	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(cr, dirCfg, r.promCollector); err != nil {
-		cr.Status.Reports.DataCollected = false
-		cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
+		// cr.Status.Reports.DataCollected = false
+		// cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 		if err == collector.ErrNoData {
 			log.Info("no data available to generate reports")
 		} else {
