@@ -1003,7 +1003,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		})
 	})
 
-	Context("test the start/end times for report generation", func() {
+	Context("mocking QueryRange to test controller flow", func() {
 		BeforeEach(func() {
 			checkPVC = true
 
@@ -1018,7 +1018,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				return nil
 			}
 		})
-		It("sdakjhdsakjlsdfalkjfdsalkj learning", func() {
+		It("failed to get prometheus config because of missing token", func() {
 			resetReconciler(WithSecretOverride(false))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
@@ -1041,7 +1041,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("failed to get token"))
 		})
-		It("just learning", func() {
+		It("successfully queried but there was no data", func() {
 			resetReconciler(WithSecretOverride(true))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
@@ -1066,6 +1066,30 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("No data to report for the hour queried."))
 
 		})
+		It("query failed due to error", func() {
+			resetReconciler(WithSecretOverride(true))
 
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, errors.New("test error")).MinTimes(1)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, &instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeFalse())
+			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("test error"))
+
+		})
 	})
 })
