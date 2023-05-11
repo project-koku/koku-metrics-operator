@@ -200,8 +200,6 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 
 	if len(nodeResults) <= 0 {
 		log.Info("no data to report")
-		cr.Status.Reports.DataCollected = false
-		cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 		// there is no data for the hour queried. Return nothing
 		return ErrNoData
 	}
@@ -250,9 +248,6 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	}
 
 	//################################################################################################################
-
-	cr.Status.Reports.DataCollected = true
-	cr.Status.Reports.DataCollectionMessage = ""
 
 	return nil
 }

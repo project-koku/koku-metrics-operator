@@ -138,15 +138,18 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 
 	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(cr, dirCfg, r.promCollector); err != nil {
-		// cr.Status.Reports.DataCollected = false
-		// cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
+		cr.Status.Reports.DataCollected = false
 		if err == collector.ErrNoData {
+			cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 			log.Info("no data available to generate reports")
 		} else {
+			cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 			log.Error(err, "failed to generate reports")
 		}
 		return err
 	}
+	cr.Status.Reports.DataCollected = true
+	cr.Status.Reports.DataCollectionMessage = ""
 	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
 	cr.Status.Prometheus.LastQuerySuccessTime = t
 	return nil
