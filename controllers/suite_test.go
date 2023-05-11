@@ -226,7 +226,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		Expect(resetReconciler()).ToNot(HaveOccurred())
+		r := &MetricsConfigReconciler{
+			Client:             k8sManager.GetClient(),
+			Scheme:             scheme.Scheme,
+			Clientset:          clientset,
+			InCluster:          true,
+			overrideSecretPath: true,
+		}
+		Expect(resetReconciler(r)).ToNot(HaveOccurred())
 	}
 
 	go func() {
@@ -242,15 +249,8 @@ var _ = BeforeSuite(func() {
 
 })
 
-func resetReconciler() error {
-	return (&MetricsConfigReconciler{
-		Client:                        k8sManager.GetClient(),
-		Scheme:                        scheme.Scheme,
-		Clientset:                     clientset,
-		InCluster:                     true,
-		disablePreviousDataCollection: true,
-		overrideSecretPath:            true,
-	}).SetupWithManager(k8sManager)
+func resetReconciler(r *MetricsConfigReconciler) error {
+	return (r).SetupWithManager(k8sManager)
 }
 
 func createNamespace(ctx context.Context, namespace string) {

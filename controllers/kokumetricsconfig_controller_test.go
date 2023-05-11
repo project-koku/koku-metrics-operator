@@ -231,8 +231,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
-
 	var (
+		r *MetricsConfigReconciler
+
 		mockCtrl  *gomock.Controller
 		mockpconn *mocks.MockPrometheusConnection
 
@@ -849,7 +850,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("set the correct retention period for data gather on CR creation", func() {
-		var r *MetricsConfigReconciler
+
 		BeforeEach(func() {
 			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
 			retentionPeriod = time.Duration(0)
@@ -1004,16 +1005,14 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("test the start/end times for report generation", func() {
-		// var r *MetricsConfigReconciler
 		BeforeEach(func() {
 			checkPVC = true
+
+			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader(), overrideSecretPath: true}
 
 			mockCtrl = gomock.NewController(GinkgoT())
 			mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
 
-		})
-		AfterEach(func() {
-			// deleteObject(ctx, &zeroDayRetentionConfigMap)
 		})
 		JustBeforeEach(func() {
 			promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
@@ -1023,7 +1022,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}
 		})
 		It("just learning", func() {
-			Expect(resetReconciler()).ToNot(HaveOccurred())
+			Expect(resetReconciler(r)).ToNot(HaveOccurred())
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
 				Start: t,
