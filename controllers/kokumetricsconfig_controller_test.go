@@ -1091,5 +1091,58 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("test error"))
 
 		})
+		It("query returns node data only", func() {
+			resetReconciler(WithSecretOverride(true))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			start := timeRange.Start.Add(1 * time.Second)
+			end := start.Add(14*time.Minute + 59*time.Second)
+			timeROS1 := end
+			timeROS2 := timeROS1.Add(15 * time.Minute)
+			timeROS3 := timeROS2.Add(15 * time.Minute)
+			timeROS4 := timeROS3.Add(15 * time.Minute)
+			// this mock is tightly coupled to the order in which the node queries are run
+			gomock.InOrder(
+				// node-allocatable-cpu-cores
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil),
+				// node-allocatable-memory-bytes
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablememorybytes), nil, nil),
+				// node-capacity-cpu-cores
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodecapacitycpucores), nil, nil),
+				// node-capacity-memory-bytes
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodecapacitymemorybytes), nil, nil),
+				// node-role
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, noderole), nil, nil),
+				// node-labels
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodelabels), nil, nil),
+			)
+			// mock the rest of the Queries Anytimes
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS1, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS2, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS3, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS4, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+
+			// Mock these again in case the CR is reconciled again
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, &instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+		})
 	})
 })
