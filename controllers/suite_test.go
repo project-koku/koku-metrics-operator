@@ -406,6 +406,7 @@ var _ = AfterSuite(func() {
 
 	os.Remove(filepath.Join(secretsPath, "token"))
 	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
+	os.RemoveAll(filepath.Join(secretsPath, "tmp"))
 
 	validTS.Close()
 	unauthorizedTS.Close()

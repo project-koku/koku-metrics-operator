@@ -39,7 +39,6 @@ type FilePackagerInterface interface {
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	CR               *metricscfgv1beta1.MetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
 	FilesAction      FilesAction
 	manifest         manifestInfo
@@ -186,7 +185,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return tracker
 }
 
-func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr metricscfgv1beta1.MetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr *metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var costFiles []string
@@ -202,8 +201,8 @@ func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr
 	p.manifest = manifestInfo{
 		manifest: manifest{
 			UUID:      p.uid,
-			ClusterID: p.CR.Status.ClusterID,
-			Version:   p.CR.Status.OperatorCommit,
+			ClusterID: cr.Status.ClusterID,
+			Version:   cr.Status.OperatorCommit,
 			Date:      manifestDate.UTC(),
 			Files:     costFiles,
 			ROSFiles:  rosFiles,
@@ -433,7 +432,7 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 }
 
 // moveOrCopyFiles moves files from reportsDirectory to stagingDirectory
-func (p *FilePackager) moveOrCopyFiles() ([]os.FileInfo, error) {
+func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]os.FileInfo, error) {
 	log := log.WithName("moveOrCopyFiles")
 	var movedFiles []os.FileInfo
 
@@ -447,7 +446,7 @@ func (p *FilePackager) moveOrCopyFiles() ([]os.FileInfo, error) {
 	}
 
 	// remove all files from staging directory
-	if p.CR.Status.Packaging.PackagingError == "" {
+	if cr.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
@@ -477,7 +476,7 @@ func (p *FilePackager) moveOrCopyFiles() ([]os.FileInfo, error) {
 	return movedFiles, nil
 }
 
-func (p *FilePackager) TrimPackages() error {
+func (p *FilePackager) TrimPackages(cr *metricscfgv1beta1.MetricsConfig) error {
 	log := log.WithName("trimPackages")
 
 	packages, err := p.DirCfg.Upload.GetFiles()
@@ -494,9 +493,9 @@ func (p *FilePackager) TrimPackages() error {
 
 	reportCount := int64(datetimesSet.Len())
 
-	if reportCount <= p.CR.Spec.Packaging.MaxReports {
+	if reportCount <= cr.Spec.Packaging.MaxReports {
 		log.Info("number of stored reports within limit")
-		p.CR.Status.Packaging.ReportCount = &reportCount
+		cr.Status.Packaging.ReportCount = &reportCount
 		return nil
 	}
 
@@ -508,7 +507,7 @@ func (p *FilePackager) TrimPackages() error {
 	}
 
 	sort.Strings(datetimes)
-	ind := len(datetimes) - int(p.CR.Spec.Packaging.MaxReports)
+	ind := len(datetimes) - int(cr.Spec.Packaging.MaxReports)
 	filesToExclude := datetimes[0:ind]
 
 	for _, pre := range filesToExclude {
@@ -523,14 +522,14 @@ func (p *FilePackager) TrimPackages() error {
 		}
 	}
 
-	p.CR.Status.Packaging.ReportCount = &p.CR.Spec.Packaging.MaxReports
+	cr.Status.Packaging.ReportCount = &cr.Spec.Packaging.MaxReports
 	return nil
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports() error {
+func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error {
 	log := log.WithName("PackageReports")
-	p.maxBytes = *p.CR.Status.Packaging.MaxSize * megaByte
+	p.maxBytes = *cr.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
 	p.createdTimestamp = time.Now().Format(timestampFormat)
 
@@ -540,7 +539,7 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	// move CSV reports from data directory to staging directory
-	filesToPackage, err := p.moveOrCopyFiles()
+	filesToPackage, err := p.moveOrCopyFiles(cr)
 	if err == ErrNoReports {
 		return nil
 	} else if err != nil {
@@ -564,7 +563,7 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	tracker := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(tracker, p.DirCfg.Staging.Path, *p.CR)
+	p.getManifest(tracker, p.DirCfg.Staging.Path, cr)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -588,7 +587,7 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("file packaging was successful")
-	p.CR.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
+	cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
 

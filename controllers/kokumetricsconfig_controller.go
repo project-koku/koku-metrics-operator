@@ -429,20 +429,20 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
-func packageFiles(p *packaging.FilePackager) {
+func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	log := log.WithName("packageAndUpload")
 
 	// if its time to package
-	if !checkCycle(log, *p.CR.Status.Upload.UploadCycle, p.CR.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
+	if !checkCycle(log, *cr.Status.Upload.UploadCycle, cr.Status.Packaging.LastSuccessfulPackagingTime, "file packaging") {
 		return
 	}
 
 	// Package and split the payload if necessary
-	p.CR.Status.Packaging.PackagingError = ""
-	if err := p.PackageReports(); err != nil {
+	cr.Status.Packaging.PackagingError = ""
+	if err := p.PackageReports(cr); err != nil {
 		log.Error(err, "PackageReports failed")
 		// update the CR packaging error status
-		p.CR.Status.Packaging.PackagingError = err.Error()
+		cr.Status.Packaging.PackagingError = err.Error()
 	}
 }
 
@@ -609,6 +609,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// so we need to package the old files before generating new reports.
 		// We set this packaging time to zero so that the next call to packageFiles
 		// will force file packaging to occur.
+		log.Info("commit changed, resetting packaging time")
 		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 		cr.Status.OperatorCommit = GitCommit
 	}
@@ -625,7 +626,6 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	startTime, endTime := getTimeRange(ctx, r, cr)
 
 	packager := &packaging.FilePackager{
-		CR:          cr,
 		DirCfg:      dirCfg,
 		FilesAction: packaging.MoveFiles,
 	}
@@ -637,7 +637,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
 			log.Info("packaging files from an old operator version")
-			packageFiles(packager)
+			packageFiles(packager, cr)
 			// after packaging files after an upgrade, truncate the start time so we recollect
 			// all of today's data. This ensures that today's report contains any new report changes.
 			startTime = startTime.Truncate(24 * time.Hour)
@@ -664,11 +664,12 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				Step:  time.Minute,
 			}
 			if err := collectPromStats(r, cr, dirCfg, timeRange); err != nil {
-				if err == collector.ErrNoData && t.Hour() == 0 && r.initialDataCollection {
+				if err == collector.ErrNoData && t.Hour() == 0 && t.Day() != endTime.Day() && r.initialDataCollection {
 					// if there is no data for the first hour of the day, and we are doing the
 					// initial data collection, skip to the next day so we avoid collecting
 					// partial data for a full day. This ensures we are generating a full daily
 					// report upon initial ingest.
+					log.Info("skipping data collection for day", "datetime", timeRange.Start)
 					break
 				}
 			}
@@ -681,11 +682,11 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
 			// zero enables packaging to occur thruout this loop
 			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-			packageFiles(packager)
+			packageFiles(packager, cr)
 			startTime = t
+			// update status to show progress
+			r.updateStatusAndLogError(ctx, cr)
 		}
-
-		r.updateStatusAndLogError(ctx, cr)
 	}
 
 	r.initialDataCollection = false
@@ -697,7 +698,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// package report files
-	packageFiles(packager)
+	packageFiles(packager, cr)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
@@ -750,7 +751,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// remove old reports if maximum report count has been exceeded
-	if err := packager.TrimPackages(); err != nil {
+	if err := packager.TrimPackages(cr); err != nil {
 		result = ctrl.Result{}
 		errors = append(errors, err)
 	}
