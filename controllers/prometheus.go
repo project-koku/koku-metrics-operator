@@ -24,8 +24,6 @@ var (
 	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
 	retentionPeriod     time.Duration
 
-	promCompareFormat = "2006-01-02T15"
-
 	monitoringMeta = types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
 
 	promCfgSetter  collector.PrometheusConfigurationSetter = collector.SetPrometheusConfig
