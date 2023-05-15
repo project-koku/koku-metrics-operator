@@ -939,8 +939,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("check the start time on new CR creation - previous data collection set to true", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
-			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-			// !r.disablePreviousDataCollection
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -959,8 +958,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("check the start time on old CR - previous data collection set to true", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
-			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-			// !r.disablePreviousDataCollection
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -984,8 +982,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("check the start time on new CR - previous data collection set to false", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
-			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-			// !r.disablePreviousDataCollection
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{

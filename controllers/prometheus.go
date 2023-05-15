@@ -85,10 +85,9 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 	end := start.Add(59*time.Minute + 59*time.Second)
 	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
-		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-		!r.disablePreviousDataCollection {
-		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
-		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
+		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() {
+		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the beginning of
+		// the retention period when the CR is first created, otherwise we stick to using the start of the previous full hour.
 		setRetentionPeriod(ctx, r)
 		log.Info(fmt.Sprintf("duration used: %s", retentionPeriod))
 		start = start.Add(-1 * retentionPeriod).Truncate(24 * time.Hour)

@@ -69,12 +69,11 @@ type MetricsConfigReconciler struct {
 	InCluster bool
 	Namespace string
 
-	apiReader                     client.Reader
-	cvClientBuilder               cv.ClusterVersionBuilder
-	promCollector                 *collector.PrometheusCollector
-	disablePreviousDataCollection bool
-	initialDataCollection         bool
-	overrideSecretPath            bool
+	apiReader             client.Reader
+	cvClientBuilder       cv.ClusterVersionBuilder
+	promCollector         *collector.PrometheusCollector
+	initialDataCollection bool
+	overrideSecretPath    bool
 }
 
 type previousAuthValidation struct {
