@@ -58,7 +58,7 @@ var (
 
 	log = logr.Log.WithName("metricsconfig_controller")
 
-	HOURS_IN_DAY int = 23
+	HOURS_IN_DAY int = 23 // first hour is 0: 0 -> 23 == 24 hrs
 )
 
 // MetricsConfigReconciler reconciles a MetricsConfig object
