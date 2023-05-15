@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	now                 = time.Now
 	fourteenDayDuration = time.Duration(14 * 24 * time.Hour)
 	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
 	retentionPeriod     time.Duration
@@ -82,7 +83,7 @@ func setRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) {
 }
 
 func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
-	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
+	start := now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
 	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
@@ -129,7 +130,7 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	t := metav1.Time{Time: timeRange.Start}
 	formattedStart := timeRange.Start.Format(time.RFC3339)
 	formattedEnd := timeRange.End.Format(time.RFC3339)
-	if cr.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
+	if cr.Status.Prometheus.LastQuerySuccessTime.Equal(&t) {
 		log.Info("reports already generated for range", "start", formattedStart, "end", formattedEnd)
 		return nil
 	}

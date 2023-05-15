@@ -261,6 +261,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	})
 
 	JustBeforeEach(func() {
+		// ensure all tests use the correct time.Now()
+		now = time.Now
 
 		instCopy = &metricscfgv1beta1.MetricsConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1092,6 +1094,38 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+		})
+		It("2day retention period - end of 24 hr test", func() {
+			resetReconciler(WithSecretOverride(true))
+			now = func() time.Time { return time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour) }
+
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			createObject(ctx, testConfigMap)
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			t2 := t.Truncate(24 * time.Hour).Add(-24 * time.Hour) // midnight yesterday
+			timeRangeInitial := promv1.Range{
+				Start: t2,
+				End:   t2.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRangeInitial, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil).MinTimes(1)
+
+			instCopy.Spec.PrometheusConfig.CollectPreviousData = &trueDef
+			instCopy.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(1))
 		})
 		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
 			resetReconciler(WithSecretOverride(true))

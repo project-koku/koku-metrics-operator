@@ -609,7 +609,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// so we need to package the old files before generating new reports.
 		// We set this packaging time to zero so that the next call to packageFiles
 		// will force file packaging to occur.
-		log.Info("commit changed, resetting packaging time")
+		log.Info("commit changed, resetting packaging time to force packaging of old data files")
 		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 		cr.Status.OperatorCommit = GitCommit
 	}
@@ -681,6 +681,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// after collecting 96 hours of data, package the report to compress the files
 			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
 			// zero enables packaging to occur thruout this loop
+			log.Info("collected 96 hours of data, resetting packaging time to force packaging")
 			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 			packageFiles(packager, cr)
 			startTime = t
@@ -691,8 +692,9 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	r.initialDataCollection = false
 	packager.FilesAction = packaging.CopyFiles
-	if endTime.Hour() == 23 {
+	if endTime.Hour() == 23 && !cr.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: startTime}) {
 		// when we've reached the end of the day, force packaging to occur to generate the daily report
+		log.Info("collected a full day of data, resetting packaging time to force packaging")
 		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 		packager.FilesAction = packaging.MoveFiles
 	}
