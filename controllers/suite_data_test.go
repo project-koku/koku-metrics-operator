@@ -6,11 +6,7 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// var athing = model.Matrix{
-// &model.SampleStream{
-
-// }
-// }
+// the data in this file is used to mock Prometheus queries in controller tests
 
 var metricjson string = `
 {

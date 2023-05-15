@@ -251,15 +251,15 @@ var _ = BeforeSuite(func() {
 
 })
 
-type Option func(f *MetricsConfigReconciler)
+type ReconcilerOption func(f *MetricsConfigReconciler)
 
-func WithSecretOverride(overrideSecretPath bool) Option {
+func WithSecretOverride(overrideSecretPath bool) ReconcilerOption {
 	return func(r *MetricsConfigReconciler) {
 		r.overrideSecretPath = overrideSecretPath
 	}
 }
 
-func resetReconciler(opts ...Option) {
+func resetReconciler(opts ...ReconcilerOption) {
 	defaultReconciler.promCollector = nil
 	defaultReconciler.overrideSecretPath = true
 	for _, opt := range opts {
