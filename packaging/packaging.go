@@ -82,16 +82,17 @@ type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string                                `json:"uuid"`
-	ClusterID string                                `json:"cluster_id"`
-	Version   string                                `json:"version"`
-	Date      time.Time                             `json:"date"`
-	Files     []string                              `json:"files"`
-	ROSFiles  []string                              `json:"resource_optimization_files"`
-	Start     time.Time                             `json:"start"`
-	End       time.Time                             `json:"end"`
-	CRStatus  metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
-	Certified bool                                  `json:"certified"`
+	UUID         string                                `json:"uuid"`
+	ClusterID    string                                `json:"cluster_id"`
+	Version      string                                `json:"version"`
+	Date         time.Time                             `json:"date"`
+	Files        []string                              `json:"files"`
+	ROSFiles     []string                              `json:"resource_optimization_files"`
+	Start        time.Time                             `json:"start"`
+	End          time.Time                             `json:"end"`
+	CRStatus     metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
+	Certified    bool                                  `json:"certified"`
+	DailyReports bool                                  `json:"daily_reports"`
 }
 
 type FileInfoManifest manifest
@@ -194,16 +195,17 @@ func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr
 	}
 	p.manifest = manifestInfo{
 		manifest: manifest{
-			UUID:      p.uid,
-			ClusterID: cr.Status.ClusterID,
-			Version:   cr.Status.OperatorCommit,
-			Date:      manifestDate.UTC(),
-			Files:     costFiles,
-			ROSFiles:  rosFiles,
-			Start:     p.start.UTC(),
-			End:       p.end.UTC(),
-			Certified: isCertified,
-			CRStatus:  cr.Status,
+			UUID:         p.uid,
+			ClusterID:    cr.Status.ClusterID,
+			Version:      cr.Status.OperatorCommit,
+			Date:         manifestDate.UTC(),
+			Files:        costFiles,
+			ROSFiles:     rosFiles,
+			Start:        p.start.UTC(),
+			End:          p.end.UTC(),
+			Certified:    isCertified,
+			CRStatus:     cr.Status,
+			DailyReports: true,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
