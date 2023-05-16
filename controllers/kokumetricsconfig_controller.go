@@ -39,6 +39,8 @@ import (
 	"github.com/project-koku/koku-metrics-operator/storage"
 )
 
+const HOURS_IN_DAY int = 23 // first hour is 0: 0 -> 23 == 24 hrs
+
 var (
 	GitCommit string
 
@@ -57,8 +59,6 @@ var (
 	previousValidation *previousAuthValidation
 
 	log = logr.Log.WithName("metricsconfig_controller")
-
-	HOURS_IN_DAY int = 23 // first hour is 0: 0 -> 23 == 24 hrs
 )
 
 // MetricsConfigReconciler reconciles a MetricsConfig object
@@ -691,7 +691,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	r.initialDataCollection = false
 	packager.FilesAction = packaging.CopyFiles
-	if endTime.Hour() == 23 && !cr.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: startTime}) {
+	if endTime.Hour() == HOURS_IN_DAY && !cr.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: startTime}) {
 		// when we've reached the end of the day, force packaging to occur to generate the daily report
 		log.Info("collected a full day of data, resetting packaging time to force packaging")
 		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
