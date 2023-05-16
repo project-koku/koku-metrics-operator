@@ -527,7 +527,7 @@ func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error
 	log := log.WithName("PackageReports")
 	p.maxBytes = *cr.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
-	p.createdTimestamp = strings.Replace(time.Now().Format(timestampFormat), ".", "-", 1)
+	p.createdTimestamp = strings.Replace(time.Now().Format(timestampFormat), ".", "_", 1)
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {

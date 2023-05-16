@@ -1123,6 +1123,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
 			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(1))
+			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
+			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(1))
 		})
 		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
 			resetReconciler(WithSecretOverride(true))
@@ -1155,6 +1157,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
 			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(2))
+			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
+			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(2))
 
 		})
 		It("query failed due to error", func() {
