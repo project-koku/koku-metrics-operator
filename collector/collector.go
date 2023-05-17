@@ -6,6 +6,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -33,6 +34,8 @@ var (
 	statusTimeFormat = "2006-01-02 15:04:05"
 
 	log = logr.Log.WithName("collector")
+
+	ErrNoData = errors.New("no data to collect")
 )
 
 type mappedCSVStruct map[string]csvStruct
@@ -197,10 +200,8 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 
 	if len(nodeResults) <= 0 {
 		log.Info("no data to report")
-		cr.Status.Reports.DataCollected = false
-		cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 		// there is no data for the hour queried. Return nothing
-		return nil
+		return ErrNoData
 	}
 	for node, val := range nodeResults {
 		resourceID := getResourceID(val["provider_id"].(string))
@@ -247,9 +248,6 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	}
 
 	//################################################################################################################
-
-	cr.Status.Reports.DataCollected = true
-	cr.Status.Reports.DataCollectionMessage = ""
 
 	return nil
 }

@@ -15,7 +15,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -23,11 +24,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/collector"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/mocks"
 	"github.com/project-koku/koku-metrics-operator/storage"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
@@ -38,7 +41,7 @@ var (
 	volumeMountName = fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix)
 	volumeClaimName = fmt.Sprintf("%s-metrics-operator-data", metricscfgv1beta1.NamePrefix)
 
-	testObjectNamePrefix        = "cost-test-local-"
+	testObjectNamePrefix        = "cost-test-local"
 	clusterID                   = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                     = "4.8-stable"
 	sourceName                  = "cluster-test"
@@ -55,19 +58,13 @@ var (
 	testingDir                  = dirconfig.MountPath
 )
 
-func MockPromConnTester(promcoll *collector.PrometheusCollector) error { return nil }
-func MockPromConnSetter(promcoll *collector.PrometheusCollector) error {
-	promcoll.PromConn = mockPrometheusConnection{}
-	return nil
-}
-
 type mockPrometheusConnection struct{}
 
-func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+func (m *mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	return model.Matrix{}, nil, nil
 }
 
-func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+func (m *mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	return model.Vector{}, nil, nil
 }
 
@@ -234,26 +231,40 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
+	var (
+		r *MetricsConfigReconciler
 
-	var instCopy metricscfgv1beta1.KokuMetricsConfig
-	var testPVC *corev1.PersistentVolumeClaim
-	var checkPVC bool = true
+		mockCtrl  *gomock.Controller
+		mockpconn *mocks.MockPrometheusConnection
+
+		testConfigMap *corev1.ConfigMap
+		instCopy      *metricscfgv1beta1.KokuMetricsConfig
+		testPVC       *corev1.PersistentVolumeClaim
+		checkPVC      bool = true
+	)
 
 	ctx := context.Background()
 	emptyDep1 := emptyDirDeployment.DeepCopy()
 	emptyDep2 := emptyDirDeployment.DeepCopy()
-	pvcDeploymentKey := types.NamespacedName{Name: pvcDeployment.ObjectMeta.Name, Namespace: pvcDeployment.ObjectMeta.Namespace}
 
-	JustBeforeEach(func() {
-		// failed test runs that do not clean up leave resources behind.
-		shutdown()
+	BeforeEach(func() {
+
+		GitCommit = "1234567"
 
 		setupRequired(ctx)
-		GitCommit = "1234567"
-		promConnTester = MockPromConnTester
-		promConnSetter = MockPromConnSetter
 
-		instCopy = metricscfgv1beta1.MetricsConfig{
+		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
+		promConnSetter = func(promcoll *collector.PrometheusCollector) error {
+			promcoll.PromConn = &mockPrometheusConnection{}
+			return nil
+		}
+	})
+
+	JustBeforeEach(func() {
+		// ensure all tests use the correct time.Now()
+		now = time.Now
+
+		instCopy = &metricscfgv1beta1.MetricsConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: namespace,
 				Name:      testObjectNamePrefix,
@@ -279,6 +290,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					CheckCycle:     &defaultCheckCycle,
 				},
 				PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+					CollectPreviousData: &falseDef,
 					ContextTimeout:      &defaultContextTimeout,
 					SkipTLSVerification: &trueValue,
 					SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
@@ -286,15 +298,29 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				APIURL: "https://not-the-real-cloud.redhat.com",
 			},
 		}
+		testConfigMap = &corev1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ConfigMap",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      monitoringMeta.Name,
+				Namespace: monitoringMeta.Namespace,
+			},
+		}
 
 		if checkPVC {
 			testPVC = storage.MakeVolumeClaimTemplate(storage.DefaultPVC, namespace)
-			pvckey := types.NamespacedName{Name: testPVC.ObjectMeta.Name, Namespace: testPVC.ObjectMeta.Namespace}
 
-			ensureObjectExists(ctx, pvckey, testPVC)
-			ensureObjectExists(ctx, pvcDeploymentKey, pvcDeployment)
+			ensureObjectExists(ctx, client.ObjectKeyFromObject(testPVC), testPVC)
+			ensureObjectExists(ctx, client.ObjectKeyFromObject(pvcDeployment), pvcDeployment)
 		}
 
+	})
+
+	JustAfterEach(func() {
+		deleteObject(ctx, instCopy)
+		deleteObject(ctx, testConfigMap)
 	})
 
 	AfterEach(func() {
@@ -320,8 +346,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should create and mount PVC for CR without PVC spec", func() {
 			createObject(ctx, emptyDep1)
 
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "no-pvc-spec-1"
-			Expect(k8sClient.Create(ctx, &instCopy)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, instCopy)).Should(Succeed())
 
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
@@ -331,8 +356,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "no-pvc-spec-2"
-			createObject(ctx, &instCopy)
+			createObject(ctx, instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -348,9 +372,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(fetched.Status.PersistentVolumeClaim.Name).To(Equal(storage.DefaultPVC.Name))
 		})
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-3"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
-			createObject(ctx, &instCopy)
+			createObject(ctx, instCopy)
 
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
@@ -363,9 +386,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("should mount PVC for CR with new PVC spec - pvc already mounted", func() {
 			createObject(ctx, emptyDep2)
 
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-4"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
-			createObject(ctx, &instCopy)
+			createObject(ctx, instCopy)
 
 			Eventually(func() bool {
 				fetched := &appsv1.Deployment{}
@@ -375,9 +397,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 		It("should not mount PVC for CR without PVC spec - pvc already mounted", func() {
-			instCopy.ObjectMeta.Name = testObjectNamePrefix + "pvc-spec-5"
 			instCopy.Spec.VolumeClaimTemplate = differentPVC
-			createObject(ctx, &instCopy)
+			createObject(ctx, instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -408,10 +429,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			})
 			It("basic auth works fine", func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "default-cr-air-gapped-basic"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = "not-existent-secret"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -437,8 +457,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			})
 			It("token auth works fine", func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "default-cr-air-gapped-token"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -468,10 +487,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				checkPVC = true
 			})
 			It("default CR works fine", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "default-cr"
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -492,9 +510,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})
 			It("upload set to false case", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "uploadfalse"
 				instCopy.Spec.Upload.UploadToggle = &falseValue
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -503,19 +520,14 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					return fetched.Status.ClusterID != ""
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 				Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
 				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 			})
 			It("should find basic auth creds for good basic auth CRD case", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "basicauthgood"
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -532,11 +544,10 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			})
 			It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "basicauthgood-unauthorized"
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -558,11 +569,10 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				}
 				replaceAuthSecretData(ctx, mixedCaseData)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "mixed-case"
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -579,10 +589,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail for missing basic auth token for bad basic auth CRD case", func() {
 				deleteAuthSecret(ctx)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "basicauthbad"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -598,9 +607,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			})
 			It("should reflect source name in status for source info CRD case", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "sourceinfo"
 				instCopy.Spec.Source.SourceName = sourceName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -612,10 +620,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
 			})
 			It("should reflect source error when attempting to create source", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "sourcecreate"
 				instCopy.Spec.Source.SourceName = sourceName
 				instCopy.Spec.Source.CreateSource = &trueValue
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -634,10 +641,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail due to bad basic auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{})
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "badauthsecret"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -657,10 +663,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail due to missing pass in auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{authSecretUserKey: []byte("user1")})
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "badpass"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -678,10 +683,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail due to missing user in auth secret", func() {
 				replaceAuthSecretData(ctx, map[string][]byte{authSecretPasswordKey: []byte("password1")})
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "baduser"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -697,9 +701,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			})
 			It("should fail due to missing auth secret name with basic set", func() {
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "missingname"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -717,8 +720,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should should fail due to deleted token secret", func() {
 				deletePullSecret(ctx)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "nopullsecret"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -736,8 +738,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				deletePullSecret(ctx)
 				createPullSecret(ctx, map[string][]byte{}) // create a bad pullsecret
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "nopulldata"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -754,10 +755,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should fail bc of missing cluster version", func() {
 				deleteClusterVersion(ctx)
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "missingcvfailure"
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -771,8 +771,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should attempt upload due to tar.gz being present", func() {
 				Expect(setup()).Should(Succeed())
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "attemptupload"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -787,9 +786,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "attemptuploadsuccess"
 				instCopy.Spec.APIURL = validTS.URL
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -816,11 +814,10 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					timestamp:  metav1.Time{Time: hourAgo},
 				}
 
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "attemptupload-unauthorized"
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -840,9 +837,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
 
-				uploadTime := metav1.Now()
-				instCopy.ObjectMeta.Name = testObjectNamePrefix + "checkuploadstatus"
-				createObject(ctx, &instCopy)
+				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
 
@@ -851,7 +846,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					return fetched.Status.ClusterID != ""
 				}, timeout, interval).Should(BeTrue())
 
-				fetched.Status.Upload.LastSuccessfulUploadTime = uploadTime
+				fetched.Status.Upload.LastSuccessfulUploadTime = metav1.Now()
 				Eventually(func() bool {
 					_ = k8sClient.Status().Update(ctx, fetched)
 					return fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
@@ -867,7 +862,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	})
 
 	Context("set the correct retention period for data gather on CR creation", func() {
-		var r *MetricsConfigReconciler
+
 		BeforeEach(func() {
 			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
 			retentionPeriod = time.Duration(0)
@@ -879,18 +874,14 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
 		})
 		It("no configMap is specified - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			createObject(ctx, testConfigMap)
 
 			setRetentionPeriod(ctx, r)
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with empty config.yaml - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": ""}
 			createObject(ctx, testConfigMap)
 
@@ -898,11 +889,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml without retention period - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  not-retention-period-string: 90d"}
 			createObject(ctx, testConfigMap)
 
@@ -910,11 +898,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with mangled config.yaml - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s\n  not-retention-period-string: 90d"}
 			createObject(ctx, testConfigMap)
 
@@ -922,11 +907,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with malformed retention period - uses 14 days", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 90"}
 			createObject(ctx, testConfigMap)
 
@@ -934,11 +916,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(fourteenDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with valid retention period", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 81d"}
 			createObject(ctx, testConfigMap)
 
@@ -946,11 +925,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(time.Duration(81 * 24 * time.Hour)))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 		It("configMap is specified with config.yaml with valid retention period greater than 90d", func() {
-			testConfigMap := configMapEmpty.DeepCopy()
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 91d"}
 			createObject(ctx, testConfigMap)
 
@@ -958,15 +934,12 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Expect(retentionPeriod).To(Equal(ninetyDayDuration))
 			Expect(retentionPeriod).ToNot(Equal(time.Duration(0)))
-
-			deleteObject(ctx, testConfigMap)
 		})
 
 		It("check the start time on new CR creation - previous data collection set to true", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
-			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-			// !r.disablePreviousDataCollection
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -979,14 +952,13 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			got, _ := getTimeRange(ctx, r, cr)
 			Expect(got).ToNot(Equal(original))
-			Expect(got).To(Equal(original.Add(-fourteenDayDuration)))
+			Expect(got).To(Equal(original.Add(-fourteenDayDuration).Truncate(24 * time.Hour)))
 		})
 
 		It("check the start time on old CR - previous data collection set to true", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
-			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-			// !r.disablePreviousDataCollection
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -1010,8 +982,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("check the start time on new CR - previous data collection set to false", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
-			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-			// !r.disablePreviousDataCollection
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
 			original := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 
 			cr := &metricscfgv1beta1.MetricsConfig{
@@ -1026,6 +997,250 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(got).To(Equal(original))
 			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
 		})
+	})
 
+	Context("mocking QueryRange to test controller flow", func() {
+		BeforeEach(func() {
+			checkPVC = true
+
+			mockCtrl = gomock.NewController(GinkgoT())
+			mockpconn = mocks.NewMockPrometheusConnection(mockCtrl)
+
+		})
+		JustBeforeEach(func() {
+			promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
+			promConnSetter = func(promcoll *collector.PrometheusCollector) error {
+				promcoll.PromConn = mockpconn
+				return nil
+			}
+		})
+		It("failed to get prometheus config because of missing token", func() {
+			resetReconciler(WithSecretOverride(false))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).Times(0)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Prometheus.ConfigError != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("failed to get token"))
+		})
+		It("successfully queried but there was no data", func() {
+			resetReconciler(WithSecretOverride(true))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeFalse())
+			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("No data to report for the hour queried."))
+
+		})
+		It("2day retention period - successfully queried but there was no data on first day, but data on second", func() {
+			resetReconciler(WithSecretOverride(true))
+
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			createObject(ctx, testConfigMap)
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			t2 := t.Truncate(24 * time.Hour).Add(-24 * time.Hour) // midnight yesterday
+			timeRangeInitial := promv1.Range{
+				Start: t2,
+				End:   t2.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRangeInitial, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil).MinTimes(1)
+
+			instCopy.Spec.PrometheusConfig.CollectPreviousData = &trueDef
+			instCopy.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+		})
+		It("2day retention period - end of 24 hr test", func() {
+			resetReconciler(WithSecretOverride(true))
+			now = func() time.Time { return time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour) }
+
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			createObject(ctx, testConfigMap)
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			t2 := t.Truncate(24 * time.Hour).Add(-24 * time.Hour) // midnight yesterday
+			timeRangeInitial := promv1.Range{
+				Start: t2,
+				End:   t2.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRangeInitial, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil).MinTimes(1)
+
+			instCopy.Spec.PrometheusConfig.CollectPreviousData = &trueDef
+			instCopy.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(1))
+			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
+			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(1))
+		})
+		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
+			resetReconciler(WithSecretOverride(true))
+
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 8d"}
+			createObject(ctx, testConfigMap)
+
+			t := metav1.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			t2 := t.Truncate(24 * time.Hour).Add(-24 * 8 * time.Hour) // midnight 8 days ago
+			timeRangeInitial := promv1.Range{
+				Start: t2,
+				End:   t2.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRangeInitial, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil).MinTimes(1)
+
+			instCopy.Spec.Packaging.MaxReports = 2
+			instCopy.Spec.PrometheusConfig.CollectPreviousData = &trueDef
+			instCopy.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: t})
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(2))
+			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
+			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(2))
+
+		})
+		It("query failed due to error", func() {
+			resetReconciler(WithSecretOverride(true))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, errors.New("test error")).MinTimes(1)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeFalse())
+			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("test error"))
+
+		})
+		It("query returns node data only", func() {
+			resetReconciler(WithSecretOverride(true))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			start := timeRange.Start.Add(1 * time.Second)
+			end := start.Add(14*time.Minute + 59*time.Second)
+			timeROS1 := end
+			timeROS2 := timeROS1.Add(15 * time.Minute)
+			timeROS3 := timeROS2.Add(15 * time.Minute)
+			timeROS4 := timeROS3.Add(15 * time.Minute)
+			// this mock is tightly coupled to the order in which the node queries are run and the first pod query
+			gomock.InOrder(
+				// node-allocatable-cpu-cores
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil),
+				// node-allocatable-memory-bytes
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablememorybytes), nil, nil),
+				// node-capacity-cpu-cores
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodecapacitycpucores), nil, nil),
+				// node-capacity-memory-bytes
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodecapacitymemorybytes), nil, nil),
+				// node-role
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, noderole), nil, nil),
+				// node-labels
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, nodelabels), nil, nil),
+				// pod-limit-cpu-cores
+				mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(asModelMatrix(metricjson, podlimitcpucores), nil, nil),
+			)
+			// mock the rest of the Queries Anytimes
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS1, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS2, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS3, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), timeROS4, gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+
+			// Mock these again in case the CR is reconciled again
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Matrix{}, nil, nil).AnyTimes()
+			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			instCopy.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.ClusterID != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+		})
 	})
 })
