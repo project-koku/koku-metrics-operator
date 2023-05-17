@@ -19,11 +19,10 @@ import (
 )
 
 var (
+	now                 = time.Now
 	fourteenDayDuration = time.Duration(14 * 24 * time.Hour)
 	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
 	retentionPeriod     time.Duration
-
-	promCompareFormat = "2006-01-02T15"
 
 	monitoringMeta = types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
 
@@ -82,19 +81,19 @@ func setRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) {
 }
 
 func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
-	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
+	start := now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
 	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
-		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() &&
-		!r.disablePreviousDataCollection {
-		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the first of the
-		// month when the CR is first created, otherwise we stick to using the start of the previous full hour.
+		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() {
+		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the beginning of
+		// the retention period when the CR is first created, otherwise we stick to using the start of the previous full hour.
 		setRetentionPeriod(ctx, r)
 		log.Info(fmt.Sprintf("duration used: %s", retentionPeriod))
-		start = start.Add(-1 * retentionPeriod)
+		start = start.Add(-1 * retentionPeriod).Truncate(24 * time.Hour)
 		log.Info(fmt.Sprintf("start used: %s", start))
 		cr.Status.Prometheus.PreviousDataCollected = true
+		r.initialDataCollection = true
 	}
 	return start, end
 }
@@ -120,7 +119,7 @@ func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	return r.promCollector.GetPromConn(cr, promCfgSetter, promConnSetter, promConnTester)
 }
 
-func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) {
+func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) error {
 	log := log.WithName("collectPromStats")
 
 	r.promCollector.TimeSeries = &timeRange
@@ -128,9 +127,9 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	t := metav1.Time{Time: timeRange.Start}
 	formattedStart := timeRange.Start.Format(time.RFC3339)
 	formattedEnd := timeRange.End.Format(time.RFC3339)
-	if cr.Status.Prometheus.LastQuerySuccessTime.UTC().Format(promCompareFormat) == t.Format(promCompareFormat) {
+	if cr.Status.Prometheus.LastQuerySuccessTime.Equal(&t) {
 		log.Info("reports already generated for range", "start", formattedStart, "end", formattedEnd)
-		return
+		return nil
 	}
 
 	cr.Status.Prometheus.LastQueryStartTime = t
@@ -138,10 +137,18 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(cr, dirCfg, r.promCollector); err != nil {
 		cr.Status.Reports.DataCollected = false
-		cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
-		log.Error(err, "failed to generate reports")
-		return
+		if err == collector.ErrNoData {
+			cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
+			log.Info("no data available to generate reports")
+		} else {
+			cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
+			log.Error(err, "failed to generate reports")
+		}
+		return err
 	}
+	cr.Status.Reports.DataCollected = true
+	cr.Status.Reports.DataCollectionMessage = ""
 	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
 	cr.Status.Prometheus.LastQuerySuccessTime = t
+	return nil
 }

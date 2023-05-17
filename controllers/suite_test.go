@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -53,6 +52,7 @@ var (
 	k8sClient          client.Client
 	k8sManager         ctrl.Manager
 	testEnv            *envtest.Environment
+	defaultReconciler  *MetricsConfigReconciler
 	ctx                context.Context
 	cancel             context.CancelFunc
 	useCluster         bool
@@ -150,16 +150,6 @@ var (
 			},
 		},
 	}
-	configMapEmpty = &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      monitoringMeta.Name,
-			Namespace: monitoringMeta.Namespace,
-		},
-	}
 
 	validTS        *httptest.Server
 	unauthorizedTS *httptest.Server
@@ -223,7 +213,7 @@ var _ = BeforeSuite(func() {
 
 	// make the metrics listen address different for each parallel thread to avoid clashes when running with -p
 	var metricsAddr string
-	metricsPort := 8090 + config.GinkgoConfig.ParallelNode
+	metricsPort := 8090 + GinkgoParallelProcess()
 	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%d", metricsPort), "The address the metric endpoint binds to.")
 	flag.Parse()
 
@@ -237,14 +227,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&MetricsConfigReconciler{
-			Client:                        k8sManager.GetClient(),
-			Scheme:                        scheme.Scheme,
-			Clientset:                     clientset,
-			InCluster:                     true,
-			disablePreviousDataCollection: true,
-			overrideSecretPath:            true,
-		}).SetupWithManager(k8sManager)
+		defaultReconciler = &MetricsConfigReconciler{
+			Client:             k8sManager.GetClient(),
+			Scheme:             scheme.Scheme,
+			Clientset:          clientset,
+			InCluster:          true,
+			overrideSecretPath: true,
+		}
+		err := (defaultReconciler).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
@@ -259,7 +249,23 @@ var _ = BeforeSuite(func() {
 
 	clusterPrep(ctx)
 
-}, 60)
+})
+
+type ReconcilerOption func(f *MetricsConfigReconciler)
+
+func WithSecretOverride(overrideSecretPath bool) ReconcilerOption {
+	return func(r *MetricsConfigReconciler) {
+		r.overrideSecretPath = overrideSecretPath
+	}
+}
+
+func resetReconciler(opts ...ReconcilerOption) {
+	defaultReconciler.promCollector = nil
+	defaultReconciler.overrideSecretPath = true
+	for _, opt := range opts {
+		opt(defaultReconciler)
+	}
+}
 
 func createNamespace(ctx context.Context, namespace string) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
@@ -352,7 +358,9 @@ func createObject(ctx context.Context, obj client.Object) {
 }
 
 func deleteObject(ctx context.Context, obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
 	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
+	Eventually(func() bool { return errors.IsNotFound(k8sClient.Get(ctx, key, obj)) }, 60, 1).Should(BeTrue())
 }
 
 func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {
@@ -398,6 +406,7 @@ var _ = AfterSuite(func() {
 
 	os.Remove(filepath.Join(secretsPath, "token"))
 	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
+	os.RemoveAll(filepath.Join(secretsPath, "tmp"))
 
 	validTS.Close()
 	unauthorizedTS.Close()

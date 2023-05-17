@@ -33,8 +33,8 @@ import (
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	CR               *metricscfgv1beta1.MetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
+	FilesAction      FilesAction
 	manifest         manifestInfo
 	uid              string
 	createdTimestamp string
@@ -43,45 +43,56 @@ type FilePackager struct {
 	end              time.Time
 }
 
-const timestampFormat = "20060102T150405"
+type FilesAction func(src, dst string) error
 
-// Define the global variables
-const megaByte int64 = 1024 * 1024
+const (
+	timestampFormat = "20060102T150405.999999"
 
-// the csv module does not expose the bytes-offset of the
-// underlying file object.
-// instead, the script estimates the size of the data as VARIANCE percent larger than a
-// naïve string concatenation of the CSV fields to cover the overhead of quoting
-// and delimiters. This gets close enough for now.
-// VARIANCE := 0.03
-const variance float64 = 0.03
+	megaByte int64 = 1024 * 1024
 
-// if we're creating more than 1k files, something is probably wrong.
-var maxSplits int64 = 1000
+	// the csv module does not expose the bytes-offset of the
+	// underlying file object.
+	// instead, the script estimates the size of the data as VARIANCE percent larger than a
+	// naïve string concatenation of the CSV fields to cover the overhead of quoting
+	// and delimiters. This gets close enough for now.
+	// VARIANCE := 0.03
+	variance float64 = 0.03
+)
 
-// ErrNoReports a "no reports" Error type
-var ErrNoReports = errors.New("reports not found")
+var (
+	MoveFiles FilesAction = os.Rename
+	CopyFiles FilesAction = copyFile
 
-// Set boolean on whether community or certified
-var isCertified bool = false
+	// if we're creating more than 1k files, something is probably wrong.
+	maxSplits int64 = 1000
 
-var log = logr.Log.WithName("packaging")
+	BUFFERSIZE int64 = 10 * megaByte
+
+	// ErrNoReports a "no reports" Error type
+	ErrNoReports = errors.New("reports not found")
+
+	// Set boolean on whether community or certified
+	isCertified bool = false
+
+	log = logr.Log.WithName("packaging")
+)
 
 // Manifest interface
 type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string                                `json:"uuid"`
-	ClusterID string                                `json:"cluster_id"`
-	Version   string                                `json:"version"`
-	Date      time.Time                             `json:"date"`
-	Files     []string                              `json:"files"`
-	ROSFiles  []string                              `json:"resource_optimization_files"`
-	Start     time.Time                             `json:"start"`
-	End       time.Time                             `json:"end"`
-	CRStatus  metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
-	Certified bool                                  `json:"certified"`
+	UUID         string                                `json:"uuid"`
+	ClusterID    string                                `json:"cluster_id"`
+	Version      string                                `json:"version"`
+	Date         time.Time                             `json:"date"`
+	Files        []string                              `json:"files"`
+	ROSFiles     []string                              `json:"resource_optimization_files"`
+	Start        time.Time                             `json:"start"`
+	End          time.Time                             `json:"end"`
+	CRStatus     metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
+	Certified    bool                                  `json:"certified"`
+	DailyReports bool                                  `json:"daily_reports"`
 }
 
 type FileInfoManifest manifest
@@ -116,6 +127,41 @@ func (m *manifestInfo) renderManifest() error {
 	return nil
 }
 
+func copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	_, err = os.Stat(dst)
+	if err == nil {
+		return fmt.Errorf("file %s already exists", dst)
+	}
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 // buildLocalCSVFileList gets the list of files in the staging directory
 func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) fileTracker {
 	tracker := newFileTracker()
@@ -134,7 +180,7 @@ func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDire
 	return tracker
 }
 
-func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr metricscfgv1beta1.MetricsConfig) {
+func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr *metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var costFiles []string
@@ -149,16 +195,17 @@ func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr
 	}
 	p.manifest = manifestInfo{
 		manifest: manifest{
-			UUID:      p.uid,
-			ClusterID: p.CR.Status.ClusterID,
-			Version:   p.CR.Status.OperatorCommit,
-			Date:      manifestDate.UTC(),
-			Files:     costFiles,
-			ROSFiles:  rosFiles,
-			Start:     p.start.UTC(),
-			End:       p.end.UTC(),
-			Certified: isCertified,
-			CRStatus:  cr.Status,
+			UUID:         p.uid,
+			ClusterID:    cr.Status.ClusterID,
+			Version:      cr.Status.OperatorCommit,
+			Date:         manifestDate.UTC(),
+			Files:        costFiles,
+			ROSFiles:     rosFiles,
+			Start:        p.start.UTC(),
+			End:          p.end.UTC(),
+			Certified:    isCertified,
+			CRStatus:     cr.Status,
+			DailyReports: true,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
@@ -309,7 +356,12 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("getStartEnd: error reading file: %v", err)
 	}
-	lastLine := allLines[len(allLines)-1]
+	var lastLine []string
+	if len(allLines) > 0 {
+		lastLine = allLines[len(allLines)-1]
+	} else {
+		lastLine = firstLine
+	}
 	endInterval := lastLine[endIndex]
 	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
 	return nil
@@ -375,26 +427,26 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	return false
 }
 
-// moveFiles moves files from reportsDirectory to stagingDirectory
-func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := log.WithName("moveFiles")
+// moveOrCopyFiles moves files from reportsDirectory to stagingDirectory
+func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]os.FileInfo, error) {
+	log := log.WithName("moveOrCopyFiles")
 	var movedFiles []os.FileInfo
 
 	// move all files
 	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
 	if err != nil {
-		return nil, fmt.Errorf("moveFiles: could not read reports directory: %v", err)
+		return nil, fmt.Errorf("moveOrCopyFiles: could not read reports directory: %v", err)
 	}
 	if len(fileList) <= 0 {
 		return nil, ErrNoReports
 	}
 
 	// remove all files from staging directory
-	if p.CR.Status.Packaging.PackagingError == "" {
+	if cr.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
-			return nil, fmt.Errorf("moveFiles: could not clear staging: %v", err)
+			return nil, fmt.Errorf("moveOrCopyFiles: could not clear staging: %v", err)
 		}
 	}
 
@@ -403,21 +455,24 @@ func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
 		if !strings.HasSuffix(file.Name(), ".csv") {
 			continue
 		}
+
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
-		if err := os.Rename(from, to); err != nil {
-			return nil, fmt.Errorf("moveFiles: failed to move files: %v", err)
+
+		if err := p.FilesAction(from, to); err != nil {
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to copy/move files: %v", err)
 		}
+
 		newFile, err := os.Stat(to)
 		if err != nil {
-			return nil, fmt.Errorf("moveFiles: failed to get new file stats: %v", err)
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to get new file stats: %v", err)
 		}
 		movedFiles = append(movedFiles, newFile)
 	}
 	return movedFiles, nil
 }
 
-func (p *FilePackager) TrimPackages() error {
+func (p *FilePackager) TrimPackages(cr *metricscfgv1beta1.MetricsConfig) error {
 	log := log.WithName("trimPackages")
 
 	packages, err := p.DirCfg.Upload.GetFiles()
@@ -434,9 +489,9 @@ func (p *FilePackager) TrimPackages() error {
 
 	reportCount := int64(datetimesSet.Len())
 
-	if reportCount <= p.CR.Spec.Packaging.MaxReports {
+	if reportCount <= cr.Spec.Packaging.MaxReports {
 		log.Info("number of stored reports within limit")
-		p.CR.Status.Packaging.ReportCount = &reportCount
+		cr.Status.Packaging.ReportCount = &reportCount
 		return nil
 	}
 
@@ -448,7 +503,7 @@ func (p *FilePackager) TrimPackages() error {
 	}
 
 	sort.Strings(datetimes)
-	ind := len(datetimes) - int(p.CR.Spec.Packaging.MaxReports)
+	ind := len(datetimes) - int(cr.Spec.Packaging.MaxReports)
 	filesToExclude := datetimes[0:ind]
 
 	for _, pre := range filesToExclude {
@@ -463,16 +518,16 @@ func (p *FilePackager) TrimPackages() error {
 		}
 	}
 
-	p.CR.Status.Packaging.ReportCount = &p.CR.Spec.Packaging.MaxReports
+	cr.Status.Packaging.ReportCount = &cr.Spec.Packaging.MaxReports
 	return nil
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports() error {
+func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error {
 	log := log.WithName("PackageReports")
-	p.maxBytes = *p.CR.Status.Packaging.MaxSize * megaByte
+	p.maxBytes = *cr.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
-	p.createdTimestamp = time.Now().Format(timestampFormat)
+	p.createdTimestamp = strings.Replace(time.Now().Format(timestampFormat), ".", "_", 1)
 
 	// create reports/staging/upload directories if they do not exist
 	if err := dirconfig.CheckExistsOrRecreate(p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
@@ -480,7 +535,7 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	// move CSV reports from data directory to staging directory
-	filesToPackage, err := p.moveFiles()
+	filesToPackage, err := p.moveOrCopyFiles(cr)
 	if err == ErrNoReports {
 		return nil
 	} else if err != nil {
@@ -490,11 +545,7 @@ func (p *FilePackager) PackageReports() error {
 	log.Info("getting the start and end intervals for the manifest")
 	for _, file := range filesToPackage {
 		absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
-		if strings.Contains(file.Name(), "cm-openshift-pod") {
-			if err := p.getStartEnd(absPath); err != nil {
-				return fmt.Errorf("PackageReports: %v", err)
-			}
-		} else if p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift") {
+		if strings.Contains(file.Name(), "cm-openshift-pod") || (p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift")) {
 			if err := p.getStartEnd(absPath); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
@@ -508,7 +559,7 @@ func (p *FilePackager) PackageReports() error {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
 	tracker := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(tracker, p.DirCfg.Staging.Path, *p.CR)
+	p.getManifest(tracker, p.DirCfg.Staging.Path, cr)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -532,7 +583,7 @@ func (p *FilePackager) PackageReports() error {
 	}
 
 	log.Info("file packaging was successful")
-	p.CR.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
+	cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
 

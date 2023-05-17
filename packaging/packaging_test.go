@@ -34,8 +34,8 @@ var testingDir string
 var dirCfg *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 var cr = &metricscfgv1beta1.MetricsConfig{}
 var testPackager = FilePackager{
-	DirCfg: dirCfg,
-	CR:     cr,
+	DirCfg:      dirCfg,
+	FilesAction: MoveFiles,
 }
 var errTest = errors.New("test error")
 
@@ -65,23 +65,11 @@ type testDirMap struct {
 var testDirs testDirMap
 
 func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
-	in, err := os.Open(src)
+	err := copyFile(src, dst)
 	if err != nil {
 		return nil, err
 	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return nil, err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return nil, err
-	}
-	info, err := out.Stat()
+	out, err := os.Open(dst)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +78,7 @@ func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 		return nil, err
 	}
 
-	return info, out.Close()
+	return out.Stat()
 }
 
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
@@ -277,6 +265,7 @@ func TestMain(m *testing.M) {
 
 func TestNeedSplit(t *testing.T) {
 	// create the needSplitTests
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	needSplitTests := []struct {
 		name     string
 		fileList []os.FileInfo
@@ -310,6 +299,7 @@ func TestNeedSplit(t *testing.T) {
 
 func TestBuildLocalCSVFileList(t *testing.T) {
 	// create the buildLocalCSVFileList tests
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	buildLocalCSVFileListTests := []struct {
 		name     string
 		dirName  string
@@ -346,6 +336,7 @@ func TestBuildLocalCSVFileList(t *testing.T) {
 
 func TestMoveFiles(t *testing.T) {
 	// create the moveFiles tests
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	moveFilesTests := []struct {
 		name      string
 		dirName   string
@@ -373,7 +364,7 @@ func TestMoveFiles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = genDirCfg(t, tt.dirName)
 			testPackager.uid = tt.fileUUID
-			got, err := testPackager.moveFiles()
+			got, err := testPackager.moveOrCopyFiles(cr)
 			if tt.want == nil && got != nil {
 				t.Errorf("Expected moved files to be nil")
 			} else if tt.want != nil && got == nil {
@@ -402,6 +393,7 @@ func TestMoveFiles(t *testing.T) {
 
 func TestPackagingReports(t *testing.T) {
 	// create the packagingReports tests
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	packagingReportTests := []struct {
 		name          string
 		dirCfg        *dirconfig.DirectoryConfig
@@ -461,9 +453,9 @@ func TestPackagingReports(t *testing.T) {
 		// using tt.name from the case to use it as the `t.Run` test name
 		t.Run(tt.name, func(t *testing.T) {
 			testPackager.DirCfg = tt.dirCfg
-			testPackager.CR.Spec.Packaging.MaxReports = tt.maxReports
-			testPackager.CR.Status.Packaging.MaxSize = &tt.maxSize
-			err := testPackager.PackageReports()
+			cr.Spec.Packaging.MaxReports = tt.maxReports
+			cr.Status.Packaging.MaxSize = &tt.maxSize
+			err := testPackager.PackageReports(cr)
 			if tt.want != nil && err == nil {
 				t.Errorf("%s wanted error got %v", tt.name, err)
 			}
@@ -483,6 +475,7 @@ func TestPackagingReports(t *testing.T) {
 
 func TestGetAndRenderManifest(t *testing.T) {
 	// set up the tests to check the manifest contents
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	getAndRenderManifestTests := []struct {
 		name          string
 		dirCfg        string
@@ -547,11 +540,11 @@ func TestGetAndRenderManifest(t *testing.T) {
 			csvFileNames := testPackager.buildLocalCSVFileList(tt.fileList, tt.dirName)
 			if err := testPackager.getStartEnd(filepath.Join(testPackager.DirCfg.Reports.Path, tt.podReportName)); err != nil {
 				if !tt.expectErr {
-					log.Info("This error occurred %v", err)
+					log.Info("This error occurred", "error", err)
 					t.Fatal("could not set start/end times")
 				}
 			}
-			testPackager.getManifest(csvFileNames, tt.dirName, *testPackager.CR)
+			testPackager.getManifest(csvFileNames, tt.dirName, cr)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -584,9 +577,9 @@ func TestGetAndRenderManifest(t *testing.T) {
 			endTime, _ := time.Parse("2006-01-02 15:04:05", strings.Split("2021-01-07 18:59:59", " +")[0])
 			expectedManifest := manifest{
 				UUID:      testPackager.uid,
-				ClusterID: testPackager.CR.Status.ClusterID,
-				CRStatus:  testPackager.CR.Status,
-				Version:   testPackager.CR.Status.OperatorCommit,
+				ClusterID: cr.Status.ClusterID,
+				CRStatus:  cr.Status,
+				Version:   cr.Status.OperatorCommit,
 				Date:      manifestDate.UTC(),
 				Files:     expectedCostFiles,
 				ROSFiles:  expectedRosFiles,
@@ -646,6 +639,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 }
 
 func TestRenderManifest(t *testing.T) {
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	tempFile := getTempFile(t, 0644, ".")
 	tempFileNoPerm := getTempFile(t, 0000, ".")
 	defer os.Remove(tempFile.Name())
@@ -693,6 +687,7 @@ func TestRenderManifest(t *testing.T) {
 
 func TestWriteTarball(t *testing.T) {
 	// setup the writeTarball tests
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	writeTarballTests := []struct {
 		name         string
 		dirName      string
@@ -758,7 +753,7 @@ func TestWriteTarball(t *testing.T) {
 				csvFileNames = testPackager.buildLocalCSVFileList(tt.fileList, stagingDir)
 			}
 			manifestName := tt.manifestName
-			testPackager.getManifest(csvFileNames, stagingDir, *testPackager.CR)
+			testPackager.getManifest(csvFileNames, stagingDir, cr)
 			if err := testPackager.manifest.renderManifest(); err != nil {
 				t.Fatal("failed to render manifest")
 			}
@@ -814,6 +809,7 @@ func TestWriteTarball(t *testing.T) {
 }
 
 func TestSplitFiles(t *testing.T) {
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
 	defer os.RemoveAll(tmpDir)
 	splitFilesTests := []struct {
@@ -917,6 +913,7 @@ func TestSplitFiles(t *testing.T) {
 }
 
 func TestGetFileInfo(t *testing.T) {
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	files := []string{
 		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.0.csv",
 		"ff1c03d2-e303-4ab8-a8fc-d1267bf160d4_openshift_usage_report.1.csv",
@@ -976,6 +973,7 @@ func TestGetFileInfo(t *testing.T) {
 }
 
 func TestTrimPackages(t *testing.T) {
+	cr = &metricscfgv1beta1.MetricsConfig{}
 	tmpDir := getTempDir(t, 0777, "./test_files", "tmp-*")
 	defer os.RemoveAll(tmpDir)
 	trimPackagesTests := []struct {
@@ -1077,9 +1075,8 @@ func TestTrimPackages(t *testing.T) {
 			cr.Spec.Packaging.MaxReports = tt.maxReports
 			testPackager := FilePackager{
 				DirCfg: dirCfg,
-				CR:     cr,
 			}
-			got := testPackager.TrimPackages()
+			got := testPackager.TrimPackages(cr)
 			if tt.want == nil && got != nil {
 				t.Errorf("%s did not expect error but got: %v", tt.name, got)
 			}
@@ -1095,11 +1092,10 @@ func TestTrimPackages(t *testing.T) {
 				if len(files) != tt.numFilesExpected {
 					t.Errorf("%s expected %d files got %d files", tt.name, tt.numFilesExpected, len(files))
 				}
-				if testPackager.CR.Status.Packaging.ReportCount != nil && *testPackager.CR.Status.Packaging.ReportCount != int64(tt.numReportsExpected) {
-					t.Errorf("%s expected %d number of reports got %d", tt.name, tt.numReportsExpected, *testPackager.CR.Status.Packaging.ReportCount)
+				if cr.Status.Packaging.ReportCount != nil && *cr.Status.Packaging.ReportCount != int64(tt.numReportsExpected) {
+					t.Errorf("%s expected %d number of reports got %d", tt.name, tt.numReportsExpected, *cr.Status.Packaging.ReportCount)
 				}
 			}
 		})
 	}
-
 }

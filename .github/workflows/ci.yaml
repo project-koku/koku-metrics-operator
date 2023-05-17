@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
       - name: golangci-lint
@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -39,18 +39,9 @@ jobs:
         run: printenv
 
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          stable: 'true'
           go-version: 1.18 # The Go version to download (if necessary) and use.
-
-      - name: Cache Go modules
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
-
 
       - name: Install kubebuilder
         run : |
@@ -80,7 +71,7 @@ jobs:
       - name: Checkout
         # this checkout is required for the coverage report. If we don't do this, then
         # the uploaded report is invalid and codecov doesn't know how to process it.
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -90,7 +81,7 @@ jobs:
           name: coverage
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3
         with:
           file: ./cover.out
           flags: unittests
