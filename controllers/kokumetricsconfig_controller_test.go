@@ -1099,7 +1099,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
 			createObject(ctx, testConfigMap)
 
-			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			t := now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			t2 := t.Truncate(24 * time.Hour).Add(-24 * time.Hour) // midnight yesterday
 			timeRangeInitial := promv1.Range{
 				Start: t2,
@@ -1118,13 +1118,17 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 			Eventually(func() bool {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.ClusterID != ""
+				return fetched.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: t})
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
 			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(1))
 			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
 			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(1))
+
+			files, err := os.ReadDir(filepath.Join(".", "tmp", volumeMountName, "data"))
+			Expect(err).To(BeNil())
+			Expect(len(files)).To(Equal(0))
 		})
 		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
 			resetReconciler(WithSecretOverride(true))
