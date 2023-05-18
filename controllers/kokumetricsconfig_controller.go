@@ -691,7 +691,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	r.initialDataCollection = false
 	packager.FilesAction = packaging.CopyFiles
-	if endTime.Hour() == HOURS_IN_DAY && !cr.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: startTime}) {
+	if endTime.Hour() == HOURS_IN_DAY {
 		// when we've reached the end of the day, force packaging to occur to generate the daily report
 		log.Info("collected a full day of data, resetting packaging time to force packaging")
 		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
