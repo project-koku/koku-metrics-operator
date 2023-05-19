@@ -428,7 +428,7 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
-func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
+func packageFilesWithCycle(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	log := log.WithName("packageAndUpload")
 
 	// if its time to package
@@ -436,10 +436,10 @@ func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig
 		return
 	}
 
-	forcePackageFiles(p, cr)
+	packageFiles(p, cr)
 }
 
-func forcePackageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
+func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	// Package and split the payload if necessary
 	cr.Status.Packaging.PackagingError = ""
 	if err := p.PackageReports(cr); err != nil {
@@ -640,7 +640,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
 			log.Info("packaging files from an old operator version")
-			forcePackageFiles(packager, cr)
+			packageFiles(packager, cr)
 			// after packaging files after an upgrade, truncate the start time so we recollect
 			// all of today's data. This ensures that today's report contains any new report changes.
 			startTime = startTime.Truncate(24 * time.Hour)
@@ -683,7 +683,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// only perform these steps during the initial data collection.
 			// after collecting 96 hours of data, package the report to compress the files
 			log.Info("collected 96 hours of data, packaging files")
-			forcePackageFiles(packager, cr)
+			packageFiles(packager, cr)
 			startTime = t
 			// update status to show progress
 			r.updateStatusAndLogError(ctx, cr)
@@ -695,10 +695,10 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if endTime.Hour() == HOURS_IN_DAY {
 		// when we've reached the end of the day. move the files so we stop appending to them
 		packager.FilesAction = packaging.MoveFiles
-		forcePackageFiles(packager, cr)
+		packageFiles(packager, cr)
 	} else {
 		// package report files
-		packageFiles(packager, cr)
+		packageFilesWithCycle(packager, cr)
 	}
 
 	// Initial returned result -> requeue reconcile after 5 min.
