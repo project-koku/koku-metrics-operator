@@ -428,6 +428,16 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
+func forcePackageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
+	// Package and split the payload if necessary
+	cr.Status.Packaging.PackagingError = ""
+	if err := p.PackageReports(cr); err != nil {
+		log.Error(err, "PackageReports failed")
+		// update the CR packaging error status
+		cr.Status.Packaging.PackagingError = err.Error()
+	}
+}
+
 func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	log := log.WithName("packageAndUpload")
 
@@ -436,13 +446,7 @@ func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig
 		return
 	}
 
-	// Package and split the payload if necessary
-	cr.Status.Packaging.PackagingError = ""
-	if err := p.PackageReports(cr); err != nil {
-		log.Error(err, "PackageReports failed")
-		// update the CR packaging error status
-		cr.Status.Packaging.PackagingError = err.Error()
-	}
+	forcePackageFiles(p, cr)
 }
 
 func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
@@ -601,6 +605,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log.Info("using the following inputs", "MetricsConfigConfig", cr.Status)
 
 	// set the Operator git commit and reflect it in the upload status
+	newInstall := false
 	setOperatorCommit(r)
 	if cr.Status.OperatorCommit != GitCommit {
 		// If the commit is different, this is either a fresh install or the operator was upgraded.
@@ -608,9 +613,9 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// so we need to package the old files before generating new reports.
 		// We set this packaging time to zero so that the next call to packageFiles
 		// will force file packaging to occur.
-		log.Info("commit changed, resetting packaging time to force packaging of old data files")
-		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		log.Info("git commit changed which indicates newly installed operator")
 		cr.Status.OperatorCommit = GitCommit
+		newInstall = true
 	}
 
 	// Get or create the directory configuration
@@ -629,14 +634,13 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		FilesAction: packaging.MoveFiles,
 	}
 
-	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
-	// package all the files so that the next prometheus query generates a fresh report
-	if cr.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+	// after upgrade, package all the files so that the next prometheus query generates a fresh report
+	if newInstall && dirCfg != nil {
 		log.Info("checking for files from an old operator version")
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
 			log.Info("packaging files from an old operator version")
-			packageFiles(packager, cr)
+			forcePackageFiles(packager, cr)
 			// after packaging files after an upgrade, truncate the start time so we recollect
 			// all of today's data. This ensures that today's report contains any new report changes.
 			startTime = startTime.Truncate(24 * time.Hour)
@@ -680,9 +684,8 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// after collecting 96 hours of data, package the report to compress the files
 			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
 			// zero enables packaging to occur thruout this loop
-			log.Info("collected 96 hours of data, resetting packaging time to force packaging")
-			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
-			packageFiles(packager, cr)
+			log.Info("collected 96 hours of data, packaging files")
+			forcePackageFiles(packager, cr)
 			startTime = t
 			// update status to show progress
 			r.updateStatusAndLogError(ctx, cr)
@@ -691,15 +694,15 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	r.initialDataCollection = false
 	packager.FilesAction = packaging.CopyFiles
-	if endTime.Hour() == HOURS_IN_DAY && cr.Status.Packaging.LastSuccessfulPackagingTime.Hour() != HOURS_IN_DAY {
+	if endTime.Hour() == HOURS_IN_DAY {
 		// when we've reached the end of the day, force packaging to occur to generate the daily report
 		log.Info("collected a full day of data, resetting packaging time to force packaging")
-		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
 		packager.FilesAction = packaging.MoveFiles
+		forcePackageFiles(packager, cr)
+	} else {
+		// package report files
+		packageFiles(packager, cr)
 	}
-
-	// package report files
-	packageFiles(packager, cr)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
