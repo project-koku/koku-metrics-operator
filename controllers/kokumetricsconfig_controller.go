@@ -428,16 +428,6 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
-func forcePackageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
-	// Package and split the payload if necessary
-	cr.Status.Packaging.PackagingError = ""
-	if err := p.PackageReports(cr); err != nil {
-		log.Error(err, "PackageReports failed")
-		// update the CR packaging error status
-		cr.Status.Packaging.PackagingError = err.Error()
-	}
-}
-
 func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	log := log.WithName("packageAndUpload")
 
@@ -447,6 +437,16 @@ func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig
 	}
 
 	forcePackageFiles(p, cr)
+}
+
+func forcePackageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
+	// Package and split the payload if necessary
+	cr.Status.Packaging.PackagingError = ""
+	if err := p.PackageReports(cr); err != nil {
+		log.Error(err, "PackageReports failed")
+		// update the CR packaging error status
+		cr.Status.Packaging.PackagingError = err.Error()
+	}
 }
 
 func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
