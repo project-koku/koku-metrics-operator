@@ -428,7 +428,7 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	}
 }
 
-func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
+func packageFilesWithCycle(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	log := log.WithName("packageAndUpload")
 
 	// if its time to package
@@ -436,6 +436,10 @@ func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig
 		return
 	}
 
+	packageFiles(p, cr)
+}
+
+func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig) {
 	// Package and split the payload if necessary
 	cr.Status.Packaging.PackagingError = ""
 	if err := p.PackageReports(cr); err != nil {
@@ -601,6 +605,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log.Info("using the following inputs", "MetricsConfigConfig", cr.Status)
 
 	// set the Operator git commit and reflect it in the upload status
+	newInstall := false
 	setOperatorCommit(r)
 	if cr.Status.OperatorCommit != GitCommit {
 		// If the commit is different, this is either a fresh install or the operator was upgraded.
@@ -608,9 +613,9 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// so we need to package the old files before generating new reports.
 		// We set this packaging time to zero so that the next call to packageFiles
 		// will force file packaging to occur.
-		log.Info("commit changed, resetting packaging time to force packaging of old data files")
-		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		log.Info("git commit changed which indicates newly installed operator")
 		cr.Status.OperatorCommit = GitCommit
+		newInstall = true
 	}
 
 	// Get or create the directory configuration
@@ -629,9 +634,8 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		FilesAction: packaging.MoveFiles,
 	}
 
-	// if packaging time is zero but there are files in the data dir, this is an upgraded operator.
-	// package all the files so that the next prometheus query generates a fresh report
-	if cr.Status.Packaging.LastSuccessfulPackagingTime.IsZero() && dirCfg != nil {
+	// after upgrade, package all the files so that the next prometheus query generates a fresh report
+	if newInstall && dirCfg != nil {
 		log.Info("checking for files from an old operator version")
 		files, err := dirCfg.Reports.GetFiles()
 		if err == nil && len(files) > 0 {
@@ -678,10 +682,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if r.initialDataCollection && t.Sub(startTime).Hours() == 96 {
 			// only perform these steps during the initial data collection.
 			// after collecting 96 hours of data, package the report to compress the files
-			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
-			// zero enables packaging to occur thruout this loop
-			log.Info("collected 96 hours of data, resetting packaging time to force packaging")
-			cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+			log.Info("collected 96 hours of data, packaging files")
 			packageFiles(packager, cr)
 			startTime = t
 			// update status to show progress
@@ -692,14 +693,13 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	r.initialDataCollection = false
 	packager.FilesAction = packaging.CopyFiles
 	if endTime.Hour() == HOURS_IN_DAY {
-		// when we've reached the end of the day, force packaging to occur to generate the daily report
-		log.Info("collected a full day of data, resetting packaging time to force packaging")
-		cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Time{}
+		// when we've reached the end of the day. move the files so we stop appending to them
 		packager.FilesAction = packaging.MoveFiles
+		packageFiles(packager, cr)
+	} else {
+		// package report files
+		packageFilesWithCycle(packager, cr)
 	}
-
-	// package report files
-	packageFiles(packager, cr)
 
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
