@@ -1234,7 +1234,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			mockpconn.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(model.Vector{}, nil, nil).AnyTimes()
 
 			instCopy.Spec.Upload.UploadToggle = &falseValue
-			instCopy.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 			createObject(ctx, instCopy)
 
 			fetched := &metricscfgv1beta1.MetricsConfig{}
