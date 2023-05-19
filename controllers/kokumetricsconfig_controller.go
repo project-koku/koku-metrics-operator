@@ -695,8 +695,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	r.initialDataCollection = false
 	packager.FilesAction = packaging.CopyFiles
 	if endTime.Hour() == HOURS_IN_DAY {
-		// when we've reached the end of the day, force packaging to occur to generate the daily report
-		log.Info("collected a full day of data, resetting packaging time to force packaging")
+		// when we've reached the end of the day. move the files so we stop appending to them
 		packager.FilesAction = packaging.MoveFiles
 		forcePackageFiles(packager, cr)
 	} else {

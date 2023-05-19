@@ -430,7 +430,7 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 // moveOrCopyFiles moves files from reportsDirectory to stagingDirectory
 func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]os.FileInfo, error) {
 	log := log.WithName("moveOrCopyFiles")
-	var movedFiles []os.FileInfo
+	var files []os.FileInfo
 
 	// move all files
 	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
@@ -450,7 +450,7 @@ func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]o
 		}
 	}
 
-	log.Info("moving report files to staging directory")
+	log.Info("moving or copying report files to staging directory")
 	for _, file := range fileList {
 		if !strings.HasSuffix(file.Name(), ".csv") {
 			continue
@@ -467,9 +467,9 @@ func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]o
 		if err != nil {
 			return nil, fmt.Errorf("moveOrCopyFiles: failed to get new file stats: %v", err)
 		}
-		movedFiles = append(movedFiles, newFile)
+		files = append(files, newFile)
 	}
-	return movedFiles, nil
+	return files, nil
 }
 
 func (p *FilePackager) TrimPackages(cr *metricscfgv1beta1.MetricsConfig) error {
@@ -537,6 +537,7 @@ func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveOrCopyFiles(cr)
 	if err == ErrNoReports {
+		log.Info("no reports to generate")
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
