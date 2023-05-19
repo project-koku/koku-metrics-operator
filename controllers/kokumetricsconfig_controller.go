@@ -682,8 +682,6 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if r.initialDataCollection && t.Sub(startTime).Hours() == 96 {
 			// only perform these steps during the initial data collection.
 			// after collecting 96 hours of data, package the report to compress the files
-			// packaging is guarded by this LastSuccessfulPackagingTime, so setting it to
-			// zero enables packaging to occur thruout this loop
 			log.Info("collected 96 hours of data, packaging files")
 			forcePackageFiles(packager, cr)
 			startTime = t
