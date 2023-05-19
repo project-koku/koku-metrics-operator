@@ -537,7 +537,7 @@ func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveOrCopyFiles(cr)
 	if err == ErrNoReports {
-		log.Info("no reports to generate")
+		log.Info("no payload to generate")
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
