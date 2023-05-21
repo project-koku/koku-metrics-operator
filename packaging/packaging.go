@@ -43,7 +43,21 @@ type FilePackager struct {
 	end              time.Time
 }
 
-type FilesAction func(src, dst string) error
+type FilesAction struct {
+	action func(src, dst string) error
+}
+
+func (fa *FilesAction) String() string {
+	switch fa {
+	case &MoveFiles:
+		return "move"
+	case &CopyFiles:
+		return "copy"
+	default:
+		return "unknown action"
+	}
+
+}
 
 const (
 	timestampFormat = "20060102T150405.999999"
@@ -60,8 +74,8 @@ const (
 )
 
 var (
-	MoveFiles FilesAction = os.Rename
-	CopyFiles FilesAction = copyFile
+	MoveFiles = FilesAction{os.Rename}
+	CopyFiles = FilesAction{copyFile}
 
 	// if we're creating more than 1k files, something is probably wrong.
 	maxSplits int64 = 1000
@@ -450,7 +464,7 @@ func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]o
 		}
 	}
 
-	log.Info("moving or copying report files to staging directory")
+	log.Info(fmt.Sprintf("%s report files to staging directory", p.FilesAction.String()))
 	for _, file := range fileList {
 		if !strings.HasSuffix(file.Name(), ".csv") {
 			continue
@@ -459,8 +473,8 @@ func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]o
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
 
-		if err := p.FilesAction(from, to); err != nil {
-			return nil, fmt.Errorf("moveOrCopyFiles: failed to copy/move files: %v", err)
+		if err := p.FilesAction.action(from, to); err != nil {
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to %s files: %v", p.FilesAction.String(), err)
 		}
 
 		newFile, err := os.Stat(to)
