@@ -1,5 +1,5 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: koku-metrics-manager-role
+  name: koku-metrics-controller-manager
   namespace: koku-metrics-operator

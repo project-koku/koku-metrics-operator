@@ -191,7 +191,7 @@ endif
 
 SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
 get-token-and-cert:
-	oc whoami --show-token > $(SECRET_ABSPATH)/token
+	printf "%s" "$(shell oc whoami --show-token)" > $(SECRET_ABSPATH)/token
 	oc get -o template $(SECRET_NAME) -o go-template=='{{index .data "service-ca.crt"|base64decode}}' > $(SECRET_ABSPATH)/service-ca.crt
 
 # Generate manifests e.g. CRD, RBAC etc.
