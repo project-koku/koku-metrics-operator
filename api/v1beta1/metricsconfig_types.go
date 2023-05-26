@@ -20,7 +20,7 @@ const (
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
 
-	//UploadOn sets the operator to upload to console.redhat.com.
+	// UploadOn sets the operator to upload to console.redhat.com.
 	UploadOn bool = true
 
 	//UploadOff sets the operator to not upload to console.redhat.com.
