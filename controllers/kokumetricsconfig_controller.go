@@ -381,7 +381,7 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 	cr.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
-		msg := fmt.Sprintf("cloud.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
+		msg := fmt.Sprintf("console.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
 		log.Info(msg)
 		cr.Status.Authentication.AuthErrorMessage = msg
 		cr.Status.Authentication.ValidBasicAuth = &falseDef

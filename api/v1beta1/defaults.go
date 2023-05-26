@@ -10,7 +10,7 @@ const (
 	DefaultAuthenticationType AuthenticationType = Token
 
 	// DefaultAPIURL The default ingress path.
-	DefaultAPIURL string = "https://cloud.redhat.com"
+	DefaultAPIURL string = "https://console.redhat.com"
 
 	// DefaultIngressPath The default ingress path.
 	DefaultIngressPath string = "/api/ingress/v1/upload"

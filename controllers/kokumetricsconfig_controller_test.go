@@ -54,7 +54,7 @@ var (
 	defaultCheckCycle     int64 = 1440
 	defaultUploadWait     int64 = 0
 	defaultMaxReports     int64 = 1
-	defaultAPIURL               = "https://not-the-real-cloud.redhat.com"
+	defaultAPIURL               = "https://not-the-real-console.redhat.com"
 	testingDir                  = dirconfig.MountPath
 )
 
@@ -295,7 +295,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					SkipTLSVerification: &trueValue,
 					SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 				},
-				APIURL: "https://not-the-real-cloud.redhat.com",
+				APIURL: "https://not-the-real-console.redhat.com",
 			},
 		}
 		testConfigMap = &corev1.ConfigMap{
