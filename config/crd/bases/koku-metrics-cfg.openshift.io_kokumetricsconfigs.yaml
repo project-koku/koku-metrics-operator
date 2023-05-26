@@ -37,10 +37,10 @@ spec:
             description: KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
             properties:
               api_url:
-                default: https://cloud.redhat.com
+                default: https://console.redhat.com
                 description: FOR DEVELOPMENT ONLY. APIURL is a field of KokuMetricsConfig
                   to represent the url of the API endpoint for service interaction.
-                  The default is `https://cloud.redhat.com`.
+                  The default is `https://console.redhat.com`.
                 type: string
               authentication:
                 description: Authentication is a field of KokuMetricsConfig to represent
@@ -155,7 +155,7 @@ spec:
                 type: object
               source:
                 description: Source is a field of KokuMetricsConfig to represent the
-                  desired source on cloud.redhat.com.
+                  desired source on console.redhat.com.
                 properties:
                   check_cycle:
                     default: 1440
@@ -172,7 +172,7 @@ spec:
                     type: boolean
                   name:
                     description: SourceName is a field of KokuMetricsConfigSpec to
-                      represent the source name on cloud.redhat.com.
+                      represent the source name on console.redhat.com.
                     type: string
                   sources_path:
                     default: /api/sources/v1.0/
@@ -207,7 +207,7 @@ spec:
                     default: true
                     description: UploadToggle is a field of KokuMetricsConfig to represent
                       if the operator is installed in a restricted-network. If `false`,
-                      the operator will not upload to cloud.redhat.com or check/create
+                      the operator will not upload to console.redhat.com or check/create
                       sources. The default is true.
                     type: boolean
                   upload_wait:
@@ -842,7 +842,7 @@ spec:
                 type: object
               source:
                 description: Source is a field of KokuMetricsConfig to represent the
-                  observed state of the source on cloud.redhat.com.
+                  observed state of the source on console.redhat.com.
                 properties:
                   check_cycle:
                     description: CheckCycle is a field of KokuMetricsConfig to represent
@@ -867,11 +867,11 @@ spec:
                     type: string
                   name:
                     description: SourceName is a field of KokuMetricsConfigStatus
-                      to represent the source name on cloud.redhat.com.
+                      to represent the source name on console.redhat.com.
                     type: string
                   source_defined:
                     description: SourceDefined is a field of KokuMetricsConfigStatus
-                      to represent if the source exists as defined on cloud.redhat.com.
+                      to represent if the source exists as defined on console.redhat.com.
                     type: boolean
                   sources_path:
                     description: SourcesAPIPath is a field of KokuMetricsConfig to
@@ -933,7 +933,7 @@ spec:
                     type: string
                   upload:
                     description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator should upload to cloud.redhat.com. The default
+                      if the operator should upload to console.redhat.com. The default
                       is true
                     type: boolean
                   upload_cycle:

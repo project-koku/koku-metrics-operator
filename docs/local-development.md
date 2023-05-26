@@ -64,7 +64,7 @@ This will place the `token` and `service-ca.crt` in the `testing` directory. To 
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
-7. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
+7. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at console.redhat.com:
 
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
@@ -73,6 +73,6 @@ This will place the `token` and `service-ca.crt` in the `testing` directory. To 
 
     After this CR has been created in the cluster, reconciliation will begin.
 
-    Running `make deploy-local-cr` as-is will create the external prometheus route, disable TLS verification for prometheus, and use token authentication for cloud.redhat.com.
+    Running `make deploy-local-cr` as-is will create the external prometheus route, disable TLS verification for prometheus, and use token authentication for console.redhat.com.
 
 8. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.

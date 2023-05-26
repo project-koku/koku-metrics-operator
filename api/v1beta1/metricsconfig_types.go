@@ -20,10 +20,10 @@ const (
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
 
-	//UploadOn sets the operator to upload to cloud.redhat.com.
+	//UploadOn sets the operator to upload to console.redhat.com.
 	UploadOn bool = true
 
-	//UploadOff sets the operator to not upload to cloud.redhat.com.
+	//UploadOff sets the operator to not upload to console.redhat.com.
 	UploadOff bool = false
 
 	//UploadCycle sets the default cycle to be 360 minutes (6 hours).
@@ -145,7 +145,7 @@ type UploadSpec struct {
 	UploadCycle *int64 `json:"upload_cycle"`
 
 	// UploadToggle is a field of KokuMetricsConfig to represent if the operator is installed in a restricted-network.
-	// If `false`, the operator will not upload to cloud.redhat.com or check/create sources.
+	// If `false`, the operator will not upload to console.redhat.com or check/create sources.
 	// The default is true.
 	// +kubebuilder:default=true
 	UploadToggle *bool `json:"upload_toggle"`
@@ -203,7 +203,7 @@ type CloudDotRedHatSourceSpec struct {
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on cloud.redhat.com.
+	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
@@ -234,8 +234,8 @@ type KokuMetricsConfigSpec struct {
 
 	// FOR DEVELOPMENT ONLY.
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
-	// The default is `https://cloud.redhat.com`.
-	// +kubebuilder:default=`https://cloud.redhat.com`
+	// The default is `https://console.redhat.com`.
+	// +kubebuilder:default=`https://console.redhat.com`
 	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of KokuMetricsConfig to represent the authentication object.
@@ -250,7 +250,7 @@ type KokuMetricsConfigSpec struct {
 	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
 	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
-	// Source is a field of KokuMetricsConfig to represent the desired source on cloud.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the desired source on console.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
 	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
@@ -310,7 +310,7 @@ type UploadStatus struct {
 	// +optional
 	IngressAPIPath string `json:"ingress_path,omitempty"`
 
-	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
+	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to console.redhat.com.
 	// The default is true
 	UploadToggle *bool `json:"upload,omitempty"`
 
@@ -355,11 +355,11 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on cloud.redhat.com.
+	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on cloud.redhat.com.
+	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on console.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
@@ -488,7 +488,7 @@ type KokuMetricsConfigStatus struct {
 	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
-	// Source is a field of KokuMetricsConfig to represent the observed state of the source on cloud.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the observed state of the source on console.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 
