@@ -23,7 +23,7 @@ const (
 	// UploadOn sets the operator to upload to console.redhat.com.
 	UploadOn bool = true
 
-	//UploadOff sets the operator to not upload to console.redhat.com.
+	// UploadOff sets the operator to not upload to console.redhat.com.
 	UploadOff bool = false
 
 	//UploadCycle sets the default cycle to be 360 minutes (6 hours).
