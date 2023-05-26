@@ -92,7 +92,7 @@ func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) 
 	return buf, mw.FormDataContentType(), mw.Close()
 }
 
-// SetupRequest creates a new request, adds headers to request object for communication to cloud.redhat.com, and returns the request
+// SetupRequest creates a new request, adds headers to request object for communication to console.redhat.com, and returns the request
 func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
 	log := log.WithName("SetupRequest")
 
@@ -174,7 +174,7 @@ func ProcessResponse(resp *http.Response) ([]byte, error) {
 	return nil, fmt.Errorf("unexpected response: %d", resp.StatusCode)
 }
 
-// Upload Send data to cloud.redhat.com
+// Upload Send data to console.redhat.com
 func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
 	log := log.WithName("Upload")
 	currentTime := metav1.Now()

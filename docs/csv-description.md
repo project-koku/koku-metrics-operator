@@ -56,7 +56,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
 
 ## Configurable parameters:
   * `authentication`:
-    * `type: token` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` is used when the openshift-config pull-secret does not contain a token for `cloud.redhat.com`.
+    * `type: token` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` is used when the openshift-config pull-secret does not contain a token for `console.redhat.com`.
     * `secret_name` -> The Secret used by the operator when the authentication type is `basic`. This parameter is required **only if** the authentication type is `basic`.
   * `packaging`:
     * `max_reports_to_store: 30` -> The number of reports to store when configured in air-gapped mode. The default is 30, with a minimum of 1 and no maximum. When the operator is not configured in air-gapped mode, this parameter has no effect. Reports are removed as soon as they are uploaded.

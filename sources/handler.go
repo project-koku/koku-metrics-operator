@@ -180,7 +180,7 @@ func GetSourceTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (string
 	}
 
 	// Get Source Type ID
-	// https://cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift
+	// https://console.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift
 	bodyBytes, err := request.getRequest(handler)
 	if err != nil {
 		return "", err
@@ -211,7 +211,7 @@ func GetSources(handler *SourceHandler, client crhchttp.HTTPClient) ([]byte, err
 		errKey:   "validating auth credentials",
 	}
 
-	// https://cloud.redhat.com/api/sources/v1.0/sources
+	// https://console.redhat.com/api/sources/v1.0/sources
 	return request.getRequest(handler)
 }
 
@@ -237,7 +237,7 @@ func CheckSourceExists(handler *SourceHandler, client crhchttp.HTTPClient, sourc
 	request.queries = queries
 
 	// Check if Source exists already
-	// https://cloud.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
+	// https://console.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
 	bodyBytes, err := request.getRequest(handler)
 	if err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func GetApplicationTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (s
 	}
 
 	// Get Application Type ID
-	// https://cloud.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management
+	// https://console.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management
 	bodyBytes, err := request.getRequest(handler)
 	if err != nil {
 		return "", err
@@ -303,7 +303,7 @@ func PostSource(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID
 	}
 
 	// Post Source
-	// https://cloud.redhat.com/api/sources/v1.0/sources
+	// https://console.redhat.com/api/sources/v1.0/sources
 	// BODY:
 	// {"source_type_id": "1", "name": "source_name", "source_ref": "clusterId"}
 	bodyBytes, err := request.jsonRequest(handler)
@@ -331,7 +331,7 @@ func PostApplication(handler *SourceHandler, client crhchttp.HTTPClient, source 
 	}
 
 	// Post Source
-	// https://cloud.redhat.com/api/sources/v1.0/applications
+	// https://console.redhat.com/api/sources/v1.0/applications
 	// BODY:
 	// {"source_id": "source", "application_type_id": "app_type"}
 	_, err := request.jsonRequest(handler)

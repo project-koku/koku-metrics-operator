@@ -133,8 +133,8 @@ deploy-branch:
 # replaces the username and password with your base64 encoded username and password and looks up the token value for you
 setup-auth:
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),cloud.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),console.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),console.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
 	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
@@ -154,7 +154,7 @@ local-validate-cert:
 	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-ci-route:
-	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  api_url: https://ci.console.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
