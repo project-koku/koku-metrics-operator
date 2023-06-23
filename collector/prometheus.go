@@ -22,6 +22,11 @@ import (
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
+const (
+	statusConnection int = iota
+	statusConfiguration
+)
+
 var (
 	ps *metricscfgv1beta1.PrometheusSpec
 
@@ -58,9 +63,9 @@ func getBearerToken(tokenFile string) (config.Secret, error) {
 	return config.Secret(encodedSecret), nil
 }
 
-func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status string, err error) {
+func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status int, err error) {
 	switch status {
-	case "configuration":
+	case statusConfiguration:
 		if err != nil {
 			cr.Status.Prometheus.PrometheusConfigured = false
 			cr.Status.Prometheus.ConfigError = fmt.Sprintf("%v", err)
@@ -68,7 +73,7 @@ func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status string, err error)
 			cr.Status.Prometheus.PrometheusConfigured = true
 			cr.Status.Prometheus.ConfigError = ""
 		}
-	case "connection":
+	case statusConnection:
 		if err != nil {
 			cr.Status.Prometheus.PrometheusConnected = false
 			cr.Status.Prometheus.ConnectionError = fmt.Sprintf("%v", err)
@@ -172,19 +177,19 @@ func (c *PrometheusCollector) GetPromConn(
 	}
 	ps = cr.Spec.PrometheusConfig.DeepCopy()
 
-	if updated || c.PromCfg == nil || cr.Status.Prometheus.ConfigError != "" {
+	if updated || c.PromCfg == nil || !cr.Status.Prometheus.PrometheusConfigured {
 		log.Info("getting prometheus configuration")
 		err = pcfgs(&cr.Spec.PrometheusConfig, c)
-		statusHelper(cr, "configuration", err)
+		statusHelper(cr, statusConfiguration, err)
 		if err != nil {
 			return fmt.Errorf("cannot get prometheus configuration: %v", err)
 		}
 	}
 
-	if updated || c.PromConn == nil || cr.Status.Prometheus.ConnectionError != "" {
+	if updated || c.PromConn == nil || !cr.Status.Prometheus.PrometheusConnected {
 		log.Info("getting prometheus connection")
 		err = pcs(c)
-		statusHelper(cr, "configuration", err)
+		statusHelper(cr, statusConfiguration, err)
 		if err != nil {
 			return err
 		}
@@ -192,7 +197,7 @@ func (c *PrometheusCollector) GetPromConn(
 
 	log.Info("testing the ability to query prometheus")
 	err = pct(c)
-	statusHelper(cr, "connection", err)
+	statusHelper(cr, statusConnection, err)
 	if err != nil {
 		return fmt.Errorf("prometheus test query failed: %v", err)
 	}
