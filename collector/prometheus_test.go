@@ -7,6 +7,7 @@ package collector
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -375,35 +376,35 @@ func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
 		cr     *metricscfgv1beta1.MetricsConfig
-		status string
+		status int
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
 			cr:     &metricscfgv1beta1.MetricsConfig{},
-			status: "configuration",
+			status: statusConfiguration,
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
 			cr:     &metricscfgv1beta1.MetricsConfig{},
-			status: "configuration",
+			status: statusConfiguration,
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
 			cr:     &metricscfgv1beta1.MetricsConfig{},
-			status: "connection",
+			status: statusConnection,
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
 			cr:     &metricscfgv1beta1.MetricsConfig{},
-			status: "connection",
+			status: statusConnection,
 			want:   false,
 			err:    errTest,
 		},
@@ -414,10 +415,10 @@ func TestStatusHelper(t *testing.T) {
 			var gotMsg string
 			var gotBool bool
 			switch tt.status {
-			case "configuration":
+			case statusConfiguration:
 				gotMsg = tt.cr.Status.Prometheus.ConfigError
 				gotBool = tt.cr.Status.Prometheus.PrometheusConfigured
-			case "connection":
+			case statusConnection:
 				gotMsg = tt.cr.Status.Prometheus.ConnectionError
 				gotBool = tt.cr.Status.Prometheus.PrometheusConnected
 			}
@@ -479,64 +480,64 @@ func TestGetPromConn(t *testing.T) {
 		name         string
 		cfg          *PrometheusConfig
 		createTokCrt bool
-		cfgErr       string
+		cfgErr       error
 		con          PrometheusConnection
-		conErr       string
+		conErr       error
 		wantedError  error
 	}{
 		{
 			name:        "nil promconn: return getConn error",
 			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr:      "",
+			cfgErr:      nil,
 			con:         nil,
-			conErr:      "",
+			conErr:      nil,
 			wantedError: errTest,
 		},
 		{
 			name:        "not empty ConfigError: return getConn error",
 			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr:      "error",
+			cfgErr:      fmt.Errorf("error"),
 			con:         nil,
-			conErr:      "",
+			conErr:      nil,
 			wantedError: errTest,
 		},
 		{
 			name:         "not empty ConfigError: reconfig and succeed",
 			cfg:          &PrometheusConfig{Address: "%gh&%ij"},
 			createTokCrt: true,
-			cfgErr:       "error",
+			cfgErr:       fmt.Errorf("error"),
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: nil},
 			},
-			conErr:      "",
+			conErr:      nil,
 			wantedError: nil,
 		},
 		{
 			name:        "not empty ConnectionError: return getConn error",
 			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr:      "",
+			cfgErr:      nil,
 			con:         &mockPrometheusConnection{},
-			conErr:      "not empty",
+			conErr:      fmt.Errorf("not empty"),
 			wantedError: errTest,
 		},
 		{
 			name:   "return getConn successed, test con fails",
 			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr: "",
+			cfgErr: nil,
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: errTest},
 			},
-			conErr:      "",
+			conErr:      nil,
 			wantedError: errTest,
 		},
 		{
 			name:   "return getConn successed, test con succeeds",
 			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr: "",
+			cfgErr: nil,
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: nil},
 			},
-			conErr:      "",
+			conErr:      nil,
 			wantedError: nil,
 		},
 	}
@@ -554,8 +555,8 @@ func TestGetPromConn(t *testing.T) {
 				}()
 			}
 			cr := &metricscfgv1beta1.MetricsConfig{}
-			cr.Status.Prometheus.ConfigError = tt.cfgErr
-			cr.Status.Prometheus.ConnectionError = tt.conErr
+			statusHelper(cr, statusConfiguration, tt.cfgErr)
+			statusHelper(cr, statusConnection, tt.conErr)
 			cr.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
 			c := &PrometheusCollector{
 				PromConn: tt.con,
