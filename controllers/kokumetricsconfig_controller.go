@@ -112,7 +112,12 @@ func StringReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.Metrics
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) {
 
-	StringReflectSpec(r, cr, &cr.Spec.APIURL, &cr.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
+	if cr.Spec.APIURL == metricscfgv1beta1.OldDefaultAPIURL {
+		defaultAPIURL := metricscfgv1beta1.DefaultAPIURL
+		StringReflectSpec(r, cr, &defaultAPIURL, &cr.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
+	} else {
+		StringReflectSpec(r, cr, &cr.Spec.APIURL, &cr.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
+	}
 	StringReflectSpec(r, cr, &cr.Spec.Authentication.AuthenticationSecretName, &cr.Status.Authentication.AuthenticationSecretName, "")
 
 	if !reflect.DeepEqual(cr.Spec.Authentication.AuthType, cr.Status.Authentication.AuthType) {
