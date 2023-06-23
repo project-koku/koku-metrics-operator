@@ -38,4 +38,7 @@ const (
 
 	// DefaultPrometheusContextTimeout The default context timeout for Prometheus Queries
 	DefaultPrometheusContextTimeout int64 = 120
+
+	// OldDefaultAPIURL The old default ingress path.
+	OldDefaultAPIURL string = "https://cloud.redhat.com"
 )
