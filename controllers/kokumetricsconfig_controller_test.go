@@ -858,6 +858,26 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 					return refetched.Status.Upload.LastSuccessfulUploadTime.IsZero()
 				}, timeout, interval).Should(BeFalse())
 			})
+			It("old default url - should update status to new default url", func() {
+				Expect(setup()).Should(Succeed())
+
+				instCopy.Spec.APIURL = metricscfgv1beta1.OldDefaultAPIURL
+				instCopy.Spec.Source.SourceName = "OLD-API-URL"
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
+				Expect(fetched.Status.APIURL).To(Equal(metricscfgv1beta1.DefaultAPIURL))
+				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
+			})
 		})
 	})
 
