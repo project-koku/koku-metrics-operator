@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	now                 = time.Now
-	fourteenDayDuration = time.Duration(14 * 24 * time.Hour)
-	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
-	retentionPeriod     time.Duration
+	now                               = time.Now
+	fourteenDayDuration               = time.Duration(14 * 24 * time.Hour)
+	ninetyDayDuration                 = time.Duration(90 * 24 * time.Hour)
+	retentionPeriod     time.Duration = 0
 
 	monitoringMeta = types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
 
@@ -85,12 +85,17 @@ func setRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) {
 func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
 	start := now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
+
+	if retentionPeriod == 0 {
+		setRetentionPeriod(ctx, r)
+	}
+
+	// logic for gathering previous data upon CR creation
 	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
 		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() {
 		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the beginning of
 		// the retention period when the CR is first created, otherwise we stick to using the start of the previous full hour.
-		setRetentionPeriod(ctx, r)
 		log.Info(fmt.Sprintf("duration used: %s", retentionPeriod))
 		start = start.Add(-1 * retentionPeriod).Truncate(24 * time.Hour)
 		log.Info(fmt.Sprintf("start used: %s", start))
@@ -98,8 +103,17 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 		r.initialDataCollection = true
 		return start, end
 	}
+
 	if !cr.Status.Prometheus.LastQuerySuccessTime.IsZero() && start.Sub(cr.Status.Prometheus.LastQuerySuccessTime.Time) > time.Hour {
-		start = cr.Status.Prometheus.LastQuerySuccessTime.Add(time.Hour)
+		// If we have previously had successful queries, and the difference between the last success and the current hour to query
+		// is greater than 1 hour, then we've had a query failure. Here, we reset the start of the query hour so that we retry gathering
+		// metrics from the last time we had a success
+		if start.Add(-1 * retentionPeriod).After(cr.Status.Prometheus.LastQuerySuccessTime.Time) {
+			// ensure we aren't trying to gather beyond the retention period
+			start = start.Add(-1 * retentionPeriod).Truncate(24 * time.Hour)
+		} else {
+			start = cr.Status.Prometheus.LastQuerySuccessTime.Add(time.Hour)
+		}
 	}
 	return start, end
 }
@@ -139,7 +153,7 @@ func isQueryNeeded(start time.Time) bool {
 	}
 
 	// we've exceeded 5 tries, so give up trying
-	log.Info("query retry limit exceeded")
+	log.Info("query retry limit exceeded", "start", start.Format(time.RFC3339))
 	return false
 
 }
