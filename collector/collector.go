@@ -194,7 +194,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	// ################################################################################################################
 	log.Info("querying for node metrics")
 	nodeResults := mappedResults{}
-	if err := c.getQueryRangeResults(nodeQueries, &nodeResults); err != nil {
+	if err := c.getQueryRangeResults(nodeQueries, &nodeResults, 5); err != nil {
 		return err
 	}
 
@@ -274,7 +274,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 	log.Info("querying for pod metrics")
 	podResults := mappedResults{}
-	if err := c.getQueryRangeResults(podQueries, &podResults); err != nil {
+	if err := c.getQueryRangeResults(podQueries, &podResults, 5); err != nil {
 		return err
 	}
 
@@ -314,7 +314,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 	log.Info("querying for storage metrics")
 	volResults := mappedResults{}
-	if err := c.getQueryRangeResults(volQueries, &volResults); err != nil {
+	if err := c.getQueryRangeResults(volQueries, &volResults, 5); err != nil {
 		return err
 	}
 
@@ -346,7 +346,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 	log.Info("querying for namespaces")
 	namespaceResults := mappedResults{}
-	if err := c.getQueryRangeResults(namespaceQueries, &namespaceResults); err != nil {
+	if err := c.getQueryRangeResults(namespaceQueries, &namespaceResults, 5); err != nil {
 		return err
 	}
 

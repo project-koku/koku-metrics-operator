@@ -206,16 +206,23 @@ func (c *PrometheusCollector) GetPromConn(
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *mappedResults) error {
+func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *mappedResults, retries int) error {
 	log := log.WithName("getQueryRangeResults")
+
+	queriesToRetry := querys{}
 
 	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
-
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
 		if err != nil {
-			return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
+			if retries > 0 {
+				log.Info(fmt.Sprintf("query `%s` failed, appending to queries to retry", query.Name))
+				queriesToRetry = append(queriesToRetry, query)
+				continue
+			} else {
+				return fmt.Errorf("query: %s: error querying prometheus: %v", query.QueryString, err)
+			}
 		}
 		if len(warnings) > 0 {
 			log.Info("query warnings", "Warnings", warnings)
@@ -224,8 +231,15 @@ func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *map
 		if !ok {
 			return fmt.Errorf("expected a matrix in response to query, got a %v", queryResult.Type())
 		}
-
 		results.iterateMatrix(matrix, query)
+	}
+
+	if len(queriesToRetry) > 0 {
+		retries--
+		waitTime := time.Duration(5-retries) * time.Second
+		log.Info(fmt.Sprintf("retrying failed queries after %d seconds", waitTime))
+		time.Sleep(waitTime)
+		return c.getQueryRangeResults(&queriesToRetry, results, retries)
 	}
 	return nil
 }

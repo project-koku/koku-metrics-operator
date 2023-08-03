@@ -204,7 +204,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 				t:             t,
 			}
 			got := mappedResults{}
-			err := c.getQueryRangeResults(tt.queries, &got)
+			err := c.getQueryRangeResults(tt.queries, &got, 5)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("got unexpected error: %v", err)
 			}
@@ -282,7 +282,7 @@ func TestGetQueryResultsError(t *testing.T) {
 				t:            t,
 			}
 			got := mappedResults{}
-			err := c.getQueryRangeResults(&querys{query{QueryString: "fake-query"}}, &got)
+			err := c.getQueryRangeResults(&querys{query{QueryString: "fake-query"}}, &got, 5)
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
 			}
