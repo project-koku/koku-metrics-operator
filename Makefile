@@ -40,7 +40,7 @@ OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 
 DOCKER := $(shell which docker 2>/dev/null)
-# export DOCKER_DEFAULT_PLATFORM = linux/x86_64
+export DOCKER_DEFAULT_PLATFORM = linux/x86_64
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of:"
