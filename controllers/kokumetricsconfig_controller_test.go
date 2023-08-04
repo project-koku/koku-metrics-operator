@@ -1049,7 +1049,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			cr := &metricscfgv1beta1.MetricsConfig{
 				Spec: metricscfgv1beta1.MetricsConfigSpec{
 					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
-						CollectPreviousData: &trueDef,
+						CollectPreviousData: &falseDef,
 					},
 				},
 				Status: metricscfgv1beta1.MetricsConfigStatus{
@@ -1064,7 +1064,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
 		})
 
-		FIt("check the start time on old CR - failed query more than retention period old", func() {
+		It("check the start time on old CR - failed query more than retention period old", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
 			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
@@ -1074,7 +1074,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			cr := &metricscfgv1beta1.MetricsConfig{
 				Spec: metricscfgv1beta1.MetricsConfigSpec{
 					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
-						CollectPreviousData: &trueDef,
+						CollectPreviousData: &falseDef,
 					},
 				},
 				Status: metricscfgv1beta1.MetricsConfigStatus{
