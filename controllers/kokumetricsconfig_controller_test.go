@@ -1040,6 +1040,54 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
 		})
 
+		It("check the start time on old CR - failed query more than hour old", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
+			original := time.Now().UTC().Truncate(time.Hour).Add(-2 * time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &trueDef,
+					},
+				},
+				Status: metricscfgv1beta1.MetricsConfigStatus{
+					Prometheus: metricscfgv1beta1.PrometheusStatus{
+						LastQuerySuccessTime: metav1.Time{Time: original.Add(-1 * time.Hour)},
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).To(Equal(original))
+			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
+		})
+
+		FIt("check the start time on old CR - failed query more than retention period old", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
+			thirtyDaysOld := time.Now().UTC().Truncate(time.Hour).Add(-30 * 24 * time.Hour)
+			expected := now().UTC().Add(-1 * fourteenDayDuration).Truncate(24 * time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &trueDef,
+					},
+				},
+				Status: metricscfgv1beta1.MetricsConfigStatus{
+					Prometheus: metricscfgv1beta1.PrometheusStatus{
+						LastQuerySuccessTime: metav1.Time{Time: thirtyDaysOld},
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).To(Equal(expected))
+		})
+
 		It("check the start time on new CR - previous data collection set to false", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
