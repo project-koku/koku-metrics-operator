@@ -177,6 +177,47 @@ func TestConcatErrors(t *testing.T) {
 	}
 }
 
+func TestIsQueryNeeded(t *testing.T) {
+	isQueryNeededTests := []struct {
+		name  string
+		time  time.Time
+		count []int
+		want  bool
+	}{
+		{
+			name:  "time not in tracker",
+			time:  time.Now(),
+			count: []int{-1},
+			want:  true,
+		},
+		{
+			name:  "time in tracker, retry required",
+			time:  time.Now(),
+			count: []int{0, 1, 2, 3, 4},
+			want:  true,
+		},
+		{
+			name:  "time in tracker, retry count exceeded",
+			time:  time.Now(),
+			count: []int{5, 6, 7, 8, 9},
+			want:  false,
+		},
+	}
+	for _, tt := range isQueryNeededTests {
+		for _, count := range tt.count {
+			if count > -1 {
+				retryTracker[tt.time] = count
+			}
+			t.Run(tt.name, func(t *testing.T) {
+				got := isQueryNeeded(tt.time)
+				if got != tt.want {
+					t.Errorf("%s\ngot: %v\nwant: %v\n", tt.name, got, tt.want)
+				}
+			})
+		}
+	}
+}
+
 func setup() error {
 	type dirInfo struct {
 		dirName  string
