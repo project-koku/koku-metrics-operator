@@ -91,11 +91,11 @@ func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string
 	return res.value, res.warnings, err
 }
 
-func TestGetQueryResultsSuccess(t *testing.T) {
+func TestGetQueryRangeResultsSuccess(t *testing.T) {
 	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
 	}
-	getQueryResultsErrorsTests := []struct {
+	getQueryRangeResultsSuccessTests := []struct {
 		name          string
 		queries       *querys
 		queriesResult mappedMockPromResult
@@ -197,7 +197,7 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 			wantedError: nil,
 		},
 	}
-	for _, tt := range getQueryResultsErrorsTests {
+	for _, tt := range getQueryRangeResultsSuccessTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c.PromConn = mockPrometheusConnection{
 				mappedResults: &tt.queriesResult,
@@ -209,18 +209,18 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 				t.Errorf("got unexpected error: %v", err)
 			}
 			if !reflect.DeepEqual(got, tt.wantedResult) {
-				t.Errorf("getQueryResults got:\n\t%s\n  want:\n\t%s", got, tt.wantedResult)
+				t.Errorf("getQueryRangeResults got:\n\t%s\n  want:\n\t%s", got, tt.wantedResult)
 			}
 		})
 	}
 }
 
-func TestGetQueryResultsError(t *testing.T) {
+func TestGetQueryRangeResultsError(t *testing.T) {
 	c := PrometheusCollector{
 		ContextTimeout: defaultContextTimeout,
 		TimeSeries:     &promv1.Range{},
 	}
-	getQueryResultsErrorsTests := []struct {
+	getQueryRangeResultsErrorsTests := []struct {
 		name         string
 		queryResult  *mockPromResult
 		wantedResult mappedResults
@@ -275,7 +275,7 @@ func TestGetQueryResultsError(t *testing.T) {
 			wantedError:  errTest,
 		},
 	}
-	for _, tt := range getQueryResultsErrorsTests {
+	for _, tt := range getQueryRangeResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c.PromConn = mockPrometheusConnection{
 				singleResult: tt.queryResult,

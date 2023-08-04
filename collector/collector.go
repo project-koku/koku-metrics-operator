@@ -381,7 +381,7 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	ts := c.TimeSeries.End
 	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
-	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults); err != nil {
+	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, 5); err != nil {
 		return err
 	}
 

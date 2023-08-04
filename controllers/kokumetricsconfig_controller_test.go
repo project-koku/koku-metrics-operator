@@ -252,6 +252,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		GitCommit = "1234567"
 
 		setupRequired(ctx)
+		retentionPeriod = time.Duration(0)
 
 		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
 		promConnSetter = func(promcoll *collector.PrometheusCollector) error {
@@ -885,7 +886,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 		BeforeEach(func() {
 			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
-			retentionPeriod = time.Duration(0)
 			Expect(retentionPeriod).To(Equal(time.Duration(0)))
 		})
 		It("configMap does not exist - uses 14 days", func() {
@@ -1085,7 +1085,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("2day retention period - successfully queried but there was no data on first day, but data on second", func() {
 			resetReconciler(WithSecretOverride(true))
 
-			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
 			createObject(ctx, testConfigMap)
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
@@ -1116,7 +1116,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			resetReconciler(WithSecretOverride(true))
 			now = func() time.Time { return time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour) }
 
-			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
 			createObject(ctx, testConfigMap)
 
 			t := now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
