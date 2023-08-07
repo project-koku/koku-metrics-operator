@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -26,6 +27,8 @@ const (
 	statusConnection int = iota
 	statusConfiguration
 )
+
+var MaxRetries int = 5
 
 var (
 	ps *metricscfgv1beta1.PrometheusSpec
@@ -236,7 +239,7 @@ func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *map
 
 	if len(queriesToRetry) > 0 {
 		retries--
-		waitTime := time.Duration(5-retries) * time.Second
+		waitTime := time.Duration(math.Pow(2, float64(MaxRetries-retries))) * time.Second
 		log.Info(fmt.Sprintf("retrying failed queries after %s seconds", waitTime))
 		time.Sleep(waitTime)
 		return c.getQueryRangeResults(&queriesToRetry, results, retries)
@@ -276,7 +279,7 @@ func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, res
 
 	if len(queriesToRetry) > 0 {
 		retries--
-		waitTime := time.Duration(5-retries) * time.Second
+		waitTime := time.Duration(math.Pow(2, float64(MaxRetries-retries))) * time.Second
 		log.Info(fmt.Sprintf("retrying failed queries after %s seconds", waitTime))
 		time.Sleep(waitTime)
 		return c.getQueryResults(ts, &queriesToRetry, results, retries)

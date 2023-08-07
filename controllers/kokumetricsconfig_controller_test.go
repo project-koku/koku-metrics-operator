@@ -268,7 +268,7 @@ func shutdown() {
 	os.RemoveAll(testingDir)
 }
 
-var _ = Describe("MetricsConfigController - CRD Handling", func() {
+var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
@@ -287,6 +287,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	ctx := context.Background()
 	emptyDep1 := emptyDirDeployment.DeepCopy()
 	emptyDep2 := emptyDirDeployment.DeepCopy()
+
+	// override MaxRetries to reduce testing time
+	collector.MaxRetries = 1
 
 	BeforeEach(func() {
 

@@ -38,7 +38,7 @@ def replace(file_path, pattern, subst):
     remove(file_path)
     move(abs_path, file_path)
 
-def fix_csv(version, previous_version, image_sha, namespace=""):
+def fix_csv(version, previous_version, image_sha, namespace):
 
     # get the operator description from docs
     docs = open("docs/csv-description.md")
@@ -72,17 +72,15 @@ def fix_dockerfile(version):
         replace(filename, k, v)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Script for updating the appropriate fields of the CSV",
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-n", "--namespace", help="namespace used for testing")
+    parser = argparse.ArgumentParser(description="Script for updating the appropriate fields of the CSV")
+    parser.add_argument("-n", "--namespace", help="namespace used for testing", default="")
     parser.add_argument("version", help="New version of the CSV")
     parser.add_argument("previous_version", help="Version of CSV being replaced")
     parser.add_argument("image_sha", help="The image sha of the compiled operator")
     args = parser.parse_args()
-    config = vars(args)
-    print(config)
+    print(vars(args))
 
-    check_version(config["version"], config["previous_version"])
+    check_version(args.version, args.previous_version)
 
-    fix_csv(**config)
-    fix_dockerfile(config["version"])
+    fix_csv(args.version, args.previous_version, args.image_sha, args.namespace)
+    fix_dockerfile(args.version)
