@@ -354,13 +354,18 @@ func replaceAuthSecretData(ctx context.Context, data map[string][]byte) {
 }
 
 func createObject(ctx context.Context, obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
+	log.Info("CREATING OBJECT", "object", key)
 	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+	log.Info("CREATED OBJECT", "object", key)
 }
 
 func deleteObject(ctx context.Context, obj client.Object) {
 	key := client.ObjectKeyFromObject(obj)
+	log.Info("DELETING OBJECT", "object", key)
 	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
 	Eventually(func() bool { return errors.IsNotFound(k8sClient.Get(ctx, key, obj)) }, 60, 1).Should(BeTrue())
+	log.Info("DELETED OBJECT", "object", key)
 }
 
 func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {

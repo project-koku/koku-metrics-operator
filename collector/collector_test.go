@@ -270,6 +270,7 @@ func TestGenerateReportsNoCost(t *testing.T) {
 }
 
 func TestGenerateReportsQueryErrors(t *testing.T) {
+	MaxRetries = 1
 	mapResults := make(mappedMockPromResult)
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
