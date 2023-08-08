@@ -268,6 +268,7 @@ else
 KUSTOMIZE=$(shell which kustomize)
 endif
 
+NAMESPACE ?= ""
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: manifests kustomize
 	mkdir -p koku-metrics-operator/$(VERSION)/
@@ -278,7 +279,7 @@ bundle: manifests kustomize
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA}
+	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA} --namespace=${NAMESPACE}
 
 # Build the bundle image.
 bundle-build:
