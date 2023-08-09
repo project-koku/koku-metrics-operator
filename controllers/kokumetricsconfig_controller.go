@@ -151,6 +151,11 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 	StringReflectSpec(r, cr, &cr.Spec.Source.SourcesAPIPath, &cr.Status.Source.SourcesAPIPath, metricscfgv1beta1.DefaultSourcesPath)
 	StringReflectSpec(r, cr, &cr.Spec.Source.SourceName, &cr.Status.Source.SourceName, "")
 
+	// use cluster id as default source name
+	if cr.Status.Source.SourceName == "" {
+		cr.Status.Source.SourceName = cr.Status.ClusterID
+	}
+
 	cr.Status.Source.CreateSource = cr.Spec.Source.CreateSource
 
 	if !reflect.DeepEqual(cr.Spec.Source.CheckCycle, cr.Status.Source.CheckCycle) {
