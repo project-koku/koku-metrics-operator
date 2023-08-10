@@ -13,10 +13,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// CertValidationType describes how the certificate validation will be handled.
-// Only one of the following certificate validation types may be specified.
-// If none of the following types are specified, the default one
-// is Token.
 const (
 	// CertIgnore allows certificate validation to be bypassed.
 	CertIgnore bool = false
@@ -24,10 +20,10 @@ const (
 	// CertCheck allows certificate validation to occur.
 	CertCheck bool = true
 
-	//UploadOn sets the operator to upload to cloud.redhat.com.
+	// UploadOn sets the operator to upload to console.redhat.com.
 	UploadOn bool = true
 
-	//UploadOff sets the operator to not upload to cloud.redhat.com.
+	// UploadOff sets the operator to not upload to console.redhat.com.
 	UploadOff bool = false
 
 	//UploadCycle sets the default cycle to be 360 minutes (6 hours).
@@ -149,7 +145,7 @@ type UploadSpec struct {
 	UploadCycle *int64 `json:"upload_cycle"`
 
 	// UploadToggle is a field of KokuMetricsConfig to represent if the operator is installed in a restricted-network.
-	// If `false`, the operator will not upload to cloud.redhat.com or check/create sources.
+	// If `false`, the operator will not upload to console.redhat.com or check/create sources.
 	// The default is true.
 	// +kubebuilder:default=true
 	UploadToggle *bool `json:"upload_toggle"`
@@ -168,6 +164,22 @@ type PrometheusSpec struct {
 	// +kubebuilder:validation:Maximum=180
 	// +kubebuilder:default=120
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
+
+	// CollectPreviousData is a field of KokuMetricsConfig to represent whether or not the operator will gather previous data upon KokuMetricsConfig
+	// creation. This toggle only changes operator behavior when a new KokuMetricsConfig is created. When `true`, the operator will gather all
+	// existing Prometheus data for the current month. The default is true.
+	// +kubebuilder:default=true
+	CollectPreviousData *bool `json:"collect_previous_data,omitempty"`
+
+	// DisableMetricsCollectionCostManagement is a field of KokuMetricsConfig to represent whether or not the operator will generate
+	// reports for cost-management metrics. The default is false.
+	// +kubebuilder:default=false
+	DisableMetricsCollectionCostManagement *bool `json:"disable_metrics_collection_cost_management,omitempty"`
+
+	// DisableMetricsCollectionResourceOptimization is a field of KokuMetricsConfig to represent whether or not the operator will generate
+	// reports for resource-optimization metrics. The default is false.
+	// +kubebuilder:default=false
+	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
 
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
@@ -191,7 +203,7 @@ type CloudDotRedHatSourceSpec struct {
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on cloud.redhat.com.
+	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
@@ -222,8 +234,8 @@ type KokuMetricsConfigSpec struct {
 
 	// FOR DEVELOPMENT ONLY.
 	// APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
-	// The default is `https://cloud.redhat.com`.
-	// +kubebuilder:default=`https://cloud.redhat.com`
+	// The default is `https://console.redhat.com`.
+	// +kubebuilder:default=`https://console.redhat.com`
 	APIURL string `json:"api_url,omitempty"`
 
 	// Authentication is a field of KokuMetricsConfig to represent the authentication object.
@@ -238,7 +250,7 @@ type KokuMetricsConfigSpec struct {
 	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
 	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
-	// Source is a field of KokuMetricsConfig to represent the desired source on cloud.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the desired source on console.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
 	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
@@ -298,7 +310,7 @@ type UploadStatus struct {
 	// +optional
 	IngressAPIPath string `json:"ingress_path,omitempty"`
 
-	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to cloud.redhat.com.
+	// UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to console.redhat.com.
 	// The default is true
 	UploadToggle *bool `json:"upload,omitempty"`
 
@@ -343,11 +355,11 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on cloud.redhat.com.
+	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on cloud.redhat.com.
+	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on console.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
@@ -381,7 +393,7 @@ type PrometheusStatus struct {
 	// PrometheusConnected is a field of KokuMetricsConfigStatus to represent if prometheus can be queried.
 	PrometheusConnected bool `json:"prometheus_connected"`
 
-	//ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
+	// ContextTimeout is a field of KokuMetricsConfigState to represent how long a query to prometheus should run in seconds before timing out.
 	ContextTimeout *int64 `json:"context_timeout,omitempty"`
 
 	// ConnectionError is a field of KokuMetricsConfigStatus to represent errors during prometheus test query.
@@ -394,6 +406,21 @@ type PrometheusStatus struct {
 	// LastQuerySuccessTime is a field of KokuMetricsConfigStatus to represent the last time queries were successful.
 	// +nullable
 	LastQuerySuccessTime metav1.Time `json:"last_query_success_time,omitempty"`
+
+	// PreviousDataCollected is a field of KokuMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
+	// data upon KokuMetricsConfig creation.
+	// +kubebuilder:default=false
+	PreviousDataCollected bool `json:"previous_data_collected,omitempty"`
+
+	// DisabledMetricsCollectionCostManagement is a field of KokuMetricsConfigStatus to represent whether or not collecting
+	// cost-management metrics is disabled. The default is false.
+	// +kubebuilder:default=false
+	DisabledMetricsCollectionCostManagement *bool `json:"disabled_metrics_collection_cost_management,omitempty"`
+
+	// DisabledMetricsCollectionResourceOptimization is a field of KokuMetricsConfigStatus to represent whether or not collecting
+	// resource-optimzation metrics is disabled. The default is true.
+	// +kubebuilder:default=true
+	DisabledMetricsCollectionResourceOptimization *bool `json:"disabled_metrics_collection_resource_optimization,omitempty"`
 
 	// SvcAddress is the internal thanos-querier address.
 	SvcAddress string `json:"service_address,omitempty"`
@@ -461,7 +488,7 @@ type KokuMetricsConfigStatus struct {
 	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
-	// Source is a field of KokuMetricsConfig to represent the observed state of the source on cloud.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the observed state of the source on console.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 
@@ -498,3 +525,12 @@ type KokuMetricsConfigList struct {
 func init() {
 	SchemeBuilder.Register(&KokuMetricsConfig{}, &KokuMetricsConfigList{})
 }
+
+// +kubebuilder:object:generate:=false
+type MetricsConfig = KokuMetricsConfig
+
+// +kubebuilder:object:generate:=false
+type MetricsConfigSpec = KokuMetricsConfigSpec
+
+// +kubebuilder:object:generate:=false
+type MetricsConfigStatus = KokuMetricsConfigStatus

@@ -1,0 +1,98 @@
+[
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "america",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "eap-app-9-pfc5g"
+		},
+		"value": [
+			1677009600,
+			"1073741824"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "america",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "example-sxk9d"
+		},
+		"value": [
+			1677009600,
+			"1073741824"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "america",
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "eap-app-9-4q2wz"
+		},
+		"value": [
+			1677009600,
+			"1073741824"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "america",
+			"node": "ip-10-0-184-152.us-east-2.compute.internal",
+			"pod": "example-htgbh"
+		},
+		"value": [
+			1677009600,
+			"1073741824"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "europe",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "eap-app-6-tvg28"
+		},
+		"value": [
+			1677009600,
+			"1073741824"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"namespace": "europe",
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "eap-app-6-g8p6p"
+		},
+		"value": [
+			1677009600,
+			"1073741824"
+		]
+	},
+	{
+		"metric": {
+			"container": "manager",
+			"namespace": "costmanagement-metrics-operator",
+			"node": "ip-10-0-146-115.us-east-2.compute.internal",
+			"pod": "costmanagement-metrics-operator-6757c56ccf-5mw2r"
+		},
+		"value": [
+			1677009600,
+			"20971520"
+		]
+	},
+	{
+		"metric": {
+			"container": "manager",
+			"namespace": "koku-metrics-operator",
+			"node": "ip-10-0-150-20.us-east-2.compute.internal",
+			"pod": "koku-metrics-operator-86685d87c7-drthj"
+		},
+		"value": [
+			1677009600,
+			"20971520"
+		]
+	}
+]

@@ -18,25 +18,28 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	configv1 "github.com/openshift/api/config/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	configv1 "github.com/openshift/api/config/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/testutils"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -49,10 +52,14 @@ var (
 	k8sClient          client.Client
 	k8sManager         ctrl.Manager
 	testEnv            *envtest.Environment
+	defaultReconciler  *MetricsConfigReconciler
+	ctx                context.Context
+	cancel             context.CancelFunc
 	useCluster         bool
+	secretsPath        = ""
 	emptyDirDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator",
+			Name:      deploymentName,
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -75,13 +82,13 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      volumeMountName,
+									MountPath: dirconfig.MountPath,
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: volumeMountName,
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
@@ -90,7 +97,7 @@ var (
 	}
 	pvcDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "koku-metrics-operator",
+			Name:      deploymentName,
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -113,15 +120,32 @@ var (
 							Image: "nginx:1.12",
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "koku-metrics-operator-reports",
-									MountPath: "/tmp/koku-metrics-operator-reports",
+									Name:      volumeMountName,
+									MountPath: dirconfig.MountPath,
 								}},
 						},
 					},
 					Volumes: []corev1.Volume{{
-						Name: "koku-metrics-operator-reports",
+						Name: volumeMountName,
 						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "koku-metrics-operator-data"}}}},
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeClaimName}}}},
+				},
+			},
+		},
+	}
+	differentPVC = &metricscfgv1beta1.EmbeddedPersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "PersistentVolumeClaim",
+		},
+		EmbeddedObjectMetadata: metricscfgv1beta1.EmbeddedObjectMetadata{
+			Name: "a-different-pvc",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: *resource.NewQuantity(10*1024*1024*1024, resource.BinarySI),
 				},
 			},
 		},
@@ -136,12 +160,10 @@ func int32Ptr(i int32) *int32 { return &i }
 func TestController(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func() {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "ingress") {
 			w.WriteHeader(http.StatusAccepted)
@@ -155,8 +177,8 @@ var _ = BeforeSuite(func(done Done) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	ctx := context.Background()
+	logf.SetLogger(testutils.ZapLogger(true))
+	ctx, cancel = context.WithCancel(context.Background())
 
 	// Default to run locally
 	var useClusterEnv string
@@ -165,6 +187,7 @@ var _ = BeforeSuite(func(done Done) {
 	useCluster = false
 	if useClusterEnv, ok = os.LookupEnv("USE_CLUSTER"); ok {
 		useCluster, err = strconv.ParseBool(useClusterEnv)
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	By("bootstrapping test environment")
@@ -179,9 +202,10 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = kokumetricscfgv1beta1.AddToScheme(scheme.Scheme)
+	err = metricscfgv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-
+	err = operatorsv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 	err = configv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -189,7 +213,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	// make the metrics listen address different for each parallel thread to avoid clashes when running with -p
 	var metricsAddr string
-	metricsPort := 8090 + config.GinkgoConfig.ParallelNode
+	metricsPort := 8090 + GinkgoParallelProcess()
 	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%d", metricsPort), "The address the metric endpoint binds to.")
 	flag.Parse()
 
@@ -203,18 +227,19 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	if !useCluster {
-		err = (&KokuMetricsConfigReconciler{
-			Client:    k8sManager.GetClient(),
-			Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfigReconciler"),
-			Scheme:    scheme.Scheme,
-			Clientset: clientset,
-			InCluster: true,
-		}).SetupWithManager(k8sManager)
+		defaultReconciler = &MetricsConfigReconciler{
+			Client:             k8sManager.GetClient(),
+			Scheme:             scheme.Scheme,
+			Clientset:          clientset,
+			InCluster:          true,
+			overrideSecretPath: true,
+		}
+		err := (defaultReconciler).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
 	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred())
 	}()
 
@@ -224,164 +249,169 @@ var _ = BeforeSuite(func(done Done) {
 
 	clusterPrep(ctx)
 
-	close(done)
-}, 60)
+})
 
-func createNamespace(ctx context.Context, namespace string) {
-	instance := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+type ReconcilerOption func(f *MetricsConfigReconciler)
+
+func WithSecretOverride(overrideSecretPath bool) ReconcilerOption {
+	return func(r *MetricsConfigReconciler) {
+		r.overrideSecretPath = overrideSecretPath
+	}
 }
 
-func createClusterVersion(ctx context.Context, clusterID string, channel string) {
-	instance := &configv1.ClusterVersion{
-		ObjectMeta: metav1.ObjectMeta{Name: "version"},
+func resetReconciler(opts ...ReconcilerOption) {
+	defaultReconciler.promCollector = nil
+	defaultReconciler.overrideSecretPath = true
+	for _, opt := range opts {
+		opt(defaultReconciler)
+	}
+}
+
+func createNamespace(ctx context.Context, namespace string) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	createObject(ctx, ns)
+}
+
+func createClusterVersion(ctx context.Context) {
+	key := types.NamespacedName{Name: "version"}
+	cv := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{Name: key.Name},
 		Spec: configv1.ClusterVersionSpec{
 			ClusterID: configv1.ClusterID(clusterID),
 			Channel:   channel,
 		},
 	}
-	Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+	createObject(ctx, cv)
 }
 
-func fakeDockerConfig() []byte {
+func deleteClusterVersion(ctx context.Context) {
+	cv := &configv1.ClusterVersion{ObjectMeta: metav1.ObjectMeta{Name: "version"}}
+	deleteObject(ctx, cv)
+}
+
+func fakeDockerConfig() map[string][]byte {
 	d, _ := json.Marshal(
 		serializedAuthMap{
 			Auths: map[string]serializedAuth{pullSecretAuthKey: {Auth: ".."}},
 		})
-	return d
+	return map[string][]byte{pullSecretDataKey: d}
 }
 
-func createPullSecret(ctx context.Context, namespace string, data []byte) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		pullSecretDataKey: data,
-	},
+func createSecret(ctx context.Context, name, namespace string, data map[string][]byte) {
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName,
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: data,
+	}
+	createObject(ctx, secret)
+}
+
+func deleteSecret(ctx context.Context, name, namespace string) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
 			Namespace: namespace,
 		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+	deleteObject(ctx, secret)
 }
 
-func deletePullSecret(ctx context.Context, namespace string, data []byte) {
-	oldsecret := &corev1.Secret{Data: map[string][]byte{
-		pullSecretDataKey: data,
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName,
-			Namespace: namespace,
-		}}
-
-	Expect(k8sClient.Delete(ctx, oldsecret)).Should(Succeed())
+func createPullSecret(ctx context.Context, data map[string][]byte) {
+	createSecret(ctx, pullSecretName, openShiftConfigNamespace, data)
 }
 
-func createBadPullSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+func deletePullSecret(ctx context.Context) {
+	deleteSecret(ctx, pullSecretName, openShiftConfigNamespace)
 }
 
-func createAuthSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
+func createAuthSecret(ctx context.Context) {
+	secretData := map[string][]byte{
 		authSecretUserKey:     []byte("user1"),
 		authSecretPasswordKey: []byte("password1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      authSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-func createMixedCaseAuthSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		"UserName": []byte("user1"),
-		"PassWord": []byte("password1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      authMixedCaseName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createBadAuthSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      badAuthSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createBadAuthPassSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		authSecretUserKey: []byte("user1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      badAuthPassSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func createBadAuthUserSecret(ctx context.Context, namespace string) {
-	secret := &corev1.Secret{Data: map[string][]byte{
-		authSecretPasswordKey: []byte("password1"),
-	},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      badAuthUserSecretName,
-			Namespace: namespace,
-		}}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-}
-
-func deleteClusterVersion(ctx context.Context) {
-	instance := &configv1.ClusterVersion{
-		ObjectMeta: metav1.ObjectMeta{Name: "version"},
-		Spec: configv1.ClusterVersionSpec{
-			ClusterID: configv1.ClusterID(clusterID),
-		},
 	}
-	Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
+	createSecret(ctx, authSecretName, namespace, secretData)
 }
 
-func createDeployment(ctx context.Context, deployment *appsv1.Deployment) {
-	Expect(k8sClient.Create(ctx, deployment)).Should(Succeed())
+func deleteAuthSecret(ctx context.Context) {
+	deleteSecret(ctx, authSecretName, namespace)
 }
 
-func deleteDeployment(ctx context.Context, deployment *appsv1.Deployment) {
-	Expect(k8sClient.Delete(ctx, deployment)).Should(Succeed())
+func replaceAuthSecretData(ctx context.Context, data map[string][]byte) {
+	key := types.NamespacedName{
+		Name:      authSecretName,
+		Namespace: namespace,
+	}
+	secret := &corev1.Secret{}
+	Expect(k8sClient.Get(ctx, key, secret)).Should(Succeed())
+
+	secret.Data = data
+	Expect(k8sClient.Update(ctx, secret)).Should(Succeed())
+
+	secret = &corev1.Secret{}
+	Expect(k8sClient.Get(ctx, key, secret)).Should(Succeed())
+	Expect(secret.Data).To(BeComparableTo(data, cmpopts.EquateEmpty()))
+}
+
+func createObject(ctx context.Context, obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
+	log.Info("CREATING OBJECT", "object", key)
+	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+	log.Info("CREATED OBJECT", "object", key)
+}
+
+func deleteObject(ctx context.Context, obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
+	log.Info("DELETING OBJECT", "object", key)
+	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
+	Eventually(func() bool { return errors.IsNotFound(k8sClient.Get(ctx, key, obj)) }, 60, 1).Should(BeTrue())
+	log.Info("DELETED OBJECT", "object", key)
+}
+
+func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {
+	if err := k8sClient.Get(ctx, key, obj); errors.IsNotFound(err) {
+		createObject(ctx, obj)
+	}
+}
+
+func setupRequired(ctx context.Context) {
+	createClusterVersion(ctx)
+	createPullSecret(ctx, fakeDockerConfig())
+	createAuthSecret(ctx)
+}
+
+func tearDownRequired(ctx context.Context) {
+	deleteClusterVersion(ctx)
+	deletePullSecret(ctx)
+	deleteAuthSecret(ctx)
 }
 
 func clusterPrep(ctx context.Context) {
 	if !useCluster {
 		// Create operator namespace
 		createNamespace(ctx, namespace)
-
-		// Create auth secret in operator namespace
-		createAuthSecret(ctx, namespace)
-		createMixedCaseAuthSecret(ctx, namespace)
-
-		// Create an empty auth secret
-		createBadAuthSecret(ctx, namespace)
-		createBadAuthPassSecret(ctx, namespace)
-		createBadAuthUserSecret(ctx, namespace)
-
-		// Create openshift config namespace and secret
+		createNamespace(ctx, "openshift-monitoring")
 		createNamespace(ctx, openShiftConfigNamespace)
-		createPullSecret(ctx, openShiftConfigNamespace, fakeDockerConfig())
 
-		// Create cluster version
-		createClusterVersion(ctx, clusterID, channel)
+		cwd, err := os.Getwd()
+		Expect(err).ToNot(HaveOccurred())
+		err = os.Setenv("SECRET_ABSPATH", filepath.Join(cwd, secretsPath))
+		Expect(err).ToNot(HaveOccurred())
+
+		testutils.CreateCertificate(secretsPath, "service-ca.crt")
+		testutils.CreateToken(secretsPath, "token")
 	}
 }
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
+
+	os.Remove(filepath.Join(secretsPath, "token"))
+	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
+	os.RemoveAll(filepath.Join(secretsPath, "tmp"))
 
 	validTS.Close()
 	unauthorizedTS.Close()

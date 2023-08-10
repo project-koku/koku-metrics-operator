@@ -11,28 +11,29 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/crhchttp"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var (
-	auth  = &crhchttp.AuthConfig{ClusterID: "post-cluster-id", Log: testLogger}
-	sSpec = &SourceSpec{
-		APIURL: "https://ci.cloud.redhat.com",
+	auth    = &crhchttp.AuthConfig{ClusterID: "post-cluster-id"}
+	handler = &SourceHandler{
+		APIURL: "https://ci.console.redhat.com",
 		Auth:   auth,
-		Spec: kokumetricscfgv1beta1.CloudDotRedHatSourceStatus{
+		Spec: metricscfgv1beta1.CloudDotRedHatSourceStatus{
 			SourcesAPIPath: "/api/sources/v1.0/",
 			SourceName:     "post-source-name",
 		},
-		Log: testLogger,
 	}
 	errSources = errors.New("test error")
-	testLogger = testutils.TestLogger{}
 )
 
 // https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
@@ -83,8 +84,14 @@ func getReqBody(t *testing.T, req *http.Request) []byte {
 	return bodyBytes
 }
 
+func TestMain(m *testing.M) {
+	logf.SetLogger(testutils.ZapLogger(true))
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestGetSourceTypeID(t *testing.T) {
-	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift"
+	expectedURL := "https://ci.console.redhat.com/api/sources/v1.0/source_types?filter[name]=openshift"
 	getSourceTypeIDTests := []struct {
 		name        string
 		response    *http.Response
@@ -158,7 +165,7 @@ func TestGetSourceTypeID(t *testing.T) {
 	for _, tt := range getSourceTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetSourceTypeID(sSpec, clt)
+			got, err := GetSourceTypeID(handler, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -208,7 +215,7 @@ func TestGetSources(t *testing.T) {
 	for _, tt := range getSourcesTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetSources(sSpec, clt)
+			got, err := GetSources(handler, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -226,7 +233,7 @@ func TestGetSources(t *testing.T) {
 }
 
 func TestCheckSourceExists(t *testing.T) {
-	// https://cloud.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
+	// https://console.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1&filter[source_ref]=eb93b259-1369-4f90-88ce-e68c6ba879a9&filter[name]=OpenShift%20on%20Azure
 	checkSourceExistsTests := []struct {
 		name          string
 		queryname     string
@@ -244,7 +251,7 @@ func TestCheckSourceExists(t *testing.T) {
 			sourceTypeID:  "1",
 			sourceRef:     "12345",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[name]=name&filter[source_ref]=12345&filter[source_type_id]=1",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[name]=name&filter[source_ref]=12345&filter[source_type_id]=1",
 			expectedErr:   errSources,
 		},
 		{
@@ -252,7 +259,7 @@ func TestCheckSourceExists(t *testing.T) {
 			queryname:     "name",
 			sourceRef:     "12345",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[name]=name&filter[source_ref]=12345",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[name]=name&filter[source_ref]=12345",
 			expectedErr:   errSources,
 		},
 		{
@@ -260,7 +267,7 @@ func TestCheckSourceExists(t *testing.T) {
 			sourceTypeID:  "1",
 			sourceRef:     "12345",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[source_ref]=12345&filter[source_type_id]=1",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[source_ref]=12345&filter[source_type_id]=1",
 			expectedErr:   errSources,
 		},
 		{
@@ -268,34 +275,34 @@ func TestCheckSourceExists(t *testing.T) {
 			queryname:     "name",
 			sourceTypeID:  "1",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[name]=name&filter[source_type_id]=1",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[name]=name&filter[source_type_id]=1",
 			expectedErr:   errSources,
 		},
 		{
 			name:          "query test",
 			queryname:     "name",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[name]=name",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[name]=name",
 			expectedErr:   errSources,
 		},
 		{
 			name:          "query test",
 			sourceTypeID:  "1",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[source_type_id]=1",
 			expectedErr:   errSources,
 		},
 		{
 			name:          "query test",
 			sourceRef:     "12345",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources?filter[source_ref]=12345",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources?filter[source_ref]=12345",
 			expectedErr:   errSources,
 		},
 		{
 			name:          "query test",
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			expectedErr:   errSources,
 		},
 		{
@@ -307,7 +314,7 @@ func TestCheckSourceExists(t *testing.T) {
 			},
 			responseErr:   nil,
 			expected:      &SourceItem{ID: "1", Name: "name", SourceTypeID: "1", SourceRef: "12345"},
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			expectedErr:   nil,
 		},
 		{
@@ -317,7 +324,7 @@ func TestCheckSourceExists(t *testing.T) {
 				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			responseErr:   nil,
 			expectedErr:   errSources,
 		},
@@ -329,14 +336,14 @@ func TestCheckSourceExists(t *testing.T) {
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			expectedErr:   errSources,
 		},
 		{
 			name:          "request failure",
 			response:      &http.Response{},
 			responseErr:   errSources,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			expectedErr:   errSources,
 		},
 		{
@@ -347,7 +354,7 @@ func TestCheckSourceExists(t *testing.T) {
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			expectedErr:   nil,
 		},
 		{
@@ -358,14 +365,14 @@ func TestCheckSourceExists(t *testing.T) {
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
-			expectedQuery: "https://ci.cloud.redhat.com/api/sources/v1.0/sources",
+			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
 			expectedErr:   nil,
 		},
 	}
 	for _, tt := range checkSourceExistsTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := CheckSourceExists(sSpec, clt, tt.sourceTypeID, tt.queryname, tt.sourceRef)
+			got, err := CheckSourceExists(handler, clt, tt.sourceTypeID, tt.queryname, tt.sourceRef)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -389,7 +396,7 @@ func TestCheckSourceExists(t *testing.T) {
 }
 
 func TestGetApplicationTypeID(t *testing.T) {
-	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management"
+	expectedURL := "https://ci.console.redhat.com/api/sources/v1.0/application_types?filter[name]=/insights/platform/cost-management"
 	getApplicationTypeIDTests := []struct {
 		name        string
 		response    *http.Response
@@ -463,7 +470,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 	for _, tt := range getApplicationTypeIDTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := GetApplicationTypeID(sSpec, clt)
+			got, err := GetApplicationTypeID(handler, clt)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -484,7 +491,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 }
 
 func TestPostSource(t *testing.T) {
-	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/sources"
+	expectedURL := "https://ci.console.redhat.com/api/sources/v1.0/sources"
 	postSourceTests := []struct {
 		name         string
 		response     *http.Response
@@ -543,7 +550,7 @@ func TestPostSource(t *testing.T) {
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			got, err := PostSource(sSpec, clt, tt.sourceTypeID)
+			got, err := PostSource(handler, clt, tt.sourceTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -573,7 +580,7 @@ func TestPostSource(t *testing.T) {
 }
 
 func TestPostApplication(t *testing.T) {
-	expectedURL := "https://ci.cloud.redhat.com/api/sources/v1.0/applications"
+	expectedURL := "https://ci.console.redhat.com/api/sources/v1.0/applications"
 	postSourceTests := []struct {
 		name         string
 		response     *http.Response
@@ -622,7 +629,7 @@ func TestPostApplication(t *testing.T) {
 	for _, tt := range postSourceTests {
 		t.Run(tt.name, func(t *testing.T) {
 			clt := &MockClient{res: tt.response, err: tt.responseErr}
-			err := PostApplication(sSpec, clt, tt.source, tt.appTypeID)
+			err := PostApplication(handler, clt, tt.source, tt.appTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -748,7 +755,7 @@ func TestSourceCreate(t *testing.T) {
 	}
 	for _, tt := range sourceCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SourceCreate(sSpec, &tt.clts, tt.sourceTypeID)
+			got, err := SourceCreate(handler, &tt.clts, tt.sourceTypeID)
 			if tt.expectedErr != nil && err == nil {
 				t.Errorf("%s expected error, got: %v", tt.name, err)
 			}
@@ -1141,7 +1148,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 	}
 	for _, tt := range sourceGetOrCreateTests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := *sSpec
+			c := *handler
 			c.Spec.CreateSource = &tt.create
 			got, _, err := SourceGetOrCreate(&c, &tt.clts)
 			if tt.expectedErr != nil && err == nil {

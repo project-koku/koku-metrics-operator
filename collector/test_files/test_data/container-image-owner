@@ -1,0 +1,310 @@
+[
+	{
+		"metric": {
+			"container": "eap-app",
+			"container_id": "cri-o://026a35eb53cdf9eebd7cd464d808fb9809341147efa97f2873daea4e6ad33751",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_kind": "ReplicationController",
+			"owner_name": "example",
+			"pod": "example-sxk9d",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "4321cfa8-c9a9-414c-9a08-89161074ed5e"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"container_id": "cri-o://151cf546d9a3188001cf62f688af98b20cfdbac356c1a9b4af75a59897307e24",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-9",
+			"pod": "eap-app-9-4q2wz",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "1d2dff87-0685-46a3-99bd-dd59cdc2a05f"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"container_id": "cri-o://3d294c7e175007441903b5ed99b58873df2c7c1685a008779f122df2061ec534",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-6",
+			"pod": "eap-app-6-g8p6p",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "51bd7f41-3e14-4a6b-b6a9-2f3e38220b48"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"container_id": "cri-o://d3311f4b94b8d98f2fa9d864a8f1e709270e100e54fa8bf1ebd6fc9c9a73e53d",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-9",
+			"pod": "eap-app-9-pfc5g",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "33f5f624-f4da-4086-8030-b6e49b9f2ba8"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"container_id": "cri-o://e68c0c2230cd18e40790b986f42d69fc0a2b56f6614909f5a1f9bc40887395f8",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/eap-app@sha256:073e723df4ca7583f0348b14a6f2bb8eb31facc167b59d8533559113e335a53c",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_kind": "ReplicationController",
+			"owner_name": "example",
+			"pod": "example-htgbh",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "18e55f4c-3a88-4f3b-a92b-ef4ae1e89727"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "eap-app",
+			"container_id": "cri-o://f416bdbe4fa940dc41adc1c7708aedb65213083715b7ba4f359f426d57451e74",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/eap-app@sha256:e0dc87a6090dd6672cdecf44ce4f8eaf5d221b909651e67a5b88abd59b2aa011",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_kind": "ReplicationController",
+			"owner_name": "eap-app-6",
+			"pod": "eap-app-6-tvg28",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "d7a0bc48-a2b4-4677-a0e6-c9763bda002d"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "manager",
+			"container_id": "cri-o://553b25cede5190cb2a0ecf435e693b2ad697d86d76a6b83104f9e656727d5359",
+			"endpoint": "https-main",
+			"image": "quay.io/project-koku/koku-metrics-operator@sha256:4d60286deb439e81fad78056dd483393b28940b276f1a9dfc755c94558484b8b",
+			"image_id": "quay.io/project-koku/koku-metrics-operator@sha256:4d60286deb439e81fad78056dd483393b28940b276f1a9dfc755c94558484b8b",
+			"image_spec": "quay.io/project-koku/koku-metrics-operator@sha256:4d60286deb439e81fad78056dd483393b28940b276f1a9dfc755c94558484b8b",
+			"job": "kube-state-metrics",
+			"namespace": "koku-metrics-operator",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "koku-metrics-operator-86685d87c7",
+			"pod": "koku-metrics-operator-86685d87c7-drthj",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "81dd0c63-9883-4d65-b7c7-618efdfc8528"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "manager",
+			"container_id": "cri-o://94eab95e763e2685c046f8740f24db3847bcf7b3e9866bea051ebafdedf6d71b",
+			"endpoint": "https-main",
+			"image": "registry.redhat.io/costmanagement/costmanagement-metrics-rhel8-operator@sha256:2ba8cbaa8232a3506c6f7d79360102a678091275a0138882df14c7da820ebb1b",
+			"image_id": "registry.redhat.io/costmanagement/costmanagement-metrics-rhel8-operator@sha256:2ba8cbaa8232a3506c6f7d79360102a678091275a0138882df14c7da820ebb1b",
+			"image_spec": "registry.redhat.io/costmanagement/costmanagement-metrics-rhel8-operator@sha256:2ba8cbaa8232a3506c6f7d79360102a678091275a0138882df14c7da820ebb1b",
+			"job": "kube-state-metrics",
+			"namespace": "costmanagement-metrics-operator",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "costmanagement-metrics-operator-6757c56ccf",
+			"pod": "costmanagement-metrics-operator-6757c56ccf-5mw2r",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "8b716e04-b524-44ba-aba9-88404f309462"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "nginx-sample",
+			"container_id": "cri-o://2207d8a1d46083a5012efb540471e57d184a89fa1dde78592b1f3d15516e47a4",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "nginx-sample-576c785f4",
+			"pod": "nginx-sample-576c785f4-wjsvc",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "e2f9cb45-e259-4f8a-98e0-e4b02d3ee7b8"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "nginx-sample",
+			"container_id": "cri-o://6094314b6ababfa3b2d1b7ee64907424b3ff6fe4e8d1923fbe84d0e4264fa4a6",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/europe/nginx-sample@sha256:01494ee0e88b769d92b65c82588d23b600dd8e2e595e23e929307fd44c7cd412",
+			"job": "kube-state-metrics",
+			"namespace": "europe",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "nginx-sample-576c785f4",
+			"pod": "nginx-sample-576c785f4-t2fs2",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "bdcfe66f-8406-41c4-9bc3-e1aa335e279e"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "python-sample",
+			"container_id": "cri-o://d49f83720bd25a8bbfc5f4a47d3509cd43774c696166912e3c01cabaa43d945e",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "python-sample-675d6c79f5",
+			"pod": "python-sample-675d6c79f5-7jzs2",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "e6fda588-9768-4647-afd7-22f37fa793dc"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "python-sample",
+			"container_id": "cri-o://d620d5a0a3d044da7200fe6f42af8104498049d1f482561aa264e31219bdb806",
+			"endpoint": "https-main",
+			"image": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_id": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"image_spec": "image-registry.openshift-image-registry.svc:5000/america/python-sample@sha256:df28b3553ccd0fe1d3cb75016b3f51aea0e39e6fef17cd72f06da95b2ec46694",
+			"job": "kube-state-metrics",
+			"namespace": "america",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "python-sample-675d6c79f5",
+			"pod": "python-sample-675d6c79f5-ctd95",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "a750328e-00c6-483e-b550-be0287c3cc78"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "rhsso-operator",
+			"container_id": "cri-o://bd119e4fceaa056587fff154b6a2973283d892f2b50fe8e0ebaa55c34aed41c5",
+			"endpoint": "https-main",
+			"image": "registry.redhat.io/rh-sso-7/sso7-rhel8-operator@sha256:6c1ee2243eb01cc422da28a3266639d90070f3ef7e7a903041f71dad780e33db",
+			"image_id": "registry.redhat.io/rh-sso-7/sso7-rhel8-operator@sha256:573329befa18f2f4b2811c49c415cf51ccdd174c55d4026852823b017562841b",
+			"image_spec": "registry.redhat.io/rh-sso-7/sso7-rhel8-operator@sha256:6c1ee2243eb01cc422da28a3266639d90070f3ef7e7a903041f71dad780e33db",
+			"job": "kube-state-metrics",
+			"namespace": "sso",
+			"owner_kind": "ReplicaSet",
+			"owner_name": "rhsso-operator-5fbc4bb59b",
+			"pod": "rhsso-operator-5fbc4bb59b-6mvtx",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "72173b25-e35f-413a-bef9-d51fbd42220f"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"container": "volume-shell",
+			"container_id": "cri-o://ecf2287c9efae5065c4e08fa349e3086af9df17d39d4034575a1e4def88e5c29",
+			"endpoint": "https-main",
+			"image": "docker.io/library/busybox:latest",
+			"image_id": "docker.io/library/busybox@sha256:7b3ccabffc97de872a30dfd234fd972a66d247c8cfc69b0550f276481852627c",
+			"image_spec": "busybox",
+			"job": "kube-state-metrics",
+			"namespace": "koku-metrics-operator-2",
+			"owner_kind": "\u003cnone\u003e",
+			"owner_name": "\u003cnone\u003e",
+			"pod": "volume-shell",
+			"prometheus": "openshift-monitoring/k8s",
+			"service": "kube-state-metrics",
+			"uid": "484b666b-709e-44ba-a4f0-767ecb355578"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	}
+]

@@ -1,6 +1,6 @@
 # Current Operator version
-PREVIOUS_VERSION ?= 1.1.9
-VERSION ?= 1.1.10
+PREVIOUS_VERSION ?= 2.0.0
+VERSION ?= 2.0.1
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -101,10 +101,12 @@ lint:
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
+SECRET_ABSPATH ?= ./testing
+WATCH_NAMESPACE ?= koku-metrics-operator
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
 	kubectl apply -f testing/sa.yaml
-	GIT_COMMIT=${GIT_COMMIT} go run ./main.go
+	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run ./main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -131,8 +133,8 @@ deploy-branch:
 # replaces the username and password with your base64 encoded username and password and looks up the token value for you
 setup-auth:
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),cloud.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),cloud.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),console.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),console.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
 add-prom-route:
 	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
@@ -152,7 +154,7 @@ local-validate-cert:
 	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-ci-route:
-	@echo '  api_url: https://ci.cloud.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  api_url: https://ci.console.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
@@ -186,6 +188,11 @@ ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
 	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+
+SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
+get-token-and-cert:
+	printf "%s" "$(shell oc whoami --show-token)" > $(SECRET_ABSPATH)/token
+	oc get -o template $(SECRET_NAME) -o go-template=='{{index .data "service-ca.crt"|base64decode}}' > $(SECRET_ABSPATH)/service-ca.crt
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -238,7 +245,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.2 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -261,6 +268,7 @@ else
 KUSTOMIZE=$(shell which kustomize)
 endif
 
+NAMESPACE ?= ""
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: manifests kustomize
 	mkdir -p koku-metrics-operator/$(VERSION)/
@@ -271,7 +279,7 @@ bundle: manifests kustomize
 	operator-sdk bundle validate ./bundle
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA}
+	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA} --namespace=${NAMESPACE}
 
 # Build the bundle image.
 bundle-build:

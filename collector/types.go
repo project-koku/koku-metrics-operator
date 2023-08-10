@@ -50,6 +50,9 @@ func newNamespaceRow(ts *promv1.Range) namespaceRow { return namespaceRow{dateTi
 func newNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{dateTimes: newDates(ts)} }
 func newPodRow(ts *promv1.Range) podRow             { return podRow{dateTimes: newDates(ts)} }
 func newStorageRow(ts *promv1.Range) storageRow     { return storageRow{dateTimes: newDates(ts)} }
+func newROSRow(ts *promv1.Range) resourceOptimizationRow {
+	return resourceOptimizationRow{dateTimes: newDates(ts)}
+}
 
 type namespaceRow struct {
 	*dateTimes
@@ -87,6 +90,7 @@ type nodeRow struct {
 	ModeCapacityCPUCoreSeconds    string `mapstructure:"node-capacity-cpu-core-seconds"`
 	NodeCapacityMemoryBytes       string `mapstructure:"node-capacity-memory-bytes"`
 	NodeCapacityMemoryByteSeconds string `mapstructure:"node-capacity-memory-byte-seconds"`
+	NodeRole                      string `mapstructure:"node-role"`
 	ResourceID                    string `mapstructure:"resource_id"`
 	NodeLabels                    string `mapstructure:"node_labels"`
 }
@@ -102,6 +106,7 @@ func (nodeRow) csvHeader() []string {
 		// "node_capacity_cpu_core_seconds",
 		// "node_capacity_memory_bytes",
 		// "node_capacity_memory_byte_seconds",
+		// "node_role",
 		// "resource_id",
 		"node_labels"}
 }
@@ -117,6 +122,7 @@ func (row nodeRow) csvRow() []string {
 		// row.ModeCapacityCPUCoreSeconds,
 		// row.NodeCapacityMemoryBytes,
 		// row.NodeCapacityMemoryByteSeconds,
+		// row.NodeRole,
 		// row.ResourceID,
 		row.NodeLabels,
 	}
@@ -157,6 +163,7 @@ func (podRow) csvHeader() []string {
 		"node_capacity_cpu_core_seconds",
 		"node_capacity_memory_bytes",
 		"node_capacity_memory_byte_seconds",
+		"node_role",
 		"resource_id",
 		"pod_labels"}
 }
@@ -180,6 +187,7 @@ func (row podRow) csvRow() []string {
 		row.ModeCapacityCPUCoreSeconds,
 		row.NodeCapacityMemoryBytes,
 		row.NodeCapacityMemoryByteSeconds,
+		row.NodeRole,
 		row.ResourceID,
 		row.PodLabels,
 	}
@@ -245,3 +253,125 @@ func (row storageRow) csvRow() []string {
 }
 
 func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }
+
+type resourceOptimizationRow struct {
+	*dateTimes
+	nodeRow
+	ContainerName              string `mapstructure:"container_name"`
+	Pod                        string `mapstructure:"pod"`
+	OwnerName                  string `mapstructure:"owner_name"`
+	OwnerKind                  string `mapstructure:"owner_kind"`
+	Workload                   string `mapstructure:"workload"`
+	WorkloadType               string `mapstructure:"workload_type"`
+	Namespace                  string `mapstructure:"namespace"`
+	ImageName                  string `mapstructure:"image_name"`
+	CPURequestContainerAvg     string `mapstructure:"cpu-request-container-avg"`
+	CPURequestContainerSum     string `mapstructure:"cpu-request-container-sum"`
+	CPULimitContainerAvg       string `mapstructure:"cpu-limit-container-avg"`
+	CPULimitContainerSum       string `mapstructure:"cpu-limit-container-sum"`
+	CPUUsageContainerAvg       string `mapstructure:"cpu-usage-container-avg"`
+	CPUUsageContainerMin       string `mapstructure:"cpu-usage-container-min"`
+	CPUUsageContainerMax       string `mapstructure:"cpu-usage-container-max"`
+	CPUUsageContainerSum       string `mapstructure:"cpu-usage-container-sum"`
+	CPUThrottleContainerAvg    string `mapstructure:"cpu-throttle-container-avg"`
+	CPUThrottleContainerMax    string `mapstructure:"cpu-throttle-container-max"`
+	CPUThrottleContainerSum    string `mapstructure:"cpu-throttle-container-sum"`
+	MemoryRequestContainerAvg  string `mapstructure:"memory-request-container-avg"`
+	MemoryRequestContainerSum  string `mapstructure:"memory-request-container-sum"`
+	MemoryLimitContainerAvg    string `mapstructure:"memory-limit-container-avg"`
+	MemoryLimitContainerSum    string `mapstructure:"memory-limit-container-sum"`
+	MemoryUsageContainerAvg    string `mapstructure:"memory-usage-container-avg"`
+	MemoryUsageContainerMin    string `mapstructure:"memory-usage-container-min"`
+	MemoryUsageContainerMax    string `mapstructure:"memory-usage-container-max"`
+	MemoryUsageContainerSum    string `mapstructure:"memory-usage-container-sum"`
+	MemoryRSSUsageContainerAvg string `mapstructure:"memory-rss-usage-container-avg"`
+	MemoryRSSUsageContainerMin string `mapstructure:"memory-rss-usage-container-min"`
+	MemoryRSSUsageContainerMax string `mapstructure:"memory-rss-usage-container-max"`
+	MemoryRSSUsageContainerSum string `mapstructure:"memory-rss-usage-container-sum"`
+}
+
+func (resourceOptimizationRow) csvHeader() []string {
+	return []string{
+		"report_period_start",
+		"report_period_end",
+		"interval_start",
+		"interval_end",
+		"container_name",
+		"pod",
+		"owner_name",
+		"owner_kind",
+		"workload",
+		"workload_type",
+		"namespace",
+		"image_name",
+		"node",
+		"resource_id",
+		"cpu_request_container_avg",
+		"cpu_request_container_sum",
+		"cpu_limit_container_avg",
+		"cpu_limit_container_sum",
+		"cpu_usage_container_avg",
+		"cpu_usage_container_min",
+		"cpu_usage_container_max",
+		"cpu_usage_container_sum",
+		"cpu_throttle_container_avg",
+		"cpu_throttle_container_max",
+		"cpu_throttle_container_sum",
+		"memory_request_container_avg",
+		"memory_request_container_sum",
+		"memory_limit_container_avg",
+		"memory_limit_container_sum",
+		"memory_usage_container_avg",
+		"memory_usage_container_min",
+		"memory_usage_container_max",
+		"memory_usage_container_sum",
+		"memory_rss_usage_container_avg",
+		"memory_rss_usage_container_min",
+		"memory_rss_usage_container_max",
+		"memory_rss_usage_container_sum",
+	}
+}
+
+func (row resourceOptimizationRow) csvRow() []string {
+	return []string{
+		row.ReportPeriodStart,
+		row.ReportPeriodEnd,
+		row.IntervalStart,
+		row.IntervalEnd,
+		row.ContainerName,
+		row.Pod,
+		row.OwnerName,
+		row.OwnerKind,
+		row.Workload,
+		row.WorkloadType,
+		row.Namespace,
+		row.ImageName,
+		row.Node,
+		row.ResourceID,
+		row.CPURequestContainerAvg,
+		row.CPURequestContainerSum,
+		row.CPULimitContainerAvg,
+		row.CPULimitContainerSum,
+		row.CPUUsageContainerAvg,
+		row.CPUUsageContainerMin,
+		row.CPUUsageContainerMax,
+		row.CPUUsageContainerSum,
+		row.CPUThrottleContainerAvg,
+		row.CPUThrottleContainerMax,
+		row.CPUThrottleContainerSum,
+		row.MemoryRequestContainerAvg,
+		row.MemoryRequestContainerSum,
+		row.MemoryLimitContainerAvg,
+		row.MemoryLimitContainerSum,
+		row.MemoryUsageContainerAvg,
+		row.MemoryUsageContainerMin,
+		row.MemoryUsageContainerMax,
+		row.MemoryUsageContainerSum,
+		row.MemoryRSSUsageContainerAvg,
+		row.MemoryRSSUsageContainerMin,
+		row.MemoryRSSUsageContainerMax,
+		row.MemoryRSSUsageContainerSum,
+	}
+}
+
+func (row resourceOptimizationRow) string() string { return strings.Join(row.csvRow(), ",") }

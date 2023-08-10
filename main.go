@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"os"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -18,9 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	configv1 "github.com/openshift/api/config/v1"
-
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -35,8 +35,8 @@ func init() {
 
 	// Adding the configv1 scheme
 	utilruntime.Must(configv1.AddToScheme(scheme))
-	// Adding the kokumetricscfgv1beta1 scheme
-	utilruntime.Must(kokumetricscfgv1beta1.AddToScheme(scheme))
+	// Adding the metricscfgv1beta1 scheme
+	utilruntime.Must(metricscfgv1beta1.AddToScheme(scheme))
 	// Adding the operatorsv1alpha1 scheme
 	utilruntime.Must(operatorsv1alpha1.AddToScheme(scheme))
 
@@ -52,7 +52,12 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	loggerOpts := zap.Options{
+		Development: true,
+		TimeEncoder: zapcore.RFC3339NanoTimeEncoder,
+	}
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&loggerOpts)))
 
 	inCluster := false
 	if value, ok := os.LookupEnv("IN_CLUSTER"); ok {
@@ -84,15 +89,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.KokuMetricsConfigReconciler{
+	if err = (&controllers.MetricsConfigReconciler{
 		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("KokuMetricsConfig"),
 		Scheme:    mgr.GetScheme(),
 		Clientset: clientset,
 		InCluster: inCluster,
 		Namespace: watchNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KokuMetricsConfig")
+		setupLog.Error(err, "unable to create controller", "controller", "MetricsConfig")
 		os.Exit(1)
 	}
 

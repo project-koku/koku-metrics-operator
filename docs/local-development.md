@@ -8,7 +8,7 @@
 * [Openshift-CLI](https://docs.openshift.com/container-platform/4.5/cli_reference/openshift_cli/getting-started-cli.html) (preferably a version that matches your Openshift cluster version)
 * [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-* [kustomize](https://kubernetes-sigs.github.io/kustomize/installation/) (before installing this separately, check that it was not already installed along with kubectl)
+* [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/) (before installing this separately, check that it was not already installed along with kubectl)
 * [Docker Desktop](https://www.docker.com/products/docker-desktop)
 * [quay.io](quay.io) account
 
@@ -40,10 +40,17 @@
     ```
 
 5. The `token` and `service-ca.crt` need to be copied from one of the created `koku-metrics-manager-role-token-*` secrets.
-Log into the cluster console, and find one of the `koku-metrics-manager-role-token-*` secrets within the `koku-metrics-operator`
-namespace (there should be 2 of these; either one will work). Create a local directory to save your secrets (e.g. testing/secrets).
-Create 2 files in that directory: `token` and `service-ca.crt`. Copy the values for `token` and `service-ca.crt` from the
-`koku-metrics-manager-role-token-*` secret, and paste into the newly created files.
+A make command exists to help:
+
+    ```
+    $ make get-token-and-cert
+    ```
+
+This will place the `token` and `service-ca.crt` in the `testing` directory. To place these files somewhere else, you can also use the command like this:
+
+    ```
+    $ SECRET_ABSPATH=/absolute/path/to/local/secrets make get-token-and-cert
+    ```
 
 6. Deploy the operator
 
@@ -57,7 +64,7 @@ Create 2 files in that directory: `token` and `service-ca.crt`. Copy the values 
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
-7. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at cloud.redhat.com:
+7. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at console.redhat.com:
 
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
@@ -66,6 +73,6 @@ Create 2 files in that directory: `token` and `service-ca.crt`. Copy the values 
 
     After this CR has been created in the cluster, reconciliation will begin.
 
-    Running `make deploy-local-cr` as-is will create the external prometheus route, disable TLS verification for prometheus, and use token authentication for cloud.redhat.com.
+    Running `make deploy-local-cr` as-is will create the external prometheus route, disable TLS verification for prometheus, and use token authentication for console.redhat.com.
 
 8. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.

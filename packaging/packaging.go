@@ -22,20 +22,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
 	"github.com/project-koku/koku-metrics-operator/strset"
 )
 
 // FilePackager struct for defining the packaging vars
 type FilePackager struct {
-	KMCfg            *kokumetricscfgv1beta1.KokuMetricsConfig
 	DirCfg           *dirconfig.DirectoryConfig
-	Log              logr.Logger
+	FilesAction      FilesAction
 	manifest         manifestInfo
 	uid              string
 	createdTimestamp string
@@ -44,48 +43,75 @@ type FilePackager struct {
 	end              time.Time
 }
 
-const timestampFormat = "20060102T150405"
+type FilesAction func(src, dst string) error
 
-// Define the global variables
-const megaByte int64 = 1024 * 1024
+const (
+	timestampFormat = "20060102T150405.999999"
 
-// the csv module does not expose the bytes-offset of the
-// underlying file object.
-// instead, the script estimates the size of the data as VARIANCE percent larger than a
-// naïve string concatenation of the CSV fields to cover the overhead of quoting
-// and delimiters. This gets close enough for now.
-// VARIANCE := 0.03
-const variance float64 = 0.03
+	megaByte int64 = 1024 * 1024
 
-// if we're creating more than 1k files, something is probably wrong.
-var maxSplits int64 = 1000
+	// the csv module does not expose the bytes-offset of the
+	// underlying file object.
+	// instead, the script estimates the size of the data as VARIANCE percent larger than a
+	// naïve string concatenation of the CSV fields to cover the overhead of quoting
+	// and delimiters. This gets close enough for now.
+	// VARIANCE := 0.03
+	variance float64 = 0.03
+)
 
-// ErrNoReports a "no reports" Error type
-var ErrNoReports = errors.New("reports not found")
+var (
+	MoveFiles FilesAction = os.Rename
+	CopyFiles FilesAction = copyFile
 
-// Set boolean on whether community or certified
-var isCertified bool = false
+	// if we're creating more than 1k files, something is probably wrong.
+	maxSplits int64 = 1000
+
+	BUFFERSIZE int64 = 10 * megaByte
+
+	// ErrNoReports a "no reports" Error type
+	ErrNoReports = errors.New("reports not found")
+
+	// Set boolean on whether community or certified
+	isCertified bool = false
+
+	log = logr.Log.WithName("packaging")
+)
 
 // Manifest interface
 type Manifest interface{}
 
 // manifest template
 type manifest struct {
-	UUID      string                                        `json:"uuid"`
-	ClusterID string                                        `json:"cluster_id"`
-	Version   string                                        `json:"version"`
-	Date      time.Time                                     `json:"date"`
-	Files     []string                                      `json:"files"`
-	Start     time.Time                                     `json:"start"`
-	End       time.Time                                     `json:"end"`
-	CRStatus  kokumetricscfgv1beta1.KokuMetricsConfigStatus `json:"cr_status"`
-	Certified bool                                          `json:"certified"`
+	UUID         string                                `json:"uuid"`
+	ClusterID    string                                `json:"cluster_id"`
+	Version      string                                `json:"version"`
+	Date         time.Time                             `json:"date"`
+	Files        []string                              `json:"files"`
+	ROSFiles     []string                              `json:"resource_optimization_files"`
+	Start        time.Time                             `json:"start"`
+	End          time.Time                             `json:"end"`
+	CRStatus     metricscfgv1beta1.MetricsConfigStatus `json:"cr_status"`
+	Certified    bool                                  `json:"certified"`
+	DailyReports bool                                  `json:"daily_reports"`
 }
 
 type FileInfoManifest manifest
 type manifestInfo struct {
 	manifest Manifest
 	filename string
+}
+type fileTracker struct {
+	costfiles map[int]string
+	rosfiles  map[int]string
+	allfiles  map[int]string
+}
+
+func newFileTracker() fileTracker {
+	return fileTracker{
+		costfiles: make(map[int]string, 4),
+		rosfiles:  make(map[int]string, 1),
+		allfiles:  make(map[int]string, 5),
+	}
 }
 
 // renderManifest writes the manifest
@@ -101,44 +127,92 @@ func (m *manifestInfo) renderManifest() error {
 	return nil
 }
 
-// buildLocalCSVFileList gets the list of files in the staging directory
-func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) map[int]string {
-	csvList := make(map[int]string)
-	for idx, file := range fileList {
-		if strings.HasSuffix(file.Name(), ".csv") {
-			csvFilePath := filepath.Join(stagingDirectory, file.Name())
-			csvList[idx] = csvFilePath
+func copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	_, err = os.Stat(dst)
+	if err == nil {
+		return fmt.Errorf("file %s already exists", dst)
+	}
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
 		}
 	}
-	return csvList
+	return err
 }
 
-func (p *FilePackager) getManifest(archiveFiles map[int]string, filePath string, kmc kokumetricscfgv1beta1.KokuMetricsConfig) {
+// buildLocalCSVFileList gets the list of files in the staging directory
+func (p *FilePackager) buildLocalCSVFileList(fileList []os.FileInfo, stagingDirectory string) fileTracker {
+	tracker := newFileTracker()
+	for idx, file := range fileList {
+		if !strings.HasSuffix(file.Name(), ".csv") {
+			continue
+		}
+		csvFilePath := filepath.Join(stagingDirectory, file.Name())
+		if strings.Contains(file.Name(), "ros-openshift") {
+			tracker.rosfiles[idx] = csvFilePath
+		} else {
+			tracker.costfiles[idx] = csvFilePath
+		}
+		tracker.allfiles[idx] = csvFilePath
+	}
+	return tracker
+}
+
+func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr *metricscfgv1beta1.MetricsConfig) {
 	// setup the manifest
 	manifestDate := metav1.Now()
-	var manifestFiles []string
-	for idx := range archiveFiles {
+	var costFiles []string
+	for idx := range archiveFiles.costfiles {
 		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
-		manifestFiles = append(manifestFiles, uploadName)
+		costFiles = append(costFiles, uploadName)
+	}
+	var rosFiles []string
+	for idx := range archiveFiles.rosfiles {
+		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+		rosFiles = append(rosFiles, uploadName)
 	}
 	p.manifest = manifestInfo{
 		manifest: manifest{
-			UUID:      p.uid,
-			ClusterID: p.KMCfg.Status.ClusterID,
-			Version:   p.KMCfg.Status.OperatorCommit,
-			Date:      manifestDate.UTC(),
-			Files:     manifestFiles,
-			Start:     p.start.UTC(),
-			End:       p.end.UTC(),
-			Certified: isCertified,
-			CRStatus:  kmc.Status,
+			UUID:         p.uid,
+			ClusterID:    cr.Status.ClusterID,
+			Version:      cr.Status.OperatorCommit,
+			Date:         manifestDate.UTC(),
+			Files:        costFiles,
+			ROSFiles:     rosFiles,
+			Start:        p.start.UTC(),
+			End:          p.end.UTC(),
+			Certified:    isCertified,
+			CRStatus:     cr.Status,
+			DailyReports: true,
 		},
 		filename: filepath.Join(filePath, "manifest.json"),
 	}
 }
 
 func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter *tar.Writer) error {
-	log := p.Log.WithValues("kokumetricsconfig", "addFileToTarWriter")
+	log := log.WithName("addFileToTarWriter")
 	log.Info("adding file to tar.gz", "file", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -171,9 +245,11 @@ func (p *FilePackager) addFileToTarWriter(uploadName, filePath string, tarWriter
 
 // writeTarball packages the files into tar balls
 func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiveFiles map[int]string) error {
+	tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
+	log.Info("generating tar.gz", "tarFile", tarFilePath)
 
 	// create the tarfile
-	tarFile, err := os.Create(tarFileName)
+	tarFile, err := os.Create(tarFilePath)
 	if err != nil {
 		return fmt.Errorf("writeTarball: error creating tar file: %v", err)
 	}
@@ -202,7 +278,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 
 // writePart writes a portion of a split file into a new file
 func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHeader []string, num int64) (*os.File, bool, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "writePart")
+	log := log.WithName("writePart")
 	fileNamePart := strings.TrimSuffix(fileName, ".csv")
 	sizeEstimate := 0
 	splitFileName := fileNamePart + strconv.FormatInt(num, 10) + ".csv"
@@ -280,7 +356,12 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("getStartEnd: error reading file: %v", err)
 	}
-	lastLine := allLines[len(allLines)-1]
+	var lastLine []string
+	if len(allLines) > 0 {
+		lastLine = allLines[len(allLines)-1]
+	} else {
+		lastLine = firstLine
+	}
 	endInterval := lastLine[endIndex]
 	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
 	return nil
@@ -288,7 +369,7 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 
 // splitFiles breaks larger files into smaller ones
 func (p *FilePackager) splitFiles(filePath string, fileList []os.FileInfo) ([]os.FileInfo, bool, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "splitFiles")
+	log := log.WithName("splitFiles")
 	if !p.needSplit(fileList) {
 		log.Info("files do not require splitting")
 		return fileList, false, nil
@@ -346,50 +427,53 @@ func (p *FilePackager) needSplit(fileList []os.FileInfo) bool {
 	return false
 }
 
-// moveFiles moves files from reportsDirectory to stagingDirectory
-func (p *FilePackager) moveFiles() ([]os.FileInfo, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "moveFiles")
-	var movedFiles []os.FileInfo
+// moveOrCopyFiles moves files from reportsDirectory to stagingDirectory
+func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]os.FileInfo, error) {
+	log := log.WithName("moveOrCopyFiles")
+	var files []os.FileInfo
 
 	// move all files
 	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
 	if err != nil {
-		return nil, fmt.Errorf("moveFiles: could not read reports directory: %v", err)
+		return nil, fmt.Errorf("moveOrCopyFiles: could not read reports directory: %v", err)
 	}
 	if len(fileList) <= 0 {
 		return nil, ErrNoReports
 	}
 
 	// remove all files from staging directory
-	if p.KMCfg.Status.Packaging.PackagingError == "" {
+	if cr.Status.Packaging.PackagingError == "" {
 		// Only clear the staging directory if previous packaging was successful
 		log.Info("clearing out staging directory")
 		if err := p.DirCfg.Staging.RemoveContents(); err != nil {
-			return nil, fmt.Errorf("moveFiles: could not clear staging: %v", err)
+			return nil, fmt.Errorf("moveOrCopyFiles: could not clear staging: %v", err)
 		}
 	}
 
-	log.Info("moving report files to staging directory")
+	log.Info("moving or copying report files to staging directory")
 	for _, file := range fileList {
 		if !strings.HasSuffix(file.Name(), ".csv") {
 			continue
 		}
+
 		from := filepath.Join(p.DirCfg.Reports.Path, file.Name())
 		to := filepath.Join(p.DirCfg.Staging.Path, p.uid+"-"+file.Name())
-		if err := os.Rename(from, to); err != nil {
-			return nil, fmt.Errorf("moveFiles: failed to move files: %v", err)
+
+		if err := p.FilesAction(from, to); err != nil {
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to copy/move files: %v", err)
 		}
+
 		newFile, err := os.Stat(to)
 		if err != nil {
-			return nil, fmt.Errorf("moveFiles: failed to get new file stats: %v", err)
+			return nil, fmt.Errorf("moveOrCopyFiles: failed to get new file stats: %v", err)
 		}
-		movedFiles = append(movedFiles, newFile)
+		files = append(files, newFile)
 	}
-	return movedFiles, nil
+	return files, nil
 }
 
-func (p *FilePackager) TrimPackages() error {
-	log := p.Log.WithValues("kokumetricsconfig", "trimPackages")
+func (p *FilePackager) TrimPackages(cr *metricscfgv1beta1.MetricsConfig) error {
+	log := log.WithName("trimPackages")
 
 	packages, err := p.DirCfg.Upload.GetFiles()
 	if err != nil {
@@ -405,9 +489,9 @@ func (p *FilePackager) TrimPackages() error {
 
 	reportCount := int64(datetimesSet.Len())
 
-	if reportCount <= p.KMCfg.Spec.Packaging.MaxReports {
+	if reportCount <= cr.Spec.Packaging.MaxReports {
 		log.Info("number of stored reports within limit")
-		p.KMCfg.Status.Packaging.ReportCount = &reportCount
+		cr.Status.Packaging.ReportCount = &reportCount
 		return nil
 	}
 
@@ -419,7 +503,7 @@ func (p *FilePackager) TrimPackages() error {
 	}
 
 	sort.Strings(datetimes)
-	ind := len(datetimes) - int(p.KMCfg.Spec.Packaging.MaxReports)
+	ind := len(datetimes) - int(cr.Spec.Packaging.MaxReports)
 	filesToExclude := datetimes[0:ind]
 
 	for _, pre := range filesToExclude {
@@ -434,25 +518,26 @@ func (p *FilePackager) TrimPackages() error {
 		}
 	}
 
-	p.KMCfg.Status.Packaging.ReportCount = &p.KMCfg.Spec.Packaging.MaxReports
+	cr.Status.Packaging.ReportCount = &cr.Spec.Packaging.MaxReports
 	return nil
 }
 
 // PackageReports is responsible for packing report files for upload
-func (p *FilePackager) PackageReports() error {
-	log := p.Log.WithValues("kokumetricsconfig", "PackageReports")
-	p.maxBytes = *p.KMCfg.Status.Packaging.MaxSize * megaByte
+func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error {
+	log := log.WithName("PackageReports")
+	p.maxBytes = *cr.Status.Packaging.MaxSize * megaByte
 	p.uid = uuid.New().String()
-	p.createdTimestamp = time.Now().Format(timestampFormat)
+	p.createdTimestamp = strings.Replace(time.Now().Format(timestampFormat), ".", "_", 1)
 
 	// create reports/staging/upload directories if they do not exist
-	if err := dirconfig.CheckExistsOrRecreate(log, p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
+	if err := dirconfig.CheckExistsOrRecreate(p.DirCfg.Reports, p.DirCfg.Staging, p.DirCfg.Upload); err != nil {
 		return fmt.Errorf("PackageReports: could not check directory: %v", err)
 	}
 
 	// move CSV reports from data directory to staging directory
-	filesToPackage, err := p.moveFiles()
+	filesToPackage, err := p.moveOrCopyFiles(cr)
 	if err == ErrNoReports {
+		log.Info("no payload to generate")
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -460,21 +545,22 @@ func (p *FilePackager) PackageReports() error {
 	// get the start and end dates from the report
 	log.Info("getting the start and end intervals for the manifest")
 	for _, file := range filesToPackage {
-		if strings.Contains(file.Name(), "pod") {
-			absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+		absPath := filepath.Join(p.DirCfg.Staging.Path, file.Name())
+		if strings.Contains(file.Name(), "cm-openshift-pod") || (p.start.IsZero() && strings.Contains(file.Name(), "ros-openshift")) {
 			if err := p.getStartEnd(absPath); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	}
+
 	// check if the files need to be split
 	log.Info("checking to see if the report files need to be split")
 	filesToPackage, split, err := p.splitFiles(p.DirCfg.Staging.Path, filesToPackage)
 	if err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
 	}
-	fileList := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
-	p.getManifest(fileList, p.DirCfg.Staging.Path, *p.KMCfg)
+	tracker := p.buildLocalCSVFileList(filesToPackage, p.DirCfg.Staging.Path)
+	p.getManifest(tracker, p.DirCfg.Staging.Path, cr)
 	log.Info("rendering manifest", "manifest", p.manifest.filename)
 	if err := p.manifest.renderManifest(); err != nil {
 		return fmt.Errorf("PackageReports: %v", err)
@@ -483,34 +569,27 @@ func (p *FilePackager) PackageReports() error {
 	filenameBase := p.createdTimestamp + "-cost-mgmt"
 
 	if split {
-		for idx, fileName := range fileList {
-			if !strings.HasSuffix(fileName, ".csv") {
-				continue
-			}
-			fileList = map[int]string{idx: fileName}
+		for idx, fileName := range tracker.allfiles {
+			fileMap := map[int]string{idx: fileName}
 			tarFileName := filenameBase + "-" + strconv.Itoa(idx) + ".tar.gz"
-			tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-			log.Info("generating tar.gz", "tarFile", tarFilePath)
-			if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
+			if err := p.writeTarball(tarFileName, p.manifest.filename, fileMap); err != nil {
 				return fmt.Errorf("PackageReports: %v", err)
 			}
 		}
 	} else {
 		tarFileName := filenameBase + ".tar.gz"
-		tarFilePath := filepath.Join(p.DirCfg.Upload.Path, tarFileName)
-		log.Info("generating tar.gz", "tarFile", tarFilePath)
-		if err := p.writeTarball(tarFilePath, p.manifest.filename, fileList); err != nil {
+		if err := p.writeTarball(tarFileName, p.manifest.filename, tracker.allfiles); err != nil {
 			return fmt.Errorf("PackageReports: %v", err)
 		}
 	}
 
 	log.Info("file packaging was successful")
-	p.KMCfg.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
+	cr.Status.Packaging.LastSuccessfulPackagingTime = metav1.Now()
 	return nil
 }
 
 func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
-	log := p.Log.WithValues("kokumetricsconfig", "getFileInfo")
+	log := log.WithName("getFileInfo")
 	fileInfo := FileInfoManifest{}
 	openFile, err := os.Open(file)
 	if err != nil {

@@ -7,6 +7,7 @@ package collector
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,12 +18,13 @@ import (
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 
-	kokumetricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/testutils"
 )
 
 var trueDef = true
-var defaultContextTimeout int64 = 90
+var falseDef = false
+var defaultContextTimeout = 90 * time.Second
 
 type mappedMockPromResult map[string]*mockPromResult
 type mockPromResult struct {
@@ -36,7 +38,7 @@ type mockPrometheusConnection struct {
 	t             *testing.T
 }
 
-func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	var res *mockPromResult
 	var ok bool
 	if m.mappedResults != nil {
@@ -52,15 +54,26 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	return res.value, res.warnings, res.err
 }
 
-func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
-	res := m.singleResult
+func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+	var res *mockPromResult
+	var ok bool
+	if m.mappedResults != nil {
+		res, ok = (*m.mappedResults)[query]
+		if !ok {
+			m.t.Fatalf("Could not find test result!")
+		}
+	} else if m.singleResult != nil {
+		res = m.singleResult
+	} else {
+		m.t.Fatalf("Could not find test result!")
+	}
 	return res.value, res.warnings, res.err
 }
 
 type mockPrometheusConnectionPolling struct {
 	mockPrometheusConnection
 
-	timeout int64
+	timeout time.Duration
 }
 
 func sleepContext(ctx context.Context, delay time.Duration) error {
@@ -72,18 +85,17 @@ func sleepContext(ctx context.Context, delay time.Duration) error {
 	}
 }
 
-func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string, ts time.Time) (model.Value, promv1.Warnings, error) {
+func (m mockPrometheusConnectionPolling) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
 	res := m.singleResult
-	err := sleepContext(ctx, time.Duration(m.timeout*int64(time.Second)))
+	err := sleepContext(ctx, m.timeout)
 	return res.value, res.warnings, err
 }
 
-func TestGetQueryResultsSuccess(t *testing.T) {
-	col := PromCollector{
+func TestGetQueryRangeResultsSuccess(t *testing.T) {
+	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        testLogger,
 	}
-	getQueryResultsErrorsTests := []struct {
+	getQueryRangeResultsSuccessTests := []struct {
 		name          string
 		queries       *querys
 		queriesResult mappedMockPromResult
@@ -100,7 +112,6 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 					QueryValue: &saveQueryValue{
 						ValName:         "usage-cpu-cores",
 						Method:          "max",
-						Factor:          maxFactor,
 						TransformedName: "usage-cpu-core-seconds",
 					},
 					RowKey: []model.LabelName{"id"},
@@ -112,7 +123,6 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 					QueryValue: &saveQueryValue{
 						ValName:         "capacity-cpu-cores",
 						Method:          "max",
-						Factor:          maxFactor,
 						TransformedName: "capacity-cpu-core-seconds",
 					},
 					RowKey: []model.LabelName{"id"},
@@ -187,31 +197,30 @@ func TestGetQueryResultsSuccess(t *testing.T) {
 			wantedError: nil,
 		},
 	}
-	for _, tt := range getQueryResultsErrorsTests {
+	for _, tt := range getQueryRangeResultsSuccessTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
+			c.PromConn = mockPrometheusConnection{
 				mappedResults: &tt.queriesResult,
 				t:             t,
 			}
 			got := mappedResults{}
-			err := col.getQueryResults(tt.queries, &got)
+			err := c.getQueryRangeResults(tt.queries, &got, 5)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("got unexpected error: %v", err)
 			}
 			if !reflect.DeepEqual(got, tt.wantedResult) {
-				t.Errorf("getQueryResults got:\n\t%s\n  want:\n\t%s", got, tt.wantedResult)
+				t.Errorf("getQueryRangeResults got:\n\t%s\n  want:\n\t%s", got, tt.wantedResult)
 			}
 		})
 	}
 }
 
-func TestGetQueryResultsError(t *testing.T) {
-	col := PromCollector{
-		ContextTimeout: &defaultContextTimeout,
+func TestGetQueryRangeResultsError(t *testing.T) {
+	c := PrometheusCollector{
+		ContextTimeout: defaultContextTimeout,
 		TimeSeries:     &promv1.Range{},
-		Log:            testLogger,
 	}
-	getQueryResultsErrorsTests := []struct {
+	getQueryRangeResultsErrorsTests := []struct {
 		name         string
 		queryResult  *mockPromResult
 		wantedResult mappedResults
@@ -266,14 +275,14 @@ func TestGetQueryResultsError(t *testing.T) {
 			wantedError:  errTest,
 		},
 	}
-	for _, tt := range getQueryResultsErrorsTests {
+	for _, tt := range getQueryRangeResultsErrorsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
+			c.PromConn = mockPrometheusConnection{
 				singleResult: tt.queryResult,
 				t:            t,
 			}
 			got := mappedResults{}
-			err := col.getQueryResults(&querys{query{QueryString: "fake-query"}}, &got)
+			err := c.getQueryRangeResults(&querys{query{QueryString: "fake-query"}}, &got, 5)
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
 			}
@@ -285,9 +294,8 @@ func TestGetQueryResultsError(t *testing.T) {
 }
 
 func TestTestPrometheusConnection(t *testing.T) {
-	col := PromCollector{
+	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        testLogger,
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
@@ -307,11 +315,11 @@ func TestTestPrometheusConnection(t *testing.T) {
 	}
 	for _, tt := range testPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnection{
+			c.PromConn = mockPrometheusConnection{
 				singleResult: tt.queryResult,
 				t:            t,
 			}
-			err := testPrometheusConnection(col.PromConn)
+			err := TestPrometheusConnection(&c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -323,37 +331,37 @@ func TestTestPrometheusConnection(t *testing.T) {
 }
 
 func TestTestPrometheusConnectionPolling(t *testing.T) {
-	col := PromCollector{
+	pollingCtxTimeout = 10 * time.Millisecond
+	c := PrometheusCollector{
 		TimeSeries: &promv1.Range{},
-		Log:        testLogger,
 	}
 	testPrometheusConnectionTests := []struct {
 		name        string
-		wait        int64
+		wait        time.Duration
 		queryResult *mockPromResult
 		wantedError error
 	}{
 		{
 			name:        "test query success",
-			wait:        1,
+			wait:        5 * time.Millisecond,
 			queryResult: &mockPromResult{err: nil},
 			wantedError: nil,
 		},
 		{
 			name:        "test query error",
-			wait:        16,
+			wait:        15 * time.Millisecond,
 			queryResult: &mockPromResult{err: ctxTimeout},
 			wantedError: errTest,
 		},
 	}
 	for _, tt := range testPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			col.PromConn = mockPrometheusConnectionPolling{
+			c.PromConn = mockPrometheusConnectionPolling{
 				mockPrometheusConnection: mockPrometheusConnection{
 					singleResult: tt.queryResult,
 					t:            t},
 				timeout: tt.wait}
-			err := testPrometheusConnection(col.PromConn)
+			err := TestPrometheusConnection(&c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -367,52 +375,52 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 func TestStatusHelper(t *testing.T) {
 	statusHelperTests := []struct {
 		name   string
-		kmCfg  *kokumetricscfgv1beta1.KokuMetricsConfig
-		status string
+		cr     *metricscfgv1beta1.MetricsConfig
+		status int
 		want   bool
 		err    error
 	}{
 		{
 			name:   "config success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
-			status: "configuration",
+			cr:     &metricscfgv1beta1.MetricsConfig{},
+			status: statusConfiguration,
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "config failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
-			status: "configuration",
+			cr:     &metricscfgv1beta1.MetricsConfig{},
+			status: statusConfiguration,
 			want:   false,
 			err:    errTest,
 		},
 		{
 			name:   "connection success",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
-			status: "connection",
+			cr:     &metricscfgv1beta1.MetricsConfig{},
+			status: statusConnection,
 			want:   true,
 			err:    nil,
 		},
 		{
 			name:   "connection failed",
-			kmCfg:  &kokumetricscfgv1beta1.KokuMetricsConfig{},
-			status: "connection",
+			cr:     &metricscfgv1beta1.MetricsConfig{},
+			status: statusConnection,
 			want:   false,
 			err:    errTest,
 		},
 	}
 	for _, tt := range statusHelperTests {
 		t.Run(tt.name, func(t *testing.T) {
-			statusHelper(tt.kmCfg, tt.status, tt.err)
+			statusHelper(tt.cr, tt.status, tt.err)
 			var gotMsg string
 			var gotBool bool
 			switch tt.status {
-			case "configuration":
-				gotMsg = tt.kmCfg.Status.Prometheus.ConfigError
-				gotBool = tt.kmCfg.Status.Prometheus.PrometheusConfigured
-			case "connection":
-				gotMsg = tt.kmCfg.Status.Prometheus.ConnectionError
-				gotBool = tt.kmCfg.Status.Prometheus.PrometheusConnected
+			case statusConfiguration:
+				gotMsg = tt.cr.Status.Prometheus.ConfigError
+				gotBool = tt.cr.Status.Prometheus.PrometheusConfigured
+			case statusConnection:
+				gotMsg = tt.cr.Status.Prometheus.ConnectionError
+				gotBool = tt.cr.Status.Prometheus.PrometheusConnected
 			}
 			if tt.err != nil && gotMsg == "" {
 				t.Errorf("%s got '' want %v", tt.name, tt.err)
@@ -427,8 +435,8 @@ func TestStatusHelper(t *testing.T) {
 	}
 }
 
-func TestGetPrometheusConnFromCfg(t *testing.T) {
-	getPrometheusConnFromCfgTests := []struct {
+func TestSetPrometheusConnection(t *testing.T) {
+	setPrometheusConnectionTests := []struct {
 		name        string
 		cfg         *PrometheusConfig
 		wantedError error
@@ -453,9 +461,10 @@ func TestGetPrometheusConnFromCfg(t *testing.T) {
 			wantedError: nil,
 		},
 	}
-	for _, tt := range getPrometheusConnFromCfgTests {
+	for _, tt := range setPrometheusConnectionTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getPrometheusConnFromCfg(tt.cfg)
+			c := &PrometheusCollector{PromCfg: tt.cfg}
+			err := SetPrometheusConnection(c)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -471,64 +480,64 @@ func TestGetPromConn(t *testing.T) {
 		name         string
 		cfg          *PrometheusConfig
 		createTokCrt bool
-		cfgErr       string
-		con          prometheusConnection
-		conErr       string
+		cfgErr       error
+		con          PrometheusConnection
+		conErr       error
 		wantedError  error
 	}{
 		{
 			name:        "nil promconn: return getConn error",
 			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr:      "",
+			cfgErr:      nil,
 			con:         nil,
-			conErr:      "",
+			conErr:      nil,
 			wantedError: errTest,
 		},
 		{
 			name:        "not empty ConfigError: return getConn error",
 			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr:      "error",
+			cfgErr:      fmt.Errorf("error"),
 			con:         nil,
-			conErr:      "",
+			conErr:      nil,
 			wantedError: errTest,
 		},
 		{
 			name:         "not empty ConfigError: reconfig and succeed",
 			cfg:          &PrometheusConfig{Address: "%gh&%ij"},
 			createTokCrt: true,
-			cfgErr:       "error",
+			cfgErr:       fmt.Errorf("error"),
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: nil},
 			},
-			conErr:      "",
+			conErr:      nil,
 			wantedError: nil,
 		},
 		{
 			name:        "not empty ConnectionError: return getConn error",
 			cfg:         &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr:      "",
+			cfgErr:      nil,
 			con:         &mockPrometheusConnection{},
-			conErr:      "not empty",
+			conErr:      fmt.Errorf("not empty"),
 			wantedError: errTest,
 		},
 		{
 			name:   "return getConn successed, test con fails",
 			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr: "",
+			cfgErr: nil,
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: errTest},
 			},
-			conErr:      "",
+			conErr:      nil,
 			wantedError: errTest,
 		},
 		{
 			name:   "return getConn successed, test con succeeds",
 			cfg:    &PrometheusConfig{Address: "%gh&%ij"},
-			cfgErr: "",
+			cfgErr: nil,
 			con: &mockPrometheusConnection{
 				singleResult: &mockPromResult{err: nil},
 			},
-			conErr:      "",
+			conErr:      nil,
 			wantedError: nil,
 		},
 	}
@@ -545,17 +554,17 @@ func TestGetPromConn(t *testing.T) {
 					os.Remove(toke)
 				}()
 			}
-			kmCfg := &kokumetricscfgv1beta1.KokuMetricsConfig{}
-			kmCfg.Status.Prometheus.ConfigError = tt.cfgErr
-			kmCfg.Status.Prometheus.ConnectionError = tt.conErr
-			kmCfg.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
-			col := &PromCollector{
+			cr := &metricscfgv1beta1.MetricsConfig{}
+			statusHelper(cr, statusConfiguration, tt.cfgErr)
+			statusHelper(cr, statusConnection, tt.conErr)
+			cr.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
+			c := &PrometheusCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
-				Log:      testLogger,
+
+				serviceaccountPath: serviceaccountPath,
 			}
-			promSpec = kmCfg.Spec.PrometheusConfig.DeepCopy()
-			err := col.GetPromConn(kmCfg)
+			err := c.GetPromConn(cr, SetPrometheusConfig, SetPrometheusConnection, TestPrometheusConnection)
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
@@ -566,18 +575,14 @@ func TestGetPromConn(t *testing.T) {
 	}
 }
 
-func TestGetPrometheusConfig(t *testing.T) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get working dir: %v", err)
-	}
+func TestSetPrometheusConfig(t *testing.T) {
 	trueDef := true
-	kmCfg := &kokumetricscfgv1beta1.PrometheusSpec{
+	ps := &metricscfgv1beta1.PrometheusSpec{
 		SvcAddress:          "svc-address",
 		SkipTLSVerification: &trueDef,
 	}
 	secretsPath := "./test_files/test_secrets"
-	getPromCfgTests := []struct {
+	setPrometheusConfigTests := []struct {
 		name        string
 		inCluster   bool
 		basePath    string
@@ -587,11 +592,10 @@ func TestGetPrometheusConfig(t *testing.T) {
 		wantedError error
 	}{
 		{
-			name:      "successful config - in cluster",
-			inCluster: true,
-			basePath:  secretsPath,
-			certKey:   true,
-			tokenKey:  true,
+			name:     "successful config - in cluster",
+			basePath: secretsPath,
+			certKey:  true,
+			tokenKey: true,
 			want: &PrometheusConfig{
 				Address:     "svc-address",
 				SkipTLS:     true,
@@ -602,7 +606,6 @@ func TestGetPrometheusConfig(t *testing.T) {
 		},
 		{
 			name:        "missing token - in cluster",
-			inCluster:   true,
 			basePath:    secretsPath,
 			certKey:     true,
 			tokenKey:    false,
@@ -610,22 +613,20 @@ func TestGetPrometheusConfig(t *testing.T) {
 			wantedError: errTest,
 		},
 		{
-			name:      "successful config - local",
-			inCluster: false,
-			basePath:  secretsPath,
-			certKey:   true,
-			tokenKey:  true,
+			name:     "successful config - local",
+			basePath: secretsPath,
+			certKey:  true,
+			tokenKey: true,
 			want: &PrometheusConfig{
 				Address:     "svc-address",
 				SkipTLS:     true,
 				BearerToken: config.Secret([]byte("this-is-token-data")),
-				CAFile:      filepath.Join(cwd, secretsPath, certKey),
+				CAFile:      filepath.Join(secretsPath, certKey),
 			},
 			wantedError: nil,
 		},
 		{
 			name:        "missing token - local",
-			inCluster:   false,
 			basePath:    secretsPath,
 			certKey:     true,
 			tokenKey:    false,
@@ -634,14 +635,13 @@ func TestGetPrometheusConfig(t *testing.T) {
 		},
 		{
 			name:        "local - no path to secrets",
-			inCluster:   false,
 			basePath:    "",
 			tokenKey:    false,
 			want:        nil,
 			wantedError: errTest,
 		},
 	}
-	for _, tt := range getPromCfgTests {
+	for _, tt := range setPrometheusConfigTests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.certKey {
 				testutils.CreateCertificate(secretsPath, certKey)
@@ -649,21 +649,13 @@ func TestGetPrometheusConfig(t *testing.T) {
 			if tt.tokenKey {
 				testutils.CreateToken(secretsPath, tokenKey)
 			}
-			tmpBase := serviceaccountPath
-			if tt.inCluster {
-				serviceaccountPath = tt.basePath
-			} else {
-				if err := os.Setenv("SECRET_ABSPATH", filepath.Join(cwd, tt.basePath)); err != nil {
-					t.Fatalf("failed to set SECRET_ABSPATH variable")
-				}
-			}
+			c := NewPromCollector(tt.basePath)
 			defer func() {
-				serviceaccountPath = tmpBase
-				os.Unsetenv("SECRET_ABSPATH")
-				os.Remove(filepath.Join(tt.basePath, "token"))
-				os.Remove(filepath.Join(tt.basePath, "service-ca.crt"))
+				os.Remove(filepath.Join(tt.basePath, tokenKey))
+				os.Remove(filepath.Join(tt.basePath, certKey))
 			}()
-			got, err := getPrometheusConfig(kmCfg, tt.inCluster)
+			err := SetPrometheusConfig(ps, c)
+			got := c.PromCfg
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}

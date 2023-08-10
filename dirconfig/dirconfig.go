@@ -11,15 +11,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/go-logr/logr"
 	"github.com/mitchellh/mapstructure"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
+
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var (
-	parentDir    = "/tmp/koku-metrics-operator-reports/"
+	MountPath = filepath.Join("tmp", fmt.Sprintf("%s-metrics-operator-reports", metricscfgv1beta1.NamePrefix))
+
 	queryDataDir = "data"
 	stagingDir   = "staging"
 	uploadDir    = "upload"
+
+	log = logr.Log.WithName("dirconfig")
 )
 
 type DirListFunc = func(path string) ([]os.FileInfo, error)
@@ -125,7 +130,7 @@ func (dir *Directory) Create() error {
 	return nil
 }
 
-func CheckExistsOrRecreate(log logr.Logger, dirs ...Directory) error {
+func CheckExistsOrRecreate(dirs ...Directory) error {
 	for _, dir := range dirs {
 		if !dir.Exists() {
 			log.Info(fmt.Sprintf("recreating %s", dir.Path))
@@ -151,7 +156,7 @@ func getOrCreatePath(directory string, dirFs *DirectoryFileSystem) (*Directory, 
 func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 	var err error
 	dirMap := map[string]*Directory{}
-	dirMap["parent"], err = getOrCreatePath(parentDir, dirCfg.DirectoryFileSystem)
+	dirMap["parent"], err = getOrCreatePath(MountPath, dirCfg.DirectoryFileSystem)
 	if err != nil {
 		return fmt.Errorf("getDirectoryConfig: %v", err)
 	}
@@ -162,7 +167,7 @@ func (dirCfg *DirectoryConfig) GetDirectoryConfig() error {
 		"upload":  uploadDir,
 	}
 	for name, folder := range folders {
-		d := filepath.Join(parentDir, folder)
+		d := filepath.Join(MountPath, folder)
 		dirMap[name], err = getOrCreatePath(d, dirCfg.DirectoryFileSystem)
 		if err != nil {
 			return fmt.Errorf("getDirectoryConfig: %v", err)

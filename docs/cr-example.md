@@ -6,7 +6,7 @@ kind: KokuMetricsConfig
 metadata:
   name: kokumetricsconfig-sample
 spec:
-  api_url: string # default=https://cloud.redhat.com, the url of the API endpoint for service interaction
+  api_url: string # default=https://console.redhat.com, the url of the API endpoint for service interaction
   clusterID: string # The cluster ID -> the reconciler finds this value if not supplied
   validate_cert: bool # default=true, represent if the Ingress endpoint must be certificate validated
   authentication:
@@ -19,7 +19,7 @@ spec:
     skip_tls_verification: bool # default=false, do TLS verification for prometheus queries
   source:
     sources_path: string # default=/api/sources/v1.0/, path to sources API
-    name: string # name of source in cloud.redhat.com
+    name: string # name of source in console.redhat.com
     create_source: bool # default=false, create the source or not
     check_cycle: int # default=1440, time in minutes to wait between source checks.
   upload: # optional
