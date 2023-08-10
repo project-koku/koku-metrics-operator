@@ -506,8 +506,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
 				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
-				Expect(fetched.Status.Source.SourceName).ToNot(Equal(""))
-				// TODO: test for cluster id as default source name
+				Expect(fetched.Status.Source.SourceName).To(Equal(clusterID))
 				Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})

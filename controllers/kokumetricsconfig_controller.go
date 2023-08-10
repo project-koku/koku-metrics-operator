@@ -151,11 +151,6 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 	StringReflectSpec(r, cr, &cr.Spec.Source.SourcesAPIPath, &cr.Status.Source.SourcesAPIPath, metricscfgv1beta1.DefaultSourcesPath)
 	StringReflectSpec(r, cr, &cr.Spec.Source.SourceName, &cr.Status.Source.SourceName, "")
 
-	// use cluster id as default source name
-	if cr.Status.Source.SourceName == "" {
-		cr.Status.Source.SourceName = cr.Status.ClusterID
-	}
-
 	cr.Status.Source.CreateSource = cr.Spec.Source.CreateSource
 
 	if !reflect.DeepEqual(cr.Spec.Source.CheckCycle, cr.Status.Source.CheckCycle) {
@@ -610,6 +605,12 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "failed to obtain clusterID")
 		r.updateStatusAndLogError(ctx, cr)
 		return ctrl.Result{}, err
+	}
+
+	// set cluster id as default source name
+	if cr.Status.Source.SourceName == "" {
+		log.Info("using cluster id as default source name")
+		cr.Status.Source.SourceName = cr.Status.ClusterID
 	}
 
 	log.Info("using the following inputs", "MetricsConfigConfig", cr.Status)
