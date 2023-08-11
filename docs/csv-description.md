@@ -97,10 +97,11 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
         ```
 
 3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `source` field:
-    * Replace `INSERT-SOURCE-NAME` with the preferred name of the source to be created.
+    * Replace the `name` field value with the preferred name of the source to be created.
     * Replace the `create_source` field value with `true`.
 
-    **Note:** if the source already exists, replace `INSERT-SOURCE-NAME` with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
+    **Note:** if the source already exists, replace the empty string value of the `name` field with the existing name, and leave `create_source` as false. This will allow the operator to confirm the source exists.
+
 4. If not specified, the operator will create a default PersistentVolumeClaim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
     * Add the desired configuration to the `volume_claim_template` field in the spec:
 
