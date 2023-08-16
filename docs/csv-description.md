@@ -67,7 +67,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
     * `disable_metrics_collection_resource_optimization: false` -> Toggle for disabling the collection of metrics for Resource Optimization. The default is false. (New in v2.0.0)
     * `context_timeout: 120` -> The time in seconds before Prometheus queries timeout due to exceeding context timeout. The default is 120, with a minimum of 10 and maximum of 180.
   * `source`:
-    * `name: INSERT_SOURCE_NAME` -> The name of the Source the operator will create in `console.redhat.com`. The default is `INSERT_SOURCE_NAME` which is a placeholder.
+    * `name: ''` -> The name of the Source the operator will create in `console.redhat.com`. If the name value is empty, the default source name is the **cluster id**.
     * `create_source: false` -> Toggle for whether or not the operator will create the Source in `console.redhat.com`. The default is False. This parameter should be switched to True when a Source does not already exist in `console.redhat.com` for this cluster.
     * `check_cycle: 1440` -> The time in minutes to wait between checking if a Source exists for this cluster. The default is 1440 minutes (24 hrs).
   * `upload`:
