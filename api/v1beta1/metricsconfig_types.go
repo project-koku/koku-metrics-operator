@@ -250,7 +250,7 @@ type KokuMetricsConfigSpec struct {
 	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
 	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
-	// Source is a field of KokuMetricsConfig to represent the desired source on console.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the desired integration on console.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
 	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
@@ -355,20 +355,20 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on console.redhat.com.
+	// SourceName is a field of KokuMetricsConfigStatus to represent the integration name on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on console.redhat.com.
+	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the integration exists as defined on console.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
-	// CreateSource is a field of KokuMetricsConfigStatus to represent if the source should be created if not found.
-	// A source will not be created if upload_toggle is `false`.
+	// CreateSource is a field of KokuMetricsConfigStatus to represent if the integration should be created if not found.
+	// An integration will not be created if upload_toggle is `false`.
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
 
-	// SourceError is a field of KokuMetricsConfigStatus to represent the error encountered creating the source.
+	// SourceError is a field of KokuMetricsConfigStatus to represent the error encountered creating the integration.
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
@@ -376,7 +376,7 @@ type CloudDotRedHatSourceStatus struct {
 	// +nullable
 	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
-	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule.
+	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each integration check schedule.
 	// The default is 1440 min (24 hours).
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
@@ -488,7 +488,7 @@ type KokuMetricsConfigStatus struct {
 	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
-	// Source is a field of KokuMetricsConfig to represent the observed state of the source on console.redhat.com.
+	// Source is a field of KokuMetricsConfig to represent the observed state of the integration on console.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 
