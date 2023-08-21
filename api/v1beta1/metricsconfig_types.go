@@ -368,7 +368,7 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
 
-	// error is a field of KokuMetricsConfigStatus to represent the error encountered creating the integration.
+	// error is a field of KokuMetricsConfigStatus to represent errors encountered when creating the integration.
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
