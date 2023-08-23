@@ -203,7 +203,7 @@ type CloudDotRedHatSourceSpec struct {
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// name is the desired name of the integration on console.redhat.com.
+	// name is the desired name of the integration to create on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
