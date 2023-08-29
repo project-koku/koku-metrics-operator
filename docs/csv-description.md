@@ -1,6 +1,6 @@
 # Koku Metrics Operator
 ## Introduction
-The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift, used to gather the required information from the cluster. It is recommended to be installed in OpenShift 4.5+. This operator obtains OpenShift usage data by querying Prometheus and uploads it to cost management to be processed. The Operator queries Prometheus every hour to create metric reports, which are then packaged and uploaded to cost management at [console.redhat.com](https://console.redhat.com). For more information, reach out to <costmanagement@redhat.com>.
+The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports and uploading the metrics reports to cost management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
 This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
 
@@ -8,7 +8,7 @@ This operator is capable of functioning within a disconnected/restricted network
 #### Metrics collection:
 The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics required for cost management by:
 * Querying Prometheus to gather the necessary metrics for cost management.
-* Writing Prometheus queries to CSV report files.
+* Writing the results of Prometheus queries to CSV report files.
 * Packaging the CSV report files into tarballs.
 
 #### Additional Capabilities:
@@ -19,16 +19,20 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v3.0.0:
+* Daily report generation: Operator versions prior to v3.0.0 generated sequential reports. Now, reports are generated starting at 0:00 UTC. Any payloads generated throughout a given day will contain all data starting from 0:00 UTC. Once the next day starts, the previous day's reports are packaged, and the new report again starts at 0:00 UTC for the current day.
+* Failed query retry: In an attempt to prevent missing data, the operator will retry queries from the last successful query time, up to 5 times.
+
 ## New in v2.0.0:
 * Adds metrics and report generation for resource optimization. This feature will collect additional usage metrics and create a new report in the payload. These metrics are enabled by default, but can be disabled by setting `disable_metrics_collection_resource_optimization` to `true`.
 * Collect all available Prometheus data upon CR creation. This feature only applies to newly created KokuMetricsConfigs. The operator will check the monitoring stack configuration in the `openshift-monitoring` namespace. The operator will use the `retention` period set in the `cluster-monitoring-config` ConfigMap if defined, up to a maximum of 90 days. Otherwise it will fall back to collecting 14 days of data, if available. This data collection may be disabled by setting `collect_previous_data` to `false`. Turning this feature off results in the operator collecting metrics from the time the KokuMetricsConfig is created, forward.
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
-* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator and is gone forever. If the data within the payload is not processed, a gap will be introduced in the usage metrics.
+* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
 
 **Note** The following limitations are specific to operators configured to run in a restricted network:
-* The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is filled. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
+* The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is full. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
 * The default report retention is 30 reports (about one week's worth of data). The reports must be manually downloaded and uploaded to console.redhat.com every week, or they will be deleted and the data will be lost.
 
 #### Storage configuration prerequisite
@@ -133,7 +137,7 @@ Within a restricted network, the operator queries prometheus to gather the neces
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
 2. Specify the desired storage. If not specified, the operator will create a default Persistent Volume Claim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
-    * Add the desired configuration to the `volume_claim_template` field in the spec:
+    * Add the desired configuration to the `volume_claim_template` field in the spec (below is only a template. Any _valid_ `PersistentVolumeClaim` may be defined here):
 
       ```
         volume_claim_template:
