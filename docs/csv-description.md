@@ -1,6 +1,6 @@
 # Koku Metrics Operator
 ## Introduction
-The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports and uploading the metrics reports to cost management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
+The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to cost management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
 This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
 
@@ -29,7 +29,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
-* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, the payload is removed from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
+* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, it is deleted from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
 
 **Note** The following limitations are specific to operators configured to run in a restricted network:
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is full. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
@@ -220,20 +220,20 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   $ oc delete -f volume-shell.yaml
   ```
 
-## Create a source
-In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift source to cost management:
+## Create an Integration
+In a restricted network, the `koku-metrics-operator` cannot automatically create an integration. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift integration to cost management:
 
 Prerequisites:
 * The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
 
-Create source:
+Creating an integration:
 1. Navigate to the Sources menu
 2. Select the `Red Hat sources` tab
-3. Create a new `Red Hat Openshift Container Platform` source:
-    * give the source a unique name
+3. Create a new `Red Hat Openshift Container Platform` integration:
+    * give the integration a unique name
     * add the Cost Management application
     * add the cluster identifier
-4. In the Sources wizard, review the details and click `Finish` to create the Source.
+4. In the Sources wizard, review the details and click `Finish` to create the integration.
 
 ## Upload the reports to cost managment
 Uploading reports to cost managment is done through curl:
