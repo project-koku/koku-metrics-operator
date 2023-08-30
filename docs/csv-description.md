@@ -1,21 +1,21 @@
 # Koku Metrics Operator
 ## Introduction
-The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to cost management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
+The `koku-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
-This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to cost management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
+This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to Cost Management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
 
 ## Features and Capabilities
 #### Metrics collection:
-The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics required for cost management by:
-* Querying Prometheus to gather the necessary metrics for cost management.
+The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics required for Cost Management by:
+* Querying Prometheus to gather the necessary metrics for Cost Management.
 * Writing the results of Prometheus queries to CSV report files.
 * Packaging the CSV report files into tarballs.
 
 #### Additional Capabilities:
 * Resource Optimization metrics collection.
 * The operator can be configured to gather all previous data within the configured retention period or a maximum of 90 days. The default data collection period is the 14 previous days. This setting is only applicable to newly created KokuMetricsConfigs.
-* The operator can be configured to automatically upload the packaged reports to cost management through Red Hat Insights Ingress service.
-* The operator can create an integration in console.redhat.com. An integration is required for cost management to process the uploaded packages.
+* The operator can be configured to automatically upload the packaged reports to Cost Management through Red Hat Insights Ingress service.
+* The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
@@ -29,7 +29,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
-* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by cost management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with cost management that the payload was processed. After Ingress accepts the uploaded payload, it is deleted from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
+* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by Cost Management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with Cost Management that the payload was processed. After Ingress accepts the uploaded payload, it is deleted from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
 
 **Note** The following limitations are specific to operators configured to run in a restricted network:
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is full. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
@@ -221,7 +221,7 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   ```
 
 ## Create an Integration
-In a restricted network, the `koku-metrics-operator` cannot automatically create an integration. This process must be done manually. In the console.redhat.com platform, open the [Integrations menu](https://console.redhat.com/settings/integrations/) to begin adding an OpenShift integration to cost management:
+In a restricted network, the `koku-metrics-operator` cannot automatically create an integration. This process must be done manually. In the console.redhat.com platform, open the [Integrations menu](https://console.redhat.com/settings/integrations/) to begin adding an OpenShift integration to Cost Management:
 
 Prerequisites:
 * The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
