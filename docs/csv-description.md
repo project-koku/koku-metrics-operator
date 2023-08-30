@@ -221,19 +221,19 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   ```
 
 ## Create an Integration
-In a restricted network, the `koku-metrics-operator` cannot automatically create an integration. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift integration to cost management:
+In a restricted network, the `koku-metrics-operator` cannot automatically create an integration. This process must be done manually. In the console.redhat.com platform, open the [Integrations menu](https://console.redhat.com/settings/integrations/) to begin adding an OpenShift integration to cost management:
 
 Prerequisites:
 * The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
 
 Creating an integration:
-1. Navigate to the Sources menu
-2. Select the `Red Hat sources` tab
+1. Navigate to the Integrations menu
+2. Select the `Red Hat` tab
 3. Create a new `Red Hat Openshift Container Platform` integration:
     * give the integration a unique name
     * add the Cost Management application
     * add the cluster identifier
-4. In the Sources wizard, review the details and click `Finish` to create the integration.
+4. In the Integration wizard, review the details and click `Finish` to create the integration.
 
 ## Upload the reports to cost managment
 Uploading reports to cost managment is done through curl:
