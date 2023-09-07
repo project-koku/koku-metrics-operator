@@ -14,10 +14,12 @@ var (
 		"cost:node_capacity_cpu_cores":       "kube_node_status_capacity{resource='cpu'} * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info)",
 		"cost:node_capacity_memory_bytes":    "kube_node_status_capacity{resource='memory'} * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info)",
 
-		"cost:persistentvolume_pod_info":            "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) max by(persistentvolumeclaim, namespace) (kube_persistentvolumeclaim_info{volumename != ''})",
-		"cost:persistentvolumeclaim_capacity_bytes": "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(persistentvolumeclaim, namespace) (kube_persistentvolumeclaim_info{volumename != ''})",
-		"cost:persistentvolumeclaim_request_bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(persistentvolumeclaim, namespace) (kube_persistentvolumeclaim_info{volumename != ''})",
-		"cost:persistentvolumeclaim_usage_bytes":    "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(persistentvolumeclaim, namespace) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolume_pod_info":            "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolumeclaim_capacity_bytes": "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolumeclaim_request_bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolumeclaim_usage_bytes":    "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolume_labels":              "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass) max by(namespace, persistentvolume, storageclass) (kube_persistentvolume_info)",
+		"cost:persistentvolumeclaim_labels":         "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
 
 		"cost:pod_limit_cpu_cores":      "sum by (pod, namespace, node) (kube_pod_container_resource_limits{pod!='', namespace!='', node!='', resource='cpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_request_cpu_cores":    "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='cpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
@@ -150,14 +152,14 @@ var (
 		},
 		query{
 			Name:           "persistentvolume-labels",
-			QueryString:    "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass) max by(persistentvolume, namespace) (kube_persistentvolume_info)",
+			QueryString:    QueryMap["cost:persistentvolume_labels"],
 			MetricKey:      staticFields{"storageclass": "storageclass", "persistentvolume": "persistentvolume"},
 			MetricKeyRegex: regexFields{"persistentvolume_labels": "label_*"},
 			RowKey:         []model.LabelName{"persistentvolume"},
 		},
 		query{
 			Name:           "persistentvolumeclaim-labels",
-			QueryString:    "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) max by(persistentvolumeclaim, namespace) (kube_persistentvolumeclaim_info{volumename != ''})",
+			QueryString:    QueryMap["cost:persistentvolumeclaim_labels"],
 			MetricKey:      staticFields{"namespace": "namespace", "persistentvolumeclaim": "persistentvolumeclaim"},
 			MetricKeyRegex: regexFields{"persistentvolumeclaim_labels": "label_"},
 			RowKey:         []model.LabelName{"volumename"},
