@@ -1,10 +1,11 @@
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.2
   creationTimestamp: null
+  labels:
+    app: koku-metrics-operator
   name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
 spec:
   group: koku-metrics-cfg.openshift.io
@@ -963,3 +964,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null
