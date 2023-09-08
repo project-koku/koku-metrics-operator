@@ -72,7 +72,7 @@ var (
 	ErrNoReports = errors.New("reports not found")
 
 	// Set boolean on whether community or certified
-	isCertified bool = false
+	isCertified bool = true
 
 	log = logr.Log.WithName("packaging")
 )
