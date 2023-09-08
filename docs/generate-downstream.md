@@ -1,26 +1,14 @@
-1. open PR to merge `main` into `downstream-base` and update vendored packages (example [PR](https://github.com/project-koku/koku-metrics-operator/pull/182)):
-```
-git checkout downstream-base
-git pull -r
-git checkout update-downstream-base
-git rebase main
-go mod vendor
-git add vendor/
-git commit -m 'revendor packages'
-git push
-```
-2. have the above PR reviewed and **REBASE** into the `downstream-base`
-3. branch `downstream-base` for the target downstream branch and push:
-```
-git checkout downstream-base
-git checkout -b downstream-vX.Y.X (be sure to substitute the correct version for x.y.z, e.g. 2.0.0)
-git push
-```
-4. again, using the newly updated `downstream-base`, make a new branch, and run the `make downstream` command:
+1. Create the `downstream-vX.Y.Z` branch based off main:
 ```
 git fetch origin
-git switch --no-track -c new-downstream-vX.Y.X origin/downstream-base
+git switch --no-track -c downstream-vX.Y.Z origin/main
+git push downstream-vX.Y.Z
+```
+
+2. Branch `downstream-vX.Y.Z` so we can make the updates for the downstream code:
+```
+git checkout -b make-downstream-vX.Y.X (be sure to substitute the correct version for x.y.z, e.g. 2.0.0)
 make downstream
 git add/commit/push
 ```
-This will update all the necessary pieces of code. Commit these and open a new PR against the `downtream-vX.Y.Z` branch.
+3. Open PR against `downstream-vX.Y.Z` to merge the downstream code changes.
