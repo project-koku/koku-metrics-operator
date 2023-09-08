@@ -1,7 +1,7 @@
-apiVersion: koku-metrics-cfg.openshift.io/v1beta1
-kind: KokuMetricsConfig
+apiVersion: costmanagement-metrics-cfg.openshift.io/v1beta1
+kind: CostManagementMetricsConfig
 metadata:
-  name: kokumetricscfg-sample-air-gapped
+  name: costmanagementmetricscfg-sample-air-gapped
 spec:
   authentication: {}
   packaging:
