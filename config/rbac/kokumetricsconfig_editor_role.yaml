@@ -1,13 +1,13 @@
-# permissions for end users to edit kokumetricsconfigs.
+# permissions for end users to edit costmanagementmetricsconfigs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kokumetricsconfig-editor-role
+  name: costmanagementmetricsconfig-editor-role
 rules:
 - apiGroups:
-  - koku-metrics-cfg.openshift.io
+  - costmanagement-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs
+  - costmanagementmetricsconfigs
   verbs:
   - create
   - delete
@@ -17,8 +17,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - koku-metrics-cfg.openshift.io
+  - costmanagement-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs/status
+  - costmanagementmetricsconfigs/status
   verbs:
   - get
