@@ -279,7 +279,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		mockpconn *mocks.MockPrometheusConnection
 
 		testConfigMap *corev1.ConfigMap
-		instCopy      *metricscfgv1beta1.KokuMetricsConfig
+		instCopy      *metricscfgv1beta1.MetricsConfig
 		testPVC       *corev1.PersistentVolumeClaim
 		checkPVC      bool = true
 	)

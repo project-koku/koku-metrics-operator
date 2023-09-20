@@ -1,6 +1,6 @@
 # Current Operator version
 PREVIOUS_VERSION ?= 2.0.0
-VERSION ?= 2.0.1
+VERSION ?= 3.0.0
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -321,3 +321,26 @@ catalog-build: opm
 .PHONY: catalog-push
 catalog-push: ## Push the catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+
+#### Updates code for downstream release
+REMOVE_FILES = koku-metrics-operator/
+UPSTREAM_LOWERCASE = koku
+UPSTREAM_UPPERCASE = Koku
+DOWNSTREAM_LOWERCASE = costmanagement
+DOWNSTREAM_UPPERCASE = CostManagement
+downstream:
+	go mod vendor
+	rm -rf $(REMOVE_FILES)
+	# sed replace everything but the Makefile
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# fix the cert
+	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
+	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' packaging/packaging.go
+	# clean up the other files
+	- git clean -fx
+	# mv the sample to the correctly named file
+	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	$(MAKE) generate
+	$(MAKE) manifests
