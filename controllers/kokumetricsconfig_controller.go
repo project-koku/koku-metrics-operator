@@ -19,7 +19,7 @@ import (
 	gologr "github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -89,6 +89,15 @@ type serializedAuthMap struct {
 }
 type serializedAuth struct {
 	Auth string `json:"auth"`
+}
+
+type TokenResponse struct {
+	AccessToken      string `json:"access_token"`
+	ExpiresIn        int    `json:"expires_in"`
+	RefreshExpiresIn int    `json:"refresh_expires_in"`
+	TokenType        string `json:"token_type"`
+	NotBeforePolicy  int    `json:"not_before_policy"`
+	Scope            string `json:"scope"`
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
@@ -205,9 +214,9 @@ func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthCon
 	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
 		switch {
-		case errors.IsNotFound(err):
+		case k8serrors.IsNotFound(err):
 			log.Error(err, "pull-secret does not exist")
-		case errors.IsForbidden(err):
+		case k8serrors.IsForbidden(err):
 			log.Error(err, "operator does not have permission to check pull-secret")
 		default:
 			log.Error(err, "could not check pull-secret")
@@ -263,9 +272,9 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
 		switch {
-		case errors.IsNotFound(err):
+		case k8serrors.IsNotFound(err):
 			log.Error(err, "secret does not exist")
-		case errors.IsForbidden(err):
+		case k8serrors.IsForbidden(err):
 			log.Error(err, "operator does not have permission to check secret")
 		default:
 			log.Error(err, "could not check secret")
@@ -288,6 +297,55 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 
 	authConfig.BasicAuthUser = keys[authSecretUserKey]
 	authConfig.BasicAuthPassword = keys[authSecretPasswordKey]
+
+	return nil
+}
+
+// GetServiceAccountSecret Obtain the client id and client secret from the service account data provided in the current namespace
+func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
+	ctx := context.Background()
+	log := log.WithName("GetServiceAccountSecret")
+
+	log.Info("Secret namespace", "namespace", reqNamespace.Namespace)
+
+	// Fetching the Secret object
+	secret := &corev1.Secret{}
+	secretName := cr.Spec.Authentication.AuthenticationSecretName
+	namespace := types.NamespacedName{
+		Namespace: reqNamespace.Namespace,
+		Name:      secretName}
+	err := r.Get(ctx, namespace, secret)
+	if err != nil {
+		switch {
+		case k8serrors.IsNotFound(err):
+			log.Error(err, "Service account secret does not exist")
+		case k8serrors.IsForbidden(err):
+			log.Error(err, "Operator does not have permission to check service account secret")
+		default:
+			log.Error(err, "Could not check service account secret")
+		}
+		return err
+	}
+
+	// Extracting data from the Secret
+	keys := make(map[string]string)
+	for k, v := range secret.Data {
+		keys[strings.ToLower(k)] = string(v)
+	}
+
+	// Defining the required keys
+	requiredKeys := []string{"clientid", "clientsecret"}
+	for _, k := range requiredKeys {
+		if len(keys[k]) <= 0 {
+			msg := fmt.Sprintf("Service account secret not found with expected %s data", k)
+			log.Info(msg)
+			return fmt.Errorf(msg)
+		}
+	}
+
+	// Populating the authConfig object
+	authConfig.ServiceAccountData.ClientID = keys["clientid"]
+	authConfig.ServiceAccountData.ClientSecret = keys["clientsecret"]
 
 	return nil
 }
@@ -332,6 +390,18 @@ func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConf
 		err := GetPullSecretToken(r, authConfig)
 		if err != nil {
 			log.Error(nil, "failed to obtain cluster authentication token")
+			cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+			cr.Status.Authentication.AuthErrorMessage = err.Error()
+		}
+		return err
+	} else if cr.Status.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
+		cr.Status.Authentication.ValidBasicAuth = nil
+		cr.Status.Authentication.AuthErrorMessage = ""
+		cr.Status.Authentication.LastVerificationTime = nil
+		// Get client ID and client secret from service account secret
+		err := GetServiceAccountSecret(r, cr, authConfig, reqNamespace)
+		if err != nil {
+			log.Error(nil, "failed to obtain service account secret credentials")
 			cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 			cr.Status.Authentication.AuthErrorMessage = err.Error()
 		}
@@ -575,6 +645,9 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
+	r.overrideSecretPath = true
+
 	os.Setenv("TZ", "UTC")
 
 	// fetch the MetricsConfig instance

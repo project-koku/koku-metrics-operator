@@ -50,18 +50,27 @@ spec:
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
+                  token_url:
+                    default: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+                    description: FOR DEVELOPMENT ONLY. TokenURL is a filed of KokuMetricsConfig
+                      to represent the endpoint used to obtain the service account
+                      token The default is https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+                    type: string
                   type:
                     default: token
                     description: 'AuthType is a field of KokuMetricsConfig to represent
                       the authentication type to be used basic or token. Valid values
                       are: - "basic" : Enables authentication using user and password
-                      from authentication secret. - "token" (default): Uses cluster
-                      token for authentication.'
+                      from authentication secret. - "service_account" : Enables authentication
+                      using client-id and client-secret from the authentication secret.
+                      - "token" (default): Uses cluster token for authentication.'
                     enum:
                     - token
                     - basic
+                    - service_account
                     type: string
                 required:
+                - token_url
                 - type
                 type: object
               clusterID:
@@ -477,17 +486,24 @@ spec:
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
+                  token_url:
+                    description: TokenURL is a filed of KokuMetricsConfig to represent
+                      the url used to generate a service account token
+                    type: string
                   type:
                     description: AuthType is a field of KokuMetricsConfig to represent
                       the authentication type to be used basic or token.
                     enum:
                     - token
                     - basic
+                    - service_account
                     type: string
                   valid_basic_auth:
                     description: ValidBasicAuth is a field of KokuMetricsConfig to
                       represent if the given basic auth credentials are valid.
                     type: boolean
+                required:
+                - token_url
                 type: object
               clusterID:
                 description: ClusterID is a field of KokuMetricsConfig to represent

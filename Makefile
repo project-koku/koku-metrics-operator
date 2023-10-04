@@ -74,13 +74,15 @@ help:
 	@echo "  run                                run the operator locally outside of the cluster"
 	@echo "  deploy-cr                          copy and configure the sample CR and deploy it. Will also create auth secret depending on parameters"
 	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
-	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
-	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      USER=<console.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
+	@echo "      PASS=<console.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
 	@echo "  deploy-local-cr                    copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
-	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
-	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
-	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      AUTH=<basic/token/service_account>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
+	@echo "      USER=<console.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
+	@echo "      PASS=<console.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
+	@echo "      CLIENT_ID=<console.rh.com username>          @param - Optional. Must specify CLIENT_ID if you choose service_account auth. Default is token."
+	@echo "      CLIENT_SECRET=<console.rh.com username>      @param - Optional. Must specify CLIENT_SECRET if you choose service_account auth. Default is token."
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
 	@echo "--- Testing Commands ---"
 	@echo "  test                                run unit tests"
@@ -136,6 +138,22 @@ setup-auth:
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),console.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),console.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
+# replaces the client id and client secret with your base64 encoded versions
+setup-sa-auth:
+	@echo "Setting up service account auth..."
+	# @echo "Using CLIENT_ID: $(or $(CLIENT_ID),default-client-id)"
+	# @echo "Using CLIENT_SECRET: $(or $(CLIENT_SECRET),default-client-secret)"
+	@cp testing/sa-auth-secret-template.yaml testing/authentication_secret.yaml
+	@sed -i "" 's/NWYwZjViYWMtNmQwYS00Y2NjLTkxNWUtYTBhZmVkYTUwZGFj/$(shell printf "$(or $(CLIENT_ID),default-client-id)" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/dExaZXZzQktUWVdFR3JyZFY5b3VxeHFGdnNWN09zN1AK/$(shell printf "$(or $(CLIENT_SECRET),default-client-secret)" | base64)/g' testing/authentication_secret.yaml
+
+# Add service_account authentication type spec to local
+add-sa-auth:
+	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    type: service_account'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+
 add-prom-route:
 	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
@@ -180,6 +198,10 @@ deploy-local-cr:
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else ifeq ($(AUTH), service_account)
+	$(MAKE) setup-sa-auth
+	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
