@@ -52,7 +52,7 @@ spec:
                     type: string
                   token_url:
                     default: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-                    description: FOR DEVELOPMENT ONLY. TokenURL is a filed of KokuMetricsConfig
+                    description: FOR DEVELOPMENT ONLY. TokenURL is a field of KokuMetricsConfig
                       to represent the endpoint used to obtain the service account
                       token The default is https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
                     type: string
@@ -63,7 +63,10 @@ spec:
                       are: - "basic" : Enables authentication using user and password
                       from authentication secret. - "service_account" : Enables authentication
                       using client-id and client-secret from the authentication secret.
-                      - "token" (default): Uses cluster token for authentication.'
+                      - "service_account" : Uses client-id and client-secret from
+                      the authentication secret to get an access_token from the token_url
+                      for authentication. - "token" (default): Uses cluster token
+                      for authentication.'
                     enum:
                     - token
                     - basic

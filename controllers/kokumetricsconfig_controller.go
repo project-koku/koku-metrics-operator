@@ -6,10 +6,13 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -306,7 +309,7 @@ func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.M
 	ctx := context.Background()
 	log := log.WithName("GetServiceAccountSecret")
 
-	log.Info("Secret namespace", "namespace", reqNamespace.Namespace)
+	log.Info("secret namespace", "namespace", reqNamespace.Namespace)
 
 	// Fetching the Secret object
 	secret := &corev1.Secret{}
@@ -318,11 +321,11 @@ func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.M
 	if err != nil {
 		switch {
 		case k8serrors.IsNotFound(err):
-			log.Error(err, "Service account secret does not exist")
+			log.Error(err, "service account secret does not exist")
 		case k8serrors.IsForbidden(err):
-			log.Error(err, "Operator does not have permission to check service account secret")
+			log.Error(err, "operator does not have permission to check service account secret")
 		default:
-			log.Error(err, "Could not check service account secret")
+			log.Error(err, "could not check service account secret")
 		}
 		return err
 	}
@@ -337,15 +340,62 @@ func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.M
 	requiredKeys := []string{"clientid", "clientsecret"}
 	for _, k := range requiredKeys {
 		if len(keys[k]) <= 0 {
-			msg := fmt.Sprintf("Service account secret not found with expected %s data", k)
+			msg := fmt.Sprintf("service account secret not found with expected %s data", k)
 			log.Info(msg)
 			return fmt.Errorf(msg)
 		}
 	}
 
 	// Populating the authConfig object
-	authConfig.ServiceAccountData.ClientID = keys["clientid"]
-	authConfig.ServiceAccountData.ClientSecret = keys["clientsecret"]
+	authConfig.ServiceAccountData.ClientID = strings.TrimSpace(keys["clientid"])
+	authConfig.ServiceAccountData.ClientSecret = strings.TrimSpace(keys["clientsecret"])
+
+	return nil
+}
+
+// GetServiceAccountToken Acquires the bearer token using the service account credentials
+func GetServiceAccountToken(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig) error {
+	log := log.WithName("GetServiceAccountToken")
+
+	// Prepare the POST data
+	data := url.Values{}
+	data.Set("client_id", authConfig.ServiceAccountData.ClientID)
+	data.Set("client_secret", authConfig.ServiceAccountData.ClientSecret)
+	data.Set("grant_type", authConfig.ServiceAccountData.GrantType)
+
+	// Making the HTTP POST request
+	req, err := crhchttp.SetupRequest(authConfig, "application/x-www-form-urlencoded", "POST", cr.Spec.Authentication.TokenURL, bytes.NewBufferString(data.Encode()))
+	if err != nil {
+		log.Error(err, "error constructing request for for access_token")
+		return nil
+	}
+
+	client := crhchttp.GetClient(authConfig)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error(err, "error making HTTP request to acquire token")
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	// Decoding the received JSON response
+	var tokenResponse TokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		log.Error(err, "error decoding token response")
+		return err
+	}
+
+	// Extract the access_token
+	if tokenResponse.AccessToken == "" {
+		errorMsg := "no access token in the response"
+		log.Error(errors.New(errorMsg), errorMsg)
+		return errors.New(errorMsg)
+	}
+
+	// Log successful receipt and assignment of the access token
+	log.Info("access token successfully received and set for subsequet requests")
+	authConfig.BearerTokenString = tokenResponse.AccessToken
 
 	return nil
 }
@@ -432,6 +482,15 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.Token {
 		// no need to validate token auth
 		return nil
+	}
+
+	// Service  Account authentication check
+	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
+		err := GetServiceAccountToken(r, cr, handler.Auth)
+		if err != nil {
+			log.Error(err, "Failed to obtain service account token")
+			return err
+		}
 	}
 
 	if previousValidation == nil {
