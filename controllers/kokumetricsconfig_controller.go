@@ -488,7 +488,7 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
 		err := GetServiceAccountToken(r, cr, handler.Auth)
 		if err != nil {
-			log.Error(err, "Failed to obtain service account token")
+			log.Error(err, "failed to obtain service account token")
 			return err
 		}
 	}
@@ -705,6 +705,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
+	// TODO: Remove before merge
 	r.overrideSecretPath = true
 
 	os.Setenv("TZ", "UTC")
