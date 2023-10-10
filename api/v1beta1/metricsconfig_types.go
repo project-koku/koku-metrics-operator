@@ -203,15 +203,15 @@ type CloudDotRedHatSourceSpec struct {
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// name is the desired name of the source to create on console.redhat.com.
+	// name is the desired name of the integration to create on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// create_source toggles the creation of the source on console.redhat.com.
+	// create_source toggles the creation of the integration on console.redhat.com.
 	// +kubebuilder:default=false
 	CreateSource *bool `json:"create_source"`
 
-	// check_cycle is the number of minutes between each source status check on console.redhat.com.
+	// check_cycle is the number of minutes between each integration status check on console.redhat.com.
 	// The default is 1440 min (24 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=1440
@@ -250,7 +250,7 @@ type KokuMetricsConfigSpec struct {
 	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
 	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
-	// source represents the desired source on console.redhat.com.
+	// source represents the desired integration on console.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
 	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
@@ -355,28 +355,28 @@ type CloudDotRedHatSourceStatus struct {
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// name represents the name of the source that the operator attempted to create on console.redhat.com.
+	// name represents the name of the integration that the operator attempted to create on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// source_defined represents whether the defined source name exists on console.redhat.com.
+	// source_defined represents whether the defined integration name exists on console.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
-	// create_source represents the toggle used during the creation of the source on console.redhat.com.
-	// A source will not be created if upload_toggle is `false`.
+	// create_source represents the toggle used during the creation of the integration on console.redhat.com.
+	// An Integration will not be created if upload_toggle is `false`.
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
 
-	// error represents any errors encountered when creating the source.
+	// error represents any errors encountered when creating the integration.
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
-	// last_check_time is the time that the last source status check was attempted.
+	// last_check_time is the time that the last integration status check was attempted.
 	// +nullable
 	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
-	// check_cycle is the number of minutes between each source status check on console.redhat.com.
+	// check_cycle is the number of minutes between each integration status check on console.redhat.com.
 	// The default is 1440 min (24 hours).
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
@@ -488,7 +488,7 @@ type KokuMetricsConfigStatus struct {
 	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
-	// source represents the observed state of the source on console.redhat.com.
+	// source represents the observed state of the integration on console.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 
