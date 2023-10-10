@@ -30,7 +30,3 @@ type ServiceAccountData struct {
 	ClientSecret string `json:"client_secret"`
 	GrantType    string `json:"grant_type"`
 }
-
-type ServiceAccountToken struct {
-	AccessToken string `json:"access_token"`
-}
