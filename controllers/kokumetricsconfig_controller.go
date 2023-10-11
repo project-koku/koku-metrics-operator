@@ -719,7 +719,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	// TODO: Remove before merge
-	r.overrideSecretPath = true
+	// r.overrideSecretPath = true
 
 	os.Setenv("TZ", "UTC")
 
