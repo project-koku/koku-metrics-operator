@@ -330,16 +330,29 @@ func createAuthSecret(ctx context.Context) {
 		authSecretUserKey:     []byte("user1"),
 		authSecretPasswordKey: []byte("password1"),
 	}
-	createSecret(ctx, authSecretName, namespace, secretData)
+	createSecret(ctx, basicAuthSecretName, namespace, secretData)
 }
 
 func deleteAuthSecret(ctx context.Context) {
-	deleteSecret(ctx, authSecretName, namespace)
+	deleteSecret(ctx, basicAuthSecretName, namespace)
+}
+
+func createServiceAccountSecret(ctx context.Context) {
+	secretData := map[string][]byte{
+		"clientId":     []byte("mockClientID"),
+		"clientSecret": []byte("mockclientSecret"),
+	}
+
+	createSecret(ctx, serviceAccountSecretName, namespace, secretData)
+}
+
+func deleteServiceAccountSecret(ctx context.Context) {
+	deleteSecret(ctx, serviceAccountSecretName, namespace)
 }
 
 func replaceAuthSecretData(ctx context.Context, data map[string][]byte) {
 	key := types.NamespacedName{
-		Name:      authSecretName,
+		Name:      basicAuthSecretName,
 		Namespace: namespace,
 	}
 	secret := &corev1.Secret{}
@@ -378,12 +391,14 @@ func setupRequired(ctx context.Context) {
 	createClusterVersion(ctx)
 	createPullSecret(ctx, fakeDockerConfig())
 	createAuthSecret(ctx)
+	createServiceAccountSecret(ctx)
 }
 
 func tearDownRequired(ctx context.Context) {
 	deleteClusterVersion(ctx)
 	deletePullSecret(ctx)
 	deleteAuthSecret(ctx)
+	deleteServiceAccountSecret(ctx)
 }
 
 func clusterPrep(ctx context.Context) {
