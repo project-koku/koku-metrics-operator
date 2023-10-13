@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -82,7 +81,7 @@ var (
 
 func getFiles(dir string, t *testing.T) map[string]*os.File {
 	fileMap := make(map[string]*os.File)
-	filelist, err := ioutil.ReadDir(filepath.Join("test_files", dir))
+	filelist, err := os.ReadDir(filepath.Join("test_files", dir))
 	if err != nil {
 		t.Fatalf("Failed to read %s directory", dir)
 	}
@@ -360,7 +359,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil && err != ErrNoData {
 		t.Errorf("Failed to generate reports: %v", err)
 	}
-	filelist, err := ioutil.ReadDir(filepath.Join("test_files", "test_reports"))
+	filelist, err := os.ReadDir(filepath.Join("test_files", "test_reports"))
 	if err != nil {
 		t.Fatalf("Failed to read expected reports dir")
 	}
