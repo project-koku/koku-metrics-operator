@@ -227,13 +227,13 @@ Prerequisites:
 * The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
 
 Creating an integration:
-1. Navigate to the Sources menu
+1. Navigate to the Integrations menu
 2. Select the `Red Hat` tab
 3. Create a new `Red Hat Openshift Container Platform` integration:
     * give the integration a unique name
     * add the Cost Management application
     * add the cluster identifier
-4. In the Integration wizard, review the details and click `Finish` to create the integration.
+4. In the Source wizard, review the details and click `Finish` to create the source.
 
 ## Upload the reports to cost managment
 Uploading reports to cost managment is done through curl:
