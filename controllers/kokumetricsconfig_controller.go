@@ -6,15 +6,10 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"math/rand"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -94,15 +89,6 @@ type serializedAuthMap struct {
 }
 type serializedAuth struct {
 	Auth string `json:"auth"`
-}
-
-type ServiceAccountToken struct {
-	AccessToken      string `json:"access_token"`
-	ExpiresIn        int    `json:"expires_in"`
-	RefreshExpiresIn int    `json:"refresh_expires_in"`
-	TokenType        string `json:"token_type"`
-	NotBeforePolicy  int    `json:"not_before_policy"`
-	Scope            string `json:"scope"`
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
@@ -356,55 +342,11 @@ func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.M
 	}
 
 	// Populating the authConfig object
-	authConfig.ServiceAccountData.ClientID = strings.TrimSpace(keys["clientid"])
-	authConfig.ServiceAccountData.ClientSecret = strings.TrimSpace(keys["clientsecret"])
-
-	return nil
-}
-
-// GetAccesToken Acquires the bearer token using the service account credentials
-func GetAccesToken(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig) error {
-	log := log.WithName("GetAccesToken")
-
-	// Prepare the POST data
-	data := url.Values{}
-	data.Set("client_id", authConfig.ServiceAccountData.ClientID)
-	data.Set("client_secret", authConfig.ServiceAccountData.ClientSecret)
-	data.Set("grant_type", "client_credentials")
-
-	// Making the HTTP POST request
-	resp, err := http.Post(cr.Spec.Authentication.TokenURL, "application/x-www-form-urlencoded", bytes.NewBufferString(data.Encode()))
-	if err != nil {
-		log.Error(err, "error making HTTP request to acquire token")
-		return err
+	authConfig.ServiceAccountData = crhchttp.ServiceAccountData{
+		ClientID:     strings.TrimSpace(keys["clientid"]),
+		ClientSecret: strings.TrimSpace(keys["clientsecret"]),
+		GrantType:    "client_credentials",
 	}
-
-	defer resp.Body.Close()
-
-	// Read the received body response
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Error(err, "error reading response body")
-		return err
-	}
-
-	var tokenResponse ServiceAccountToken
-
-	// Unmarshal response body
-	if err := json.Unmarshal([]byte(body), &tokenResponse); err != nil {
-		log.Error(err, "error unmashalling data from request")
-	}
-
-	// Check for access_token
-	if tokenResponse.AccessToken == "" {
-		errorMsg := "no access token in the response"
-		log.Error(errors.New(errorMsg), errorMsg)
-		return errors.New(errorMsg)
-	}
-
-	// Log successful receipt and assignment of the access token
-	log.Info("access token successfully received and set for subsequet requests")
-	authConfig.BearerTokenString = tokenResponse.AccessToken
 
 	return nil
 }
@@ -496,7 +438,7 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 
 	// Service  Account authentication check
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
-		err := GetAccesToken(r, cr, handler.Auth)
+		err := handler.Auth.GetAccessToken(cr.Spec.Authentication.TokenURL)
 		if err != nil {
 			log.Error(err, "failed to obtain service account token")
 			errorMsg := fmt.Sprintf("Invalid client credentials provided. Correct the client-id / client-secret in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)

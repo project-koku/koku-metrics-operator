@@ -339,8 +339,8 @@ func deleteAuthSecret(ctx context.Context) {
 
 func createServiceAccountSecret(ctx context.Context) {
 	secretData := map[string][]byte{
-		"clientId":     []byte("mockClientID"),
-		"clientSecret": []byte("mockclientSecret"),
+		"clientid":     []byte("mockClientID"),
+		"clientsecret": []byte("mockclientSecret"),
 	}
 
 	createSecret(ctx, serviceAccountSecretName, namespace, secretData)

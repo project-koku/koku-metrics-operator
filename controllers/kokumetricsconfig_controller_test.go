@@ -57,7 +57,6 @@ var (
 	defaultMaxReports        int64 = 1
 	defaultAPIURL                  = "https://not-the-real-console.redhat.com"
 	testingDir                     = dirconfig.MountPath
-	defaultTOKENURL                = "https://not-the-real-redhat-external/openid-connect/token"
 )
 
 type mockPrometheusConnection struct{}
@@ -571,10 +570,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
 				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 			})
-			// Service Account Auth tests
 			It("should find service account auth creds for good service account auth CRD case", func() {
+				// Create a valid service account secret
 				instCopy.Spec.APIURL = validTS.URL
-				instCopy.Spec.Authentication.TokenURL = defaultTOKENURL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
 				instCopy.Spec.Authentication.AuthenticationSecretName = serviceAccountSecretName
 
@@ -590,10 +588,61 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.ServiceAccount))
 				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(serviceAccountSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
+				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
 				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 			})
-			// Basic Auth tests
+
+			It("should handle missing service account auth secret", func() {
+				deleteServiceAccountSecret(ctx)
+
+				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.ServiceAccount))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(BeEmpty())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(BeEmpty())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(And(ContainSubstring("Secret"), ContainSubstring("not found")))
+			})
+
+			It("should handle missing required fields in service account auth creds", func() {
+
+				// Create secret missing 'clientid' to make it invalid.
+				secretData := map[string][]byte{
+					"clientSecret": []byte("mockClientSecret"),
+				}
+				secretName := "invalid-sa-secret"
+				createSecret(ctx, secretName, namespace, secretData)
+
+				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+				instCopy.Spec.Authentication.AuthenticationSecretName = secretName
+
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.ServiceAccount))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(secretName))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("service account secret not found with expected clientid data"))
+			})
+
 			It("should find basic auth creds for good basic auth CRD case", func() {
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
