@@ -573,6 +573,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			It("should find service account auth creds for good service account auth CRD case", func() {
 				// Create a valid service account secret
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
 				instCopy.Spec.Authentication.AuthenticationSecretName = serviceAccountSecretName
 
@@ -597,6 +598,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				deleteServiceAccountSecret(ctx)
 
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
 
 				createObject(ctx, instCopy)
@@ -625,6 +627,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				createSecret(ctx, secretName, namespace, secretData)
 
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
 				instCopy.Spec.Authentication.AuthenticationSecretName = secretName
 
