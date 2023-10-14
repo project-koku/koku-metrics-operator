@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	neturl "net/url"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -48,22 +49,21 @@ type ServiceAccountToken struct {
 
 const serviceaccount = metricscfgv1beta1.ServiceAccount
 
-func (ac *AuthConfig) GetAccessToken(url string) error {
+func (ac *AuthConfig) GetAccessToken(tokenURL string) error {
 	if ac.Authentication != serviceaccount {
 		return nil
 	}
 
 	log := log.WithName("GetAccessToken")
 
-	// Marshal ServiceAccountData into JSON prior to requesting
-	serviceAccountJSON, err := json.Marshal(ac.ServiceAccountData)
-	if err != nil {
-		log.Error(err, "failed to marshal service account data")
-		return err
-	}
+	// Prepare the POST data
+	data := neturl.Values{}
+	data.Set("client_id", ac.ServiceAccountData.ClientID)
+	data.Set("client_secret", ac.ServiceAccountData.ClientSecret)
+	data.Set("grant_type", ac.ServiceAccountData.GrantType)
 
-	// Make request with marshalled JSON as the POST body
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(serviceAccountJSON))
+	// // Making the HTTP POST request
+	resp, err := http.Post(tokenURL, "application/x-www-form-urlencoded", bytes.NewBufferString(data.Encode()))
 	if err != nil {
 		log.Error(err, "failed to make HTTP request to acquire token")
 	}
