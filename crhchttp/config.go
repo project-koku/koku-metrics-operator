@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	neturl "net/url"
@@ -76,10 +77,15 @@ func (ac *AuthConfig) GetAccessToken(tokenURL string) error {
 		return err
 	}
 
+	// ONLY proceed to unmarshal if the status was 200
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, body)
+	}
+
 	var result ServiceAccountToken
 	err = json.Unmarshal([]byte(body), &result)
 	if err != nil {
-		log.Error(err, "error unmarshaling data from request.")
+		log.Error(err, "error unmarshaling data from request")
 		return err
 	}
 
