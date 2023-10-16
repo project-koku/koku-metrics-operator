@@ -77,12 +77,14 @@ help:
 	@echo "      USER=<console.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
 	@echo "      PASS=<console.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
+	@echo "      CLIENT_ID=<console.rh.com client id>          @param - Optional. Must specify CLIENT_ID if you choose service_account auth. Default is token."
+	@echo "      CLIENT_SECRET=<console.rh.com client secret>      @param - Optional. Must specify CLIENT_SECRET if you choose service_account auth. Default is token."
 	@echo "  deploy-local-cr                    copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
 	@echo "      AUTH=<basic/token/service_account>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
 	@echo "      USER=<console.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
 	@echo "      PASS=<console.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
-	@echo "      CLIENT_ID=<console.rh.com username>          @param - Optional. Must specify CLIENT_ID if you choose service_account auth. Default is token."
-	@echo "      CLIENT_SECRET=<console.rh.com username>      @param - Optional. Must specify CLIENT_SECRET if you choose service_account auth. Default is token."
+	@echo "      CLIENT_ID=<console.rh.com client id>          @param - Optional. Must specify CLIENT_ID if you choose service_account auth. Default is token."
+	@echo "      CLIENT_SECRET=<console.rh.com client secret>      @param - Optional. Must specify CLIENT_SECRET if you choose service_account auth. Default is token."
 	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
 	@echo "--- Testing Commands ---"
 	@echo "  test                                run unit tests"
@@ -182,6 +184,10 @@ deploy-cr:
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else ifeq ($(AUTH), service_account)
+	$(MAKE) setup-sa-auth
+	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
