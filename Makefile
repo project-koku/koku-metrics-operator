@@ -6,7 +6,6 @@
 PREVIOUS_VERSION ?= 2.0.0
 VERSION ?= 3.0.0
 
-
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -29,9 +28,6 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # CRD_OPTIONS ?= "crd:trivialVersions=true"
 CRD_OPTIONS ?= "crd:crdVersions={v1}"
 
-# Use git branch for dev team deployment of pushed branches
-GITBRANCH=$(shell git branch --show-current)
-GITBRANCH_IMG="quay.io/project-koku/koku-metrics-operator:${GITBRANCH}"
 GIT_COMMIT=$(shell git rev-parse HEAD)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
