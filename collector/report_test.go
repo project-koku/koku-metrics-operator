@@ -3,7 +3,6 @@ package collector
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,7 +55,7 @@ func (f *fakeData) writeToFile(w io.Writer, s *strset.Set, b bool) error {
 }
 
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
-	tempFile, err := ioutil.TempFile(dir, "temp-file-")
+	tempFile, err := os.CreateTemp(dir, "temp-file-")
 	if err != nil {
 		t.Fatalf("Failed to create temp file.")
 	}
@@ -67,7 +66,7 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 }
 
 func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
-	tempDir, err := ioutil.TempDir(dir, pattern)
+	tempDir, err := os.MkdirTemp(dir, pattern)
 	if err != nil {
 		t.Fatalf("Failed to create temp folder.")
 	}

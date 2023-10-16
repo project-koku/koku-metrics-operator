@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -121,7 +120,7 @@ func (m *manifestInfo) renderManifest() error {
 	if err != nil {
 		return fmt.Errorf("renderManifest: failed to marshal manifest: %v", err)
 	}
-	if err := ioutil.WriteFile(m.filename, file, 0644); err != nil {
+	if err := os.WriteFile(m.filename, file, 0644); err != nil {
 		return fmt.Errorf("renderManifest: failed to write manifest: %v", err)
 	}
 	return nil
@@ -433,7 +432,7 @@ func (p *FilePackager) moveOrCopyFiles(cr *metricscfgv1beta1.MetricsConfig) ([]o
 	var files []os.FileInfo
 
 	// move all files
-	fileList, err := ioutil.ReadDir(p.DirCfg.Reports.Path)
+	fileList, err := os.ReadDir(p.DirCfg.Reports.Path)
 	if err != nil {
 		return nil, fmt.Errorf("moveOrCopyFiles: could not read reports directory: %v", err)
 	}

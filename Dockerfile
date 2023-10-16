@@ -1,7 +1,10 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.18.9 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10 AS builder
+ARG TARGETOS
+ARG TARGETARCH
 
 USER root
+RUN yum -y update && yum clean all
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -29,7 +32,7 @@ COPY .git .git
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-CGO_ENABLED=0 GOOS=linux GO111MODULE=on \
+CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
 go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
