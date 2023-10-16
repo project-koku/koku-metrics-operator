@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
@@ -218,8 +219,8 @@ var _ = BeforeSuite(func() {
 	flag.Parse()
 
 	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		MetricsBindAddress: metricsAddr,
+		Scheme:  scheme.Scheme,
+		Metrics: metricsserver.Options{BindAddress: metricsAddr},
 	})
 	Expect(err).ToNot(HaveOccurred())
 
