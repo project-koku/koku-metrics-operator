@@ -8,8 +8,8 @@ package collector
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -59,7 +59,7 @@ type PrometheusConfig struct {
 }
 
 func getBearerToken(tokenFile string) (config.Secret, error) {
-	encodedSecret, err := ioutil.ReadFile(tokenFile)
+	encodedSecret, err := os.ReadFile(tokenFile)
 	if err != nil {
 		return "", fmt.Errorf("getBearerToken: failed to get token: %v", err)
 	}
@@ -137,7 +137,7 @@ type PrometheusConnectionTester func(c *PrometheusCollector) error
 func TestPrometheusConnection(c *PrometheusCollector) error {
 	ctx, cancel := context.WithTimeout(context.Background(), pollingCtxTimeout)
 	defer cancel()
-	return wait.PollImmediate(1*time.Second, 15*time.Second, func() (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, 1*time.Second, 15*time.Second, true, func(ctx context.Context) (bool, error) {
 		_, _, err := c.PromConn.Query(ctx, "up", time.Now())
 		if err != nil {
 			return false, err

@@ -8,7 +8,7 @@ package sources
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -77,7 +77,7 @@ func escapeQuery(s string) string {
 }
 
 func getReqBody(t *testing.T, req *http.Request) []byte {
-	bodyBytes, err := ioutil.ReadAll(req.Body)
+	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestGetSourceTypeID(t *testing.T) {
 			name: "successful response with data",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -121,7 +121,7 @@ func TestGetSourceTypeID(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -132,7 +132,7 @@ func TestGetSourceTypeID(t *testing.T) {
 			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -143,7 +143,7 @@ func TestGetSourceTypeID(t *testing.T) {
 			name: "too many count from response",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"},{\"id\":\"2\",\"name\":\"amazon\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"},{\"id\":\"2\",\"name\":\"amazon\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -154,7 +154,7 @@ func TestGetSourceTypeID(t *testing.T) {
 			name: "no count from response",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -197,7 +197,7 @@ func TestGetSources(t *testing.T) {
 			name: "successful response with data",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -309,7 +309,7 @@ func TestCheckSourceExists(t *testing.T) {
 			name: "successful response with data",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
@@ -321,7 +321,7 @@ func TestCheckSourceExists(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			expectedQuery: "https://ci.console.redhat.com/api/sources/v1.0/sources",
@@ -332,7 +332,7 @@ func TestCheckSourceExists(t *testing.T) {
 			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
@@ -350,7 +350,7 @@ func TestCheckSourceExists(t *testing.T) {
 			name: "too many count from response",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"},{\"id\":\"2\",\"name\":\"name2\",\"source_type_id\":\"3\",\"source_ref\":\"67890\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"},{\"id\":\"2\",\"name\":\"name2\",\"source_type_id\":\"3\",\"source_ref\":\"67890\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
@@ -361,7 +361,7 @@ func TestCheckSourceExists(t *testing.T) {
 			name: "no count from response",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr:   nil,
@@ -408,7 +408,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 			name: "successful response with data",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -426,7 +426,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"ArgumentError: Failed to find definition for Name\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -437,7 +437,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"i:\"openshift\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -448,7 +448,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 			name: "too many count from response",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"},{\"id\":\"2\",\"name\":\"amazon\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":2},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"},{\"id\":\"2\",\"name\":\"amazon\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -459,7 +459,7 @@ func TestGetApplicationTypeID(t *testing.T) {
 			name: "no count from response",
 			response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 			},
 			responseErr: nil,
@@ -505,7 +505,7 @@ func TestPostSource(t *testing.T) {
 			name: "successful response with data",
 			response: &http.Response{
 				StatusCode: 201,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -526,7 +526,7 @@ func TestPostSource(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"Invalid parameter - Validation failed: Source type must exist\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"Invalid parameter - Validation failed: Source type must exist\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -538,7 +538,7 @@ func TestPostSource(t *testing.T) {
 			name: "parse error", // response body is bad json
 			response: &http.Response{
 				StatusCode: 201,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -594,7 +594,7 @@ func TestPostApplication(t *testing.T) {
 			name: "successful response with data",
 			response: &http.Response{
 				StatusCode: 201,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -616,7 +616,7 @@ func TestPostApplication(t *testing.T) {
 			name: "400 bad response",
 			response: &http.Response{
 				StatusCode: 400,
-				Body:       ioutil.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"OpenAPIParser::InvalidPattern: #/components/schemas/ID pattern ^\\d+$ does not match value: source.ID\"}]}")), // type is io.ReadCloser,
+				Body:       io.NopCloser(strings.NewReader("{\"errors\":[{\"status\":\"400\",\"detail\":\"OpenAPIParser::InvalidPattern: #/components/schemas/ID pattern ^\\d+$ does not match value: source.ID\"}]}")), // type is io.ReadCloser,
 				Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 			},
 			responseErr:  nil,
@@ -678,7 +678,7 @@ func TestSourceCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -698,7 +698,7 @@ func TestSourceCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -706,7 +706,7 @@ func TestSourceCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 201,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 					},
 					err: nil,
@@ -726,7 +726,7 @@ func TestSourceCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -734,7 +734,7 @@ func TestSourceCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 201,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 					},
 					err: nil,
@@ -742,7 +742,7 @@ func TestSourceCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 201,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 					},
 					err: nil,
@@ -798,7 +798,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -818,7 +818,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -826,7 +826,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -842,7 +842,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -850,7 +850,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -866,7 +866,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -874,7 +874,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -894,7 +894,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -902,7 +902,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -910,7 +910,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -926,7 +926,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -934,7 +934,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -942,7 +942,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -962,7 +962,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"400\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"400\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -970,7 +970,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -978,7 +978,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -986,7 +986,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1002,7 +1002,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1010,7 +1010,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1018,7 +1018,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1026,7 +1026,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"name\",\"source_type_id\":\"1\",\"source_ref\":\"12345\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1043,7 +1043,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1051,7 +1051,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1059,7 +1059,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1067,7 +1067,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1087,7 +1087,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1095,7 +1095,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1103,7 +1103,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1111,7 +1111,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":0},\"data\":[]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1119,7 +1119,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 200,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"meta\":{\"count\":1},\"data\":[{\"id\":\"1\",\"name\":\"openshift\"}]}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "GET", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1127,7 +1127,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 201,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"id\":\"11\",\"name\":\"testSource01\",\"source_ref\":\"12345\",\"source_type_id\":\"1\",\"uid\":\"abcdef\"}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 					},
 					err: nil,
@@ -1135,7 +1135,7 @@ func TestSourceGetOrCreate(t *testing.T) {
 				{
 					res: &http.Response{
 						StatusCode: 201,
-						Body:       ioutil.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
+						Body:       io.NopCloser(strings.NewReader("{\"created_at\":\"2020-11-20T21:37:27Z\",\"id\":\"18292\"}")), // type is io.ReadCloser,
 						Request:    &http.Request{Method: "POST", URL: &url.URL{}},
 					},
 					err: nil,
