@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/collector"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/internal/collector"
+	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
 )
 
 var (

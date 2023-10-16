@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/project-koku/koku-metrics-operator/strset"
+	"github.com/project-koku/koku-metrics-operator/internal/strset"
 )
 
 var (
-	ctxTimeout = errors.New("context timeout")
-	errTest    = errors.New("test error")
+	errCtxTimeout = errors.New("context timeout")
+	errTest       = errors.New("test error")
 )
 
 type badReader struct{}

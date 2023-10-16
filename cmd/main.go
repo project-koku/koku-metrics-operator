@@ -19,11 +19,12 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/controllers"
+	"github.com/project-koku/koku-metrics-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -48,11 +49,12 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.Parse()
 
 	opts := zap.Options{
 		Development: true,
@@ -75,8 +77,10 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:           scheme,
-		Metrics:          metricsserver.Options{BindAddress: metricsAddr},
+		Scheme:                 scheme,
+		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
+		HealthProbeBindAddress: probeAddr,
+
 		LeaderElection:   enableLeaderElection,
 		LeaderElectionID: "91c624a5.openshift.io",
 		Cache:            cache.Options{DefaultNamespaces: map[string]cache.Config{watchNamespace: {}}},
@@ -86,13 +90,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	clientset, err := controllers.GetClientset()
+	clientset, err := controller.GetClientset()
 	if err != nil {
 		setupLog.Error(err, "unable to get clientset")
 		os.Exit(1)
 	}
 
-	if err = (&controllers.MetricsConfigReconciler{
+	if err = (&controller.MetricsConfigReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		Clientset: clientset,
@@ -104,6 +108,15 @@ func main() {
 	}
 
 	// +kubebuilder:scaffold:builder
+
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

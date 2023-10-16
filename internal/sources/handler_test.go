@@ -19,8 +19,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/crhchttp"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-koku/koku-metrics-operator/internal/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/internal/testutils"
 )
 
 var (

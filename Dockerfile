@@ -15,17 +15,9 @@ COPY go.sum go.sum
 RUN go mod download
 
 # Copy the go source
-COPY main.go main.go
+COPY cmd/main.go cmd/main.go
 COPY api/ api/
-COPY clusterversion/ clusterversion/
-COPY collector/ collector/
-COPY controllers/ controllers/
-COPY crhchttp/ crhchttp/
-COPY dirconfig/ dirconfig/
-COPY packaging/ packaging/
-COPY sources/ sources/
-COPY storage/ storage/
-COPY strset/ strset/
+COPY internal/ internal/
 
 # Copy git to inject the commit during build
 COPY .git .git
