@@ -1,9 +1,10 @@
 # Build the manager binary
-FROM golang:1.20 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
 USER root
+RUN yum -y update && yum clean all
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
