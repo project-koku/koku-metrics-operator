@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 2.0.0
-VERSION ?= 3.0.0
+PREVIOUS_VERSION ?= 3.0.0
+VERSION ?= 3.0.1
 
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
@@ -288,7 +288,7 @@ UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
-downstream:
+downstream: ## Generate the code changes necessary for the downstream image.
 	go mod vendor
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
@@ -303,6 +303,10 @@ downstream:
 	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	$(MAKE) generate
 	$(MAKE) manifests
+
+.PHONY: downstream-vendor
+downstream-vendor: ## Run `go mod vendor`.
+	go mod vendor
 
 ##@ Build Dependencies
 
