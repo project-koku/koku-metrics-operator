@@ -48,9 +48,9 @@ spec:
             memory: 20Mi
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
-        - mountPath: /tmp/koku-metrics-operator-reports
-          name: koku-metrics-operator-reports
+        - mountPath: /tmp/costmanagement-metrics-operator-reports
+          name: costmanagement-metrics-operator-reports
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
-        - name: koku-metrics-operator-reports
+        - name: costmanagement-metrics-operator-reports

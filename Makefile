@@ -288,8 +288,7 @@ UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
-downstream:
-	go mod vendor
+downstream: ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
@@ -303,6 +302,10 @@ downstream:
 	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	$(MAKE) generate
 	$(MAKE) manifests
+
+.PHONY: downstream-vendor
+downstream-vendor: ## Run `go mod vendor`.
+	go mod vendor
 
 ##@ Build Dependencies
 

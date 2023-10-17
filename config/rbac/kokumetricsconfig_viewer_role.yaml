@@ -1,20 +1,20 @@
-# permissions for end users to view kokumetricsconfigs.
+# permissions for end users to view costmanagementmetricsconfigs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kokumetricscfg-viewer-role
+  name: costmanagementmetricscfg-viewer-role
 rules:
 - apiGroups:
-  - koku-metrics-cfg.openshift.io
+  - costmanagement-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs
+  - costmanagementmetricsconfigs
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - koku-metrics-cfg.openshift.io
+  - costmanagement-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs/status
+  - costmanagementmetricsconfigs/status
   verbs:
   - get
