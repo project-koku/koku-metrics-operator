@@ -289,7 +289,6 @@ DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
 downstream: ## Generate the code changes necessary for the downstream image.
-	go mod vendor
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
