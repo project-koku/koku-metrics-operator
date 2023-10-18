@@ -69,10 +69,19 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(err.Error()).To(ContainSubstring("error unmarshaling data from request"))
 	})
 
-	It("should handle empty access token returned", func() {
+	It("should handle empty access token in server response", func() {
 		err := authConfig.GetAccessToken(badMockTS.URL + "/no-token")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("token response did not contain an access token"))
+	})
+
+	It("Should handle return nil when authentication is not service account", func() {
+		notValidAuth := &AuthConfig{
+			Authentication: "not-serviceaccount",
+		}
+		err := notValidAuth.GetAccessToken(validMockTS.URL)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(authConfig.BearerTokenString).To(BeEmpty())
 	})
 
 	Context("Negative Tests", func() {

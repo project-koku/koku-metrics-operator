@@ -80,8 +80,6 @@ func (ac *AuthConfig) GetAccessToken(tokenURL string) error {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
-	fmt.Printf("DEBUG: Response body: %s\n", string(body))
-
 	var result ServiceAccountToken
 	err = json.Unmarshal([]byte(body), &result)
 	if err != nil {

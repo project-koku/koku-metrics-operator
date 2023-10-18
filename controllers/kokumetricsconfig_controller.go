@@ -112,13 +112,6 @@ func StringReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.Metrics
 // ReflectSpec Determine if the Status item reflects the Spec item if not empty, otherwise set a default value if applicable.
 func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) {
 
-	if cr.Spec.Authentication.TokenURL == string(metricscfgv1beta1.DefaultTOKENURL) {
-		defaultTOKENURL := metricscfgv1beta1.DefaultTOKENURL
-		StringReflectSpec(r, cr, &defaultTOKENURL, &cr.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
-	} else {
-		StringReflectSpec(r, cr, &cr.Spec.Authentication.TokenURL, &cr.Status.Authentication.TokenURL, metricscfgv1beta1.DefaultTOKENURL)
-	}
-
 	if cr.Spec.APIURL == metricscfgv1beta1.OldDefaultAPIURL {
 		defaultAPIURL := metricscfgv1beta1.DefaultAPIURL
 		StringReflectSpec(r, cr, &defaultAPIURL, &cr.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
@@ -659,9 +652,6 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
-	// TODO: Remove before merge
-	// r.overrideSecretPath = true
 
 	os.Setenv("TZ", "UTC")
 
