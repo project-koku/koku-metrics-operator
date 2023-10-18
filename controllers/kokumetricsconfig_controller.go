@@ -433,7 +433,6 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
 		err := handler.Auth.GetAccessToken(cr.Spec.Authentication.TokenURL)
 		if err != nil {
-			log.Error(err, "failed to obtain service account token")
 			errorMsg := fmt.Sprintf("Invalid client credentials provided. Correct the client-id / client-secret in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
 			log.Info(errorMsg)
 			cr.Status.Authentication.AuthErrorMessage = errorMsg
