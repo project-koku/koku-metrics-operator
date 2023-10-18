@@ -7,10 +7,8 @@ package crhchttp
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,11 +25,10 @@ import (
 var (
 	testEnv *envtest.Environment
 
-	sethttpgetmethod bool
-	validMockTS      *httptest.Server
-	badMockTS        *httptest.Server
-	mockaccesstoken  = "mockAccessToken12345"
-	tokenurlsuffix   = "/protocol/openid-connect/token"
+	validMockTS     *httptest.Server
+	badMockTS       *httptest.Server
+	mockaccesstoken = "mockAccessToken12345"
+	tokenurlsuffix  = "/protocol/openid-connect/token"
 )
 
 func TestCrhchttp(t *testing.T) {
@@ -58,47 +55,32 @@ var _ = BeforeSuite(func() {
 	}))
 
 	badMockTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.Path, tokenurlsuffix) {
+
+		switch {
+		case strings.Contains(r.URL.Path, "/bad-response"):
+			w.Header().Set("Content-Length", "1") // Setting this might not be strictly necessary
+			w.WriteHeader(http.StatusOK)
+			w.(http.Flusher).Flush()
+			return
+
+		case strings.Contains(r.URL.Path, "/no-token"):
+			responseWithoutToken := map[string]interface{}{
+				"expires_in":         3600,
+				"refresh_expires_in": 1800,
+				"token_type":         "Bearer",
+				"not_before_policy":  0,
+				"scope":              "user",
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			err := json.NewEncoder(w).Encode(responseWithoutToken)
+			Expect(err).NotTo(HaveOccurred())
+			return
+
+		case !strings.Contains(r.URL.Path, tokenurlsuffix):
 			http.NotFound(w, r)
-		}
-
-		if r.Method != http.MethodPost || sethttpgetmethod {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		}
-
-		// Read the body
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "failed to read request body", http.StatusInternalServerError)
-		}
-
-		// Decode POST form data
-		postData, err := url.ParseQuery(string(body))
-		if err != nil {
-			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
-		}
-
-		// Validate the fields
-		if postData.Get("client_id") == "invalid client id" {
-			invalidClientResponse := map[string]string{
-				"error":             "invalid_client",
-				"error_description": "Invalid client credentials",
-			}
-			w.WriteHeader(http.StatusBadRequest)
-			err := json.NewEncoder(w).Encode(invalidClientResponse)
-			Expect(err).NotTo(HaveOccurred())
-		}
-		if postData.Get("client_secret") == "invalid client secret" {
-			invalidClientResponse := map[string]string{
-				"error":             "unauthorized_client",
-				"error_description": "Invalid client secret",
-			}
-			w.WriteHeader(http.StatusBadRequest)
-			err := json.NewEncoder(w).Encode(invalidClientResponse)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		if postData.Get("grant_type") == "" {
+			return
+		default:
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	}))

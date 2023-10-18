@@ -66,27 +66,28 @@ func (ac *AuthConfig) GetAccessToken(tokenURL string) error {
 	// // Making the HTTP POST request
 	resp, err := http.Post(tokenURL, "application/x-www-form-urlencoded", bytes.NewBufferString(data.Encode()))
 	if err != nil {
-		log.Error(err, "failed to make HTTP request to acquire token")
+		errMsg := "failed to make HTTP request to acquire token"
+		log.Error(err, errMsg)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Error(err, "failed to read response body")
-		return err
+		errMsg := "failed to read response body"
+		log.Error(err, errMsg)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
-	// ONLY proceed to unmarshal if the status was 200
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, body)
-	}
+	fmt.Printf("DEBUG: Response body: %s\n", string(body))
 
 	var result ServiceAccountToken
 	err = json.Unmarshal([]byte(body), &result)
 	if err != nil {
-		log.Error(err, "error unmarshaling data from request")
-		return err
+		errMsg := "error unmarshaling data from request"
+		log.Error(err, errMsg)
+		return fmt.Errorf("%s : %w", errMsg, err)
 	}
 
 	if result.AccessToken == "" {

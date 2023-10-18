@@ -43,6 +43,38 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
 	})
 
+	It("should validate GetAccessToken method behavior", func() {
+		err := authConfig.GetAccessToken(validMockTS.URL + tokenurlsuffix)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
+	})
+
+	It("should handle failed http requests", func() {
+		validMockTS.Close()
+
+		err := authConfig.GetAccessToken(validMockTS.URL)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to make HTTP request to acquire token"))
+	})
+
+	It("should handle failing to read response body", func() {
+		err := authConfig.GetAccessToken(badMockTS.URL + "/bad-response")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to read response body"))
+	})
+
+	It("should handle failing to unmarshal response body", func() {
+		err := authConfig.GetAccessToken(badMockTS.URL)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("error unmarshaling data from request"))
+	})
+
+	It("should handle empty access token returned", func() {
+		err := authConfig.GetAccessToken(badMockTS.URL + "/no-token")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("token response did not contain an access token"))
+	})
+
 	Context("Negative Tests", func() {
 		type TestCase struct {
 			ClientID     string
@@ -69,18 +101,5 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 				}
 			})
 		}
-	})
-
-	It("should validate GetAccessToken method behavior", func() {
-		err := authConfig.GetAccessToken(validMockTS.URL + tokenurlsuffix)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
-	})
-
-	It("should handle HTTP errors from token server", func() {
-		sethttpgetmethod = true
-		err := authConfig.GetAccessToken(badMockTS.URL + tokenurlsuffix)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("Method Not Allowed"))
 	})
 })
