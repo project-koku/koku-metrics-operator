@@ -19,7 +19,7 @@ import (
 	gologr "github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -205,9 +205,9 @@ func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthCon
 	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
 		switch {
-		case k8serrors.IsNotFound(err):
+		case errors.IsNotFound(err):
 			log.Error(err, "pull-secret does not exist")
-		case k8serrors.IsForbidden(err):
+		case errors.IsForbidden(err):
 			log.Error(err, "operator does not have permission to check pull-secret")
 		default:
 			log.Error(err, "could not check pull-secret")
@@ -263,9 +263,9 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
 		switch {
-		case k8serrors.IsNotFound(err):
+		case errors.IsNotFound(err):
 			log.Error(err, "secret does not exist")
-		case k8serrors.IsForbidden(err):
+		case errors.IsForbidden(err):
 			log.Error(err, "operator does not have permission to check secret")
 		default:
 			log.Error(err, "could not check secret")
@@ -308,9 +308,9 @@ func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.M
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
 		switch {
-		case k8serrors.IsNotFound(err):
+		case errors.IsNotFound(err):
 			log.Error(err, "service account secret does not exist")
-		case k8serrors.IsForbidden(err):
+		case errors.IsForbidden(err):
 			log.Error(err, "operator does not have permission to check service account secret")
 		default:
 			log.Error(err, "could not check service account secret")
