@@ -25,7 +25,7 @@ COPY .git .git
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 echo " injecting GIT COMMIT: $GIT_COMMIT" && \
 CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
-go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
+go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

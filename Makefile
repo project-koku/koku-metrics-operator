@@ -147,7 +147,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/manager cmd/main.go
 
 SECRET_ABSPATH ?= ./testing
 WATCH_NAMESPACE ?= koku-metrics-operator
@@ -155,7 +155,7 @@ WATCH_NAMESPACE ?= koku-metrics-operator
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	kubectl apply -f testing/sa.yaml
-	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run ./main.go
+	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
