@@ -66,9 +66,9 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	data.Set("grant_type", ac.ServiceAccountData.GrantType)
 
 	// // Making the HTTP POST request
-	timeoutCxt, cancel := context.WithTimeout(cxt, 5*time.Second)
+	cxt, cancel := context.WithTimeout(cxt, 5*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(timeoutCxt, http.MethodPost, tokenURL, bytes.NewBufferString(data.Encode()))
+	req, err := http.NewRequestWithContext(cxt, http.MethodPost, tokenURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to construct HTTP request: %w", err)
 	}
