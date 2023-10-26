@@ -86,6 +86,12 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+
+	// ONLY proceed to unmarshal if the status was 200
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("status: %d | error response: %s", resp.StatusCode, body)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}

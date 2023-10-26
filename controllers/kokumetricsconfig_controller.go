@@ -50,6 +50,8 @@ var (
 	pullSecretAuthKey        = "cloud.openshift.com"
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
+	authClientId             = "clientid"
+	authClientSecret         = "clientsecret"
 
 	falseDef = false
 	trueDef  = true
@@ -89,6 +91,17 @@ type serializedAuthMap struct {
 }
 type serializedAuth struct {
 	Auth string `json:"auth"`
+}
+
+// sanitizeKey cleans up the key strings.
+// It removes spaces, dashes, and underscores, and converts the string to lowercase.
+func sanitizeKey(key string) string {
+	key = strings.ReplaceAll(key, " ", "")
+	key = strings.ReplaceAll(key, "-", "")
+	key = strings.ReplaceAll(key, "_", "")
+	key = strings.ToLower(key)
+
+	return key
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
@@ -320,14 +333,15 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 	// Extracting data from the Secret
 	keys := make(map[string]string)
 	for k, v := range secret.Data {
-		keys[strings.ToLower(k)] = string(v)
+		sanitizedKey := sanitizeKey(k)
+		keys[sanitizedKey] = string(v)
 	}
 
 	// Defining the required keys
-	requiredKeys := []string{"clientid", "clientsecret"}
-	for _, k := range requiredKeys {
-		if len(keys[k]) <= 0 {
-			msg := fmt.Sprintf("service account secret not found with expected %s data", k)
+	requiredKeys := []string{authClientId, authClientSecret}
+	for _, requiredKey := range requiredKeys {
+		if value, exists := keys[requiredKey]; !exists || value == "" {
+			msg := fmt.Sprintf("service account secret not found with expected %s data", requiredKey)
 			log.Info(msg)
 			return fmt.Errorf(msg)
 		}
@@ -335,8 +349,8 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 
 	// Populating the authConfig object
 	authConfig.ServiceAccountData = crhchttp.ServiceAccountData{
-		ClientID:     strings.TrimSpace(keys["clientid"]),
-		ClientSecret: strings.TrimSpace(keys["clientsecret"]),
+		ClientID:     keys[authClientId],
+		ClientSecret: keys[authClientSecret],
 		GrantType:    "client_credentials",
 	}
 
