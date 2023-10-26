@@ -42,9 +42,8 @@ type ServiceAccountData struct {
 	GrantType    string `json:"grant_type"`
 }
 
-// ServiceAccountToken holds the structure of the token response for a service account's authentication request.
-// Fields within the struct provide information about the token.
-// - AccessToken: The token that must be used to authenticate service account requests.
+// ServiceAccountToken holds the structure of the token response.
+// The fields within the struct provide information about the access token that is used to authenticate service account requests.
 type ServiceAccountToken struct {
 	AccessToken      string `json:"access_token"`
 	ExpiresIn        int    `json:"expires_in"`
@@ -87,10 +86,11 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 
 	body, err := io.ReadAll(resp.Body)
 
+	// TODO: handle errors for ServiceAccountData fields
 	// ONLY proceed to unmarshal if the status was 200
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("status: %d | error response: %s", resp.StatusCode, body)
-	}
+	// if resp.StatusCode != http.StatusOK {
+	// 	return fmt.Errorf("status: %d | error response: %s", resp.StatusCode, body)
+	// }
 
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
