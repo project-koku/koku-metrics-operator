@@ -41,6 +41,10 @@ type ServiceAccountData struct {
 	ClientSecret string `json:"client_secret"`
 	GrantType    string `json:"grant_type"`
 }
+
+// ServiceAccountToken holds the structure of the token response for a service account's authentication request.
+// Fields within the struct provide information about the token.
+// - AccessToken: The token that must be used to authenticate service account requests.
 type ServiceAccountToken struct {
 	AccessToken      string `json:"access_token"`
 	ExpiresIn        int    `json:"expires_in"`
