@@ -53,7 +53,7 @@ spec:
                     default: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
                     description: FOR DEVELOPMENT ONLY. TokenURL is a field of KokuMetricsConfig
                       to represent the endpoint used to obtain the service account
-                      token The default is https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+                      token. The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
                     type: string
                   type:
                     default: token
@@ -61,15 +61,13 @@ spec:
                       the authentication type to be used basic or token. Valid values
                       are: - "basic" : Enables authentication using user and password
                       from authentication secret. - "service_account" : Enables authentication
-                      using client-id and client-secret from the authentication secret.
-                      - "service_account" : Uses client-id and client-secret from
-                      the authentication secret to get an access_token from the token_url
-                      for authentication. - "token" (default): Uses cluster token
-                      for authentication.'
+                      using client-id and client-secret from the secret containing
+                      service account information. - "token" (default): Uses cluster
+                      token for authentication.'
                     enum:
                     - token
                     - basic
-                    - service_account
+                    - service-account
                     type: string
                 required:
                 - token_url
@@ -530,7 +528,7 @@ spec:
                     type: string
                   token_url:
                     description: TokenURL is a filed of KokuMetricsConfig to represent
-                      the url used to generate a service account token
+                      the url used to generate a service account token.
                     type: string
                   type:
                     description: AuthType is a field of KokuMetricsConfig to represent
@@ -538,14 +536,12 @@ spec:
                     enum:
                     - token
                     - basic
-                    - service_account
+                    - service-account
                     type: string
                   valid_basic_auth:
                     description: ValidBasicAuth is a field of KokuMetricsConfig to
                       represent if the given basic auth credentials are valid.
                     type: boolean
-                required:
-                - token_url
                 type: object
               clusterID:
                 description: ClusterID is a field of KokuMetricsConfig to represent

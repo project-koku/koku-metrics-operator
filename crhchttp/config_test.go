@@ -6,6 +6,8 @@
 package crhchttp
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -13,6 +15,7 @@ import (
 var _ = Describe("GetAccessToken Functional Tests", func() {
 	var authConfig *AuthConfig
 
+	var ctx = context.Background()
 	BeforeEach(func() {
 		authConfig = &AuthConfig{
 			Authentication: serviceaccount,
@@ -34,17 +37,17 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 				GrantType:    grantType,
 			},
 		}
-		return config.GetAccessToken(badMockTS.URL + tokenurlsuffix)
+		return config.GetAccessToken(ctx, badMockTS.URL+tokenurlsuffix)
 	}
 
 	It("Successfully retrieves and sets the access token", func() {
-		err := authConfig.GetAccessToken(validMockTS.URL + tokenurlsuffix)
+		err := authConfig.GetAccessToken(ctx, validMockTS.URL+tokenurlsuffix)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
 	})
 
 	It("should validate GetAccessToken method behavior", func() {
-		err := authConfig.GetAccessToken(validMockTS.URL + tokenurlsuffix)
+		err := authConfig.GetAccessToken(ctx, validMockTS.URL+tokenurlsuffix)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
 	})
@@ -52,25 +55,25 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 	It("should handle failed http requests", func() {
 		validMockTS.Close()
 
-		err := authConfig.GetAccessToken(validMockTS.URL)
+		err := authConfig.GetAccessToken(ctx, validMockTS.URL)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("failed to make HTTP request to acquire token"))
 	})
 
 	It("should handle failing to read response body", func() {
-		err := authConfig.GetAccessToken(badMockTS.URL + "/bad-response")
+		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/bad-response")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("failed to read response body"))
 	})
 
 	It("should handle failing to unmarshal response body", func() {
-		err := authConfig.GetAccessToken(badMockTS.URL)
+		err := authConfig.GetAccessToken(ctx, badMockTS.URL)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("error unmarshaling data from request"))
 	})
 
 	It("should handle empty access token in server response", func() {
-		err := authConfig.GetAccessToken(badMockTS.URL + "/no-token")
+		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/no-token")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("token response did not contain an access token"))
 	})
@@ -79,7 +82,7 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		notValidAuth := &AuthConfig{
 			Authentication: "not-serviceaccount",
 		}
-		err := notValidAuth.GetAccessToken(validMockTS.URL)
+		err := notValidAuth.GetAccessToken(ctx, validMockTS.URL)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(authConfig.BearerTokenString).To(BeEmpty())
 	})

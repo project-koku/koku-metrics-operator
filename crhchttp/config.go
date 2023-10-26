@@ -7,12 +7,14 @@ package crhchttp
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	neturl "net/url"
+	"net/url"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,13 +46,13 @@ type ServiceAccountToken struct {
 	ExpiresIn        int    `json:"expires_in"`
 	RefreshExpiresIn int    `json:"refresh_expires_in"`
 	TokenType        string `json:"token_type"`
-	NotBeforePolicy  int    `json:"not_before_policy"`
+	NotBeforePolicy  int    `json:"not-before-policy"`
 	Scope            string `json:"scope"`
 }
 
 const serviceaccount = metricscfgv1beta1.ServiceAccount
 
-func (ac *AuthConfig) GetAccessToken(tokenURL string) error {
+func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error {
 	if ac.Authentication != serviceaccount {
 		return nil
 	}
@@ -58,34 +60,35 @@ func (ac *AuthConfig) GetAccessToken(tokenURL string) error {
 	log := log.WithName("GetAccessToken")
 
 	// Prepare the POST data
-	data := neturl.Values{}
+	data := url.Values{}
 	data.Set("client_id", ac.ServiceAccountData.ClientID)
 	data.Set("client_secret", ac.ServiceAccountData.ClientSecret)
 	data.Set("grant_type", ac.ServiceAccountData.GrantType)
 
 	// // Making the HTTP POST request
-	resp, err := http.Post(tokenURL, "application/x-www-form-urlencoded", bytes.NewBufferString(data.Encode()))
+	timeoutCxt, cancel := context.WithTimeout(cxt, 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(timeoutCxt, http.MethodPost, tokenURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {
-		errMsg := "failed to make HTTP request to acquire token"
-		log.Error(err, errMsg)
-		return fmt.Errorf("%s: %w", errMsg, err)
+		return fmt.Errorf("failed to construct HTTP request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to make HTTP request to acquire token: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		errMsg := "failed to read response body"
-		log.Error(err, errMsg)
-		return fmt.Errorf("%s: %w", errMsg, err)
+		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	var result ServiceAccountToken
-	err = json.Unmarshal([]byte(body), &result)
-	if err != nil {
-		errMsg := "error unmarshaling data from request"
-		log.Error(err, errMsg)
-		return fmt.Errorf("%s : %w", errMsg, err)
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		return fmt.Errorf("error unmarshaling data from request: %w", err)
 	}
 
 	if result.AccessToken == "" {

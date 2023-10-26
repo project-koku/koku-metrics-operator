@@ -293,8 +293,7 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 }
 
 // GetServiceAccountSecret Obtain the client id and client secret from the service account data provided in the current namespace
-func GetServiceAccountSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
-	ctx := context.Background()
+func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, cr *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
 	log := log.WithName("GetServiceAccountSecret")
 
 	log.Info("secret namespace", "namespace", reqNamespace.Namespace)
@@ -373,7 +372,7 @@ func setClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 	return nil
 }
 
-func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
+func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
 	log := log.WithName("setAuthentication")
 	cr.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token {
@@ -388,20 +387,23 @@ func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConf
 			cr.Status.Authentication.AuthErrorMessage = err.Error()
 		}
 		return err
-	} else if cr.Status.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
-		cr.Status.Authentication.ValidBasicAuth = nil
-		cr.Status.Authentication.AuthErrorMessage = ""
-		cr.Status.Authentication.LastVerificationTime = nil
-		cr.Status.Authentication.TokenURL = cr.Spec.Authentication.TokenURL
-		// Get client ID and client secret from service account secret
-		err := GetServiceAccountSecret(r, cr, authConfig, reqNamespace)
-		if err != nil {
-			log.Error(nil, "failed to obtain service account secret credentials")
-			cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-			cr.Status.Authentication.AuthErrorMessage = err.Error()
-		}
-		return err
 	} else if cr.Spec.Authentication.AuthenticationSecretName != "" {
+
+		if cr.Status.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
+			cr.Status.Authentication.ValidBasicAuth = nil
+			cr.Status.Authentication.AuthErrorMessage = ""
+			cr.Status.Authentication.LastVerificationTime = nil
+			cr.Status.Authentication.TokenURL = cr.Spec.Authentication.TokenURL
+			// Get client ID and client secret from service account secret
+			err := r.GetServiceAccountSecret(ctx, cr, authConfig, reqNamespace)
+			if err != nil {
+				log.Error(nil, "failed to obtain service account secret credentials")
+				cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+				cr.Status.Authentication.AuthErrorMessage = err.Error()
+			}
+			return err
+		}
+
 		// Get user and password from auth secret in namespace
 		err := GetAuthSecret(r, cr, authConfig, reqNamespace)
 		if err != nil {
@@ -412,16 +414,16 @@ func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConf
 		}
 		return err
 	} else {
-		// No authentication secret name set when using basic auth
+		// No authentication secret name set when using basic or service-account auth
 		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-		err := fmt.Errorf("no authentication secret name set when using basic auth")
+		err := fmt.Errorf("no authentication secret name set when using basic or service-account auth")
 		cr.Status.Authentication.AuthErrorMessage = err.Error()
 		cr.Status.Authentication.ValidBasicAuth = &falseDef
 		return err
 	}
 }
 
-func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr *metricscfgv1beta1.MetricsConfig, cycle int64) error {
+func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handler *sources.SourceHandler, cr *metricscfgv1beta1.MetricsConfig, cycle int64) error {
 	log := log.WithName("validateCredentials")
 
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.Token {
@@ -429,9 +431,9 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 		return nil
 	}
 
-	// Service  Account authentication check
+	// Service-account authentication check
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
-		err := handler.Auth.GetAccessToken(cr.Spec.Authentication.TokenURL)
+		err := handler.Auth.GetAccessToken(ctx, cr.Spec.Authentication.TokenURL)
 		if err != nil {
 			errorMsg := fmt.Sprintf("Invalid client credentials provided. Correct the client-id / client-secret in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
 			log.Info(errorMsg)
@@ -462,7 +464,8 @@ func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHand
 	cr.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
-		msg := fmt.Sprintf("console.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
+		// TODO: check with ux/docs on message
+		msg := fmt.Sprintf("console.redhat.com credentials in `%s` are invalid. Basic authentication is being deprecated and will soon no longer be functional. Please switch to service account authentication. Refer to the documentation for more details on this transition.", cr.Spec.Authentication.AuthenticationSecretName)
 		log.Info(msg)
 		cr.Status.Authentication.AuthErrorMessage = msg
 		cr.Status.Authentication.ValidBasicAuth = &falseDef
@@ -807,7 +810,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 		// obtain credentials token/basic & return if there are authentication credential errors
-		if err := setAuthentication(r, authConfig, cr, req.NamespacedName); err != nil {
+		if err := r.setAuthentication(ctx, authConfig, cr, req.NamespacedName); err != nil {
 			r.updateStatusAndLogError(ctx, cr)
 			return ctrl.Result{}, err
 		}
@@ -818,7 +821,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Spec:   cr.Status.Source,
 		}
 
-		if err := validateCredentials(r, handler, cr, 1440); err == nil {
+		if err := r.validateCredentials(ctx, handler, cr, 1440); err == nil {
 			// Block will run when creds are valid.
 
 			// Check if source is defined and update the status to confirmed/created
@@ -832,7 +835,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 			// revalidate if an upload fails due to 401
 			if strings.Contains(cr.Status.Upload.LastUploadStatus, "401") {
-				_ = validateCredentials(r, handler, cr, 0)
+				_ = r.validateCredentials(ctx, handler, cr, 0)
 			}
 		}
 	} else {
