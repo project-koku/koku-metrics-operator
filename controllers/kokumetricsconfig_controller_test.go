@@ -614,7 +614,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(BeEmpty())
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(BeEmpty())
-				Expect(fetched.Status.Authentication.AuthErrorMessage).To(And(ContainSubstring("Secret"), ContainSubstring("not found")))
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("no authentication secret name set when using basic or service-account auth"))
 			})
 
 			It("should handle missing required fields in service account auth creds", func() {
