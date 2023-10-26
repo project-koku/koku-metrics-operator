@@ -15,7 +15,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Resource Optimization metrics collection.
 * The operator can be configured to gather all previous data within the configured retention period or a maximum of 90 days. The default data collection period is the 14 previous days. This setting is only applicable to newly created KokuMetricsConfigs.
 * The operator can be configured to automatically upload the packaged reports to Cost Management through Red Hat Insights Ingress service.
-* The operator can create a source in console.redhat.com. A source is required for Cost Management to process the uploaded packages.
+* The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
@@ -29,7 +29,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 ## Limitations and Pre-Requisites
 #### Limitations (Potential for metrics data loss)
-* A source **must** exist in console.redhat.com for an uploaded payload to be processed by Cost Management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with Cost Management that the payload was processed. After Ingress accepts the uploaded payload, it is deleted from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
+* An integration **must** exist in console.redhat.com for an uploaded payload to be processed by Cost Management. The operator sends the payload to the Red Hat Insights Ingress service which usually returns successfully, but the operator does not currently confirm with Cost Management that the payload was processed. After Ingress accepts the uploaded payload, it is deleted from the operator. If the data within the payload is not processed, a gap will be introduced in the usage metrics. Data may be recollected by deleting the `KokuMetricsConfig`, creating a new `KokuMetricsConfig`, and setting `collect_previous_data: true`. This re-collection of data will gather all data stored in Prometheus, up to 90 days.
 
 **Note** The following limitations are specific to operators configured to run in a restricted network:
 * The `koku-metrics-operator` will not be able to generate new reports if the PVC storage is full. If this occurs, the reports must be manually deleted from the PVC so that the operator can function as normal.
@@ -71,9 +71,9 @@ If these assumptions are not met, the operator will not deploy correctly. In the
     * `disable_metrics_collection_resource_optimization: false` -> Toggle for disabling the collection of metrics for Resource Optimization. The default is false. (New in v2.0.0)
     * `context_timeout: 120` -> The time in seconds before Prometheus queries timeout due to exceeding context timeout. The default is 120, with a minimum of 10 and maximum of 180.
   * `source`:
-    * `name: ''` -> The name of the source the operator will create in `console.redhat.com`. If the name value is empty, the default intergration name is the **cluster id**.
-    * `create_source: false` -> Toggle for whether or not the operator will create the source in `console.redhat.com`. The default is False. This parameter should be switched to True when a source does not already exist in `console.redhat.com` for this cluster.
-    * `check_cycle: 1440` -> The time in minutes to wait between checking if a source exists for this cluster. The default is 1440 minutes (24 hrs).
+    * `name: ''` -> The name of the integration the operator will create in `console.redhat.com`. If the name value is empty, the default intergration name is the **cluster id**.
+    * `create_source: false` -> Toggle for whether or not the operator will create the integration in `console.redhat.com`. The default is False. This parameter should be switched to True when an integration does not already exist in `console.redhat.com` for this cluster.
+    * `check_cycle: 1440` -> The time in minutes to wait between checking if an integration exists for this cluster. The default is 1440 minutes (24 hrs).
   * `upload`:
     * `upload_cycle: 360` -> The time in minutes between payload uploads. The default is 360 (6 hours).
     * `upload_toggle: true` -> Toggle to turn upload on or off -> true means upload, false means do not upload (false == air-gapped mode). The default is `true`.
@@ -100,11 +100,11 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
             type: basic
         ```
 
-3. To configure the koku-metrics-operator to create a cost management source, edit the following values in the `source` field:
-    * Replace the `name` field value with the preferred name of the source to be created.
+3. To configure the koku-metrics-operator to create a cost management integration, edit the following values in the `source` field:
+    * Replace the `name` field value with the preferred name of the integration to be created.
     * Replace the `create_source` field value with `true`.
 
-    **Note:** if the source already exists, replace the empty string value of the `name` field with the existing name, and leave `create_source` as false. This will allow the operator to confirm that the source exists.
+    **Note:** if the integration already exists, replace the empty string value of the `name` field with the existing name, and leave `create_source` as false. This will allow the operator to confirm that the integration exists.
 
 4. If not specified, the operator will create a default PersistentVolumeClaim called `koku-metrics-operator-data` with 10Gi of storage. To configure the koku-metrics-operator to use or create a different PVC, edit the following in the spec:
     * Add the desired configuration to the `volume_claim_template` field in the spec:
@@ -220,17 +220,17 @@ If the `koku-metrics-operator` is configured to run in a restricted network, the
   $ oc delete -f volume-shell.yaml
   ```
 
-## Create a Source
-In a restricted network, the `koku-metrics-operator` cannot automatically create a source. This process must be done manually. In the console.redhat.com platform, open the [Sources menu](https://console.redhat.com/settings/sources/) to begin adding an OpenShift source to Cost Management:
+## Create an Integration
+In a restricted network, the `koku-metrics-operator` cannot automatically create an integration. This process must be done manually. In the console.redhat.com platform, open the [Integrations menu](https://console.redhat.com/settings/integrations/) to begin adding an OpenShift integration to Cost Management:
 
 Prerequisites:
 * The cluster identifier which can be found in the KokuMetricsConfig CR, the cluster Overview page, or the cluster Help > About.
 
-Creating a source:
-1. Navigate to the Sources menu
+Creating an integration:
+1. Navigate to the Integrations menu
 2. Select the `Red Hat` tab
-3. Create a new `Red Hat Openshift Container Platform` source:
-    * give the source a unique name
+3. Create a new `Red Hat Openshift Container Platform` integration:
+    * give the integration a unique name
     * add the Cost Management application
     * add the cluster identifier
 4. In the Source wizard, review the details and click `Finish` to create the source.

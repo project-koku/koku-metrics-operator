@@ -3,6 +3,7 @@ package dirconfig
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,6 +17,24 @@ import (
 
 var errTest = errors.New("test error")
 
+type MockDirEntry struct {
+	MockFileInfo MockFileInfo
+}
+
+func NewMockDirEntry(mfi MockFileInfo) MockDirEntry {
+	return MockDirEntry{MockFileInfo: mfi}
+}
+
+func (mde MockDirEntry) Name() string               { return mde.MockFileInfo.name }
+func (mde MockDirEntry) IsDir() bool                { return mde.MockFileInfo.isDir }
+func (mde MockDirEntry) Info() (os.FileInfo, error) { return mde.MockFileInfo, nil }
+func (mde MockDirEntry) Type() os.FileMode {
+	if mde.MockFileInfo.isDir {
+		return os.ModeDir
+	}
+	return os.ModeAppend
+}
+
 type MockFileInfo struct {
 	name  string
 	isDir bool
@@ -28,31 +47,17 @@ func NewMockFileInfo(name string, isDir bool) MockFileInfo {
 	}
 }
 
-func (mfi MockFileInfo) Name() string {
-	return mfi.name
-}
-
-func (mfi MockFileInfo) Size() int64 {
-	return 100
-}
+func (mfi MockFileInfo) Name() string       { return mfi.name }
+func (mfi MockFileInfo) Size() int64        { return 100 }
+func (mfi MockFileInfo) ModTime() time.Time { return time.Unix(110, 0) }
+func (mfi MockFileInfo) IsDir() bool        { return mfi.isDir }
+func (mfi MockFileInfo) Sys() any           { return nil }
 
 func (mfi MockFileInfo) Mode() os.FileMode {
 	if mfi.isDir {
 		return os.ModeDir
 	}
 	return os.ModeAppend
-}
-
-func (mfi MockFileInfo) ModTime() time.Time {
-	return time.Unix(110, 0)
-}
-
-func (mfi MockFileInfo) IsDir() bool {
-	return mfi.isDir
-}
-
-func (mfi MockFileInfo) Sys() any {
-	return nil
 }
 
 func TestMain(m *testing.M) {
@@ -169,8 +174,8 @@ func TestDirString(t *testing.T) {
 	}
 }
 
-var listDirFileMock = func(files []os.FileInfo, err error) DirListFunc {
-	return func(path string) ([]os.FileInfo, error) {
+var listDirFileMock = func(files []fs.DirEntry, err error) DirListFunc {
+	return func(path string) ([]fs.DirEntry, error) {
 		return files, err
 	}
 }
@@ -205,12 +210,12 @@ func TestDirRemoveContents(t *testing.T) {
 			fmt.Errorf("RemoveContents: could not read directory: Oh no!"),
 		},
 		{
-			listDirFileMock([]os.FileInfo{}, nil),
+			listDirFileMock([]fs.DirEntry{}, nil),
 			removeAllMock(nil),
 			nil,
 		},
 		{
-			listDirFileMock([]os.FileInfo{NewMockFileInfo("/tmp/dir/cfg", false)}, nil),
+			listDirFileMock([]fs.DirEntry{NewMockDirEntry(NewMockFileInfo("/tmp/dir/cfg", false))}, nil),
 			removeAllMock(fmt.Errorf("oops")),
 			fmt.Errorf("RemoveContents: could not remove file: oops"),
 		},

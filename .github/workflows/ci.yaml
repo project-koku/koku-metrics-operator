@@ -10,8 +10,8 @@ on:
 
 jobs:
 
-  golangci-lint:
-    name: golangci-lint
+  validate-pr:
+    name: Validate PR
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -21,9 +21,11 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.18
+          go-version-file: go.mod
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
+      - name: Verify generated Manifests are up to date
+        run: make verify-manifests
 
   unit-tests:
     name: Unit Tests
@@ -41,7 +43,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.18 # The Go version to download (if necessary) and use.
+          go-version-file: go.mod
 
       - name: Install kubebuilder
         run : |
@@ -90,7 +92,7 @@ jobs:
 
   sonarcloud:
     name: SonarCloud
-    needs: [golangci-lint,unit-tests]
+    needs: [validate-pr,unit-tests]
     runs-on: ubuntu-20.04
     steps:
 
