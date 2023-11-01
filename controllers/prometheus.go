@@ -19,16 +19,18 @@ import (
 )
 
 var (
-	now                 = time.Now
-	fourteenDayDuration = time.Duration(14 * 24 * time.Hour)
-	ninetyDayDuration   = time.Duration(90 * 24 * time.Hour)
-	retentionPeriod     time.Duration
+	now                               = time.Now
+	fourteenDayDuration               = time.Duration(14 * 24 * time.Hour)
+	ninetyDayDuration                 = time.Duration(90 * 24 * time.Hour)
+	retentionPeriod     time.Duration = 0
 
 	monitoringMeta = types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}
 
 	promCfgSetter  collector.PrometheusConfigurationSetter = collector.SetPrometheusConfig
 	promConnSetter collector.PrometheusConnectionSetter    = collector.SetPrometheusConnection
 	promConnTester collector.PrometheusConnectionTester    = collector.TestPrometheusConnection
+
+	retryTracker map[time.Time]int = make(map[time.Time]int)
 )
 
 type PrometheusK8s struct {
@@ -83,17 +85,35 @@ func setRetentionPeriod(ctx context.Context, r *MetricsConfigReconciler) {
 func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) (time.Time, time.Time) {
 	start := now().UTC().Truncate(time.Hour).Add(-time.Hour) // start of previous full hour
 	end := start.Add(59*time.Minute + 59*time.Second)
+
+	if retentionPeriod == 0 {
+		setRetentionPeriod(ctx, r)
+	}
+
+	// logic for gathering previous data upon CR creation
 	if cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 		*cr.Spec.PrometheusConfig.CollectPreviousData &&
 		cr.Status.Prometheus.LastQuerySuccessTime.IsZero() {
 		// LastQuerySuccessTime is zero when the CR is first created. We will only reset `start` to the beginning of
 		// the retention period when the CR is first created, otherwise we stick to using the start of the previous full hour.
-		setRetentionPeriod(ctx, r)
 		log.Info(fmt.Sprintf("duration used: %s", retentionPeriod))
 		start = start.Add(-1 * retentionPeriod).Truncate(24 * time.Hour)
 		log.Info(fmt.Sprintf("start used: %s", start))
 		cr.Status.Prometheus.PreviousDataCollected = true
 		r.initialDataCollection = true
+		return start, end
+	}
+
+	if !cr.Status.Prometheus.LastQuerySuccessTime.IsZero() && start.Sub(cr.Status.Prometheus.LastQuerySuccessTime.Time) > time.Hour {
+		// If we have previously had successful queries, and the difference between the last success and the current hour to query
+		// is greater than 1 hour, then we've had a query failure. Here, we reset the start of the query hour so that we retry gathering
+		// metrics from the last time we had a success
+		if start.Add(-1 * retentionPeriod).After(cr.Status.Prometheus.LastQuerySuccessTime.Time) {
+			// ensure we aren't trying to gather beyond the retention period
+			start = start.Add(-1 * retentionPeriod).Truncate(24 * time.Hour)
+		} else {
+			start = cr.Status.Prometheus.LastQuerySuccessTime.Add(time.Hour)
+		}
 	}
 	return start, end
 }
@@ -119,6 +139,25 @@ func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	return r.promCollector.GetPromConn(cr, promCfgSetter, promConnSetter, promConnTester)
 }
 
+func isQueryNeeded(start time.Time) bool {
+	retryCount, ok := retryTracker[start]
+	if !ok {
+		// if the time is not in the map, we need to run the queries for this time
+		retryTracker[start] = 0
+		return true
+	}
+
+	if retryCount < 5 {
+		// retry up to 5 times
+		return true
+	}
+
+	// we've exceeded 5 tries, so give up trying
+	log.Info("query retry limit exceeded", "start", start.Format(time.RFC3339))
+	return false
+
+}
+
 func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, timeRange promv1.Range) error {
 	log := log.WithName("collectPromStats")
 
@@ -134,13 +173,22 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 
 	cr.Status.Prometheus.LastQueryStartTime = t
 
+	shouldQuery := isQueryNeeded(timeRange.Start)
+	if !shouldQuery {
+		// here, we have already tried this timeRange 5 times. The CR contains
+		// all the necessary errors at this point, so just return
+		return nil
+	}
+
 	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(cr, dirCfg, r.promCollector); err != nil {
 		cr.Status.Reports.DataCollected = false
 		if err == collector.ErrNoData {
+			cr.Status.Prometheus.LastQuerySuccessTime = t
 			cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 			log.Info("no data available to generate reports")
 		} else {
+			retryTracker[timeRange.Start]++
 			cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
 			log.Error(err, "failed to generate reports")
 		}
@@ -150,5 +198,8 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	cr.Status.Reports.DataCollectionMessage = ""
 	log.Info("reports generated for range", "start", formattedStart, "end", formattedEnd)
 	cr.Status.Prometheus.LastQuerySuccessTime = t
+
+	// since we've had a successful query, we should wipe the tracker to remove it from mem
+	retryTracker = make(map[time.Time]int)
 	return nil
 }

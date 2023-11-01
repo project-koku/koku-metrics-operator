@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -82,7 +81,7 @@ func Copy(mode os.FileMode, src, dst string) (os.FileInfo, error) {
 }
 
 func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
-	tempFile, err := ioutil.TempFile(".", "garbage-file")
+	tempFile, err := os.CreateTemp(".", "garbage-file")
 	if err != nil {
 		t.Errorf("Failed to create temp file.")
 	}
@@ -91,7 +90,7 @@ func getTempFile(t *testing.T, mode os.FileMode, dir string) *os.File {
 }
 
 func getTempDir(t *testing.T, mode os.FileMode, dir, pattern string) string {
-	tempDir, err := ioutil.TempDir(dir, pattern)
+	tempDir, err := os.MkdirTemp(dir, pattern)
 	if err != nil {
 		t.Fatalf("Failed to create temp folder.")
 	}
@@ -553,7 +552,7 @@ func TestGetAndRenderManifest(t *testing.T) {
 				t.Errorf("Manifest was not generated correctly")
 			}
 			// check that the manifest content is correct
-			manifestData, _ := ioutil.ReadFile(testPackager.manifest.filename)
+			manifestData, _ := os.ReadFile(testPackager.manifest.filename)
 			var foundManifest manifest
 			err := json.Unmarshal(manifestData, &foundManifest)
 			if err != nil {
@@ -1054,12 +1053,12 @@ func TestTrimPackages(t *testing.T) {
 			} else {
 				tmpDir2 = getTempDir(t, perms, tmpDir, "tmp-*")
 				for i := 0; i < int(tt.numFiles); i++ {
-					_, err := ioutil.TempFile(tmpDir2, fmt.Sprintf(tt.tmpFilePattern, i))
+					_, err := os.CreateTemp(tmpDir2, fmt.Sprintf(tt.tmpFilePattern, i))
 					if err != nil {
 						t.Fatalf("failed to create temp file: %v", err)
 					}
 					if tt.duplicateReports {
-						_, err := ioutil.TempFile(tmpDir2, fmt.Sprintf(tt.tmpFilePattern, i))
+						_, err := os.CreateTemp(tmpDir2, fmt.Sprintf(tt.tmpFilePattern, i))
 						if err != nil {
 							t.Fatalf("failed to create temp file: %v", err)
 						}

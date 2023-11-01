@@ -607,6 +607,12 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	// set cluster id as default source name
+	if cr.Status.Source.SourceName == "" {
+		log.Info("using cluster id as default source name")
+		cr.Status.Source.SourceName = cr.Status.ClusterID
+	}
+
 	log.Info("using the following inputs", "MetricsConfigConfig", cr.Status)
 
 	// set the Operator git commit and reflect it in the upload status

@@ -1,9 +1,11 @@
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.11.2
+  creationTimestamp: null
+  labels:
+    app: koku-metrics-operator
   name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
 spec:
   group: koku-metrics-cfg.openshift.io
@@ -152,23 +154,23 @@ spec:
                 - skip_tls_verification
                 type: object
               source:
-                description: source represents the desired integration on console.redhat.com.
+                description: source represents the desired source on console.redhat.com.
                 properties:
                   check_cycle:
                     default: 1440
                     description: check_cycle is the number of minutes between each
-                      integration status check on console.redhat.com. The default
-                      is 1440 min (24 hours).
+                      source status check on console.redhat.com. The default is 1440
+                      min (24 hours).
                     format: int64
                     minimum: 0
                     type: integer
                   create_source:
                     default: false
-                    description: create_source toggles the creation of the integration
+                    description: create_source toggles the creation of the source
                       on console.redhat.com.
                     type: boolean
                   name:
-                    description: name is the desired name of the integration to create
+                    description: name is the desired name of the source to create
                       on console.redhat.com.
                     type: string
                   sources_path:
@@ -285,12 +287,9 @@ spec:
                           * An existing PVC (PersistentVolumeClaim) If the provisioner
                           or an external controller can support the specified data
                           source, it will create a new volume based on the contents
-                          of the specified data source. When the AnyVolumeDataSource
-                          feature gate is enabled, dataSource contents will be copied
-                          to dataSourceRef, and dataSourceRef contents will be copied
-                          to dataSource when dataSourceRef.namespace is not specified.
-                          If the namespace is specified, then dataSourceRef will not
-                          be copied to dataSource.'
+                          of the specified data source. If the AnyVolumeDataSource
+                          feature gate is enabled, this field will always have the
+                          same contents as the DataSourceRef field.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -312,30 +311,24 @@ spec:
                       dataSourceRef:
                         description: 'dataSourceRef specifies the object from which
                           to populate the volume with data, if a non-empty volume
-                          is desired. This may be any object from a non-empty API
-                          group (non core object) or a PersistentVolumeClaim object.
+                          is desired. This may be any local object from a non-empty
+                          API group (non core object) or a PersistentVolumeClaim object.
                           When this field is specified, volume binding will only succeed
                           if the type of the specified object matches some installed
                           volume populator or dynamic provisioner. This field will
-                          replace the functionality of the dataSource field and as
+                          replace the functionality of the DataSource field and as
                           such if both fields are non-empty, they must have the same
-                          value. For backwards compatibility, when namespace isn''t
-                          specified in dataSourceRef, both fields (dataSource and
-                          dataSourceRef) will be set to the same value automatically
-                          if one of them is empty and the other is non-empty. When
-                          namespace is specified in dataSourceRef, dataSource isn''t
-                          set to the same value and must be empty. There are three
-                          important differences between dataSource and dataSourceRef:
-                          * While dataSource only allows two specific types of objects,
-                          dataSourceRef allows any non-core object, as well as PersistentVolumeClaim
-                          objects. * While dataSource ignores disallowed values (dropping
-                          them), dataSourceRef preserves all values, and generates
-                          an error if a disallowed value is specified. * While dataSource
-                          only allows local objects, dataSourceRef allows objects
-                          in any namespaces. (Beta) Using this field requires the
-                          AnyVolumeDataSource feature gate to be enabled. (Alpha)
-                          Using the namespace field of dataSourceRef requires the
-                          CrossNamespaceVolumeDataSource feature gate to be enabled.'
+                          value. For backwards compatibility, both fields (DataSource
+                          and DataSourceRef) will be set to the same value automatically
+                          if one of them is empty and the other is non-empty. There
+                          are two important differences between DataSource and DataSourceRef:
+                          * While DataSource only allows two specific types of objects,
+                          DataSourceRef allows any non-core object, as well as PersistentVolumeClaim
+                          objects. * While DataSource ignores disallowed values (dropping
+                          them), DataSourceRef preserves all values, and generates
+                          an error if a disallowed value is specified. (Beta) Using
+                          this field requires the AnyVolumeDataSource feature gate
+                          to be enabled.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -349,20 +342,11 @@ spec:
                           name:
                             description: Name is the name of resource being referenced
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of resource being
-                              referenced Note that when a namespace is specified,
-                              a gateway.networking.k8s.io/ReferenceGrant object is
-                              required in the referent namespace to allow that namespace's
-                              owner to accept the reference. See the ReferenceGrant
-                              documentation for details. (Alpha) This field requires
-                              the CrossNamespaceVolumeDataSource feature gate to be
-                              enabled.
-                            type: string
                         required:
                         - kind
                         - name
                         type: object
+                        x-kubernetes-map-type: atomic
                       resources:
                         description: 'resources represents the minimum resources the
                           volume should have. If RecoverVolumeExpansionFailure feature
@@ -371,28 +355,6 @@ spec:
                           than capacity recorded in the status field of the claim.
                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
                         properties:
-                          claims:
-                            description: "Claims lists the names of resources, defined
-                              in spec.resourceClaims, that are used by this container.
-                              \n This is an alpha field and requires enabling the
-                              DynamicResourceAllocation feature gate. \n This field
-                              is immutable. It can only be set for containers."
-                            items:
-                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                              properties:
-                                name:
-                                  description: Name must match the name of one entry
-                                    in pod.spec.resourceClaims of the Pod where this
-                                    field is used. It makes that resource available
-                                    inside a container.
-                                  type: string
-                              required:
-                              - name
-                              type: object
-                            type: array
-                            x-kubernetes-list-map-keys:
-                            - name
-                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -414,7 +376,7 @@ spec:
                               compute resources required. If Requests is omitted for
                               a container, it defaults to Limits if that is explicitly
                               specified, otherwise to an implementation-defined value.
-                              Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                             type: object
                         type: object
                       selector:
@@ -639,12 +601,9 @@ spec:
                           * An existing PVC (PersistentVolumeClaim) If the provisioner
                           or an external controller can support the specified data
                           source, it will create a new volume based on the contents
-                          of the specified data source. When the AnyVolumeDataSource
-                          feature gate is enabled, dataSource contents will be copied
-                          to dataSourceRef, and dataSourceRef contents will be copied
-                          to dataSource when dataSourceRef.namespace is not specified.
-                          If the namespace is specified, then dataSourceRef will not
-                          be copied to dataSource.'
+                          of the specified data source. If the AnyVolumeDataSource
+                          feature gate is enabled, this field will always have the
+                          same contents as the DataSourceRef field.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -666,30 +625,24 @@ spec:
                       dataSourceRef:
                         description: 'dataSourceRef specifies the object from which
                           to populate the volume with data, if a non-empty volume
-                          is desired. This may be any object from a non-empty API
-                          group (non core object) or a PersistentVolumeClaim object.
+                          is desired. This may be any local object from a non-empty
+                          API group (non core object) or a PersistentVolumeClaim object.
                           When this field is specified, volume binding will only succeed
                           if the type of the specified object matches some installed
                           volume populator or dynamic provisioner. This field will
-                          replace the functionality of the dataSource field and as
+                          replace the functionality of the DataSource field and as
                           such if both fields are non-empty, they must have the same
-                          value. For backwards compatibility, when namespace isn''t
-                          specified in dataSourceRef, both fields (dataSource and
-                          dataSourceRef) will be set to the same value automatically
-                          if one of them is empty and the other is non-empty. When
-                          namespace is specified in dataSourceRef, dataSource isn''t
-                          set to the same value and must be empty. There are three
-                          important differences between dataSource and dataSourceRef:
-                          * While dataSource only allows two specific types of objects,
-                          dataSourceRef allows any non-core object, as well as PersistentVolumeClaim
-                          objects. * While dataSource ignores disallowed values (dropping
-                          them), dataSourceRef preserves all values, and generates
-                          an error if a disallowed value is specified. * While dataSource
-                          only allows local objects, dataSourceRef allows objects
-                          in any namespaces. (Beta) Using this field requires the
-                          AnyVolumeDataSource feature gate to be enabled. (Alpha)
-                          Using the namespace field of dataSourceRef requires the
-                          CrossNamespaceVolumeDataSource feature gate to be enabled.'
+                          value. For backwards compatibility, both fields (DataSource
+                          and DataSourceRef) will be set to the same value automatically
+                          if one of them is empty and the other is non-empty. There
+                          are two important differences between DataSource and DataSourceRef:
+                          * While DataSource only allows two specific types of objects,
+                          DataSourceRef allows any non-core object, as well as PersistentVolumeClaim
+                          objects. * While DataSource ignores disallowed values (dropping
+                          them), DataSourceRef preserves all values, and generates
+                          an error if a disallowed value is specified. (Beta) Using
+                          this field requires the AnyVolumeDataSource feature gate
+                          to be enabled.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -703,20 +656,11 @@ spec:
                           name:
                             description: Name is the name of resource being referenced
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of resource being
-                              referenced Note that when a namespace is specified,
-                              a gateway.networking.k8s.io/ReferenceGrant object is
-                              required in the referent namespace to allow that namespace's
-                              owner to accept the reference. See the ReferenceGrant
-                              documentation for details. (Alpha) This field requires
-                              the CrossNamespaceVolumeDataSource feature gate to be
-                              enabled.
-                            type: string
                         required:
                         - kind
                         - name
                         type: object
+                        x-kubernetes-map-type: atomic
                       resources:
                         description: 'resources represents the minimum resources the
                           volume should have. If RecoverVolumeExpansionFailure feature
@@ -725,28 +669,6 @@ spec:
                           than capacity recorded in the status field of the claim.
                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
                         properties:
-                          claims:
-                            description: "Claims lists the names of resources, defined
-                              in spec.resourceClaims, that are used by this container.
-                              \n This is an alpha field and requires enabling the
-                              DynamicResourceAllocation feature gate. \n This field
-                              is immutable. It can only be set for containers."
-                            items:
-                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                              properties:
-                                name:
-                                  description: Name must match the name of one entry
-                                    in pod.spec.resourceClaims of the Pod where this
-                                    field is used. It makes that resource available
-                                    inside a container.
-                                  type: string
-                              required:
-                              - name
-                              type: object
-                            type: array
-                            x-kubernetes-list-map-keys:
-                            - name
-                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -768,7 +690,7 @@ spec:
                               compute resources required. If Requests is omitted for
                               a container, it defaults to Limits if that is explicitly
                               specified, otherwise to an implementation-defined value.
-                              Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                             type: object
                         type: object
                       selector:
@@ -923,36 +845,36 @@ spec:
                     type: string
                 type: object
               source:
-                description: source represents the observed state of the integration
-                  on console.redhat.com.
+                description: source represents the observed state of the source on
+                  console.redhat.com.
                 properties:
                   check_cycle:
                     description: check_cycle is the number of minutes between each
-                      integration status check on console.redhat.com. The default
-                      is 1440 min (24 hours).
+                      source status check on console.redhat.com. The default is 1440
+                      min (24 hours).
                     format: int64
                     type: integer
                   create_source:
                     description: create_source represents the toggle used during the
-                      creation of the integration on console.redhat.com. An Integration
-                      will not be created if upload_toggle is `false`.
+                      creation of the source on console.redhat.com. A source will
+                      not be created if upload_toggle is `false`.
                     type: boolean
                   error:
                     description: error represents any errors encountered when creating
-                      the integration.
+                      the source.
                     type: string
                   last_check_time:
-                    description: last_check_time is the time that the last integration
+                    description: last_check_time is the time that the last source
                       status check was attempted.
                     format: date-time
                     nullable: true
                     type: string
                   name:
-                    description: name represents the name of the integration that
-                      the operator attempted to create on console.redhat.com.
+                    description: name represents the name of the source that the operator
+                      attempted to create on console.redhat.com.
                     type: string
                   source_defined:
-                    description: source_defined represents whether the defined integration
+                    description: source_defined represents whether the defined source
                       name exists on console.redhat.com.
                     type: boolean
                   sources_path:
@@ -1042,3 +964,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

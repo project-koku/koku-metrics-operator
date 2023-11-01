@@ -7,7 +7,7 @@ package dirconfig
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -27,7 +27,7 @@ var (
 	log = logr.Log.WithName("dirconfig")
 )
 
-type DirListFunc = func(path string) ([]os.FileInfo, error)
+type DirListFunc = func(path string) ([]fs.DirEntry, error)
 type RemoveAllFunc = func(path string) error
 type StatFunc = func(path string) (os.FileInfo, error)
 type DirCreateFunc = func(path string) error
@@ -58,7 +58,7 @@ func (dir *Directory) String() string {
 }
 
 func (dir *Directory) RemoveContents() error {
-	listDir := ioutil.ReadDir
+	listDir := os.ReadDir
 	removeAll := os.RemoveAll
 	if dir.DirectoryFileSystem != nil {
 		listDir = dir.DirectoryFileSystem.ListDirectory
@@ -78,7 +78,7 @@ func (dir *Directory) RemoveContents() error {
 }
 
 func (dir *Directory) GetFiles() ([]string, error) {
-	outFiles, err := ioutil.ReadDir(dir.Path)
+	outFiles, err := os.ReadDir(dir.Path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read upload directory: %v", err)
 	}

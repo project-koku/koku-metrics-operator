@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/dirconfig"
@@ -218,8 +219,8 @@ var _ = BeforeSuite(func() {
 	flag.Parse()
 
 	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		MetricsBindAddress: metricsAddr,
+		Scheme:  scheme.Scheme,
+		Metrics: metricsserver.Options{BindAddress: metricsAddr},
 	})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -354,13 +355,18 @@ func replaceAuthSecretData(ctx context.Context, data map[string][]byte) {
 }
 
 func createObject(ctx context.Context, obj client.Object) {
+	key := client.ObjectKeyFromObject(obj)
+	log.Info("CREATING OBJECT", "object", key)
 	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+	log.Info("CREATED OBJECT", "object", key)
 }
 
 func deleteObject(ctx context.Context, obj client.Object) {
 	key := client.ObjectKeyFromObject(obj)
+	log.Info("DELETING OBJECT", "object", key)
 	Expect(k8sClient.Delete(ctx, obj)).Should(Or(Succeed(), Satisfy(errors.IsNotFound)))
 	Eventually(func() bool { return errors.IsNotFound(k8sClient.Get(ctx, key, obj)) }, 60, 1).Should(BeTrue())
+	log.Info("DELETED OBJECT", "object", key)
 }
 
 func ensureObjectExists(ctx context.Context, key types.NamespacedName, obj client.Object) {

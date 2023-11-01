@@ -177,6 +177,47 @@ func TestConcatErrors(t *testing.T) {
 	}
 }
 
+func TestIsQueryNeeded(t *testing.T) {
+	isQueryNeededTests := []struct {
+		name  string
+		time  time.Time
+		count []int
+		want  bool
+	}{
+		{
+			name:  "time not in tracker",
+			time:  time.Now(),
+			count: []int{-1},
+			want:  true,
+		},
+		{
+			name:  "time in tracker, retry required",
+			time:  time.Now(),
+			count: []int{0, 1, 2, 3, 4},
+			want:  true,
+		},
+		{
+			name:  "time in tracker, retry count exceeded",
+			time:  time.Now(),
+			count: []int{5, 6, 7, 8, 9},
+			want:  false,
+		},
+	}
+	for _, tt := range isQueryNeededTests {
+		for _, count := range tt.count {
+			if count > -1 {
+				retryTracker[tt.time] = count
+			}
+			t.Run(tt.name, func(t *testing.T) {
+				got := isQueryNeeded(tt.time)
+				if got != tt.want {
+					t.Errorf("%s\ngot: %v\nwant: %v\n", tt.name, got, tt.want)
+				}
+			})
+		}
+	}
+}
+
 func setup() error {
 	type dirInfo struct {
 		dirName  string
@@ -227,7 +268,7 @@ func shutdown() {
 	os.RemoveAll(testingDir)
 }
 
-var _ = Describe("MetricsConfigController - CRD Handling", func() {
+var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 	const timeout = time.Second * 60
 	const interval = time.Second * 1
@@ -238,7 +279,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		mockpconn *mocks.MockPrometheusConnection
 
 		testConfigMap *corev1.ConfigMap
-		instCopy      *metricscfgv1beta1.KokuMetricsConfig
+		instCopy      *metricscfgv1beta1.MetricsConfig
 		testPVC       *corev1.PersistentVolumeClaim
 		checkPVC      bool = true
 	)
@@ -247,11 +288,15 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 	emptyDep1 := emptyDirDeployment.DeepCopy()
 	emptyDep2 := emptyDirDeployment.DeepCopy()
 
+	// override MaxRetries to reduce testing time
+	collector.MaxRetries = 1
+
 	BeforeEach(func() {
 
 		GitCommit = "1234567"
 
 		setupRequired(ctx)
+		retentionPeriod = time.Duration(0)
 
 		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
 		promConnSetter = func(promcoll *collector.PrometheusCollector) error {
@@ -488,7 +533,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			})
 			It("default CR works fine", func() {
 				instCopy.Spec.APIURL = validTS.URL
-				instCopy.Spec.Source.SourceName = "INSERT-SOURCE-NAME"
+				instCopy.Spec.Source.SourceName = ""
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -506,6 +551,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
 				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
+				Expect(fetched.Status.Source.SourceName).To(Equal(clusterID))
 				Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})
@@ -885,7 +931,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 
 		BeforeEach(func() {
 			r = &MetricsConfigReconciler{Client: k8sClient, apiReader: k8sManager.GetAPIReader()}
-			retentionPeriod = time.Duration(0)
 			Expect(retentionPeriod).To(Equal(time.Duration(0)))
 		})
 		It("configMap does not exist - uses 14 days", func() {
@@ -999,6 +1044,54 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
 		})
 
+		It("check the start time on old CR - failed query more than hour old", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
+			original := time.Now().UTC().Truncate(time.Hour).Add(-2 * time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &falseDef,
+					},
+				},
+				Status: metricscfgv1beta1.MetricsConfigStatus{
+					Prometheus: metricscfgv1beta1.PrometheusStatus{
+						LastQuerySuccessTime: metav1.Time{Time: original.Add(-1 * time.Hour)},
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).To(Equal(original))
+			Expect(got).ToNot(Equal(original.Add(-fourteenDayDuration)))
+		})
+
+		It("check the start time on old CR - failed query more than retention period old", func() {
+			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
+			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
+			// cr.Status.Prometheus.LastQuerySuccessTime.IsZero()
+			thirtyDaysOld := time.Now().UTC().Truncate(time.Hour).Add(-30 * 24 * time.Hour)
+			expected := now().UTC().Add(-1 * fourteenDayDuration).Truncate(24 * time.Hour)
+
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						CollectPreviousData: &falseDef,
+					},
+				},
+				Status: metricscfgv1beta1.MetricsConfigStatus{
+					Prometheus: metricscfgv1beta1.PrometheusStatus{
+						LastQuerySuccessTime: metav1.Time{Time: thirtyDaysOld},
+					},
+				},
+			}
+
+			got, _ := getTimeRange(ctx, r, cr)
+			Expect(got).To(Equal(expected))
+		})
+
 		It("check the start time on new CR - previous data collection set to false", func() {
 			// cr.Spec.PrometheusConfig.CollectPreviousData != nil &&
 			// *cr.Spec.PrometheusConfig.CollectPreviousData &&
@@ -1085,7 +1178,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 		It("2day retention period - successfully queried but there was no data on first day, but data on second", func() {
 			resetReconciler(WithSecretOverride(true))
 
-			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
 			createObject(ctx, testConfigMap)
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
@@ -1116,7 +1209,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", func() {
 			resetReconciler(WithSecretOverride(true))
 			now = func() time.Time { return time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour) }
 
-			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 1d"}
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
 			createObject(ctx, testConfigMap)
 
 			t := now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)

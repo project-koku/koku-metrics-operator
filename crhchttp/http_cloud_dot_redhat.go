@@ -12,7 +12,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -130,7 +129,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 	transport := DefaultTransport
 	if authConfig.ValidateCert {
 		// create the client specifying the ca cert file for transport
-		caCert, err := ioutil.ReadFile(cacerts)
+		caCert, err := os.ReadFile(cacerts)
 		if err != nil {
 			log.Error(err, "The following error occurred: ") // TODO fix this error handling
 		}
