@@ -55,6 +55,19 @@ type ServiceAccountToken struct {
 
 const serviceaccount = metricscfgv1beta1.ServiceAccount
 
+// AuthError represents a client error returned when authenticating client credentials.
+// It includes the HTTP status code, an error type specific to the authentication process and a desriptive error message.
+type AuthError struct {
+	StatusCode  int
+	ErrorType   string
+	Description string
+}
+
+// Error returns a formated error string combining the HTTP status, error type and description.
+func (e *AuthError) Error() string {
+	return fmt.Sprintf("HTTP Status: %d, Error: %s, Description: %s", e.StatusCode, e.ErrorType, e.Description)
+}
+
 func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error {
 	if ac.Authentication != serviceaccount {
 		return nil
@@ -85,20 +98,32 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-
-	// TODO: handle errors for ServiceAccountData fields
-	// ONLY proceed to unmarshal if the status was 200
-	// if resp.StatusCode != http.StatusOK {
-	// 	return fmt.Errorf("status: %d | error response: %s", resp.StatusCode, body)
-	// }
-
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	// Handle client errors and invalid requests
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		var errResponse struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}
+
+		if err := json.Unmarshal([]byte(body), &errResponse); err != nil {
+			// return generic error with addiotional context if unmarshalling fails
+			return fmt.Errorf("status: %d, failed to unmarshal error response: %w", resp.StatusCode, err)
+		}
+
+		return &AuthError{
+			StatusCode:  resp.StatusCode,
+			ErrorType:   errResponse.Error,
+			Description: errResponse.ErrorDescription,
+		}
+	}
+
 	var result ServiceAccountToken
 	if err := json.Unmarshal([]byte(body), &result); err != nil {
-		return fmt.Errorf("error unmarshaling data from request: %w", err)
+		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	if result.AccessToken == "" {

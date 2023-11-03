@@ -69,7 +69,7 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 	It("should handle failing to unmarshal response body", func() {
 		err := authConfig.GetAccessToken(ctx, badMockTS.URL)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("error unmarshaling data from request"))
+		Expect(err.Error()).To(ContainSubstring("failed to unmarshal"))
 	})
 
 	It("should handle empty access token in server response", func() {

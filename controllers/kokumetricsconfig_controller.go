@@ -447,10 +447,27 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 
 	// Service-account authentication check
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
-
 		if err := handler.Auth.GetAccessToken(ctx, cr.Spec.Authentication.TokenURL); err != nil {
-			errorMsg := fmt.Sprintf("Invalid client credentials provided. Correct the client-id / client-secret in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
-			log.Info(errorMsg)
+			var specificErrMsg string
+
+			if authErr, ok := err.(*crhchttp.AuthError); ok {
+				defaultMsg := "Invalid client credentials provided. Correct the client-id / client-secret"
+
+				switch {
+
+				case strings.Contains(authErr.ErrorType, "invalid_client"):
+					specificErrMsg = "Missing or invalid client credentials provided"
+				case strings.Contains(authErr.ErrorType, "unauthorized_client"):
+					specificErrMsg = "Missing or invalid client secret"
+				case strings.Contains(authErr.ErrorType, "unsupported_grant_type") || strings.Contains(authErr.Description, "grant_type"):
+					log.Error(authErr, "missing or invalid grant_type in request")
+					specificErrMsg = defaultMsg
+				default:
+					specificErrMsg = defaultMsg
+				}
+				log.Info(specificErrMsg, authErr)
+			}
+			errorMsg := fmt.Sprintf("%s in `%s`. Updated credentials will be re-verified during the next reconciliation.", specificErrMsg, cr.Spec.Authentication.AuthenticationSecretName)
 			cr.Status.Authentication.AuthErrorMessage = errorMsg
 			return err
 		}
