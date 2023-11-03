@@ -52,6 +52,13 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
 	})
 
+	It("Should handle error when constructing the HTTP request", func() {
+		invalidURL := "%%%%"
+		err := authConfig.GetAccessToken(ctx, invalidURL)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to construct HTTP request"))
+	})
+
 	It("should handle failed http requests", func() {
 		validMockTS.Close()
 
@@ -66,10 +73,16 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(err.Error()).To(ContainSubstring("failed to read response body"))
 	})
 
-	It("should handle failing to unmarshal response body", func() {
+	It("should handle failing to unmarshal error response", func() {
 		err := authConfig.GetAccessToken(ctx, badMockTS.URL)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("failed to unmarshal"))
+		Expect(err.Error()).To(ContainSubstring("failed to unmarshal error response"))
+	})
+
+	It("should handle failing to unmarshal response to ServiceAccountToken", func() {
+		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/bad-json")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to unmarshal response"))
 	})
 
 	It("should handle empty access token in server response", func() {
@@ -85,6 +98,20 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		err := notValidAuth.GetAccessToken(ctx, validMockTS.URL)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(authConfig.BearerTokenString).To(BeEmpty())
+	})
+
+	It("Should handle client errors in server response", func() {
+		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/client-error")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(Equal("HTTP Status: 400, Error: invalid_request, Description: This request is missing a required parameter"))
+	})
+
+	It("Should return AuthError for client errors", func() {
+		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/client-error")
+		Expect(err).To(HaveOccurred())
+
+		_, isAuthError := err.(*AuthError)
+		Expect(isAuthError).To(BeTrue())
 	})
 
 	Context("Negative Tests", func() {

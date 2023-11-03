@@ -55,12 +55,28 @@ var _ = BeforeSuite(func() {
 	}))
 
 	badMockTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 
 		switch {
 		case strings.Contains(r.URL.Path, "/bad-response"):
 			w.Header().Set("Content-Length", "1") // Setting this might not be strictly necessary
 			w.WriteHeader(http.StatusOK)
 			w.(http.Flusher).Flush()
+			return
+
+		case strings.Contains(r.URL.Path, "/client-error"):
+			clientErrorResponse := map[string]interface{}{
+				"error":             "invalid_request",
+				"error_description": "This request is missing a required parameter",
+			}
+
+			w.WriteHeader(http.StatusBadRequest)
+			err := json.NewEncoder(w).Encode(clientErrorResponse)
+			Expect(err).NotTo(HaveOccurred())
+			return
+
+		case strings.Contains(r.URL.Path, "/bad-json"):
+			_, _ = w.Write([]byte(`{"invalid_json": "this is not a ServiceAccountToken}`))
 			return
 
 		case strings.Contains(r.URL.Path, "/no-token"):
@@ -71,8 +87,6 @@ var _ = BeforeSuite(func() {
 				"not_before_policy":  0,
 				"scope":              "user",
 			}
-
-			w.Header().Set("Content-Type", "application/json")
 			err := json.NewEncoder(w).Encode(responseWithoutToken)
 			Expect(err).NotTo(HaveOccurred())
 			return
