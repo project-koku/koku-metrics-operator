@@ -377,6 +377,7 @@ func TestGetResourceID(t *testing.T) {
 		{name: "with slashes", input: "gce://openshift-gce-devel/us-west1-a/metering-ci-3-ig-m-91kw", want: "metering-ci-3-ig-m-91kw"},
 		{name: "without slashes", input: "metering-ci-3-ig-m-91kw", want: "metering-ci-3-ig-m-91kw"},
 		{name: "nil provider id", input: nil, want: ""},
+		{name: "nonsense int", input: 35987345987, want: ""},
 	}
 	for _, tt := range getResourceIDTests {
 		t.Run(tt.name, func(t *testing.T) {

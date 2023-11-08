@@ -108,14 +108,12 @@ func getStruct(val mappedValues, usage csvStruct, rowResults mappedCSVStruct, ke
 }
 
 func getResourceID(input interface{}) string {
-
-	provider_id, ok := input.(string)
+	input_string, ok := input.(string)
 	if !ok {
 		log.Info(fmt.Sprintf("failed to get resource-id from provider-id: %v", input))
 		return ""
 	}
-
-	splitString := strings.Split(provider_id, "/")
+	splitString := strings.Split(input_string, "/")
 	return splitString[len(splitString)-1]
 }
 
