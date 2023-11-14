@@ -50,8 +50,8 @@ var (
 	pullSecretAuthKey        = "cloud.openshift.com"
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
-	authClientId             = "clientid"
-	authClientSecret         = "clientsecret"
+	authClientId             = "client_id"
+	authClientSecret         = "client_secret"
 
 	falseDef = false
 	trueDef  = true
@@ -340,7 +340,7 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 	// Defining the required keys
 	requiredKeys := []string{authClientId, authClientSecret}
 	for _, requiredKey := range requiredKeys {
-		if value, exists := keys[requiredKey]; !exists || value == "" {
+		if len(keys[requiredKey]) <= 0 {
 			msg := fmt.Sprintf("service account secret not found with expected %s data", requiredKey)
 			log.Info(msg)
 			return fmt.Errorf(msg)
@@ -496,8 +496,7 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 	cr.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
-		// TODO: check with ux/docs on message
-		msg := fmt.Sprintf("console.redhat.com credentials in `%s` are invalid. Basic authentication is being deprecated and will soon no longer be functional. Please switch to service account authentication. Refer to the documentation for more details on this transition.", cr.Spec.Authentication.AuthenticationSecretName)
+		msg := fmt.Sprintf("console.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
 		log.Info(msg)
 		cr.Status.Authentication.AuthErrorMessage = msg
 		cr.Status.Authentication.ValidBasicAuth = &falseDef

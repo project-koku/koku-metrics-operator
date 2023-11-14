@@ -621,7 +621,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 				// Create secret missing 'clientid' to make it invalid.
 				secretData := map[string][]byte{
-					"clientSecret": []byte("mockClientSecret"),
+					"client_secret": []byte("mockClientSecret"),
 				}
 				secretName := "invalid-sa-secret"
 				createSecret(ctx, secretName, namespace, secretData)
