@@ -1,5 +1,3 @@
-# TODO: remove before merge
-include .env
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -62,6 +60,10 @@ CONTAINER_TOOL ?= docker
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
+
+# Set default values for operator environment
+OPERATOR_RUNTIME_ENV ?= development
+API_TARGET_ENV ?= stage
 
 .PHONY: all
 all: build
