@@ -465,7 +465,7 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 				default:
 					specificErrMsg = defaultMsg
 				}
-				log.Info(specificErrMsg, authErr)
+				log.Info(specificErrMsg)
 			}
 			errorMsg := fmt.Sprintf("%s in `%s`. Updated credentials will be re-verified during the next reconciliation.", specificErrMsg, cr.Spec.Authentication.AuthenticationSecretName)
 			cr.Status.Authentication.AuthErrorMessage = errorMsg
@@ -686,6 +686,14 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
+	// TODO: Remove before merge
+	operatorEnv, exists := os.LookupEnv("OPERATOR_RUNTIME_ENV")
+	if exists && operatorEnv == "development" {
+		r.overrideSecretPath = trueDef
+		msg := fmt.Sprintf("using %s environment", operatorEnv)
+		log.Info(msg)
+	}
 
 	os.Setenv("TZ", "UTC")
 

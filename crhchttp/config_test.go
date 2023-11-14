@@ -40,7 +40,7 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		return config.GetAccessToken(ctx, badMockTS.URL+tokenurlsuffix)
 	}
 
-	It("Successfully retrieves and sets the access token", func() {
+	It("successfully retrieves and sets the access token", func() {
 		err := authConfig.GetAccessToken(ctx, validMockTS.URL+tokenurlsuffix)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
@@ -52,7 +52,7 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(authConfig.BearerTokenString).To(Equal(mockaccesstoken))
 	})
 
-	It("Should handle error when constructing the HTTP request", func() {
+	It("should handle error when constructing the HTTP request", func() {
 		invalidURL := "%%%%"
 		err := authConfig.GetAccessToken(ctx, invalidURL)
 		Expect(err).To(HaveOccurred())
@@ -91,7 +91,7 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(err.Error()).To(ContainSubstring("token response did not contain an access token"))
 	})
 
-	It("Should handle return nil when authentication is not service account", func() {
+	It("should handle return nil when authentication is not service account", func() {
 		notValidAuth := &AuthConfig{
 			Authentication: "not-serviceaccount",
 		}
@@ -100,13 +100,13 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 		Expect(authConfig.BearerTokenString).To(BeEmpty())
 	})
 
-	It("Should handle client errors in server response", func() {
+	It("should handle client errors in server response", func() {
 		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/client-error")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(Equal("HTTP Status: 400, Error: invalid_request, Description: This request is missing a required parameter"))
 	})
 
-	It("Should return AuthError for client errors", func() {
+	It("should return AuthError for client errors", func() {
 		err := authConfig.GetAccessToken(ctx, badMockTS.URL+"/client-error")
 		Expect(err).To(HaveOccurred())
 
