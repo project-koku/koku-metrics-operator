@@ -9,9 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -97,43 +95,22 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
-	}
+	if resp.StatusCode != 200 {
+		errResponse := AuthError{StatusCode: resp.StatusCode}
 
-	// Handle client errors and invalid requests
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		var errResponse struct {
-			Error            string `json:"error"`
-			ErrorDescription string `json:"error_description"`
-		}
-
-		if err := json.Unmarshal([]byte(body), &errResponse); err != nil {
-			// return generic error with addiotional context if unmarshalling fails
+		if err := json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
 			return fmt.Errorf("status: %d, failed to unmarshal error response: %w", resp.StatusCode, err)
-		}
-
-		return &AuthError{
-			StatusCode:  resp.StatusCode,
-			ErrorType:   errResponse.Error,
-			Description: errResponse.ErrorDescription,
 		}
 	}
 
 	var result ServiceAccountToken
-	if err := json.Unmarshal([]byte(body), &result); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	if result.AccessToken == "" {
-		errorMsg := "token response did not contain an access token"
-		log.Error(errors.New(errorMsg), errorMsg)
-		return errors.New(errorMsg)
-	}
 	// Save the token to AuthConfig BearerTokenString
-	log.Info("successfully retrieved and set access token for subsequent requests")
 	ac.BearerTokenString = result.AccessToken
+	log.Info("successfully retrieved and set access token for subsequent requests")
 	return nil
 
 }

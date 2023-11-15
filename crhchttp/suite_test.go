@@ -59,7 +59,7 @@ var _ = BeforeSuite(func() {
 
 		switch {
 		case strings.Contains(r.URL.Path, "/bad-response"):
-			w.Header().Set("Content-Length", "1") // Setting this might not be strictly necessary
+			w.Header().Set("Content-Length", "1")
 			w.WriteHeader(http.StatusOK)
 			w.(http.Flusher).Flush()
 			return
@@ -77,18 +77,6 @@ var _ = BeforeSuite(func() {
 
 		case strings.Contains(r.URL.Path, "/bad-json"):
 			_, _ = w.Write([]byte(`{"invalid_json": "this is not a ServiceAccountToken}`))
-			return
-
-		case strings.Contains(r.URL.Path, "/no-token"):
-			responseWithoutToken := map[string]interface{}{
-				"expires_in":         3600,
-				"refresh_expires_in": 1800,
-				"token_type":         "Bearer",
-				"not_before_policy":  0,
-				"scope":              "user",
-			}
-			err := json.NewEncoder(w).Encode(responseWithoutToken)
-			Expect(err).NotTo(HaveOccurred())
 			return
 
 		case !strings.Contains(r.URL.Path, tokenurlsuffix):

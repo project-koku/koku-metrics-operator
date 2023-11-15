@@ -61,10 +61,6 @@ CONTAINER_TOOL ?= docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-# Set default values for operator environment
-OPERATOR_RUNTIME_ENV ?= development
-API_TARGET_ENV ?= stage
-
 .PHONY: all
 all: build
 
@@ -152,6 +148,12 @@ test: manifests generate fmt vet envtest ## Run tests.
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
+
+# Set default values for operator environment
+OPERATOR_RUNTIME_ENV ?= development
+API_TARGET_ENV ?= stage
+export OPERATOR_RUNTIME_ENV
+export API_TARGET_ENV
 
 SECRET_ABSPATH ?= ./testing
 WATCH_NAMESPACE ?= koku-metrics-operator
