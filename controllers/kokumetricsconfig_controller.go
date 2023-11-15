@@ -93,17 +93,6 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-// sanitizeKey cleans up the key strings.
-// It removes spaces, dashes, and underscores, and converts the string to lowercase.
-func sanitizeKey(key string) string {
-	key = strings.ReplaceAll(key, " ", "")
-	key = strings.ReplaceAll(key, "-", "")
-	key = strings.ReplaceAll(key, "_", "")
-	key = strings.ToLower(key)
-
-	return key
-}
-
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
 func StringReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, specItem *string, statusItem *string, defaultVal string) (string, bool) {
 	// Update statusItem if needed
@@ -333,8 +322,7 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 	// Extracting data from the Secret
 	keys := make(map[string]string)
 	for k, v := range secret.Data {
-		sanitizedKey := sanitizeKey(k)
-		keys[sanitizedKey] = string(v)
+		keys[strings.ToLower(k)] = string(v)
 	}
 
 	// Defining the required keys

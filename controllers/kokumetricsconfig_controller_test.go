@@ -643,7 +643,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.ServiceAccount))
 				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(secretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
-				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("service account secret not found with expected clientid data"))
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("service account secret not found with expected client_id data"))
 			})
 
 			It("should find basic auth creds for good basic auth CRD case", func() {
