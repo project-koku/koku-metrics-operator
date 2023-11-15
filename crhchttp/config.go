@@ -53,19 +53,6 @@ type ServiceAccountToken struct {
 
 const serviceaccount = metricscfgv1beta1.ServiceAccount
 
-// AuthError represents a client error returned when authenticating client credentials.
-// It includes the HTTP status code, an error type specific to the authentication process and a desriptive error message.
-type AuthError struct {
-	StatusCode  int
-	ErrorType   string
-	Description string
-}
-
-// Error returns a formated error string combining the HTTP status, error type and description.
-func (e *AuthError) Error() string {
-	return fmt.Sprintf("HTTP Status: %d, Error: %s, Description: %s", e.StatusCode, e.ErrorType, e.Description)
-}
-
 func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error {
 	if ac.Authentication != serviceaccount {
 		return nil
@@ -96,6 +83,12 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		// AuthError represents a client error returned when authenticating client credentials.
+		type AuthError struct {
+			StatusCode  int
+			ErrorType   string
+			Description string
+		}
 		errResponse := AuthError{StatusCode: resp.StatusCode}
 
 		if err := json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
