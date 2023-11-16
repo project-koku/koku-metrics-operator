@@ -199,6 +199,21 @@ func GetClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 	return nil
 }
 
+// LogSecretAccessError evaluates  the type of kube secret error and logs the appropriate message.
+func LogSecretAccessError(err error, msg string) {
+	switch {
+	case errors.IsNotFound(err):
+		errMsg := fmt.Sprintf("%s does not exist", msg)
+		log.Error(err, errMsg)
+	case errors.IsForbidden(err):
+		errMsg := fmt.Sprintf("operator does not have permission to check %s", msg)
+		log.Error(err, errMsg)
+	default:
+		errMsg := fmt.Sprintf("could not check %s", msg)
+		log.Error(err, errMsg)
+	}
+}
+
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
 func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
@@ -206,14 +221,7 @@ func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthCon
 
 	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			log.Error(err, "pull-secret does not exist")
-		case errors.IsForbidden(err):
-			log.Error(err, "operator does not have permission to check pull-secret")
-		default:
-			log.Error(err, "could not check pull-secret")
-		}
+		LogSecretAccessError(err, "pull-secret")
 		return err
 	}
 
@@ -264,14 +272,7 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 		Name:      cr.Status.Authentication.AuthenticationSecretName}
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			log.Error(err, "secret does not exist")
-		case errors.IsForbidden(err):
-			log.Error(err, "operator does not have permission to check secret")
-		default:
-			log.Error(err, "could not check secret")
-		}
+		LogSecretAccessError(err, "secret")
 		return err
 	}
 
@@ -308,14 +309,7 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 		Name:      secretName}
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			log.Error(err, "service account secret does not exist")
-		case errors.IsForbidden(err):
-			log.Error(err, "operator does not have permission to check service account secret")
-		default:
-			log.Error(err, "could not check service account secret")
-		}
+		LogSecretAccessError(err, "service-account secret")
 		return err
 	}
 
