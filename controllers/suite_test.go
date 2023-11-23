@@ -331,11 +331,11 @@ func createAuthSecret(ctx context.Context) {
 		authSecretUserKey:     []byte("user1"),
 		authSecretPasswordKey: []byte("password1"),
 	}
-	createSecret(ctx, basicAuthSecretName, namespace, secretData)
+	createSecret(ctx, authSecretName, namespace, secretData)
 }
 
 func deleteAuthSecret(ctx context.Context) {
-	deleteSecret(ctx, basicAuthSecretName, namespace)
+	deleteSecret(ctx, authSecretName, namespace)
 }
 
 func createServiceAccountSecret(ctx context.Context) {
@@ -353,7 +353,7 @@ func deleteServiceAccountSecret(ctx context.Context) {
 
 func replaceAuthSecretData(ctx context.Context, data map[string][]byte) {
 	key := types.NamespacedName{
-		Name:      basicAuthSecretName,
+		Name:      authSecretName,
 		Namespace: namespace,
 	}
 	secret := &corev1.Secret{}
