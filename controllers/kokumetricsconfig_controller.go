@@ -555,7 +555,7 @@ func (r *MetricsConfigReconciler) uploadFiles(authConfig *crhchttp.AuthConfig, c
 	log := log.WithName("uploadFiles")
 
 	log.Info("files ready for upload: " + strings.Join(uploadFiles, ", "))
-	log.Info("pausing for " + fmt.Sprintf("%d", *cr.Status.Upload.UploadWait) + " seconds before uploading")
+	log.Info(fmt.Sprintf("pausing for %d seconds before uploading", *cr.Status.Upload.UploadWait))
 	time.Sleep(time.Duration(*cr.Status.Upload.UploadWait) * time.Second)
 	for _, file := range uploadFiles {
 		if !strings.Contains(file, "tar.gz") {
