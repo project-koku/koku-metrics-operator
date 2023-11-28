@@ -45,7 +45,7 @@ var (
 	clusterID                      = "10e206d7-a11a-403e-b835-6cff14e98b23"
 	channel                        = "4.8-stable"
 	sourceName                     = "cluster-test"
-	basicAuthSecretName            = "basic-auth-secret"
+	authSecretName                 = "basic-auth-secret"
 	serviceAccountSecretName       = "sa-auth-secret"
 	falseValue               bool  = false
 	trueValue                bool  = true
@@ -531,6 +531,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		When("cluster is connected", func() {
 			BeforeEach(func() {
 				checkPVC = true
+				Expect(setup()).Should(Succeed())
 			})
 			It("default CR works fine", func() {
 				instCopy.Spec.APIURL = validTS.URL
@@ -649,7 +650,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			It("should find basic auth creds for good basic auth CRD case", func() {
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -660,7 +661,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
 				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
@@ -669,7 +670,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			It("should find basic auth creds for good basic auth CRD case but fail because creds are wrong", func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -680,7 +681,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
@@ -694,7 +695,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -705,7 +706,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeTrue())
 			})
@@ -713,7 +714,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				deleteAuthSecret(ctx)
 
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -724,7 +725,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
@@ -765,7 +766,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				replaceAuthSecretData(ctx, map[string][]byte{})
 
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -776,7 +777,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
@@ -787,7 +788,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				replaceAuthSecretData(ctx, map[string][]byte{authSecretUserKey: []byte("user1")})
 
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -798,7 +799,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
@@ -807,7 +808,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				replaceAuthSecretData(ctx, map[string][]byte{authSecretPasswordKey: []byte("password1")})
 
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -818,7 +819,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
-				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(basicAuthSecretName))
+				Expect(fetched.Status.Authentication.AuthenticationSecretName).To(Equal(authSecretName))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
 				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
@@ -879,7 +880,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				deleteClusterVersion(ctx)
 
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -892,8 +893,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.ClusterID).To(Equal(""))
 			})
 			It("should attempt upload due to tar.gz being present", func() {
-				Expect(setup()).Should(Succeed())
-
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -907,8 +906,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastUploadStatus).ToNot(BeNil())
 			})
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
-				Expect(setup()).Should(Succeed())
-
 				instCopy.Spec.APIURL = validTS.URL
 				createObject(ctx, instCopy)
 
@@ -925,12 +922,10 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeFalse())
 			})
 			It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
-				Expect(setup()).Should(Succeed())
-
 				hourAgo := metav1.Now().Time.Add(-time.Hour)
 
 				previousValidation = &previousAuthValidation{
-					secretName: basicAuthSecretName,
+					secretName: authSecretName,
 					username:   "user1",
 					password:   "password1",
 					err:        nil,
@@ -939,7 +934,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
-				instCopy.Spec.Authentication.AuthenticationSecretName = basicAuthSecretName
+				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -958,8 +953,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
 			})
 			It("should check the last upload time in the upload status", func() {
-				Expect(setup()).Should(Succeed())
-
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -982,8 +975,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeFalse())
 			})
 			It("old default url - should update status to new default url", func() {
-				Expect(setup()).Should(Succeed())
-
 				instCopy.Spec.APIURL = metricscfgv1beta1.OldDefaultAPIURL
 				instCopy.Spec.Source.SourceName = "OLD-API-URL"
 				createObject(ctx, instCopy)

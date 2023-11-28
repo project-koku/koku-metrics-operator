@@ -51,6 +51,17 @@ type ServiceAccountToken struct {
 	Scope            string `json:"scope"`
 }
 
+// AuthError represents a client error returned when authenticating client credentials.
+type AuthError struct {
+	StatusCode  int
+	ErrorType   string `json:"error"`
+	Description string `json:"error_description"`
+}
+
+func (a *AuthError) Error() string {
+	return fmt.Sprintf("status: %d, error: %s, description: %s", a.StatusCode, a.ErrorType, a.Description)
+}
+
 const serviceaccount = metricscfgv1beta1.ServiceAccount
 
 func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error {
@@ -75,6 +86,7 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
+	log.Info("requesting service-account access token")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to make HTTP request to acquire token: %w", err)
@@ -83,17 +95,11 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// AuthError represents a client error returned when authenticating client credentials.
-		type AuthError struct {
-			StatusCode  int
-			ErrorType   string
-			Description string
-		}
-		errResponse := AuthError{StatusCode: resp.StatusCode}
-
-		if err := json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
+		errResponse := &AuthError{StatusCode: resp.StatusCode}
+		if err := json.NewDecoder(resp.Body).Decode(errResponse); err != nil {
 			return fmt.Errorf("status: %d, failed to unmarshal error response: %w", resp.StatusCode, err)
 		}
+		return errResponse
 	}
 
 	var result ServiceAccountToken
@@ -105,5 +111,4 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	ac.BearerTokenString = result.AccessToken
 	log.Info("successfully retrieved and set access token for subsequent requests")
 	return nil
-
 }

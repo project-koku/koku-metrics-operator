@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/textproto"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -25,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/packaging"
 )
 
@@ -35,14 +35,7 @@ var log = logr.Log.WithName("crc_http")
 
 // DefaultTransport is a copy from the golang http package
 var DefaultTransport = &http.Transport{
-	// TODO: remove conditional proxy if not necessary going forward
-	Proxy: func(req *http.Request) (*url.URL, error) {
-		env := os.Getenv("API_TARGET_ENV")
-		if env == "stage" {
-			return url.Parse("http://squid.corp.redhat.com:3128")
-		}
-		return http.ProxyFromEnvironment(req)
-	},
+	Proxy: http.ProxyFromEnvironment,
 	DialContext: (&net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -112,15 +105,13 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 		req.Header.Set("Content-Type", contentType)
 	}
 
+	log.Info(fmt.Sprintf("request using %s authentication", authConfig.Authentication))
 	switch authConfig.Authentication {
-	case "basic":
-		log.Info("request using basic authentication")
+	case metricscfgv1beta1.Basic:
 		req.SetBasicAuth(authConfig.BasicAuthUser, authConfig.BasicAuthPassword)
-	case "service-account":
-		log.Info("request using service-account token authentication")
+	case metricscfgv1beta1.ServiceAccount:
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
 	default:
-		log.Info("request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
 	}

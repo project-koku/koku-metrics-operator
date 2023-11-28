@@ -42,6 +42,6 @@ const (
 	// OldDefaultAPIURL The old default ingress path.
 	OldDefaultAPIURL string = "https://cloud.redhat.com"
 
-	// DefaultTOKENURL The default path to obtain a service account access token
-	DefaultTOKENURL string = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+	// DefaultTokenURL The default path to obtain a service account access token
+	DefaultTokenURL string = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
 )
