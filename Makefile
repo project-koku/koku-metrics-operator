@@ -149,12 +149,6 @@ test: manifests generate fmt vet envtest ## Run tests.
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
-# Set default values for operator environment
-OPERATOR_RUNTIME_ENV ?= development
-API_TARGET_ENV ?= stage
-export OPERATOR_RUNTIME_ENV
-export API_TARGET_ENV
-
 SECRET_ABSPATH ?= ./testing
 WATCH_NAMESPACE ?= koku-metrics-operator
 # Run against the configured Kubernetes cluster in ~/.kube/config
@@ -228,7 +222,7 @@ ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
-else ifeq ($(AUTH), service_account)
+else ifeq ($(AUTH), service-account)
 	$(MAKE) setup-sa-auth
 	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
@@ -249,7 +243,7 @@ ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
-else ifeq ($(AUTH), service_account)
+else ifeq ($(AUTH), service-account)
 	$(MAKE) setup-sa-auth
 	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml

@@ -289,7 +289,7 @@ type AuthenticationStatus struct {
 	// +nullable
 	LastVerificationTime *metav1.Time `json:"last_credential_verification_time,omitempty"`
 
-	// TokenURL is a filed of KokuMetricsConfig to represent the url used to generate a service account token.
+	// TokenURL is a field of KokuMetricsConfig to represent the url used to generate a service account token.
 	TokenURL string `json:"token_url,omitempty"`
 }
 

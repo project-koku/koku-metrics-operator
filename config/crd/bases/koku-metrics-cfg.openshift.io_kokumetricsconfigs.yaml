@@ -527,7 +527,7 @@ spec:
                       uploads.
                     type: string
                   token_url:
-                    description: TokenURL is a filed of KokuMetricsConfig to represent
+                    description: TokenURL is a field of KokuMetricsConfig to represent
                       the url used to generate a service account token.
                     type: string
                   type:
