@@ -1,7 +1,9 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.20.10-3 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} registry.access.redhat.com/ubi8/go-toolset:1.20.10-3 AS builder
 ARG TARGETOS
 ARG TARGETARCH
+
+RUN echo "TARGETOS: $TARGETOS | TARGETARCH: $TARGETARCH"
 
 USER root
 RUN yum -y update && yum clean all
