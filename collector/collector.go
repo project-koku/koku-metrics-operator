@@ -107,8 +107,13 @@ func getStruct(val mappedValues, usage csvStruct, rowResults mappedCSVStruct, ke
 	return nil
 }
 
-func getResourceID(input string) string {
-	splitString := strings.Split(input, "/")
+func getResourceID(input interface{}) string {
+	input_string, ok := input.(string)
+	if !ok {
+		log.Info(fmt.Sprintf("failed to get resource-id from provider-id: %v", input))
+		return ""
+	}
+	splitString := strings.Split(input_string, "/")
 	return splitString[len(splitString)-1]
 }
 
@@ -204,7 +209,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 		return ErrNoData
 	}
 	for node, val := range nodeResults {
-		resourceID := getResourceID(val["provider_id"].(string))
+		resourceID := getResourceID(val["provider_id"])
 		nodeResults[node]["resource_id"] = resourceID
 	}
 

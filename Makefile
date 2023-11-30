@@ -137,6 +137,10 @@ lint: ## Run pre-commit
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: verify-manifests
+verify-manifests: ## Verify manifests are up to date.
+	./hack/verify-manifests.sh
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
 .PHONY: test

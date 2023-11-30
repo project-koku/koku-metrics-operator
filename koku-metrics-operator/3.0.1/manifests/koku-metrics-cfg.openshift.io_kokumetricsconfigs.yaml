@@ -1,9 +1,11 @@
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
+  creationTimestamp: null
+  labels:
+    app: koku-metrics-operator
   name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
 spec:
   group: koku-metrics-cfg.openshift.io
@@ -49,28 +51,18 @@ spec:
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
-                  token_url:
-                    default: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-                    description: FOR DEVELOPMENT ONLY. TokenURL is a field of KokuMetricsConfig
-                      to represent the endpoint used to obtain the service account
-                      token. The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
-                    type: string
                   type:
                     default: token
                     description: 'AuthType is a field of KokuMetricsConfig to represent
                       the authentication type to be used basic or token. Valid values
                       are: - "basic" : Enables authentication using user and password
-                      from authentication secret. - "service-account" : Enables authentication
-                      using client-id and client-secret from the secret containing
-                      service account information. - "token" (default): Uses cluster
+                      from authentication secret. - "token" (default): Uses cluster
                       token for authentication.'
                     enum:
                     - token
                     - basic
-                    - service-account
                     type: string
                 required:
-                - token_url
                 - type
                 type: object
               clusterID:
@@ -162,23 +154,23 @@ spec:
                 - skip_tls_verification
                 type: object
               source:
-                description: source represents the desired integration on console.redhat.com.
+                description: source represents the desired source on console.redhat.com.
                 properties:
                   check_cycle:
                     default: 1440
                     description: check_cycle is the number of minutes between each
-                      integration status check on console.redhat.com. The default
-                      is 1440 min (24 hours).
+                      source status check on console.redhat.com. The default is 1440
+                      min (24 hours).
                     format: int64
                     minimum: 0
                     type: integer
                   create_source:
                     default: false
-                    description: create_source toggles the creation of the integration
+                    description: create_source toggles the creation of the source
                       on console.redhat.com.
                     type: boolean
                   name:
-                    description: name is the desired name of the integration to create
+                    description: name is the desired name of the source to create
                       on console.redhat.com.
                     type: string
                   sources_path:
@@ -526,17 +518,12 @@ spec:
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
-                  token_url:
-                    description: TokenURL is a field of KokuMetricsConfig to represent
-                      the url used to generate a service account token.
-                    type: string
                   type:
                     description: AuthType is a field of KokuMetricsConfig to represent
                       the authentication type to be used basic or token.
                     enum:
                     - token
                     - basic
-                    - service-account
                     type: string
                   valid_basic_auth:
                     description: ValidBasicAuth is a field of KokuMetricsConfig to
@@ -938,36 +925,36 @@ spec:
                     type: string
                 type: object
               source:
-                description: source represents the observed state of the integration
-                  on console.redhat.com.
+                description: source represents the observed state of the source on
+                  console.redhat.com.
                 properties:
                   check_cycle:
                     description: check_cycle is the number of minutes between each
-                      integration status check on console.redhat.com. The default
-                      is 1440 min (24 hours).
+                      source status check on console.redhat.com. The default is 1440
+                      min (24 hours).
                     format: int64
                     type: integer
                   create_source:
                     description: create_source represents the toggle used during the
-                      creation of the integration on console.redhat.com. An Integration
-                      will not be created if upload_toggle is `false`.
+                      creation of the source on console.redhat.com. A source will
+                      not be created if upload_toggle is `false`.
                     type: boolean
                   error:
                     description: error represents any errors encountered when creating
-                      the integration.
+                      the source.
                     type: string
                   last_check_time:
-                    description: last_check_time is the time that the last integration
+                    description: last_check_time is the time that the last source
                       status check was attempted.
                     format: date-time
                     nullable: true
                     type: string
                   name:
-                    description: name represents the name of the integration that
-                      the operator attempted to create on console.redhat.com.
+                    description: name represents the name of the source that the operator
+                      attempted to create on console.redhat.com.
                     type: string
                   source_defined:
-                    description: source_defined represents whether the defined integration
+                    description: source_defined represents whether the defined source
                       name exists on console.redhat.com.
                     type: boolean
                   sources_path:
@@ -1057,3 +1044,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null
