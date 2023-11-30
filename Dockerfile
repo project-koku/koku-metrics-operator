@@ -3,8 +3,6 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} registry.access.redhat.com/ubi8/go
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN echo "TARGETOS: $TARGETOS | TARGETARCH: $TARGETARCH"
-
 USER root
 RUN yum -y update && yum clean all
 
