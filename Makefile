@@ -44,7 +44,7 @@ OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 
 # DOCKER := $(shell which docker 2>/dev/null)
-# export DOCKER_DEFAULT_PLATFORM = linux/x86_64
+export DOCKER_DEFAULT_PLATFORM = linux/x86_64
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
@@ -137,6 +137,10 @@ lint: ## Run pre-commit
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: verify-manifests
+verify-manifests: ## Verify manifests are up to date.
+	./hack/verify-manifests.sh
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
 .PHONY: test
@@ -174,12 +178,13 @@ docker-push: ## Push docker image with the manager.
 # - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 # - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
 # To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
-PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+# PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- $(CONTAINER_TOOL) buildx create --name operator-builder --driver-opt image=moby/buildkit:v0.11.6
+	- $(CONTAINER_TOOL) buildx create --name operator-builder --driver-opt image=moby/buildkit:v0.12.3
 	$(CONTAINER_TOOL) buildx use operator-builder
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
 	- $(CONTAINER_TOOL) buildx rm operator-builder
@@ -205,6 +210,11 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
+.PHONY: deploy-to-file
+deploy-to-file: manifests kustomize ## Create a deployment file
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default > testing/deployment.yaml
+
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
@@ -215,6 +225,10 @@ deploy-cr:  ## Deploy a KokuMetricsConfig CR for controller running in K8s clust
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else ifeq ($(AUTH), service-account)
+	$(MAKE) setup-sa-auth
+	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -232,6 +246,10 @@ deploy-local-cr:  ## Deploy a KokuMetricsConfig CR for controller running on loc
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else ifeq ($(AUTH), service-account)
+	$(MAKE) setup-sa-auth
+	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"

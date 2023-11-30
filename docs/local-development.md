@@ -3,7 +3,7 @@
 ## Pre-reqs
 
 * Access to a 4.3+ Openshift cluster
-* A clone of [korekuta-go-operator](https://github.com/project-koku/koku-metrics-operator)
+* A clone of [koku-metrics-operator](https://github.com/project-koku/koku-metrics-operator)
 * [Go 1.13 or greater](https://golang.org/doc/install)
 * [Openshift-CLI](https://docs.openshift.com/container-platform/4.5/cli_reference/openshift_cli/getting-started-cli.html) (preferably a version that matches your Openshift cluster version)
 * [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
@@ -24,7 +24,7 @@
 2. Build the manager binary:
 
     ```
-    $ make manager
+    $ make build
     ```
 
 3. Register the CRD with the Kubernetes apiserver:

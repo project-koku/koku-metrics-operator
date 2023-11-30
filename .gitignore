@@ -47,3 +47,7 @@ collector/test_files/test_reports/*
 bundle/
 community-operators-prod/
 bundle.Dockerfile
+
+
+# Ignore .env file
+.env
