@@ -24,9 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
@@ -50,6 +52,8 @@ var (
 	pullSecretAuthKey        = "cloud.openshift.com"
 	authSecretUserKey        = "username"
 	authSecretPasswordKey    = "password"
+	authClientId             = "client_id"
+	authClientSecret         = "client_secret"
 
 	falseDef = false
 	trueDef  = true
@@ -57,6 +61,7 @@ var (
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *metricscfgv1beta1.CloudDotRedHatSourceSpec
 	previousValidation *previousAuthValidation
+	authConfig         *crhchttp.AuthConfig
 
 	log = logr.Log.WithName("metricsconfig_controller")
 )
@@ -119,6 +124,7 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 		StringReflectSpec(r, cr, &cr.Spec.APIURL, &cr.Status.APIURL, metricscfgv1beta1.DefaultAPIURL)
 	}
 	StringReflectSpec(r, cr, &cr.Spec.Authentication.AuthenticationSecretName, &cr.Status.Authentication.AuthenticationSecretName, "")
+	StringReflectSpec(r, cr, &cr.Spec.Authentication.TokenURL, &cr.Status.Authentication.TokenURL, metricscfgv1beta1.DefaultTokenURL)
 
 	if !reflect.DeepEqual(cr.Spec.Authentication.AuthType, cr.Status.Authentication.AuthType) {
 		cr.Status.Authentication.AuthType = cr.Spec.Authentication.AuthType
@@ -197,6 +203,21 @@ func GetClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 	return nil
 }
 
+// LogSecretAccessError evaluates  the type of kube secret error and logs the appropriate message.
+func LogSecretAccessError(err error, msg string) {
+	switch {
+	case errors.IsNotFound(err):
+		errMsg := fmt.Sprintf("%s does not exist", msg)
+		log.Error(err, errMsg)
+	case errors.IsForbidden(err):
+		errMsg := fmt.Sprintf("operator does not have permission to check %s", msg)
+		log.Error(err, errMsg)
+	default:
+		errMsg := fmt.Sprintf("could not check %s", msg)
+		log.Error(err, errMsg)
+	}
+}
+
 // GetPullSecretToken Obtain the bearer token string from the pull secret in the openshift-config namespace
 func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig) error {
 	ctx := context.Background()
@@ -204,14 +225,7 @@ func GetPullSecretToken(r *MetricsConfigReconciler, authConfig *crhchttp.AuthCon
 
 	secret, err := r.Clientset.CoreV1().Secrets(openShiftConfigNamespace).Get(ctx, pullSecretName, metav1.GetOptions{})
 	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			log.Error(err, "pull-secret does not exist")
-		case errors.IsForbidden(err):
-			log.Error(err, "operator does not have permission to check pull-secret")
-		default:
-			log.Error(err, "could not check pull-secret")
-		}
+		LogSecretAccessError(err, "pull-secret")
 		return err
 	}
 
@@ -262,14 +276,7 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 		Name:      cr.Status.Authentication.AuthenticationSecretName}
 	err := r.Get(ctx, namespace, secret)
 	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			log.Error(err, "secret does not exist")
-		case errors.IsForbidden(err):
-			log.Error(err, "operator does not have permission to check secret")
-		default:
-			log.Error(err, "could not check secret")
-		}
+		LogSecretAccessError(err, "secret")
 		return err
 	}
 
@@ -288,6 +295,53 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 
 	authConfig.BasicAuthUser = keys[authSecretUserKey]
 	authConfig.BasicAuthPassword = keys[authSecretPasswordKey]
+
+	return nil
+}
+
+// GetServiceAccountSecret Obtain the client id and client secret from the service account data provided in the current namespace
+func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, cr *metricscfgv1beta1.MetricsConfig, authConfig *crhchttp.AuthConfig, reqNamespace types.NamespacedName) error {
+	log := log.WithName("GetServiceAccountSecret")
+
+	// Fetching the Secret object
+	secret := &corev1.Secret{}
+	secretName := cr.Spec.Authentication.AuthenticationSecretName
+	namespace := types.NamespacedName{
+		Namespace: reqNamespace.Namespace,
+		Name:      secretName}
+
+	log.Info("getting secret", "secret name", secretName, "namespace", reqNamespace.Namespace)
+	err := r.Get(ctx, namespace, secret)
+	if err != nil {
+		LogSecretAccessError(err, "service-account secret")
+		return err
+	}
+	log.Info("found scecret")
+
+	// Extracting data from the Secret
+	keys := make(map[string]string)
+	for k, v := range secret.Data {
+		keys[strings.ToLower(k)] = string(v)
+	}
+
+	// Defining the required keys
+	requiredKeys := []string{authClientId, authClientSecret}
+	log.Info("getting keys from secret", "required keys", requiredKeys)
+	for _, requiredKey := range requiredKeys {
+		if len(keys[requiredKey]) <= 0 {
+			msg := fmt.Sprintf("service account secret not found with expected %s data", requiredKey)
+			log.Info(msg)
+			return fmt.Errorf(msg)
+		}
+	}
+	log.Info("found required keys in secret")
+
+	// Populating the authConfig object
+	authConfig.ServiceAccountData = crhchttp.ServiceAccountData{
+		ClientID:     keys[authClientId],
+		ClientSecret: keys[authClientSecret],
+		GrantType:    "client_credentials",
+	}
 
 	return nil
 }
@@ -321,7 +375,7 @@ func setClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 	return nil
 }
 
-func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
+func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
 	log := log.WithName("setAuthentication")
 	cr.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token {
@@ -336,7 +390,18 @@ func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConf
 			cr.Status.Authentication.AuthErrorMessage = err.Error()
 		}
 		return err
-	} else if cr.Spec.Authentication.AuthenticationSecretName != "" {
+	}
+
+	if cr.Spec.Authentication.AuthenticationSecretName == "" {
+		// No authentication secret name set when using basic or service-account auth
+		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+		err := fmt.Errorf("no authentication secret name set when using basic or service-account auth")
+		cr.Status.Authentication.AuthErrorMessage = err.Error()
+		cr.Status.Authentication.ValidBasicAuth = &falseDef
+		return err
+	}
+
+	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Basic {
 		// Get user and password from auth secret in namespace
 		err := GetAuthSecret(r, cr, authConfig, reqNamespace)
 		if err != nil {
@@ -346,21 +411,37 @@ func setAuthentication(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConf
 			cr.Status.Authentication.ValidBasicAuth = &falseDef
 		}
 		return err
-	} else {
-		// No authentication secret name set when using basic auth
-		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-		err := fmt.Errorf("no authentication secret name set when using basic auth")
-		cr.Status.Authentication.AuthErrorMessage = err.Error()
-		cr.Status.Authentication.ValidBasicAuth = &falseDef
-		return err
 	}
+
+	cr.Status.Authentication.ValidBasicAuth = nil
+	cr.Status.Authentication.LastVerificationTime = nil
+	// Get client ID and client secret from service account secret
+	err := r.GetServiceAccountSecret(ctx, cr, authConfig, reqNamespace)
+	if err != nil {
+		log.Error(nil, "failed to obtain service account secret credentials")
+		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+		cr.Status.Authentication.AuthErrorMessage = err.Error()
+	}
+	return err
 }
 
-func validateCredentials(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr *metricscfgv1beta1.MetricsConfig, cycle int64) error {
+func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handler *sources.SourceHandler, cr *metricscfgv1beta1.MetricsConfig, cycle int64) error {
 	log := log.WithName("validateCredentials")
 
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.Token {
 		// no need to validate token auth
+		return nil
+	}
+
+	// Service-account authentication check
+	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
+		if err := handler.Auth.GetAccessToken(ctx, cr.Spec.Authentication.TokenURL); err != nil {
+			errorMsg := fmt.Sprintf("failed to obtain service-account token: %v", err)
+			log.Info(errorMsg)
+			cr.Status.Authentication.AuthErrorMessage = errorMsg
+			return err
+		}
+		cr.Status.Authentication.AuthErrorMessage = ""
 		return nil
 	}
 
@@ -454,31 +535,27 @@ func packageFiles(p *packaging.FilePackager, cr *metricscfgv1beta1.MetricsConfig
 	}
 }
 
-func uploadFiles(r *MetricsConfigReconciler, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager) error {
-	log := log.WithName("uploadFiles")
-
-	// if its time to upload/package
-	if !*cr.Spec.Upload.UploadToggle {
-		log.Info("operator is configured to not upload reports")
-		return nil
-	}
+func filesToUpload(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig) ([]string, error) {
 	if !checkCycle(log, *cr.Status.Upload.UploadCycle, cr.Status.Upload.LastSuccessfulUploadTime, "upload") {
-		return nil
+		return nil, nil
 	}
-
 	uploadFiles, err := dirCfg.Upload.GetFiles()
 	if err != nil {
 		log.Error(err, "failed to read upload directory")
-		return err
+		return nil, err
 	}
-
 	if len(uploadFiles) <= 0 {
 		log.Info("no files to upload")
-		return nil
+		return nil, nil
 	}
+	return uploadFiles, nil
+}
+
+func (r *MetricsConfigReconciler) uploadFiles(authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.DirectoryConfig, packager *packaging.FilePackager, uploadFiles []string) error {
+	log := log.WithName("uploadFiles")
 
 	log.Info("files ready for upload: " + strings.Join(uploadFiles, ", "))
-	log.Info("pausing for " + fmt.Sprintf("%d", *cr.Status.Upload.UploadWait) + " seconds before uploading")
+	log.Info(fmt.Sprintf("pausing for %d seconds before uploading", *cr.Status.Upload.UploadWait))
 	time.Sleep(time.Duration(*cr.Status.Upload.UploadWait) * time.Second)
 	for _, file := range uploadFiles {
 		if !strings.Contains(file, "tar.gz") {
@@ -563,6 +640,64 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 	return nil, nil
 }
 
+func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metricscfgv1beta1.MetricsConfig, packager *packaging.FilePackager, req ctrl.Request) error {
+
+	log.Info("configuration is for connected cluster")
+	// `authConfig` carries state between reconciliations. The only time we should reset the AuthConfig
+	// is when the AuthType changes between reconciliations, e.g. changing from basic auth to service-token
+	if authConfig == nil || authConfig.Authentication != cr.Status.Authentication.AuthType {
+		authConfig = &crhchttp.AuthConfig{
+			Authentication: cr.Status.Authentication.AuthType,
+			OperatorCommit: cr.Status.OperatorCommit,
+			ClusterID:      cr.Status.ClusterID,
+			Client:         r.Client,
+		}
+	}
+	authConfig.ValidateCert = *cr.Status.Upload.ValidateCert
+
+	// obtain credentials token/basic & return if there are authentication credential errors
+	if err := r.setAuthentication(ctx, authConfig, cr, req.NamespacedName); err != nil {
+		return err
+	}
+
+	uploadFiles, err := filesToUpload(cr, dirCfg)
+	if err != nil {
+		log.Error(err, "failed to get files to upload")
+		return err
+	}
+
+	// only attempt upload when files are available to upload
+	if uploadFiles == nil {
+		return nil
+	}
+
+	handler := &sources.SourceHandler{
+		APIURL: cr.Status.APIURL,
+		Auth:   authConfig,
+		Spec:   cr.Status.Source,
+	}
+
+	if err := r.validateCredentials(ctx, handler, cr, 1440); err != nil {
+		log.Info("failed to validate credentials", "error", err)
+		return err
+	}
+	// Check if source is defined and update the status to confirmed/created
+	checkSource(r, handler, cr)
+
+	// attempt upload
+	if err := r.uploadFiles(authConfig, cr, dirCfg, packager, uploadFiles); err != nil {
+		log.Info("failed to upload files", "error", err)
+		return err
+	}
+
+	// revalidate if an upload fails due to 401
+	if strings.Contains(cr.Status.Upload.LastUploadStatus, "401") {
+		return r.validateCredentials(ctx, handler, cr, 0)
+	}
+
+	return nil
+}
+
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=koku-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=kokumetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operators.coreos.com,namespace=koku-metrics-operator,resources=clusterserviceversions,verbs=get;list;watch;update;patch
@@ -575,6 +710,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
 	os.Setenv("TZ", "UTC")
 
 	// fetch the MetricsConfig instance
@@ -662,7 +798,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := getPromCollector(r, cr); err != nil {
 		log.Info("failed to get prometheus connection", "error", err)
 		r.updateStatusAndLogError(ctx, cr)
-		return ctrl.Result{RequeueAfter: time.Minute * 2}, err // give things a break and try again in 2 minutes
+		return ctrl.Result{}, err
 	}
 
 	for start := startTime; !start.After(endTime); start = start.AddDate(0, 0, 1) {
@@ -718,46 +854,11 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	var errors []error
 
 	if cr.Spec.Upload.UploadToggle != nil && *cr.Spec.Upload.UploadToggle {
-
-		log.Info("configuration is for connected cluster")
-
-		authConfig := &crhchttp.AuthConfig{
-			ValidateCert:   *cr.Status.Upload.ValidateCert,
-			Authentication: cr.Status.Authentication.AuthType,
-			OperatorCommit: cr.Status.OperatorCommit,
-			ClusterID:      cr.Status.ClusterID,
-			Client:         r.Client,
+		if err := r.setAuthAndUpload(ctx, cr, packager, req); err != nil {
+			result = ctrl.Result{}
+			errors = append(errors, err)
 		}
 
-		// obtain credentials token/basic & return if there are authentication credential errors
-		if err := setAuthentication(r, authConfig, cr, req.NamespacedName); err != nil {
-			r.updateStatusAndLogError(ctx, cr)
-			return ctrl.Result{}, err
-		}
-
-		handler := &sources.SourceHandler{
-			APIURL: cr.Status.APIURL,
-			Auth:   authConfig,
-			Spec:   cr.Status.Source,
-		}
-
-		if err := validateCredentials(r, handler, cr, 1440); err == nil {
-			// Block will run when creds are valid.
-
-			// Check if source is defined and update the status to confirmed/created
-			checkSource(r, handler, cr)
-
-			// attempt upload
-			if err := uploadFiles(r, authConfig, cr, dirCfg, packager); err != nil {
-				result = ctrl.Result{}
-				errors = append(errors, err)
-			}
-
-			// revalidate if an upload fails due to 401
-			if strings.Contains(cr.Status.Upload.LastUploadStatus, "401") {
-				_ = validateCredentials(r, handler, cr, 0)
-			}
-		}
 	} else {
 		log.Info("configuration is for restricted-network cluster")
 	}
@@ -790,6 +891,11 @@ func (r *MetricsConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metricscfgv1beta1.MetricsConfig{}).
+		WithOptions(controller.Options{
+			RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(
+				time.Duration(5*time.Second),
+				time.Duration(5*time.Minute),
+			)}).
 		Complete(r)
 }
 

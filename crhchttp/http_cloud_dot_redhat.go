@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/packaging"
 )
 
@@ -104,12 +105,13 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 		req.Header.Set("Content-Type", contentType)
 	}
 
+	log.Info(fmt.Sprintf("request using %s authentication", authConfig.Authentication))
 	switch authConfig.Authentication {
-	case "basic":
-		log.Info("request using basic authentication")
+	case metricscfgv1beta1.Basic:
 		req.SetBasicAuth(authConfig.BasicAuthUser, authConfig.BasicAuthPassword)
+	case metricscfgv1beta1.ServiceAccount:
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
 	default:
-		log.Info("request using token authentication")
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authConfig.BearerTokenString))
 		req.Header.Set("User-Agent", fmt.Sprintf("cost-mgmt-operator/%s cluster/%s", authConfig.OperatorCommit, authConfig.ClusterID))
 	}
