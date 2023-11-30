@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.20.10-3 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -10,9 +10,7 @@ WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
-# cache deps before building and copying source so that we do not need to re-download as much
-# and so that source changes do not invalidate our downloaded layer
-RUN go mod download
+COPY vendor/ vendor/
 
 # Copy the go source
 COPY main.go main.go
@@ -32,7 +30,7 @@ COPY .git .git
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
+CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
 go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary

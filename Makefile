@@ -137,6 +137,10 @@ lint: ## Run pre-commit
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: vendor
+vendor: ## Run `go mod vendor`.
+	go mod vendor
+
 .PHONY: verify-manifests
 verify-manifests: ## Verify manifests are up to date.
 	./hack/verify-manifests.sh
@@ -150,7 +154,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
+build: manifests generate fmt vet vendor ## Build manager binary.
 	go build -o bin/manager main.go
 
 SECRET_ABSPATH ?= ./testing
@@ -320,10 +324,6 @@ downstream: ## Generate the code changes necessary for the downstream image.
 	cp config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	$(MAKE) generate
 	$(MAKE) manifests
-
-.PHONY: downstream-vendor
-downstream-vendor: ## Run `go mod vendor`.
-	go mod vendor
 
 ##@ Build Dependencies
 
