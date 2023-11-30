@@ -139,6 +139,7 @@ vet: ## Run go vet against code.
 
 .PHONY: vendor
 vendor: ## Run `go mod vendor`.
+	go mod tidy
 	go mod vendor
 
 .PHONY: verify-manifests
