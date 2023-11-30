@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.0.0
-VERSION ?= 3.0.1
+PREVIOUS_VERSION ?= 3.0.1
+VERSION ?= 3.1.0
 
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
@@ -139,6 +139,7 @@ vet: ## Run go vet against code.
 
 .PHONY: vendor
 vendor: ## Run `go mod vendor`.
+	go get -u
 	go mod tidy
 	go mod vendor
 
