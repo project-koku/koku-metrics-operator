@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - 'main'
-    tags:  # run on any tag that starts with `v.` but not tags that end with `-downstream`
-      - 'v.**'
-      - '!v.**-downstream'
+    tags:  # run on any tag that starts with `v` but not tags that end with `-downstream`
+      - 'v**'
+      - '!v**-downstream'
 
 jobs:
   build-and-publish:
