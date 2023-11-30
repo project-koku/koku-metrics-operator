@@ -34,7 +34,8 @@ jobs:
             type=semver,pattern={{raw}}
             type=semver,pattern={{sha}}
             # set latest tag for default branch
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
+            type=ref,event=branch
 
       - name: Login to Quay.io
         uses: redhat-actions/podman-login@v1
