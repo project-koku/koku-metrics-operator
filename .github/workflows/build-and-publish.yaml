@@ -32,7 +32,7 @@ jobs:
             quay.io/project-koku/koku-metrics-operator
           tags: |
             type=semver,pattern={{raw}}
-            type=sha,enabled={{ startsWith(github.ref, 'refs/tags/v') }}
+            type=sha,prefix=,enable={{ github.ref_type == 'tag' }}
             # set latest tag for default branch
             type=raw,value=latest
             type=ref,event=branch
