@@ -395,7 +395,7 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 	if cr.Spec.Authentication.AuthenticationSecretName == "" {
 		// No authentication secret name set when using basic or service-account auth
 		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-		err := fmt.Errorf("no authentication secret name set when using basic or service-account auth")
+		err := fmt.Errorf("no authentication secret name set when using %s auth", cr.Status.Authentication.AuthType)
 		cr.Status.Authentication.AuthErrorMessage = err.Error()
 		cr.Status.Authentication.ValidBasicAuth = &falseDef
 		return err
