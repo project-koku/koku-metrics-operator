@@ -60,8 +60,8 @@ If these assumptions are not met, the operator will not deploy correctly. In the
 
 ## Configurable parameters:
   * `authentication`:
-    * `type: token` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` is used when the openshift-config pull-secret does not contain a token for `console.redhat.com`.
-    * `secret_name` -> The Secret used by the operator when the authentication type is `basic`. This parameter is required **only if** the authentication type is `basic`.
+    * `type: token` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` and `service-account` authentication methods are used when the openshift-config pull-secret does not contain a token for `console.redhat.com`.
+    * `secret_name` -> The Secret used by the operator when the authentication type is `basic` or `service-account`. This parameter is required **only if** the authentication type is `basic` or `service-account`.
   * `packaging`:
     * `max_reports_to_store: 30` -> The number of reports to store when configured in air-gapped mode. The default is 30, with a minimum of 1 and no maximum. When the operator is not configured in air-gapped mode, this parameter has no effect. Reports are removed as soon as they are uploaded.
     * `max_size: 100` -> The maximum size for packaged files in Megabytes prior to compression. The default is 100, with a minimum of 1 and maximum of 100.
@@ -85,19 +85,30 @@ If these assumptions are not met, the operator will not deploy correctly. In the
 ##### Configure authentication
 The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` is the preferred authentication method, a Secret must be created which holds username and password credentials:
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
-2. Give the Secret a name and add 2 keys: `username` and `password` (all lowercase). The values for these keys correspond to console.redhat.com credentials.
+2. Give the Secret a name and add 2 keys (all lowercase) for the respective authentication type. The values for these keys correspond to console.redhat.com credentials:
+    * basic auth: `username` and `password`
+    * service-account auth: `client_id` and `client_secret` 
+
 3. Select `Create`.
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
-2. For `basic` authentication, edit the following values in the spec:
-    * Replace `authentication: type:` with `basic`.
+2. For `basic` or `service-account` authentication, edit the following values in the spec:
+    * Replace `authentication: type:` with `basic` or `service-account`.
     * Add the `secret_name` field under `authentication`, and set it equal to the name of the authentication Secret that was created above. The spec should look similar to the following:
 
+        * for basic auth type
         ```
           authentication:
             secret_name: SECRET-NAME
             type: basic
+        ```
+          
+        * for service-account auth type
+        ```
+          authentication:
+            secret_name: SECRET-NAME
+            type: service-account
         ```
 
 3. To configure the koku-metrics-operator to create a cost management integration, edit the following values in the `source` field:
