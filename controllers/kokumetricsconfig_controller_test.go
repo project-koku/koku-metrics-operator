@@ -531,7 +531,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		When("cluster is connected", func() {
 			BeforeEach(func() {
 				checkPVC = true
-				Expect(setup()).Should(Succeed())
 			})
 			It("default CR works fine", func() {
 				instCopy.Spec.APIURL = validTS.URL
@@ -742,6 +741,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(fetched.Status.Source.SourceName).To(Equal(sourceName))
+				Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeFalse())
 			})
 			It("should reflect source error when attempting to create source", func() {
 				instCopy.Spec.Source.SourceName = sourceName
@@ -893,6 +893,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.ClusterID).To(Equal(""))
 			})
 			It("should attempt upload due to tar.gz being present", func() {
+				Expect(setup()).Should(Succeed())
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -906,6 +907,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastUploadStatus).ToNot(BeNil())
 			})
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
+				Expect(setup()).Should(Succeed())
 				instCopy.Spec.APIURL = validTS.URL
 				createObject(ctx, instCopy)
 
@@ -922,6 +924,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeFalse())
 			})
 			It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
+				Expect(setup()).Should(Succeed())
 				hourAgo := metav1.Now().Time.Add(-time.Hour)
 
 				previousValidation = &previousAuthValidation{
@@ -953,6 +956,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
 			})
 			It("should check the last upload time in the upload status", func() {
+				Expect(setup()).Should(Succeed())
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -975,6 +979,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(BeFalse())
 			})
 			It("old default url - should update status to new default url", func() {
+				Expect(setup()).Should(Succeed())
 				instCopy.Spec.APIURL = metricscfgv1beta1.OldDefaultAPIURL
 				instCopy.Spec.Source.SourceName = "OLD-API-URL"
 				createObject(ctx, instCopy)
