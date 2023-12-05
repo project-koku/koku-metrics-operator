@@ -666,8 +666,14 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 		return err
 	}
 
-	// only attempt upload when files are available to upload
-	if uploadFiles == nil {
+	doUpload := uploadFiles != nil
+	doSourceCheck := cr.Status.Source.LastSourceCheckTime.IsZero()
+
+	if !doUpload && !doSourceCheck {
+		// if there are no files and a time for source check, we do
+		// not need to proceed. This will enable source creation
+		// when the CR is first created.
+		log.Info("no files to upload and skipping source check")
 		return nil
 	}
 
@@ -683,6 +689,11 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 	}
 	// Check if source is defined and update the status to confirmed/created
 	checkSource(r, handler, cr)
+
+	if !doUpload {
+		// only attempt upload when files are available to upload
+		return nil
+	}
 
 	// attempt upload
 	if err := r.uploadFiles(authConfig, cr, dirCfg, packager, uploadFiles); err != nil {
