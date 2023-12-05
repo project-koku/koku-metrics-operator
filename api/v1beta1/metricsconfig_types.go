@@ -100,7 +100,7 @@ type AuthenticationSpec struct {
 
 	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	// Valid values are:
-	// - "basic" : Enables authentication using user and password from authentication secret.
+	// - "basic" (deprecated) : Enables authentication using user and password from authentication secret.
 	// - "service-account" : Enables authentication using client_id and client_secret from the secret containing service account information.
 	// - "token" (default): Uses cluster token for authentication.
 	// +kubebuilder:default="token"

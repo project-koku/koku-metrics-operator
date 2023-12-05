@@ -19,6 +19,10 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v3.1.0:
+* Add service-account aunthentication type.
+* __Deprecation Notice:__ Basic authentication is deprecated and will be removed in a future version of the operator.
+
 ## New in v3.0.0:
 * Daily report generation: Operator versions prior to v3.0.0 generated sequential reports. Now, reports are generated starting at 0:00 UTC. Any payloads generated throughout a given day will contain all data starting from 0:00 UTC. Once the next day starts, the previous day's reports are packaged, and the new report again starts at 0:00 UTC for the current day.
 * Failed query retry: In an attempt to prevent missing data, the operator will retry queries from the last successful query time, up to 5 times.
