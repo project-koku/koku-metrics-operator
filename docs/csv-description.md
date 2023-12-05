@@ -20,7 +20,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v3.1.0:
-* Add service-account aunthentication type.
+* Add service-account authentication type.
 * __Deprecation Notice:__ Basic authentication is deprecated and will be removed in a future version of the operator.
 
 ## New in v3.0.0:
@@ -64,8 +64,8 @@ If these assumptions are not met, the operator will not deploy correctly. In the
 
 ## Configurable parameters:
   * `authentication`:
-    * `type: token` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic`(deprecated) and `service-account` authentication methods are used when the openshift-config pull-secret does not contain a token for `console.redhat.com`.
-    * `secret_name` -> The Secret used by the operator when the authentication type is `basic`(deprecated) or `service-account`. This parameter is required **only if** the authentication type is `basic`(deprecated) or `service-account`.
+    * `type: token` -> The authentication method for connecting to `console.redhat.com`. The default and preferred method is `token`. `basic` (deprecated) and `service-account` authentication methods are used when the openshift-config pull-secret does not contain a token for `console.redhat.com`.
+    * `secret_name` -> The Secret used by the operator when the authentication type is `basic` (deprecated) or `service-account`. This parameter is required **only if** the authentication type is `basic` (deprecated) or `service-account`.
   * `packaging`:
     * `max_reports_to_store: 30` -> The number of reports to store when configured in air-gapped mode. The default is 30, with a minimum of 1 and no maximum. When the operator is not configured in air-gapped mode, this parameter has no effect. Reports are removed as soon as they are uploaded.
     * `max_size: 100` -> The maximum size for packaged files in Megabytes prior to compression. The default is 100, with a minimum of 1 and maximum of 100.
@@ -87,17 +87,17 @@ If these assumptions are not met, the operator will not deploy correctly. In the
 ## Configure the koku-metrics-operator
 **Note** There are separate instructions for configuring the `koku-metrics-operator` to run in a restricted network.
 ##### Configure authentication
-The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic`(deprecated) or `service-account` is the preferred authentication method, a Secret which holds the credentials must be created:
+The default authentication for the operator is `token`. No further steps are required to configure token authentication. If `basic` (deprecated) or `service-account` is the preferred authentication method, a Secret which holds the credentials must be created:
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
 2. Give the Secret a name and add 2 keys (all lowercase) for the respective authentication type. The values for these keys correspond to console.redhat.com credentials:
-    * basic auth(deprecated): `username` and `password`
+    * basic auth (deprecated): `username` and `password`
     * service-account auth: `client_id` and `client_secret` 
 
 3. Select `Create`.
 ##### Create the KokuMetricsConfig
 Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
 1. On the left navigation pane, select `Operators` -> `Installed Operators` -> `koku-metrics-operator` -> `KokuMetricsConfig` -> `Create Instance`.
-2. For `basic`(deprecated) or `service-account` authentication, edit the following values in the spec:
+2. For `basic` (deprecated) or `service-account` authentication, edit the following values in the spec:
     * Replace `authentication: type:` with `basic` or `service-account`.
     * Add the `secret_name` field under `authentication`, and set it equal to the name of the authentication Secret that was created above. The spec should look similar to the following:
 
