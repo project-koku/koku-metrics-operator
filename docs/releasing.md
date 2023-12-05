@@ -27,7 +27,7 @@ make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta
 ```
 This will generate a new `<release-version>` bundle inside of the `koku-metrics-operator` directory within the repository.
 
-Once the release bundle has been generated, fork & clone the [community-operators repository](https://github.com/operator-framework/community-operators). Create a branch, and copy the generated bundle to the `community-operators/community-operators/koku-metrics-operator/` directory in your cloned fork.
+Once the release bundle has been generated, fork & clone the [community-operators-prod repository](https://github.com/redhat-openshift-ecosystem/community-operators-prod/tree/main). Create a branch, and copy the generated bundle to the `community-operators-prod/operators/koku-metrics-operator/` directory in your cloned fork.
 
 For example, if the bundle was generated for a `1.0.0` release, the directory structure would look like the following:
 
