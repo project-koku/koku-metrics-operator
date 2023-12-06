@@ -1,3 +1,8 @@
+**Prerequisite:** 
+* rename (package can be installed with Homebrew on OSX)
+
+**Steps:**
+
 1. Create the `downstream-vX.Y.Z` branch based off main:
 ```
 git fetch origin
