@@ -1,25 +1,24 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.3.0
-  creationTimestamp: null
-  labels:
-    app: koku-metrics-operator
-  name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
 spec:
-  group: koku-metrics-cfg.openshift.io
+  group: costmanagement-metrics-cfg.openshift.io
   names:
-    kind: KokuMetricsConfig
-    listKind: KokuMetricsConfigList
-    plural: kokumetricsconfigs
-    singular: kokumetricsconfig
+    kind: CostManagementMetricsConfig
+    listKind: CostManagementMetricsConfigList
+    plural: costmanagementmetricsconfigs
+    singular: costmanagementmetricsconfig
   scope: Namespaced
   versions:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: KokuMetricsConfig is the Schema for the kokumetricsconfig API
+        description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig
+          API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,66 +33,77 @@ spec:
           metadata:
             type: object
           spec:
-            description: KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
+            description: CostManagementMetricsConfigSpec defines the desired state
+              of CostManagementMetricsConfig.
             properties:
               api_url:
-                default: https://cloud.redhat.com
-                description: FOR DEVELOPMENT ONLY. APIURL is a field of KokuMetricsConfig
+                default: https://console.redhat.com
+                description: FOR DEVELOPMENT ONLY. APIURL is a field of CostManagementMetricsConfig
                   to represent the url of the API endpoint for service interaction.
-                  The default is `https://cloud.redhat.com`.
+                  The default is `https://console.redhat.com`.
                 type: string
               authentication:
-                description: Authentication is a field of KokuMetricsConfig to represent
-                  the authentication object.
+                description: Authentication is a field of CostManagementMetricsConfig
+                  to represent the authentication object.
                 properties:
                   secret_name:
-                    description: AuthenticationSecretName is a field of KokuMetricsConfig
+                    description: AuthenticationSecretName is a field of CostManagementMetricsConfig
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
+                  token_url:
+                    default: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+                    description: FOR DEVELOPMENT ONLY. TokenURL is a field of CostManagementMetricsConfig
+                      to represent the endpoint used to obtain the service account
+                      token. The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
+                    type: string
                   type:
                     default: token
-                    description: 'AuthType is a field of KokuMetricsConfig to represent
-                      the authentication type to be used basic or token. Valid values
-                      are: - "basic" : Enables authentication using user and password
-                      from authentication secret. - "token" (default): Uses cluster
-                      token for authentication.'
+                    description: 'AuthType is a field of CostManagementMetricsConfig
+                      to represent the authentication type to be used basic, service-account
+                      or token. Valid values are: - "basic" (deprecated) : Enables
+                      authentication using user and password from authentication secret.
+                      - "service-account" : Enables authentication using client_id
+                      and client_secret from the secret containing service account
+                      information. - "token" (default): Uses cluster token for authentication.'
                     enum:
                     - token
                     - basic
+                    - service-account
                     type: string
                 required:
                 - type
                 type: object
               clusterID:
-                description: ClusterID is a field of KokuMetricsConfig to represent
-                  the cluster UUID. Normally this value should not be specified. Only
-                  set this value if the clusterID cannot be obtained from the ClusterVersion.
+                description: ClusterID is a field of CostManagementMetricsConfig to
+                  represent the cluster UUID. Normally this value should not be specified.
+                  Only set this value if the clusterID cannot be obtained from the
+                  ClusterVersion.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
-                  the cluster version. Normally this value should not be specified.
-                  Only set this value if the clusterVersion cannot be obtained from
-                  the ClusterVersion.
+                description: ClusterVersion is a field of CostManagementMetricsConfig
+                  to represent the cluster version. Normally this value should not
+                  be specified. Only set this value if the clusterVersion cannot be
+                  obtained from the ClusterVersion.
                 type: string
               packaging:
-                description: Packaging is a field of KokuMetricsConfig to represent
-                  the packaging object.
+                description: Packaging is a field of CostManagementMetricsConfig to
+                  represent the packaging object.
                 properties:
                   max_reports_to_store:
                     default: 30
-                    description: MaxReports is a field of KokuMetricsConfig to represent
-                      the maximum number of reports to store. The default is 30 reports
-                      which corresponds to approximately 7 days worth of data given
-                      the other default values.
+                    description: MaxReports is a field of CostManagementMetricsConfig
+                      to represent the maximum number of reports to store. The default
+                      is 30 reports which corresponds to approximately 7 days worth
+                      of data given the other default values.
                     format: int64
                     minimum: 1
                     type: integer
                   max_size_MB:
                     default: 100
-                    description: MaxSize is a field of KokuMetricsConfig to represent
-                      the max file size in megabytes that will be compressed for upload
-                      to Ingress. The default is 100.
+                    description: MaxSize is a field of CostManagementMetricsConfig
+                      to represent the max file size in megabytes that will be compressed
+                      for upload to Ingress. The default is 100.
                     format: int64
                     maximum: 100
                     minimum: 1
@@ -103,22 +113,22 @@ spec:
                 - max_size_MB
                 type: object
               prometheus_config:
-                description: PrometheusConfig is a field of KokuMetricsConfig to represent
-                  the configuration of Prometheus connection.
+                description: PrometheusConfig is a field of CostManagementMetricsConfig
+                  to represent the configuration of Prometheus connection.
                 properties:
                   collect_previous_data:
                     default: true
-                    description: CollectPreviousData is a field of KokuMetricsConfig
+                    description: CollectPreviousData is a field of CostManagementMetricsConfig
                       to represent whether or not the operator will gather previous
-                      data upon KokuMetricsConfig creation. This toggle only changes
-                      operator behavior when a new KokuMetricsConfig is created. When
-                      `true`, the operator will gather all existing Prometheus data
-                      for the current month. The default is true.
+                      data upon CostManagementMetricsConfig creation. This toggle
+                      only changes operator behavior when a new CostManagementMetricsConfig
+                      is created. When `true`, the operator will gather all existing
+                      Prometheus data for the current month. The default is true.
                     type: boolean
                   context_timeout:
                     default: 120
-                    description: ContextTimeout is a field of KokuMetricsConfig to
-                      represent how long a query to prometheus should run in seconds
+                    description: ContextTimeout is a field of CostManagementMetricsConfig
+                      to represent how long a query to prometheus should run in seconds
                       before timing out. The default is 120 seconds.
                     format: int64
                     maximum: 180
@@ -127,58 +137,56 @@ spec:
                   disable_metrics_collection_cost_management:
                     default: false
                     description: DisableMetricsCollectionCostManagement is a field
-                      of KokuMetricsConfig to represent whether or not the operator
-                      will generate reports for cost-management metrics. The default
-                      is false.
+                      of CostManagementMetricsConfig to represent whether or not the
+                      operator will generate reports for cost-management metrics.
+                      The default is false.
                     type: boolean
                   disable_metrics_collection_resource_optimization:
                     default: false
                     description: DisableMetricsCollectionResourceOptimization is a
-                      field of KokuMetricsConfig to represent whether or not the operator
-                      will generate reports for resource-optimization metrics. The
-                      default is false.
+                      field of CostManagementMetricsConfig to represent whether or
+                      not the operator will generate reports for resource-optimization
+                      metrics. The default is false.
                     type: boolean
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
-                    description: FOR DEVELOPMENT ONLY. SvcAddress is a field of KokuMetricsConfig
+                    description: FOR DEVELOPMENT ONLY. SvcAddress is a field of CostManagementMetricsConfig
                       to represent the thanos-querier address. The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
                     type: string
                   skip_tls_verification:
                     default: false
                     description: FOR DEVELOPMENT ONLY. SkipTLSVerification is a field
-                      of KokuMetricsConfig to represent if the thanos-querier endpoint
-                      must be certificate validated. The default is false.
+                      of CostManagementMetricsConfig to represent if the thanos-querier
+                      endpoint must be certificate validated. The default is false.
                     type: boolean
                 required:
                 - service_address
                 - skip_tls_verification
                 type: object
               source:
-                description: Source is a field of KokuMetricsConfig to represent the
-                  desired source on cloud.redhat.com.
+                description: source represents the desired integration on console.redhat.com.
                 properties:
                   check_cycle:
                     default: 1440
-                    description: CheckCycle is a field of KokuMetricsConfig to represent
-                      the number of minutes between each source check schedule The
-                      default is 1440 min (24 hours).
+                    description: check_cycle is the number of minutes between each
+                      integration status check on console.redhat.com. The default
+                      is 1440 min (24 hours).
                     format: int64
                     minimum: 0
                     type: integer
                   create_source:
                     default: false
-                    description: CreateSource is a field of KokuMetricsConfigSpec
-                      to represent if the source should be created if not found.
+                    description: create_source toggles the creation of the integration
+                      on console.redhat.com.
                     type: boolean
                   name:
-                    description: SourceName is a field of KokuMetricsConfigSpec to
-                      represent the source name on cloud.redhat.com.
+                    description: name is the desired name of the integration to create
+                      on console.redhat.com.
                     type: string
                   sources_path:
                     default: /api/sources/v1.0/
-                    description: FOR DEVELOPMENT ONLY. SourcesAPIPath is a field of
-                      KokuMetricsConfig to represent the path of the Sources API service.
-                      The default is `/api/sources/v1.0/`.
+                    description: FOR DEVELOPMENT ONLY. sources_path is the prefix
+                      of the Sources API on console.redhat.com. The default is `/api/sources/v1.0/`.
                     type: string
                 required:
                 - check_cycle
@@ -186,40 +194,40 @@ spec:
                 - sources_path
                 type: object
               upload:
-                description: Upload is a field of KokuMetricsConfig to represent the
-                  upload object.
+                description: Upload is a field of CostManagementMetricsConfig to represent
+                  the upload object.
                 properties:
                   ingress_path:
                     default: /api/ingress/v1/upload
                     description: FOR DEVELOPMENT ONLY. IngressAPIPath is a field of
-                      KokuMetricsConfig to represent the path of the Ingress API service.
-                      The default is `/api/ingress/v1/upload`.
+                      CostManagementMetricsConfig to represent the path of the Ingress
+                      API service. The default is `/api/ingress/v1/upload`.
                     type: string
                   upload_cycle:
                     default: 360
-                    description: UploadCycle is a field of KokuMetricsConfig to represent
-                      the number of minutes between each upload schedule. The default
-                      is 360 min (6 hours).
+                    description: UploadCycle is a field of CostManagementMetricsConfig
+                      to represent the number of minutes between each upload schedule.
+                      The default is 360 min (6 hours).
                     format: int64
                     minimum: 0
                     type: integer
                   upload_toggle:
                     default: true
-                    description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator is installed in a restricted-network. If `false`,
-                      the operator will not upload to cloud.redhat.com or check/create
-                      sources. The default is true.
+                    description: UploadToggle is a field of CostManagementMetricsConfig
+                      to represent if the operator is installed in a restricted-network.
+                      If `false`, the operator will not upload to console.redhat.com
+                      or check/create sources. The default is true.
                     type: boolean
                   upload_wait:
-                    description: UploadWait is a field of KokuMetricsConfig to represent
-                      the time to wait before sending an upload.
+                    description: UploadWait is a field of CostManagementMetricsConfig
+                      to represent the time to wait before sending an upload.
                     format: int64
                     minimum: 0
                     type: integer
                   validate_cert:
                     default: true
-                    description: ValidateCert is a field of KokuMetricsConfig to represent
-                      if the Ingress endpoint must be certificate validated.
+                    description: ValidateCert is a field of CostManagementMetricsConfig
+                      to represent if the Ingress endpoint must be certificate validated.
                     type: boolean
                 required:
                 - ingress_path
@@ -228,8 +236,8 @@ spec:
                 - validate_cert
                 type: object
               volume_claim_template:
-                description: VolumeClaimTemplate is a field of KokuMetricsConfig to
-                  represent a PVC template.
+                description: VolumeClaimTemplate is a field of CostManagementMetricsConfig
+                  to represent a PVC template.
                 properties:
                   apiVersion:
                     description: 'APIVersion defines the versioned schema of this
@@ -289,9 +297,12 @@ spec:
                           * An existing PVC (PersistentVolumeClaim) If the provisioner
                           or an external controller can support the specified data
                           source, it will create a new volume based on the contents
-                          of the specified data source. If the AnyVolumeDataSource
-                          feature gate is enabled, this field will always have the
-                          same contents as the DataSourceRef field.'
+                          of the specified data source. When the AnyVolumeDataSource
+                          feature gate is enabled, dataSource contents will be copied
+                          to dataSourceRef, and dataSourceRef contents will be copied
+                          to dataSource when dataSourceRef.namespace is not specified.
+                          If the namespace is specified, then dataSourceRef will not
+                          be copied to dataSource.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -309,27 +320,34 @@ spec:
                         - kind
                         - name
                         type: object
+                        x-kubernetes-map-type: atomic
                       dataSourceRef:
                         description: 'dataSourceRef specifies the object from which
                           to populate the volume with data, if a non-empty volume
-                          is desired. This may be any local object from a non-empty
-                          API group (non core object) or a PersistentVolumeClaim object.
+                          is desired. This may be any object from a non-empty API
+                          group (non core object) or a PersistentVolumeClaim object.
                           When this field is specified, volume binding will only succeed
                           if the type of the specified object matches some installed
                           volume populator or dynamic provisioner. This field will
-                          replace the functionality of the DataSource field and as
+                          replace the functionality of the dataSource field and as
                           such if both fields are non-empty, they must have the same
-                          value. For backwards compatibility, both fields (DataSource
-                          and DataSourceRef) will be set to the same value automatically
-                          if one of them is empty and the other is non-empty. There
-                          are two important differences between DataSource and DataSourceRef:
-                          * While DataSource only allows two specific types of objects,
-                          DataSourceRef   allows any non-core object, as well as PersistentVolumeClaim
-                          objects. * While DataSource ignores disallowed values (dropping
-                          them), DataSourceRef   preserves all values, and generates
-                          an error if a disallowed value is   specified. (Beta) Using
-                          this field requires the AnyVolumeDataSource feature gate
-                          to be enabled.'
+                          value. For backwards compatibility, when namespace isn''t
+                          specified in dataSourceRef, both fields (dataSource and
+                          dataSourceRef) will be set to the same value automatically
+                          if one of them is empty and the other is non-empty. When
+                          namespace is specified in dataSourceRef, dataSource isn''t
+                          set to the same value and must be empty. There are three
+                          important differences between dataSource and dataSourceRef:
+                          * While dataSource only allows two specific types of objects,
+                          dataSourceRef allows any non-core object, as well as PersistentVolumeClaim
+                          objects. * While dataSource ignores disallowed values (dropping
+                          them), dataSourceRef preserves all values, and generates
+                          an error if a disallowed value is specified. * While dataSource
+                          only allows local objects, dataSourceRef allows objects
+                          in any namespaces. (Beta) Using this field requires the
+                          AnyVolumeDataSource feature gate to be enabled. (Alpha)
+                          Using the namespace field of dataSourceRef requires the
+                          CrossNamespaceVolumeDataSource feature gate to be enabled.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -342,6 +360,16 @@ spec:
                             type: string
                           name:
                             description: Name is the name of resource being referenced
+                            type: string
+                          namespace:
+                            description: Namespace is the namespace of resource being
+                              referenced Note that when a namespace is specified,
+                              a gateway.networking.k8s.io/ReferenceGrant object is
+                              required in the referent namespace to allow that namespace's
+                              owner to accept the reference. See the ReferenceGrant
+                              documentation for details. (Alpha) This field requires
+                              the CrossNamespaceVolumeDataSource feature gate to be
+                              enabled.
                             type: string
                         required:
                         - kind
@@ -355,6 +383,28 @@ spec:
                           than capacity recorded in the status field of the claim.
                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
                         properties:
+                          claims:
+                            description: "Claims lists the names of resources, defined
+                              in spec.resourceClaims, that are used by this container.
+                              \n This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate. \n This field
+                              is immutable. It can only be set for containers."
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: Name must match the name of one entry
+                                    in pod.spec.resourceClaims of the Pod where this
+                                    field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -376,7 +426,7 @@ spec:
                               compute resources required. If Requests is omitted for
                               a container, it defaults to Limits if that is explicitly
                               specified, otherwise to an implementation-defined value.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                             type: object
                         type: object
                       selector:
@@ -425,6 +475,7 @@ spec:
                               only "value". The requirements are ANDed.
                             type: object
                         type: object
+                        x-kubernetes-map-type: atomic
                       storageClassName:
                         description: 'storageClassName is the name of the StorageClass
                           required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
@@ -448,98 +499,105 @@ spec:
             - upload
             type: object
           status:
-            description: KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
+            description: CostManagementMetricsConfigStatus defines the observed state
+              of CostManagementMetricsConfig.
             properties:
               api_url:
-                description: APIURL is a field of KokuMetricsConfig to represent the
-                  url of the API endpoint for service interaction.
+                description: APIURL is a field of CostManagementMetricsConfig to represent
+                  the url of the API endpoint for service interaction.
                 type: string
               authentication:
-                description: Authentication is a field of KokuMetricsConfig to represent
-                  the authentication status.
+                description: Authentication is a field of CostManagementMetricsConfig
+                  to represent the authentication status.
                 properties:
                   credentials_found:
-                    description: AuthenticationCredentialsFound is a field of KokuMetricsConfig
+                    description: AuthenticationCredentialsFound is a field of CostManagementMetricsConfig
                       to represent if used for uploads were found.
                     type: boolean
                   error:
-                    description: AuthErrorMessage is a field of KokuMetricsConfig
+                    description: AuthErrorMessage is a field of CostManagementMetricsConfig
                       to represent an `invalid credentials` error message.
                     type: string
                   last_credential_verification_time:
-                    description: LastVerificationTime is a field of KokuMetricsConfig
+                    description: LastVerificationTime is a field of CostManagementMetricsConfig
                       to represent the last time credentials were verified.
                     format: date-time
                     nullable: true
                     type: string
                   secret_name:
-                    description: AuthenticationSecretName is a field of KokuMetricsConfig
+                    description: AuthenticationSecretName is a field of CostManagementMetricsConfig
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
+                  token_url:
+                    description: TokenURL is a field of CostManagementMetricsConfig
+                      to represent the url used to generate a service account token.
+                    type: string
                   type:
-                    description: AuthType is a field of KokuMetricsConfig to represent
-                      the authentication type to be used basic or token.
+                    description: AuthType is a field of CostManagementMetricsConfig
+                      to represent the authentication type to be used basic, service-account
+                      or token.
                     enum:
                     - token
                     - basic
+                    - service-account
                     type: string
                   valid_basic_auth:
-                    description: ValidBasicAuth is a field of KokuMetricsConfig to
-                      represent if the given basic auth credentials are valid.
+                    description: ValidBasicAuth is a field of CostManagementMetricsConfig
+                      to represent if the given basic auth credentials are valid.
                     type: boolean
                 type: object
               clusterID:
-                description: ClusterID is a field of KokuMetricsConfig to represent
-                  the cluster UUID.
+                description: ClusterID is a field of CostManagementMetricsConfig to
+                  represent the cluster UUID.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
-                  the cluster version.
+                description: ClusterVersion is a field of CostManagementMetricsConfig
+                  to represent the cluster version.
                 type: string
               operator_commit:
-                description: OperatorCommit is a field of KokuMetricsConfig that shows
-                  the commit hash of the operator.
+                description: OperatorCommit is a field of CostManagementMetricsConfig
+                  that shows the commit hash of the operator.
                 type: string
               packaging:
-                description: Packaging is a field of KokuMetricsConfig to represent
-                  the packaging status
+                description: Packaging is a field of CostManagementMetricsConfig to
+                  represent the packaging status
                 properties:
                   error:
-                    description: PackagingError is a field of KokuMetricsConfig to
-                      represent the error encountered packaging the reports.
+                    description: PackagingError is a field of CostManagementMetricsConfig
+                      to represent the error encountered packaging the reports.
                     type: string
                   last_successful_packaging_time:
-                    description: LastSuccessfulPackagingTime is a field of KokuMetricsConfig
+                    description: LastSuccessfulPackagingTime is a field of CostManagementMetricsConfig
                       that shows the time of the last successful file packaging.
                     format: date-time
                     nullable: true
                     type: string
                   max_reports_to_store:
-                    description: MaxReports is a field of KokuMetricsConfig to represent
-                      the maximum number of reports to store.
+                    description: MaxReports is a field of CostManagementMetricsConfig
+                      to represent the maximum number of reports to store.
                     format: int64
                     type: integer
                   max_size_MB:
-                    description: MaxSize is a field of KokuMetricsConfig to represent
-                      the max file size in megabytes that will be compressed for upload
-                      to Ingress.
+                    description: MaxSize is a field of CostManagementMetricsConfig
+                      to represent the max file size in megabytes that will be compressed
+                      for upload to Ingress.
                     format: int64
                     type: integer
                   number_reports_stored:
-                    description: ReportCount is a field of KokuMetricsConfig to represent
-                      the number of reports in storage.
+                    description: ReportCount is a field of CostManagementMetricsConfig
+                      to represent the number of reports in storage.
                     format: int64
                     type: integer
                   packaged_files:
-                    description: PackagedFiles is a field of KokuMetricsConfig to
-                      represent the list of file packages in storage.
+                    description: PackagedFiles is a field of CostManagementMetricsConfig
+                      to represent the list of file packages in storage.
                     items:
                       type: string
                     type: array
                 type: object
               persistent_volume_claim:
-                description: PersistentVolumeClaim is a field of KokuMetricsConfig
+                description: PersistentVolumeClaim is a field of CostManagementMetricsConfig
                   to represent a PVC.
                 properties:
                   apiVersion:
@@ -600,9 +658,12 @@ spec:
                           * An existing PVC (PersistentVolumeClaim) If the provisioner
                           or an external controller can support the specified data
                           source, it will create a new volume based on the contents
-                          of the specified data source. If the AnyVolumeDataSource
-                          feature gate is enabled, this field will always have the
-                          same contents as the DataSourceRef field.'
+                          of the specified data source. When the AnyVolumeDataSource
+                          feature gate is enabled, dataSource contents will be copied
+                          to dataSourceRef, and dataSourceRef contents will be copied
+                          to dataSource when dataSourceRef.namespace is not specified.
+                          If the namespace is specified, then dataSourceRef will not
+                          be copied to dataSource.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -620,27 +681,34 @@ spec:
                         - kind
                         - name
                         type: object
+                        x-kubernetes-map-type: atomic
                       dataSourceRef:
                         description: 'dataSourceRef specifies the object from which
                           to populate the volume with data, if a non-empty volume
-                          is desired. This may be any local object from a non-empty
-                          API group (non core object) or a PersistentVolumeClaim object.
+                          is desired. This may be any object from a non-empty API
+                          group (non core object) or a PersistentVolumeClaim object.
                           When this field is specified, volume binding will only succeed
                           if the type of the specified object matches some installed
                           volume populator or dynamic provisioner. This field will
-                          replace the functionality of the DataSource field and as
+                          replace the functionality of the dataSource field and as
                           such if both fields are non-empty, they must have the same
-                          value. For backwards compatibility, both fields (DataSource
-                          and DataSourceRef) will be set to the same value automatically
-                          if one of them is empty and the other is non-empty. There
-                          are two important differences between DataSource and DataSourceRef:
-                          * While DataSource only allows two specific types of objects,
-                          DataSourceRef   allows any non-core object, as well as PersistentVolumeClaim
-                          objects. * While DataSource ignores disallowed values (dropping
-                          them), DataSourceRef   preserves all values, and generates
-                          an error if a disallowed value is   specified. (Beta) Using
-                          this field requires the AnyVolumeDataSource feature gate
-                          to be enabled.'
+                          value. For backwards compatibility, when namespace isn''t
+                          specified in dataSourceRef, both fields (dataSource and
+                          dataSourceRef) will be set to the same value automatically
+                          if one of them is empty and the other is non-empty. When
+                          namespace is specified in dataSourceRef, dataSource isn''t
+                          set to the same value and must be empty. There are three
+                          important differences between dataSource and dataSourceRef:
+                          * While dataSource only allows two specific types of objects,
+                          dataSourceRef allows any non-core object, as well as PersistentVolumeClaim
+                          objects. * While dataSource ignores disallowed values (dropping
+                          them), dataSourceRef preserves all values, and generates
+                          an error if a disallowed value is specified. * While dataSource
+                          only allows local objects, dataSourceRef allows objects
+                          in any namespaces. (Beta) Using this field requires the
+                          AnyVolumeDataSource feature gate to be enabled. (Alpha)
+                          Using the namespace field of dataSourceRef requires the
+                          CrossNamespaceVolumeDataSource feature gate to be enabled.'
                         properties:
                           apiGroup:
                             description: APIGroup is the group for the resource being
@@ -653,6 +721,16 @@ spec:
                             type: string
                           name:
                             description: Name is the name of resource being referenced
+                            type: string
+                          namespace:
+                            description: Namespace is the namespace of resource being
+                              referenced Note that when a namespace is specified,
+                              a gateway.networking.k8s.io/ReferenceGrant object is
+                              required in the referent namespace to allow that namespace's
+                              owner to accept the reference. See the ReferenceGrant
+                              documentation for details. (Alpha) This field requires
+                              the CrossNamespaceVolumeDataSource feature gate to be
+                              enabled.
                             type: string
                         required:
                         - kind
@@ -666,6 +744,28 @@ spec:
                           than capacity recorded in the status field of the claim.
                           More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
                         properties:
+                          claims:
+                            description: "Claims lists the names of resources, defined
+                              in spec.resourceClaims, that are used by this container.
+                              \n This is an alpha field and requires enabling the
+                              DynamicResourceAllocation feature gate. \n This field
+                              is immutable. It can only be set for containers."
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: Name must match the name of one entry
+                                    in pod.spec.resourceClaims of the Pod where this
+                                    field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -687,7 +787,7 @@ spec:
                               compute resources required. If Requests is omitted for
                               a container, it defaults to Limits if that is explicitly
                               specified, otherwise to an implementation-defined value.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                             type: object
                         type: object
                       selector:
@@ -736,6 +836,7 @@ spec:
                               only "value". The requirements are ANDed.
                             type: object
                         type: object
+                        x-kubernetes-map-type: atomic
                       storageClassName:
                         description: 'storageClassName is the name of the StorageClass
                           required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
@@ -755,11 +856,11 @@ spec:
                 description: Prometheus represents the status of premetheus queries.
                 properties:
                   configuration_error:
-                    description: ConfigError is a field of KokuMetricsConfigStatus
+                    description: ConfigError is a field of CostManagementMetricsConfigStatus
                       to represent errors during prometheus configuration.
                     type: string
                   context_timeout:
-                    description: ContextTimeout is a field of KokuMetricsConfigState
+                    description: ContextTimeout is a field of CostManagementMetricsConfigState
                       to represent how long a query to prometheus should run in seconds
                       before timing out.
                     format: int64
@@ -767,51 +868,52 @@ spec:
                   disabled_metrics_collection_cost_management:
                     default: false
                     description: DisabledMetricsCollectionCostManagement is a field
-                      of KokuMetricsConfigStatus to represent whether or not collecting
-                      cost-management metrics is disabled. The default is false.
+                      of CostManagementMetricsConfigStatus to represent whether or
+                      not collecting cost-management metrics is disabled. The default
+                      is false.
                     type: boolean
                   disabled_metrics_collection_resource_optimization:
                     default: true
                     description: DisabledMetricsCollectionResourceOptimization is
-                      a field of KokuMetricsConfigStatus to represent whether or not
-                      collecting resource-optimzation metrics is disabled. The default
-                      is true.
+                      a field of CostManagementMetricsConfigStatus to represent whether
+                      or not collecting resource-optimzation metrics is disabled.
+                      The default is true.
                     type: boolean
                   last_query_start_time:
-                    description: LastQueryStartTime is a field of KokuMetricsConfigStatus
+                    description: LastQueryStartTime is a field of CostManagementMetricsConfigStatus
                       to represent the last time queries were started.
                     format: date-time
                     nullable: true
                     type: string
                   last_query_success_time:
-                    description: LastQuerySuccessTime is a field of KokuMetricsConfigStatus
+                    description: LastQuerySuccessTime is a field of CostManagementMetricsConfigStatus
                       to represent the last time queries were successful.
                     format: date-time
                     nullable: true
                     type: string
                   previous_data_collected:
                     default: false
-                    description: PreviousDataCollected is a field of KokuMetricsConfigStatus
+                    description: PreviousDataCollected is a field of CostManagementMetricsConfigStatus
                       to represent whether or not the operator gathered the available
-                      Prometheus data upon KokuMetricsConfig creation.
+                      Prometheus data upon CostManagementMetricsConfig creation.
                     type: boolean
                   prometheus_configured:
-                    description: PrometheusConfigured is a field of KokuMetricsConfigStatus
+                    description: PrometheusConfigured is a field of CostManagementMetricsConfigStatus
                       to represent if the operator is configured to connect to prometheus.
                     type: boolean
                   prometheus_connected:
-                    description: PrometheusConnected is a field of KokuMetricsConfigStatus
+                    description: PrometheusConnected is a field of CostManagementMetricsConfigStatus
                       to represent if prometheus can be queried.
                     type: boolean
                   prometheus_connection_error:
-                    description: ConnectionError is a field of KokuMetricsConfigStatus
+                    description: ConnectionError is a field of CostManagementMetricsConfigStatus
                       to represent errors during prometheus test query.
                     type: string
                   service_address:
                     description: SvcAddress is the internal thanos-querier address.
                     type: string
                   skip_tls_verification:
-                    description: SkipTLSVerification is a field of KokuMetricsConfigStatus
+                    description: SkipTLSVerification is a field of CostManagementMetricsConfigStatus
                       to represent if the thanos-querier endpoint must be certificate
                       validated.
                     type: boolean
@@ -823,59 +925,59 @@ spec:
                 description: Reports represents the status of report generation.
                 properties:
                   data_collected:
-                    description: DataCollected is a field of KokuMetricsConfigStatus
+                    description: DataCollected is a field of CostManagementMetricsConfigStatus
                       to represent whether or not data was collected for the last
                       query.
                     type: boolean
                   data_collection_message:
-                    description: DataCollectionMessage is a field of KokuMetricsConfigStatus
+                    description: DataCollectionMessage is a field of CostManagementMetricsConfigStatus
                       to represent a message associated with the data_collected status.
                     type: string
                   last_hour_queried:
-                    description: LastHourQueried is a field of KokuMetricsConfigStatus
+                    description: LastHourQueried is a field of CostManagementMetricsConfigStatus
                       to represent the time range for which metrics were last queried.
                     type: string
                   report_month:
-                    description: ReportMonth is a field of KokuMetricsConfigStatus
+                    description: ReportMonth is a field of CostManagementMetricsConfigStatus
                       to represent the month for which reports are being generated.
                     type: string
                 type: object
               source:
-                description: Source is a field of KokuMetricsConfig to represent the
-                  observed state of the source on cloud.redhat.com.
+                description: source represents the observed state of the integration
+                  on console.redhat.com.
                 properties:
                   check_cycle:
-                    description: CheckCycle is a field of KokuMetricsConfig to represent
-                      the number of minutes between each source check schedule. The
-                      default is 1440 min (24 hours).
+                    description: check_cycle is the number of minutes between each
+                      integration status check on console.redhat.com. The default
+                      is 1440 min (24 hours).
                     format: int64
                     type: integer
                   create_source:
-                    description: CreateSource is a field of KokuMetricsConfigStatus
-                      to represent if the source should be created if not found. A
-                      source will not be created if upload_toggle is `false`.
+                    description: create_source represents the toggle used during the
+                      creation of the integration on console.redhat.com. An Integration
+                      will not be created if upload_toggle is `false`.
                     type: boolean
                   error:
-                    description: SourceError is a field of KokuMetricsConfigStatus
-                      to represent the error encountered creating the source.
+                    description: error represents any errors encountered when creating
+                      the integration.
                     type: string
                   last_check_time:
-                    description: LastSourceCheckTime is a field of KokuMetricsConfig
-                      that shows the time that the last check was attempted.
+                    description: last_check_time is the time that the last integration
+                      status check was attempted.
                     format: date-time
                     nullable: true
                     type: string
                   name:
-                    description: SourceName is a field of KokuMetricsConfigStatus
-                      to represent the source name on cloud.redhat.com.
+                    description: name represents the name of the integration that
+                      the operator attempted to create on console.redhat.com.
                     type: string
                   source_defined:
-                    description: SourceDefined is a field of KokuMetricsConfigStatus
-                      to represent if the source exists as defined on cloud.redhat.com.
+                    description: source_defined represents whether the defined integration
+                      name exists on console.redhat.com.
                     type: boolean
                   sources_path:
-                    description: SourcesAPIPath is a field of KokuMetricsConfig to
-                      represent the path of the Sources API service.
+                    description: sources_path is the prefix of the Sources API on
+                      console.redhat.com.
                     type: string
                 type: object
               storage:
@@ -891,65 +993,65 @@ spec:
                     type: string
                 type: object
               upload:
-                description: Upload is a field of KokuMetricsConfig to represent the
-                  upload object.
+                description: Upload is a field of CostManagementMetricsConfig to represent
+                  the upload object.
                 properties:
                   error:
-                    description: UploadError is a field of KokuMetricsConfigStatus
+                    description: UploadError is a field of CostManagementMetricsConfigStatus
                       to represent the error encountered uploading reports.
                     type: string
                   ingress_path:
-                    description: IngressAPIPath is a field of KokuMetricsConfig to
-                      represent the path of the Ingress API service.
+                    description: IngressAPIPath is a field of CostManagementMetricsConfig
+                      to represent the path of the Ingress API service.
                     type: string
                   last_payload_files:
-                    description: LastPayloadFiles is a field of KokuMetricsConfig
+                    description: LastPayloadFiles is a field of CostManagementMetricsConfig
                       to represent the list of files in the last payload that was
                       sent.
                     items:
                       type: string
                     type: array
                   last_payload_manifest_id:
-                    description: LastPayloadManifest is a field of KokuMetricsConfig
+                    description: LastPayloadManifest is a field of CostManagementMetricsConfig
                       that shows the manifestID of the last payload.
                     type: string
                   last_payload_name:
-                    description: LastPayloadName is a field of KokuMetricsConfig that
-                      shows the name of the last payload file.
+                    description: LastPayloadName is a field of CostManagementMetricsConfig
+                      that shows the name of the last payload file.
                     type: string
                   last_payload_request_id:
-                    description: LastPayloadRequestID is a field of KokuMetricsConfig
+                    description: LastPayloadRequestID is a field of CostManagementMetricsConfig
                       that shows the insights request id of the last payload.
                     type: string
                   last_successful_upload_time:
-                    description: LastSuccessfulUploadTime is a field of KokuMetricsConfig
+                    description: LastSuccessfulUploadTime is a field of CostManagementMetricsConfig
                       that shows the time of the last successful upload.
                     format: date-time
                     nullable: true
                     type: string
                   last_upload_status:
-                    description: LastUploadStatus is a field of KokuMetricsConfig
+                    description: LastUploadStatus is a field of CostManagementMetricsConfig
                       that shows the http status of the last upload.
                     type: string
                   upload:
-                    description: UploadToggle is a field of KokuMetricsConfig to represent
-                      if the operator should upload to cloud.redhat.com. The default
-                      is true
+                    description: UploadToggle is a field of CostManagementMetricsConfig
+                      to represent if the operator should upload to console.redhat.com.
+                      The default is true
                     type: boolean
                   upload_cycle:
-                    description: UploadCycle is a field of KokuMetricsConfig to represent
-                      the number of minutes between each upload schedule. The default
-                      is 360 min (6 hours).
+                    description: UploadCycle is a field of CostManagementMetricsConfig
+                      to represent the number of minutes between each upload schedule.
+                      The default is 360 min (6 hours).
                     format: int64
                     type: integer
                   upload_wait:
-                    description: UploadWait is a field of KokuMetricsConfig to represent
-                      the time to wait before sending an upload.
+                    description: UploadWait is a field of CostManagementMetricsConfig
+                      to represent the time to wait before sending an upload.
                     format: int64
                     type: integer
                   validate_cert:
-                    description: ValidateCert is a field of KokuMetricsConfig to represent
-                      if the Ingress endpoint must be certificate validated.
+                    description: ValidateCert is a field of CostManagementMetricsConfig
+                      to represent if the Ingress endpoint must be certificate validated.
                     type: boolean
                 type: object
             type: object
@@ -960,9 +1062,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
