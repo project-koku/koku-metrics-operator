@@ -1,0 +1,20 @@
+# permissions for end users to view costmanagementmetricsconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: costmanagementmetricscfg-viewer-role
+rules:
+- apiGroups:
+  - costmanagement-metrics-cfg.openshift.io
+  resources:
+  - costmanagementmetricsconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - costmanagement-metrics-cfg.openshift.io
+  resources:
+  - costmanagementmetricsconfigs/status
+  verbs:
+  - get
