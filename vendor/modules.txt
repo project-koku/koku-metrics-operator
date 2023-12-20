@@ -76,7 +76,7 @@ github.com/google/gofuzz/bytesource
 # github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98
 ## explicit; go 1.19
 github.com/google/pprof/profile
-# github.com/google/uuid v1.4.0
+# github.com/google/uuid v1.5.0
 ## explicit
 github.com/google/uuid
 # github.com/imdario/mergo v0.3.16
