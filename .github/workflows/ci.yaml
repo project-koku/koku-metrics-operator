@@ -59,7 +59,7 @@ jobs:
           go test ./... -v -coverprofile cover.out -covermode=atomic
 
       - name: Upload test coverage file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: cover.out
@@ -78,7 +78,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: coverage
 
@@ -104,7 +104,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: coverage
 
