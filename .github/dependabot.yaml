@@ -26,3 +26,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      k8s.io-dependencies:
+        patterns:
+          - "*k8s.io*"
