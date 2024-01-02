@@ -11,6 +11,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      ci-dependencies:
+        patterns:
+          - "*" # update all github-actions in single PR
 
   - package-ecosystem: "docker"
     directory: "/"
