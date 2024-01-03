@@ -143,6 +143,7 @@ var (
 		query{
 			Name:        "persistentvolumeclaim-usage-bytes",
 			QueryString: QueryMap["cost:persistentvolumeclaim_usage_bytes"],
+			MetricKey:   staticFields{"node": "node"},
 			QueryValue: &saveQueryValue{
 				ValName:         "persistentvolumeclaim-usage-bytes",
 				Method:          "sum",
