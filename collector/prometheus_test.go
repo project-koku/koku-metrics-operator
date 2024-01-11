@@ -79,7 +79,7 @@ type mockPrometheusConnectionPolling struct {
 func sleepContext(ctx context.Context, delay time.Duration) error {
 	select {
 	case <-ctx.Done():
-		return ctxTimeout
+		return errCtxTimeout
 	case <-time.After(delay):
 		return nil
 	}
@@ -350,7 +350,7 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 		{
 			name:        "test query error",
 			wait:        15 * time.Millisecond,
-			queryResult: &mockPromResult{err: ctxTimeout},
+			queryResult: &mockPromResult{err: errCtxTimeout},
 			wantedError: errTest,
 		},
 	}

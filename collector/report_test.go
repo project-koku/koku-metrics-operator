@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	ctxTimeout = errors.New("context timeout")
-	errTest    = errors.New("test error")
+	errCtxTimeout = errors.New("context timeout")
+	errTest       = errors.New("test error")
 )
 
 type badReader struct{}
