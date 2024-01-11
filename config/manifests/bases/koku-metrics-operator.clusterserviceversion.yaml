@@ -60,6 +60,7 @@ spec:
   - email: costmanagement@redhat.com
     name: costmanagement
   maturity: alpha
+  minKubeVersion: 1.24.0
   provider:
     name: Red Hat
   version: 0.0.0
