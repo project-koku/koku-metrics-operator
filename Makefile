@@ -48,7 +48,7 @@ ARCH = $(shell go env GOARCH)
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.32.0
+OPERATOR_SDK_VERSION ?= v1.33.0
 
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
