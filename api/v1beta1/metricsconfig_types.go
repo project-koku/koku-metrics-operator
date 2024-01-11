@@ -98,10 +98,10 @@ type EmbeddedPersistentVolumeClaim struct {
 // AuthenticationSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
 type AuthenticationSpec struct {
 
-	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	// Valid values are:
-	// - "basic" : Enables authentication using user and password from authentication secret.
-	// - "service-account" : Enables authentication using client-id and client-secret from the secret containing service account information.
+	// - "basic" (deprecated) : Enables authentication using user and password from authentication secret.
+	// - "service-account" : Enables authentication using client_id and client_secret from the secret containing service account information.
 	// - "token" (default): Uses cluster token for authentication.
 	// +kubebuilder:default="token"
 	AuthType AuthenticationType `json:"type"`
@@ -114,7 +114,7 @@ type AuthenticationSpec struct {
 	// TokenURL is a field of KokuMetricsConfig to represent the endpoint used to obtain the service account token.
 	// The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
 	// +kubebuilder:default=`https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`
-	TokenURL string `json:"token_url"`
+	TokenURL string `json:"token_url,omitempty"`
 }
 
 // PackagingSpec defines the desired state of the Packaging object in the KokuMetricsConfigSpec.
@@ -270,7 +270,7 @@ type KokuMetricsConfigSpec struct {
 // AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.
 type AuthenticationStatus struct {
 
-	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	AuthType AuthenticationType `json:"type,omitempty"`
 
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
