@@ -395,7 +395,7 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 	if cr.Spec.Authentication.AuthenticationSecretName == "" {
 		// No authentication secret name set when using basic or service-account auth
 		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
-		err := fmt.Errorf("no authentication secret name set when using basic or service-account auth")
+		err := fmt.Errorf("no authentication secret name set when using %s auth", cr.Status.Authentication.AuthType)
 		cr.Status.Authentication.AuthErrorMessage = err.Error()
 		cr.Status.Authentication.ValidBasicAuth = &falseDef
 		return err
@@ -666,8 +666,14 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 		return err
 	}
 
-	// only attempt upload when files are available to upload
-	if uploadFiles == nil {
+	doUpload := uploadFiles != nil
+	doSourceCheck := cr.Status.Source.LastSourceCheckTime.IsZero()
+
+	if !doUpload && !doSourceCheck {
+		// if there are no files and a time for source check, we do
+		// not need to proceed. This will enable source creation
+		// when the CR is first created.
+		log.Info("no files to upload and skipping source check")
 		return nil
 	}
 
@@ -683,6 +689,11 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 	}
 	// Check if source is defined and update the status to confirmed/created
 	checkSource(r, handler, cr)
+
+	if !doUpload {
+		// only attempt upload when files are available to upload
+		return nil
+	}
 
 	// attempt upload
 	if err := r.uploadFiles(authConfig, cr, dirCfg, packager, uploadFiles); err != nil {
@@ -707,6 +718,7 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses/api,verbs=get;create;update
 
 // Reconcile Process the MetricsConfig custom resource based on changes or requeue
 func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

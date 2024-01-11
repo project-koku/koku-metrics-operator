@@ -11,6 +11,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      ci-dependencies:
+        patterns:
+          - "*" # update all github-actions in single PR
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -22,3 +26,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      k8s.io-dependencies:
+        patterns:
+          - "*k8s.io*"
