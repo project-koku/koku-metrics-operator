@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/common/model"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-koku/koku-metrics-operator/internal/testutils"
 )
 
 var trueDef = true

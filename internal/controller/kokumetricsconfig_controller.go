@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -32,13 +32,13 @@ import (
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	cv "github.com/project-koku/koku-metrics-operator/clusterversion"
-	"github.com/project-koku/koku-metrics-operator/collector"
-	"github.com/project-koku/koku-metrics-operator/crhchttp"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/packaging"
-	"github.com/project-koku/koku-metrics-operator/sources"
-	"github.com/project-koku/koku-metrics-operator/storage"
+	cv "github.com/project-koku/koku-metrics-operator/internal/clusterversion"
+	"github.com/project-koku/koku-metrics-operator/internal/collector"
+	"github.com/project-koku/koku-metrics-operator/internal/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/internal/packaging"
+	"github.com/project-koku/koku-metrics-operator/internal/sources"
+	"github.com/project-koku/koku-metrics-operator/internal/storage"
 )
 
 const HOURS_IN_DAY int = 23 // first hour is 0: 0 -> 23 == 24 hrs

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -28,11 +28,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/collector"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/mocks"
-	"github.com/project-koku/koku-metrics-operator/storage"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-koku/koku-metrics-operator/internal/collector"
+	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/internal/mocks"
+	"github.com/project-koku/koku-metrics-operator/internal/storage"
+	"github.com/project-koku/koku-metrics-operator/internal/testutils"
 )
 
 var (

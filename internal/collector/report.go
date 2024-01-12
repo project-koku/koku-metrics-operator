@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/project-koku/koku-metrics-operator/strset"
+	"github.com/project-koku/koku-metrics-operator/internal/strset"
 )
 
 type dataInterface interface {

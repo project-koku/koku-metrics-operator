@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 import argparse
-import pkg_resources
 import re
 from datetime import datetime, timezone
 from tempfile import mkstemp
 from shutil import move, copymode
-from os import fdopen, path, remove
+from os import fdopen, remove
+
+try:
+    from packaging.version import parse
+except ImportError as e:
+    raise ImportError('`packaging` module not found, install with `pip3 install packaging`') from e
 
 valid_semver = re.compile("^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$")
 
@@ -15,7 +19,7 @@ def check_version(new, old):
         exit(1)
 
     if (matched_new := re.fullmatch(valid_semver, new)) and (matched_old := re.fullmatch(valid_semver, old)):
-        if pkg_resources.parse_version(new) <= pkg_resources.parse_version(old):
+        if parse(new) <= parse(old):
             print("\nnew version must sequentially follow old version!")
             exit(1)
         return
