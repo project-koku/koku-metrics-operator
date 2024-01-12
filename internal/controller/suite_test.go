@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -39,8 +39,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/internal/testutils"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -195,7 +195,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		UseExistingCluster: &useCluster,
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "config", "crd", "bases"),
+			filepath.Join("..", "..", "config", "crd", "bases"),
 			filepath.Join("test_files", "crds"),
 		},
 	}

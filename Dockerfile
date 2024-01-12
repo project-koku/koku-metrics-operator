@@ -13,17 +13,9 @@ COPY go.sum go.sum
 COPY vendor/ vendor/
 
 # Copy the go source
-COPY main.go main.go
+COPY cmd/ cmd/
 COPY api/ api/
-COPY clusterversion/ clusterversion/
-COPY collector/ collector/
-COPY controllers/ controllers/
-COPY crhchttp/ crhchttp/
-COPY dirconfig/ dirconfig/
-COPY packaging/ packaging/
-COPY sources/ sources/
-COPY storage/ storage/
-COPY strset/ strset/
+COPY internal/ internal/
 
 # Copy git to inject the commit during build
 COPY .git .git
@@ -31,7 +23,7 @@ COPY .git .git
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 echo " injecting GIT COMMIT: $GIT_COMMIT" && \
 CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
-go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
+go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

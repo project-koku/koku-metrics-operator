@@ -12,7 +12,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-koku/koku-metrics-operator/internal/testutils"
 )
 
 var errTest = errors.New("test error")
@@ -52,7 +52,6 @@ func (mfi MockFileInfo) Size() int64        { return 100 }
 func (mfi MockFileInfo) ModTime() time.Time { return time.Unix(110, 0) }
 func (mfi MockFileInfo) IsDir() bool        { return mfi.isDir }
 func (mfi MockFileInfo) Sys() any           { return nil }
-
 func (mfi MockFileInfo) Mode() os.FileMode {
 	if mfi.isDir {
 		return os.ModeDir

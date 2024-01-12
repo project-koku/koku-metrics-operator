@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/common/model"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/testutils"
+	"github.com/project-koku/koku-metrics-operator/internal/testutils"
 )
 
 var trueDef = true
@@ -79,7 +79,7 @@ type mockPrometheusConnectionPolling struct {
 func sleepContext(ctx context.Context, delay time.Duration) error {
 	select {
 	case <-ctx.Done():
-		return ctxTimeout
+		return errCtxTimeout
 	case <-time.After(delay):
 		return nil
 	}
@@ -350,7 +350,7 @@ func TestTestPrometheusConnectionPolling(t *testing.T) {
 		{
 			name:        "test query error",
 			wait:        15 * time.Millisecond,
-			queryResult: &mockPromResult{err: ctxTimeout},
+			queryResult: &mockPromResult{err: errCtxTimeout},
 			wantedError: errTest,
 		},
 	}
