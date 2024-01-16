@@ -4,7 +4,7 @@
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 PREVIOUS_VERSION ?= 3.1.0
-VERSION ?= 3.1.1
+VERSION ?= 4.0.0
 
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
@@ -44,7 +44,7 @@ OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 
 # DOCKER := $(shell which docker 2>/dev/null)
-# export DOCKER_DEFAULT_PLATFORM = linux/x86_64
+export DOCKER_DEFAULT_PLATFORM = linux/x86_64
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
