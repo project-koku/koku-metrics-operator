@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-// Package v1beta1 contains API Schema definitions for the koku-metrics-cfg v1beta1 API group
+// Package v1beta1 contains API Schema definitions for the costmanagement-metrics-cfg v1beta1 API group
 // +kubebuilder:object:generate=true
-// +groupName=koku-metrics-cfg.openshift.io
+// +groupName=costmanagement-metrics-cfg.openshift.io
 package v1beta1
 
 import (
@@ -17,7 +17,7 @@ import (
 
 var (
 	// NamePrefix is the prefix used to distinguish upstream and downstream operators
-	NamePrefix = "koku"
+	NamePrefix = "costmanagement"
 
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: fmt.Sprintf("%s-metrics-cfg.openshift.io", NamePrefix), Version: "v1beta1"}
