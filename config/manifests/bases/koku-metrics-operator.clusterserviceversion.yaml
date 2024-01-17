@@ -10,10 +10,17 @@ metadata:
     createdAt: "0001-01-01T00:00:00Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "false"
+    features.operators.openshift.io/proxy-aware: "true"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
     operatorframework.io/suggested-namespace: koku-metrics-operator
-    operators.openshift.io/infrastructure-features: '["Disconnected"]'
-    operators.operatorframework.io/builder: operator-sdk-v0.19.4
-    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+    operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
+    operators.operatorframework.io/builder: operator-sdk-v1.33.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Management
   labels:
