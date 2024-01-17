@@ -4,7 +4,7 @@
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 PREVIOUS_VERSION ?= 3.1.0
-VERSION ?= 4.0.0
+VERSION ?= 3.2.0
 
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
@@ -315,8 +315,8 @@ downstream: ## Generate the code changes necessary for the downstream image.
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	# fix the cert
-	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' crhchttp/http_cloud_dot_redhat.go
-	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' packaging/packaging.go
+	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
+	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
 	# clean up the other files
 	- git clean -fx
 	# mv the sample to the correctly named file
