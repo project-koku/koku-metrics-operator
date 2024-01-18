@@ -19,6 +19,11 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v3.2.0:
+* Support for amd64, arm64, ppc64le, s390x architectures
+* add liveness and readiness probes to controller Pod
+* update pod security settings so that the controller Pod can run in Restricted mode [more info](https://sdk.operatorframework.io/docs/best-practices/pod-security-standards/)
+
 ## New in v3.1.0:
 * Add service-account authentication type.
 * __Deprecation Notice:__ Basic authentication is deprecated and will be removed in a future version of the operator.
@@ -91,7 +96,7 @@ The default authentication for the operator is `token`. No further steps are req
 1. On the left navigation pane, select `Workloads` -> `Secrets` -> select Project: `koku-metrics-operator` -> `Create` -> `Key/Value Secret`
 2. Give the Secret a name and add 2 keys (all lowercase) for the respective authentication type. The values for these keys correspond to console.redhat.com credentials:
     * basic auth (deprecated): `username` and `password`
-    * service-account auth: `client_id` and `client_secret` 
+    * service-account auth: `client_id` and `client_secret`
 
 3. Select `Create`.
 ##### Create the KokuMetricsConfig
@@ -107,7 +112,7 @@ Configure the koku-metrics-operator by creating a `KokuMetricsConfig`.
             secret_name: SECRET-NAME
             type: basic
         ```
-          
+
         * for service-account auth type
         ```
           authentication:
