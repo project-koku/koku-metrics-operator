@@ -9,6 +9,7 @@ VERSION ?= 3.2.0
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
+PREVIOUS_BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(PREVIOUS_VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
@@ -42,14 +43,6 @@ IMAGE_SHA=$(shell docker inspect --format='{{index .RepoDigests 0}}' ${IMG})
 
 OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
-
-# DOCKER := $(shell which docker 2>/dev/null)
-export DOCKER_DEFAULT_PLATFORM = linux/x86_64
-
-# Set the Operator SDK version to use. By default, what is installed on the system is used.
-# This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.33.0
-OPERATOR_REGISTRY_VERSION ?= v1.34.0
 
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
@@ -272,33 +265,37 @@ get-token-and-cert:  ## Get a token from a running K8s cluster for local develop
 
 NAMESPACE ?= ""
 .PHONY: bundle
-bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
+bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	mkdir -p koku-metrics-operator/$(VERSION)/
 	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
-	operator-sdk generate kustomize manifests
+	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE_SHA}
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-	operator-sdk bundle validate ./bundle
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
 	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA} --namespace=${NAMESPACE}
+	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	cd koku-metrics-operator/$(VERSION) && $(CONTAINER_TOOL) build -t $(BUNDLE_IMG) .
+	cd koku-metrics-operator/$(VERSION) && $(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
 	$(CONTAINER_TOOL) push $(BUNDLE_IMG)
 
-.PHONY: test-catalog
-test-catalog: opm ## Build a test-catalog
-	$(OPM) index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
+.PHONY: deploy-previous-bundle
+bundle-deploy-previous: operator-sdk ## Deploy previous bundle into a cluster.
+	$(OPERATOR_SDK) run bundle $(PREVIOUS_BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace
 
-.PHONY: test-catalog-push
-test-catalog-push: ## Push the test-catalog
-	$(CONTAINER_TOOL) push ${CATALOG_IMG}
+.PHONY: deploy-bundle
+bundle-deploy: operator-sdk ## Deploy current bundle into a cluster.
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace
 
+.PHONY: deploy-bundle-upgrade
+bundle-deploy-upgrade: operator-sdk ## Test a bundle upgrade. The previous bundle must have been deployed first.
+	$(OPERATOR_SDK) run bundle-upgrade $(BUNDLE_IMG) --namespace=koku-metrics-operator
 
 ##@ Generate downstream file changes
 
@@ -342,6 +339,11 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 KUSTOMIZE_VERSION ?= v5.1.1
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
 
+# Set the Operator SDK version to use. By default, what is installed on the system is used.
+# This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
+OPERATOR_SDK_VERSION ?= v1.33.0
+OPERATOR_REGISTRY_VERSION ?= v1.34.0
+
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -361,23 +363,6 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-.PHONY: opm
-OPM = $(LOCALBIN)/opm
-opm: ## Download opm locally if necessary.
-ifeq (,$(wildcard $(OPM)))
-ifeq (,$(shell which opm 2>/dev/null))
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/$(OPERATOR_REGISTRY_VERSION)/$${OS}-$${ARCH}-opm ;\
-	chmod +x $(OPM) ;\
-	}
-else
-OPM = $(shell which opm)
-endif
-endif
 
 .PHONY: operator-sdk
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
