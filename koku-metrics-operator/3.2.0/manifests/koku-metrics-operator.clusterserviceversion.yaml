@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator@sha256:2cde234ca9a1dcb7661cbbde065af65687e08a1654f960dc897e236691778ad7
-    createdAt: "2024-01-18T16:51:34Z"
+    createdAt: "2024-01-18T17:40:52Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift
       usage metrics to cost management.
     features.operators.openshift.io/disconnected: "true"
@@ -403,6 +403,22 @@ spec:
                 app: koku-metrics-operator
                 control-plane: controller-manager
             spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: kubernetes.io/arch
+                        operator: In
+                        values:
+                        - amd64
+                        - arm64
+                        - ppc64le
+                        - s390x
+                      - key: kubernetes.io/os
+                        operator: In
+                        values:
+                        - linux
               containers:
               - args:
                 - --leader-elect
