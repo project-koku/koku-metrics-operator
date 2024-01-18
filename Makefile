@@ -342,7 +342,6 @@ CONTROLLER_TOOLS_VERSION ?= v0.13.0
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
 OPERATOR_SDK_VERSION ?= v1.33.0
-OPERATOR_REGISTRY_VERSION ?= v1.34.0
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
