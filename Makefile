@@ -298,8 +298,8 @@ bundle-deploy-upgrade: operator-sdk ## Test a bundle upgrade. The previous bundl
 	$(OPERATOR_SDK) run bundle-upgrade $(BUNDLE_IMG) --namespace=koku-metrics-operator
 
 .PHONY: deploy-bundle-cleanup
-deploy-bundle-cleanup: operator-sdk ## Delete the entirety of the deployed bundle
-	$(OPERATOR_SDK) cleanup koku-metrics-operator --delete-all --namespace=koku-metrics-operator
+bundle-deploy-cleanup: operator-sdk ## Delete the entirety of the deployed bundle
+	$(OPERATOR_SDK) cleanup koku-metrics-operator --delete-crds --delete-all --namespace=koku-metrics-operator
 
 ##@ Generate downstream file changes
 

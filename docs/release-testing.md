@@ -71,5 +71,5 @@ Testing an upgrade is composed of the following general steps:
 1. When done with testing, the bundle can be deleted from the cluster with:
 
     ```sh
-    $ make deploy-bundle-cleanup
+    $ make bundle-deploy-cleanup
     ```
