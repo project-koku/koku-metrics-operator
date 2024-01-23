@@ -21,7 +21,7 @@ Testing an upgrade is composed of the following general steps:
 
 
 ### Testing an operator upgrade
-1. set version numbers in the Makefile:
+1. Set version numbers in the Makefile:
     ```sh
     $ PREVIOUS_VERSION=0.9.8
     $ VERSION=0.9.9
