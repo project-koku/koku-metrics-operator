@@ -49,5 +49,5 @@ community-operators-prod/
 bundle.Dockerfile
 
 
-# Ignore .env file
-.env
+# Ignore python virtual env
+.venv/

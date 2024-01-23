@@ -269,11 +269,11 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 	mkdir -p koku-metrics-operator/$(VERSION)/
 	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
 	$(OPERATOR_SDK) generate kustomize manifests
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE_SHA}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA} --namespace=${NAMESPACE}
+	.venv/bin/python scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) $(IMAGE_SHA) --namespace=${NAMESPACE}
 	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
 	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
 
@@ -379,3 +379,9 @@ else
 OPERATOR_SDK = $(shell which operator-sdk)
 endif
 endif
+
+.PHONY: venv
+venv: ## create venv for txt_replace script
+	@python3 -m venv .venv
+	@.venv/bin/python -m pip install -U pip
+	@.venv/bin/python -m pip install -r scripts/requirements.txt
