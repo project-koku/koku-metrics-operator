@@ -291,11 +291,15 @@ bundle-deploy-previous: operator-sdk ## Deploy previous bundle into a cluster.
 
 .PHONY: deploy-bundle
 bundle-deploy: operator-sdk ## Deploy current bundle into a cluster.
-	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace --security-context-config restricted
 
 .PHONY: deploy-bundle-upgrade
 bundle-deploy-upgrade: operator-sdk ## Test a bundle upgrade. The previous bundle must have been deployed first.
 	$(OPERATOR_SDK) run bundle-upgrade $(BUNDLE_IMG) --namespace=koku-metrics-operator
+
+.PHONY: deploy-bundle-cleanup
+deploy-bundle-cleanup: operator-sdk ## Delete the entirety of the deployed bundle
+	$(OPERATOR_SDK) cleanup koku-metrics-operator --delete-all --namespace=koku-metrics-operator
 
 ##@ Generate downstream file changes
 
