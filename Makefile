@@ -285,19 +285,19 @@ bundle-build: ## Build the bundle image.
 bundle-push: ## Push the bundle image.
 	$(CONTAINER_TOOL) push $(BUNDLE_IMG)
 
-.PHONY: deploy-previous-bundle
+.PHONY: bundle-deploy-previous
 bundle-deploy-previous: operator-sdk ## Deploy previous bundle into a cluster.
 	$(OPERATOR_SDK) run bundle $(PREVIOUS_BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace
 
-.PHONY: deploy-bundle
+.PHONY: bundle-deploy
 bundle-deploy: operator-sdk ## Deploy current bundle into a cluster.
 	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace --security-context-config restricted
 
-.PHONY: deploy-bundle-upgrade
+.PHONY: bundle-deploy-upgrade
 bundle-deploy-upgrade: operator-sdk ## Test a bundle upgrade. The previous bundle must have been deployed first.
 	$(OPERATOR_SDK) run bundle-upgrade $(BUNDLE_IMG) --namespace=koku-metrics-operator
 
-.PHONY: deploy-bundle-cleanup
+.PHONY: bundle-deploy-cleanup
 bundle-deploy-cleanup: operator-sdk ## Delete the entirety of the deployed bundle
 	$(OPERATOR_SDK) cleanup koku-metrics-operator --delete-crds --delete-all --namespace=koku-metrics-operator
 
