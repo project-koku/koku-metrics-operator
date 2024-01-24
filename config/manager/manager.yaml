@@ -25,6 +25,22 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+                - ppc64le
+                - s390x
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                  - linux
       containers:
       - command:
         - /manager
@@ -39,6 +55,18 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: 500m
@@ -46,10 +74,19 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
         - mountPath: /tmp/koku-metrics-operator-reports
           name: koku-metrics-operator-reports
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       volumes:

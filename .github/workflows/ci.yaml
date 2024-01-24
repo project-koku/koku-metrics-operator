@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: golangci-lint
@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -41,7 +41,7 @@ jobs:
         run: printenv
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
@@ -59,7 +59,7 @@ jobs:
           go test ./... -v -coverprofile cover.out -covermode=atomic
 
       - name: Upload test coverage file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: cover.out
@@ -73,12 +73,12 @@ jobs:
       - name: Checkout
         # this checkout is required for the coverage report. If we don't do this, then
         # the uploaded report is invalid and codecov doesn't know how to process it.
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: coverage
 
@@ -99,12 +99,12 @@ jobs:
       - name: Checkout
         # this checkout is required for the coverage report. If we don't do this, then
         # the uploaded report is invalid and codecov doesn't know how to process it.
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: coverage
 

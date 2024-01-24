@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} registry.access.redhat.com/ubi8/go-toolset:1.20.10-10 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -10,30 +10,20 @@ WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
-# cache deps before building and copying source so that we do not need to re-download as much
-# and so that source changes do not invalidate our downloaded layer
-RUN go mod download
+COPY vendor/ vendor/
 
 # Copy the go source
-COPY main.go main.go
+COPY cmd/ cmd/
 COPY api/ api/
-COPY clusterversion/ clusterversion/
-COPY collector/ collector/
-COPY controllers/ controllers/
-COPY crhchttp/ crhchttp/
-COPY dirconfig/ dirconfig/
-COPY packaging/ packaging/
-COPY sources/ sources/
-COPY storage/ storage/
-COPY strset/ strset/
+COPY internal/ internal/
 
 # Copy git to inject the commit during build
 COPY .git .git
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
-go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/controllers.GitCommit=$GIT_COMMIT" -a -o manager main.go
+CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
+go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

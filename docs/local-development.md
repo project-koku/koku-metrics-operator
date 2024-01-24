@@ -26,7 +26,7 @@
 2. Build the manager binary:
 
     ```
-    $ make manager
+    $ make build
     ```
 
 3. Register the CRD with the Kubernetes apiserver:
