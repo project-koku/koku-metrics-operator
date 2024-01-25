@@ -149,7 +149,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: test-no-cover
 test-no-cover: envtest-not-local ## Run tests - specific for multiarch in github action
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST_NOT_LOCAL) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./...
 
 ##@ Build
 
@@ -342,6 +342,7 @@ KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVTEST_NOT_LOCAL ?= setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
@@ -372,7 +373,7 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOPATH=$(LOCALPATH) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: envtest-not-local
-envtest-not-local: $(ENVTEST) ## Download envtest-setup for qemu unit tests - specific to github action.
+envtest-not-local: $(ENVTEST_NOT_LOCAL) ## Download envtest-setup for qemu unit tests - specific to github action.
 	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: operator-sdk
