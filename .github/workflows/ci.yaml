@@ -54,8 +54,7 @@ jobs:
       #     export PATH=$PATH:/usr/local/kubebuilder/bin
 
       - name: Run tests
-        run: |
-          make test
+        run: make test
 
       - name: Upload test coverage file
         uses: actions/upload-artifact@v4
@@ -67,8 +66,8 @@ jobs:
     # needs: unit-tests
     strategy:
       matrix:
-        # arch: [arm64, s390x, ppc64le]  # s390x kubebuilder doesnt exist
-        arch: [arm64, ppc64le]
+        arch: [arm64, s390x, ppc64le]
+        # arch: [arm64, ppc64le]
     runs-on: ubuntu-22.04
 
     steps:
@@ -85,18 +84,15 @@ jobs:
       - name: Install QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Install kubebuilder
-        run : |
-          os=$(go env GOOS)
-          arch=${{ matrix.arch }}
-          curl -L "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_${os}_${arch}.tar.gz" | tar -xz -C /tmp/
-          sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
-          export PATH=$PATH:/usr/local/kubebuilder/bin
-
-      - name: Run test via qemu/binfmt
-        run: go test ./... -v
+      - name: Run tests via qemu/binfmt
+        run: make test-no-cover
         env:
           GOARCH: ${{ matrix.arch }}
+
+      # - name: Run test via qemu/binfmt
+      #   run: go test ./... -v
+      #   env:
+      #     GOARCH: ${{ matrix.arch }}
 
   coverage:
     name: Coverage
