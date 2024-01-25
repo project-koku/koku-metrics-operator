@@ -82,11 +82,10 @@ jobs:
       - name: Install QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: print go env
-        run: go env
-
       - name: Run tests via qemu/binfmt
-        run: make test-qemu
+        run: |
+          go env
+          make test-qemu
         env:
           GOARCH: ${{ matrix.arch }}
 
