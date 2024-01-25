@@ -148,7 +148,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
 .PHONY: test-no-cover
-test-no-cover: manifests generate fmt vet envtest-not-local ## Run tests - specific for multiarch in github action
+test-no-cover: envtest-not-local ## Run tests - specific for multiarch in github action
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./...
 
 ##@ Build
@@ -336,7 +336,6 @@ downstream: ## Generate the code changes necessary for the downstream image.
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
-LOCALPATH ?= $(shell pwd)
 
 ## Tool Binaries
 KUBECTL ?= kubectl
@@ -365,7 +364,7 @@ $(KUSTOMIZE): $(LOCALBIN)
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOPATH=$(LOCALPATH) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
@@ -373,9 +372,8 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOPATH=$(LOCALPATH) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: envtest-not-local
-envtest-not-local: $(ENVTEST) ## Download envtest-setup locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOPATH=$(LOCALPATH) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+envtest-not-local: $(ENVTEST) ## Download envtest-setup for qemu unit tests - specific to github action.
+	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: operator-sdk
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
