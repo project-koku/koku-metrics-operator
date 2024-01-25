@@ -147,6 +147,10 @@ ENVTEST_K8S_VERSION = 1.28.0
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: test-qemu
+test-qemu: envtest-not-local ## Run tests - specific for multiarch in github action
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST_NOT_LOCAL) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./...
+
 ##@ Build
 
 .PHONY: build
@@ -338,6 +342,7 @@ KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go env GOARCH)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
@@ -366,6 +371,10 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: envtest-not-local
+envtest-not-local: ## Download envtest-setup for qemu unit tests - specific to github action.
+	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: operator-sdk
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk

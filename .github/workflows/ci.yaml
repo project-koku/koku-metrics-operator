@@ -11,7 +11,6 @@ on:
 jobs:
 
   validate-pr:
-    name: Validate PR
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -28,60 +27,64 @@ jobs:
         run: make verify-manifests
 
   unit-tests:
-    name: Unit Tests
     runs-on: ubuntu-22.04
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Display build environment
         run: printenv
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-
-      - name: Install kubebuilder
-        run : |
-          os=$(go env GOOS)
-          arch=$(go env GOARCH)
-          curl -L "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_${os}_${arch}.tar.gz" | tar -xz -C /tmp/
-          sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
-          export PATH=$PATH:/usr/local/kubebuilder/bin
-
       - name: Run tests
-        run: |
-          make generate manifests
-          go test ./... -v -coverprofile cover.out -covermode=atomic
-
+        run: make test
       - name: Upload test coverage file
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: cover.out
 
+  unit-tests-qemu:
+    strategy:
+      matrix:
+        # arch: [arm64, s390x, ppc64le]  # kubebuilder is not available for s390x yet
+        arch: [arm64, ppc64le]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Run tests via qemu/binfmt
+        run: |
+          go env
+          make test-qemu
+        env:
+          GOARCH: ${{ matrix.arch }}
+
   coverage:
-    name: Coverage
     needs: unit-tests
     runs-on: ubuntu-22.04
     steps:
-
       - name: Checkout
         # this checkout is required for the coverage report. If we don't do this, then
         # the uploaded report is invalid and codecov doesn't know how to process it.
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Download coverage result from unit-tests
         uses: actions/download-artifact@v4
         with:
           name: coverage
-
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
@@ -91,23 +94,19 @@ jobs:
           fail_ci_if_error: true
 
   sonarcloud:
-    name: SonarCloud
     needs: [validate-pr,unit-tests]
     runs-on: ubuntu-20.04
     steps:
-
       - name: Checkout
         # this checkout is required for the coverage report. If we don't do this, then
         # the uploaded report is invalid and codecov doesn't know how to process it.
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Download coverage result from unit-tests
         uses: actions/download-artifact@v4
         with:
           name: coverage
-
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
