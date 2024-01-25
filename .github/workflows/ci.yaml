@@ -68,7 +68,8 @@ jobs:
     # needs: unit-tests
     strategy:
       matrix:
-        arch: [arm64, s390x, ppc64le]
+        # arch: [arm64, s390x, ppc64le]  # s390x kubebuilder doesnt exist
+        arch: [arm64, ppc64le]
     runs-on: ubuntu-22.04
 
     steps:
