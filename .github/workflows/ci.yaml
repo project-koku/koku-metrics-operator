@@ -11,7 +11,6 @@ on:
 jobs:
 
   validate-pr:
-    name: Validate PR
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -28,7 +27,6 @@ jobs:
         run: make verify-manifests
 
   unit-tests:
-    name: Unit Tests
     runs-on: ubuntu-22.04
 
     steps:
@@ -62,7 +60,7 @@ jobs:
           name: coverage
           path: cover.out
 
-  test-qemu:
+  unit-tests-qemu:
     # needs: unit-tests
     strategy:
       matrix:
@@ -98,7 +96,6 @@ jobs:
       #     GOARCH: ${{ matrix.arch }}
 
   coverage:
-    name: Coverage
     needs: unit-tests
     runs-on: ubuntu-22.04
     steps:
@@ -124,7 +121,6 @@ jobs:
           fail_ci_if_error: true
 
   sonarcloud:
-    name: SonarCloud
     needs: [validate-pr,unit-tests]
     runs-on: ubuntu-20.04
     steps:
