@@ -85,7 +85,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Run tests via qemu/binfmt
-        run: make test-no-cover
+        run: make test-qemu
         env:
           GOARCH: ${{ matrix.arch }}
 
