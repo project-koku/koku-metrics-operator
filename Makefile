@@ -373,7 +373,7 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOPATH=$(LOCALPATH) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: envtest-not-local
-envtest-not-local: $(ENVTEST_NOT_LOCAL) ## Download envtest-setup for qemu unit tests - specific to github action.
+envtest-not-local: ## Download envtest-setup for qemu unit tests - specific to github action.
 	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: operator-sdk
