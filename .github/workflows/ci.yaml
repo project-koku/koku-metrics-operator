@@ -50,8 +50,7 @@ jobs:
   unit-tests-qemu:
     strategy:
       matrix:
-        # arch: [arm64, s390x, ppc64le]  # kubebuilder is not available for s390x yet
-        arch: [arm64, ppc64le]
+        arch: [arm64, s390x, ppc64le]
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
