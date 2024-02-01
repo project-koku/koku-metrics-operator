@@ -1,6 +1,7 @@
 run:
   timeout: 5m
-
+  skip-dirs:
+    - vendor
 
 linters-settings:
   goimports:
