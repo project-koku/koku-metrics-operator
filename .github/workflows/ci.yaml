@@ -90,8 +90,9 @@ jobs:
         with:
           file: ./cover.out
           flags: unittests
-          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   sonarcloud:
     needs: [validate-pr,unit-tests]
