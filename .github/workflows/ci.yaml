@@ -86,12 +86,13 @@ jobs:
         with:
           name: coverage
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./cover.out
           flags: unittests
-          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   sonarcloud:
     needs: [validate-pr,unit-tests]
