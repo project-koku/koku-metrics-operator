@@ -40,7 +40,7 @@ const (
 // Only one of the following authentication types may be specified.
 // If none of the following types are specified, the default one
 // is Token.
-// +kubebuilder:validation:Enum=token;basic
+// +kubebuilder:validation:Enum=token;basic;service-account
 type AuthenticationType string
 
 const (
@@ -49,6 +49,9 @@ const (
 
 	// Token allows upload of data using token authentication.
 	Token AuthenticationType = "token"
+
+	// ServiceAccount allow upload of data using service account authentication
+	ServiceAccount AuthenticationType = "service-account"
 )
 
 // EmbeddedObjectMetadata contains a subset of the fields included in k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta
@@ -95,9 +98,10 @@ type EmbeddedPersistentVolumeClaim struct {
 // AuthenticationSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
 type AuthenticationSpec struct {
 
-	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	// Valid values are:
-	// - "basic" : Enables authentication using user and password from authentication secret.
+	// - "basic" (deprecated) : Enables authentication using user and password from authentication secret.
+	// - "service-account" : Enables authentication using client_id and client_secret from the secret containing service account information.
 	// - "token" (default): Uses cluster token for authentication.
 	// +kubebuilder:default="token"
 	AuthType AuthenticationType `json:"type"`
@@ -105,6 +109,12 @@ type AuthenticationSpec struct {
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
+
+	// FOR DEVELOPMENT ONLY.
+	// TokenURL is a field of KokuMetricsConfig to represent the endpoint used to obtain the service account token.
+	// The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
+	// +kubebuilder:default=`https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`
+	TokenURL string `json:"token_url,omitempty"`
 }
 
 // PackagingSpec defines the desired state of the Packaging object in the KokuMetricsConfigSpec.
@@ -260,7 +270,7 @@ type KokuMetricsConfigSpec struct {
 // AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.
 type AuthenticationStatus struct {
 
-	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	AuthType AuthenticationType `json:"type,omitempty"`
 
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
@@ -278,6 +288,9 @@ type AuthenticationStatus struct {
 	// LastVerificationTime is a field of KokuMetricsConfig to represent the last time credentials were verified.
 	// +nullable
 	LastVerificationTime *metav1.Time `json:"last_credential_verification_time,omitempty"`
+
+	// TokenURL is a field of KokuMetricsConfig to represent the url used to generate a service account token.
+	TokenURL string `json:"token_url,omitempty"`
 }
 
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.

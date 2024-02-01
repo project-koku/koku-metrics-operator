@@ -1,16 +1,19 @@
 domain: openshift.io
-layout: go.kubebuilder.io/v2
-projectName: koku-metrics-operator
-repo: github.com/project-koku/koku-metrics-operator
-resources:
--
-  controller: true
-  domain: openshift.io
-  group: koku-metrics-cfg
-  kind: KokuMetricsConfig
-  path: github.com/project-koku/koku-metrics-operator/api/v1beta1
-  version: v1beta1
-version: "3"
+layout:
+  - go.kubebuilder.io/v4
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
+projectName: koku-metrics-operator
+repo: github.com/project-koku/koku-metrics-operator
+resources:
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: openshift.io
+    group: koku-metrics-cfg
+    kind: KokuMetricsConfig
+    path: github.com/project-koku/koku-metrics-operator/api/v1beta1
+    version: v1beta1
+version: "3"
