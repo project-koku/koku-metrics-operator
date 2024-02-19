@@ -21,6 +21,10 @@ updates:
       ci-dependencies:
         patterns:
           - "*" # update all github-actions in single PR
+    ignore:
+      # v4 codecov is broken for dependabot updates because dependabot does not have access to secrets.
+      - dependency-name: "codecov/codecov-action"
+
 
   - package-ecosystem: "gomod"
     directory: "/"
