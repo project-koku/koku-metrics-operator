@@ -5,6 +5,12 @@
 
 version: 2
 updates:
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: "main"
+
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     # Workflow files stored in the default location of `.github/workflows`. (You don't need to specify `/.github/workflows` for `directory`. You can use `directory: "/"`.)
@@ -15,12 +21,10 @@ updates:
       ci-dependencies:
         patterns:
           - "*" # update all github-actions in single PR
+    ignore:
+      # v4 codecov is broken for dependabot updates because dependabot does not have access to secrets.
+      - dependency-name: "codecov/codecov-action"
 
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    target-branch: "main"
 
   - package-ecosystem: "gomod"
     directory: "/"
