@@ -145,11 +145,11 @@ verify-manifests: ## Verify manifests are up to date.
 ENVTEST_K8S_VERSION = 1.28.0
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v ./... -coverprofile cover.out
 
 .PHONY: test-qemu
 test-qemu: envtest-not-local ## Run tests - specific for multiarch in github action
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST_NOT_LOCAL) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST_NOT_LOCAL) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v ./...
 
 ##@ Build
 
