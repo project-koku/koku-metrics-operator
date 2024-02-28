@@ -844,8 +844,6 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Info("collected 96 hours of data, packaging files")
 			packageFiles(packager, cr)
 			startTime = t
-			// update status to show progress
-			r.updateStatusAndLogError(ctx, cr)
 		}
 	}
 
