@@ -167,6 +167,7 @@ jobs:
             cd koku-zvsi-clone && snap install go --classic --channel=$(grep -m 1 go go.mod | cut -d\  -f2)/stable && cd ..
             adduser --disabled-password --gecos "" runner
             cp -r koku-zvsi-clone /home/runner/koku-zvsi-clone
+            chmod -R 777 /home/runner/koku-zvsi-clone
             su runner -c "cd /home/runner/koku-zvsi-clone && make test"
       - name: destroy zvsi instance
         if: always()
