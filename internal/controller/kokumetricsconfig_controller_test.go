@@ -1316,41 +1316,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(err).To(BeNil())
 			Expect(len(files)).To(Equal(0))
 		})
-		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
-			resetReconciler(WithSecretOverride(true))
-
-			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 8d"}
-			createObject(ctx, testConfigMap)
-
-			t := metav1.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
-			t2 := t.Truncate(24 * time.Hour).Add(-24 * 8 * time.Hour) // midnight 8 days ago
-			timeRangeInitial := promv1.Range{
-				Start: t2,
-				End:   t2.Add(59*time.Minute + 59*time.Second),
-				Step:  time.Minute,
-			}
-			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRangeInitial, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
-			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil).MinTimes(1)
-
-			instCopy.Spec.Packaging.MaxReports = 2
-			instCopy.Spec.PrometheusConfig.CollectPreviousData = &trueDef
-			instCopy.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
-			instCopy.Spec.Upload.UploadToggle = &falseValue
-			createObject(ctx, instCopy)
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: t})
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
-			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(2))
-			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
-			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(2))
-
-		})
 		It("query failed due to error", func() {
 			resetReconciler(WithSecretOverride(true))
 
@@ -1430,6 +1395,42 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+		})
+		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
+			// slow test, always run this one last
+			resetReconciler(WithSecretOverride(true))
+
+			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 8d"}
+			createObject(ctx, testConfigMap)
+
+			t := metav1.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			t2 := t.Truncate(24 * time.Hour).Add(-24 * 8 * time.Hour) // midnight 8 days ago
+			timeRangeInitial := promv1.Range{
+				Start: t2,
+				End:   t2.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRangeInitial, gomock.Any()).Return(model.Matrix{}, nil, nil).MinTimes(1)
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(asModelMatrix(metricjson, nodeallocatablecpucores), nil, nil).MinTimes(1)
+
+			instCopy.Spec.Packaging.MaxReports = 2
+			instCopy.Spec.PrometheusConfig.CollectPreviousData = &trueDef
+			instCopy.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Prometheus.LastQuerySuccessTime.Equal(&metav1.Time{Time: t})
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+			Expect(len(fetched.Status.Packaging.PackagedFiles)).To(Equal(2))
+			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
+			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(2))
+
 		})
 	})
 })
