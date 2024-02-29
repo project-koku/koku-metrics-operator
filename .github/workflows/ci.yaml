@@ -176,7 +176,6 @@ jobs:
            zvsi_status=$(ibmcloud is instance $ZVSI_INS_NAME  -q --output JSON | jq -r .status)
            if [[ -z "$zvsi_status" ]]; then
               echo "ZVSI is destroyed"; 
-              break
            fi
            while [[ $zvsi_status == "running" || $zvsi_status == "deleting" ]]
             do
