@@ -16,7 +16,7 @@ on:
         - eu-gb
         - jp-tok
         - br-sao
-  pull_request:
+  pull_request_target:
   push:
     branches:
       - downstream
