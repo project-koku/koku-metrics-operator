@@ -100,8 +100,11 @@ jobs:
       - name: install ibmcli and setup ibm login
         run: |
           curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
-          icr="${${{ inputs.ibmcloudRegion }}:-us-south}"
-          ibmcloud login -q --apikey ${{ secrets.IBMCLOUD_API_KEY }} -r $icr | head -3
+          if ibmcloud login -q --apikey ${{ secrets.IBMCLOUD_API_KEY }} -r ${{ inputs.ibmcloudRegion }}  >/dev/null ; then
+              echo "ibm cloud logged in"
+          else
+              ibmcloud login -q --apikey ${{ secrets.IBMCLOUD_API_KEY }} -r us-south | head -3
+          fi
           ibmcloud plugin install -f vpc-infrastructure
       - name: generate ssh key
         run: |
