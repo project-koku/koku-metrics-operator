@@ -96,19 +96,24 @@ jobs:
       ZVSI_FIP_NAME: koku-ci-fip-${{ github.run_id }}-${{ github.run_number }}
       ZVSI_INS_NAME: koku-ci-zvsi-${{ github.run_id }}-${{ github.run_number }}
       ZVSI_IMAGE_NAME: ibm-ubuntu-22-04-3-minimal-s390x-2
+
+      IBMCLOUD_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+      IBMCLOUD_RESOURCE_GROUP_ID: ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }}
+      ZVSI_PUBLIC_KEY: ${{ secrets.ZVSI_PUBLIC_KEY }}
+      ZVSI_PRIVATE_KEY: ${{ secrets.ZVSI_PRIVATE_KEY }}
     steps:
       - name: install ibmcli and setup ibm login
         run: |
           curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
-          ibmcloud login -q --apikey ${{ secrets.IBMCLOUD_API_KEY }} -r ${{ inputs.ibmcloudRegion }} | head -3
+          ibmcloud login -q --apikey "$IBMCLOUD_API_KEY" -r ${{ inputs.ibmcloudRegion }} | head -3
           ibmcloud plugin install -f vpc-infrastructure
       - name: generate ssh key
         run: |
-          ibmcloud is key-create $ZVSI_SSH_KEY "${{ secrets.ZVSI_PUBLIC_KEY }}" --key-type rsa --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} -q --output JSON | jq 'del(.public_key,.resource_group)'
+          ibmcloud is key-create $ZVSI_SSH_KEY "$ZVSI_PUBLIC_KEY" --key-type rsa --resource-group-id "$IBMCLOUD_RESOURCE_GROUP_ID" -q --output JSON | jq 'del(.public_key,.resource_group)'
           sleep 2
       - name: create a virtual private cloud instance
         run: |
-           ibmcloud is vpc-create $ZVSI_VPC_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }}  -q --output JSON | jq 'del(.resource_group)'
+           ibmcloud is vpc-create $ZVSI_VPC_NAME --resource-group-id "$IBMCLOUD_RESOURCE_GROUP_ID"  -q --output JSON | jq 'del(.resource_group)'
            sleep 2
       - name: select a zone randomly
         run: |
@@ -116,7 +121,7 @@ jobs:
            echo "ZVSI_ZONE=$(ibmcloud is vpc $ZVSI_VPC_NAME --output JSON | jq -r $query)" >> $GITHUB_ENV
       - name: create a subnet for vpc
         run: |
-           ibmcloud is subnet-create $ZVSI_SUBNET_NAME $ZVSI_VPC_NAME --ipv4-address-count 256 --zone $ZVSI_ZONE --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} -q --output JSON | jq 'del(.resource_group)'
+           ibmcloud is subnet-create $ZVSI_SUBNET_NAME $ZVSI_VPC_NAME --ipv4-address-count 256 --zone $ZVSI_ZONE --resource-group-id "$IBMCLOUD_RESOURCE_GROUP_ID" -q --output JSON | jq 'del(.resource_group)'
            sleep 2
       - name: create security group rule for ssh access
         run: |
@@ -124,11 +129,11 @@ jobs:
            sleep 2
       - name: create a zvsi instance
         run: |
-           ibmcloud is instance-create $ZVSI_INS_NAME $ZVSI_VPC_NAME $ZVSI_ZONE $ZVSI_PROFILE_NAME $ZVSI_SUBNET_NAME --keys $ZVSI_SSH_KEY --image $ZVSI_IMAGE_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} -q --output JSON | jq 'del(.resource_group)'
+           ibmcloud is instance-create $ZVSI_INS_NAME $ZVSI_VPC_NAME $ZVSI_ZONE $ZVSI_PROFILE_NAME $ZVSI_SUBNET_NAME --keys $ZVSI_SSH_KEY --image $ZVSI_IMAGE_NAME --resource-group-id "$IBMCLOUD_RESOURCE_GROUP_ID" -q --output JSON | jq 'del(.resource_group)'
            sleep 30
       - name: floating ip addess assignment
         run: |
-           ibmcloud is floating-ip-reserve $ZVSI_FIP_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} --zone $ZVSI_ZONE -q --output JSON | jq 'del(.resource_group)'
+           ibmcloud is floating-ip-reserve $ZVSI_FIP_NAME --resource-group-id "$IBMCLOUD_RESOURCE_GROUP_ID" --zone $ZVSI_ZONE -q --output JSON | jq 'del(.resource_group)'
            ibmcloud is floating-ip-update $ZVSI_FIP_NAME --nic primary --in $ZVSI_INS_NAME -q --output JSON | jq 'del(.resource_group)'
       - name: setup floating ip address for ssh connection
         run: |
@@ -180,6 +185,7 @@ jobs:
            zvsi_status=$(ibmcloud is instance $ZVSI_INS_NAME  -q --output JSON | jq -r .status)
            if [[ -z "$zvsi_status" ]]; then
               echo "ZVSI is destroyed";
+              break
            fi
            while [[ $zvsi_status == "running" || $zvsi_status == "deleting" ]]
             do
