@@ -1,7 +1,7 @@
 name: CI - user triggered jobs
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs:
       ibmcloudRegion:
         description: 'ibm cloud instance region'
@@ -12,11 +12,11 @@ on:
         - us-south
         - ca-tor
         - us-east
-        - eu-es        
+        - eu-es
         - eu-gb
         - jp-tok
         - br-sao
-  pull_request_target:
+  # pull_request_target:
 
 jobs:
 
@@ -43,14 +43,14 @@ jobs:
           sleep 2
       - name: create a virtual private cloud instance
         run: |
-           ibmcloud is vpc-create $ZVSI_VPC_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }}  -q --output JSON | jq 'del(.resource_group)' 
+           ibmcloud is vpc-create $ZVSI_VPC_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }}  -q --output JSON | jq 'del(.resource_group)'
            sleep 2
       - name: select a zone randomly
         run: |
-           query=.cse_source_ips[$(awk "BEGIN{srand(); print int(rand()*(2-0+1))+0}")].zone.name 
+           query=.cse_source_ips[$(awk "BEGIN{srand(); print int(rand()*(2-0+1))+0}")].zone.name
            echo "ZVSI_ZONE=$(ibmcloud is vpc $ZVSI_VPC_NAME --output JSON | jq -r $query)" >> $GITHUB_ENV
       - name: create a subnet for vpc
-        run: | 
+        run: |
            ibmcloud is subnet-create $ZVSI_SUBNET_NAME $ZVSI_VPC_NAME --ipv4-address-count 256 --zone $ZVSI_ZONE --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} -q --output JSON | jq 'del(.resource_group)'
            sleep 2
       - name: create security group rule for ssh access
@@ -62,17 +62,17 @@ jobs:
            ibmcloud is instance-create $ZVSI_INS_NAME $ZVSI_VPC_NAME $ZVSI_ZONE $ZVSI_PROFILE_NAME $ZVSI_SUBNET_NAME --keys $ZVSI_SSH_KEY --image $ZVSI_IMAGE_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} -q --output JSON | jq 'del(.resource_group)'
            sleep 30
       - name: floating ip addess assignment
-        run: | 
+        run: |
            ibmcloud is floating-ip-reserve $ZVSI_FIP_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} --zone $ZVSI_ZONE -q --output JSON | jq 'del(.resource_group)'
            ibmcloud is floating-ip-update $ZVSI_FIP_NAME --nic primary --in $ZVSI_INS_NAME -q --output JSON | jq 'del(.resource_group)'
       - name: setup floating ip address for ssh connection
         run: |
            echo "ZVSI_FIP_ADD=$(ibmcloud is floating-ip $ZVSI_FIP_NAME -q --output JSON | jq -r .address)" >> $GITHUB_ENV
       - name: Check ZVSI is online
-        run: | 
+        run: |
            zvsi_status=$(ibmcloud is instance $ZVSI_INS_NAME  -q --output JSON | jq -r .status)
            if [[ -z "$zvsi_status" ]]; then
-              echo "ZVSI is not created"; 
+              echo "ZVSI is not created";
               exit 1
            fi
            while [[ $zvsi_status == "pending" || $zvsi_status == "starting" || $zvsi_status == "running" ]]
@@ -81,12 +81,12 @@ jobs:
               zvsi_status=$(ibmcloud is instance $ZVSI_INS_NAME  -q --output JSON | jq -r .status)
               if [[ $zvsi_status == "failed" ]]; then
                 echo "zvsi failed to start";
-                exit 1; 
+                exit 1;
               elif [[ $zvsi_status == "running" ]]; then
-                echo "zvsi is running"; 
+                echo "zvsi is running";
                 break;
               elif [[ -z "$zvsi_status" ]]; then
-                echo "ZVSI is not created"; 
+                echo "ZVSI is not created";
                 exit 1
               fi
             done
@@ -111,10 +111,10 @@ jobs:
           sleep 15
       - name: Check ZVSI is offline
         if: always()
-        run: | 
+        run: |
            zvsi_status=$(ibmcloud is instance $ZVSI_INS_NAME  -q --output JSON | jq -r .status)
            if [[ -z "$zvsi_status" ]]; then
-              echo "ZVSI is destroyed"; 
+              echo "ZVSI is destroyed";
               break
            fi
            while [[ $zvsi_status == "running" || $zvsi_status == "deleting" ]]
@@ -122,7 +122,7 @@ jobs:
               sleep 5
               zvsi_status=$(ibmcloud is instance $ZVSI_INS_NAME  -q --output JSON | jq -r .status)
               if [[ -z "$zvsi_status" ]]; then
-              echo "ZVSI is destroyed"; 
+              echo "ZVSI is destroyed";
               break
               fi
             done
@@ -132,16 +132,15 @@ jobs:
            ibmcloud is floating-ip-release -f -q $ZVSI_FIP_NAME
       - name: cleanup subnet
         if: always()
-        run: | 
+        run: |
            ibmcloud is subnet-delete -f -q $ZVSI_SUBNET_NAME
            sleep 2
       - name: cleanup virtual private cloud instance
         if: always()
-        run: | 
+        run: |
            ibmcloud is vpc-delete -f -q $ZVSI_VPC_NAME
            sleep 2
       - name: cleanup ssh key
         if: always()
         run: |
           ibmcloud is key-delete -f -q $ZVSI_SSH_KEY
-  
