@@ -6,6 +6,9 @@
 PREVIOUS_VERSION ?= 3.1.0
 VERSION ?= 3.2.0
 
+MIN_KUBE_VERSION = 1.24.0
+MIN_OCP_VERSION = 4.12
+
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -275,9 +278,18 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(IMAGE_SHA)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.relatedImages = [{"name": "koku-metrics-operator", "image": "$(IMAGE_SHA)"}]' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "koku-metrics-operator.v$(PREVIOUS_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	scripts/update_bundle_dockerfile.py
+
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	.venv/bin/python scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) $(IMAGE_SHA) --namespace=${NAMESPACE}
 	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
 	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
 
@@ -347,10 +359,27 @@ ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
+YQ_VERSION ?= v4.2.0
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
 OPERATOR_SDK_VERSION ?= v1.33.0
+
+.PHONY: yq
+YQ ?= $(LOCALBIN)/yq
+yq: ## Download yq locally if necessary.
+ifeq (,$(wildcard $(YQ)))
+ifeq (, $(shell which yq 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(YQ)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_${{ARCH}} && chmod +x $(YQ)
+	}
+else
+YQ = $(shell which yq)
+endif
+endif
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -392,9 +421,3 @@ else
 OPERATOR_SDK = $(shell which operator-sdk)
 endif
 endif
-
-.PHONY: venv
-venv: ## create venv for txt_replace script
-	@python3 -m venv .venv
-	@.venv/bin/python -m pip install -U pip
-	@.venv/bin/python -m pip install -r scripts/requirements.txt
