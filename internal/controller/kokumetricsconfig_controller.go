@@ -55,8 +55,9 @@ var (
 	authClientId             = "client_id"
 	authClientSecret         = "client_secret"
 
-	falseDef = false
-	trueDef  = true
+	falseDef   = false
+	trueDef    = true
+	sixtyInt64 = int64(60)
 
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *metricscfgv1beta1.CloudDotRedHatSourceSpec
@@ -148,6 +149,11 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		uploadWait := r.Int63() % 35
 		cr.Status.Upload.UploadWait = &uploadWait
+	}
+
+	// COST-4528: ensure upload_cycle is not less than 60
+	if *cr.Spec.Upload.UploadCycle < 60 {
+		cr.Spec.Upload.UploadCycle = &sixtyInt64
 	}
 
 	if !reflect.DeepEqual(cr.Spec.Upload.UploadCycle, cr.Status.Upload.UploadCycle) {
