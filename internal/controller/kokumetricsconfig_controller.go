@@ -55,8 +55,9 @@ var (
 	authClientId             = "client_id"
 	authClientSecret         = "client_secret"
 
-	falseDef   = false
-	trueDef    = true
+	falseDef = false
+	trueDef  = true
+
 	sixtyInt64 = int64(60)
 
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
