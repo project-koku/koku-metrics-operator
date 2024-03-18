@@ -14,6 +14,7 @@ IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 PREVIOUS_BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(PREVIOUS_VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
+DOWNSTREAM_IMAGE_TAG ?= registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
@@ -328,11 +329,13 @@ UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
-downstream: ## Generate the code changes necessary for the downstream image.
+downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+
+	- LC_ALL=C find internal/* -type f -exec sed -i -- '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	# fix the cert
 	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
 	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
@@ -341,8 +344,37 @@ downstream: ## Generate the code changes necessary for the downstream image.
 	# mv the sample to the correctly named file
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-	$(MAKE) generate
+
+	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
+	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
+	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
+
 	$(MAKE) manifests
+
+	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
+
+	$(OPERATOR_SDK) generate kustomize manifests
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+
+	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.certified = "true"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.support = "Red Hat"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/costmanagement-metrics-operator"]' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
+	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
 
 ##@ Build Dependencies
 
