@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "true"
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.2.1
-    createdAt: "2024-03-18T20:10:42Z"
+    createdAt: "2024-03-18T20:21:01Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
