@@ -570,6 +570,20 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.UploadToggle).To(Equal(&falseValue))
 				Expect(fetched.Status.Upload.UploadWait).To(Equal(&defaultUploadWait))
 			})
+			It("reset upload_cycle to 60 if defined less than 60", func() {
+				fiftyNine := int64(59)
+				instCopy.Spec.Upload.UploadCycle = &fiftyNine
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.ClusterID != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Upload.UploadCycle).To(Equal(&sixtyInt64))
+			})
 			It("should find service account auth creds for good service account auth CRD case", func() {
 				// Create a valid service account secret
 				instCopy.Spec.APIURL = validTS.URL
