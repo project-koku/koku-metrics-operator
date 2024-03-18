@@ -11,14 +11,9 @@ LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.33.0
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 
-# Labels for testing.
-LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
-LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
-
 # Copy files to locations specified by labels.
 COPY manifests /manifests/
 COPY metadata /metadata/
-COPY tests/scorecard /tests/scorecard/
 
 # Openshift specific labels
 LABEL io.k8s.display-name='Cost Management Metrics Operator'

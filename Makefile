@@ -323,7 +323,7 @@ bundle-deploy-cleanup: operator-sdk ## Delete the entirety of the deployed bundl
 ##@ Generate downstream file changes
 
 #### Updates code for downstream release
-REMOVE_FILES = koku-metrics-operator/
+REMOVE_FILES = koku-metrics-operator/ config/scorecard/
 UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
@@ -348,6 +348,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
 	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
 	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
+	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
 
 	$(MAKE) manifests
 
@@ -374,7 +375,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
 	scripts/update_bundle_dockerfile.py
-	cat downstream-assets/bundle.Dockerfile >> bundle.Dockerfile
+	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
 
 	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
