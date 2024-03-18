@@ -22,7 +22,7 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.33.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/project-costmanagement/costmanagement-metrics-operator
-    support: Red Hat
+    support: Cost Management
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
@@ -35,9 +35,8 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig
-        API
-      displayName: Cost Management Metrics Config
+    - description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig API
+      displayName: CostManagement Metrics Config
       kind: CostManagementMetricsConfig
       name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
       version: v1beta1
