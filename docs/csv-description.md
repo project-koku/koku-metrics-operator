@@ -89,7 +89,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
     * `create_source: false` -> Toggle for whether or not the operator will create the integration in `console.redhat.com`. The default is False. This parameter should be switched to True when an integration does not already exist in `console.redhat.com` for this cluster.
     * `check_cycle: 1440` -> The time in minutes to wait between checking if an integration exists for this cluster. The default is 1440 minutes (24 hrs).
   * `upload`:
-    * `upload_cycle: 360` -> The time in minutes between payload uploads. The default is 360 (6 hours).
+    * `upload_cycle: 360` -> The time in minutes between payload uploads. The default is 360 (6 hours), minimum is 60 (1 hour).
     * `upload_toggle: true` -> Toggle to turn upload on or off -> true means upload, false means do not upload (false == air-gapped mode). The default is `true`.
     * `upload_wait` -> The amount of time (in seconds) to pause before uploading a payload. The default is a random number between 0 and 35. This is used to decrease service load, but may be set to `0` if desired.
   * `volume_claim_template` -> see the "Storage configuration prerequisite" section above.
