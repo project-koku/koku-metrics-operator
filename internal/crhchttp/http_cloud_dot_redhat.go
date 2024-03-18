@@ -30,7 +30,7 @@ import (
 
 // Client is an http.Client
 var Client HTTPClient
-var cacerts = "/etc/ssl/certs/ca-certificates.crt"
+var cacerts = "/etc/ssl/certs/ca-bundle.crt"
 var log = logr.Log.WithName("crc_http")
 
 // DefaultTransport is a copy from the golang http package
