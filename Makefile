@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.1.0
-VERSION ?= 3.2.0
+PREVIOUS_VERSION ?= 3.2.0
+VERSION ?= 3.2.1
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -270,7 +270,6 @@ get-token-and-cert:  ## Get a token from a running K8s cluster for local develop
 
 ##@ Build Bundle and Test Catalog
 
-NAMESPACE ?= ""
 .PHONY: bundle
 bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	mkdir -p koku-metrics-operator/$(VERSION)/
@@ -286,6 +285,9 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.relatedImages = [{"name": "koku-metrics-operator", "image": "$(IMAGE_SHA)"}]' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.replaces = "koku-metrics-operator.v$(PREVIOUS_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+ifdef NAMESPACE
+	$(YQ) -i '.metadata.namespace = "$(NAMESPACE)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+endif
 	scripts/update_bundle_dockerfile.py
 
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
