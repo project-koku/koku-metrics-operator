@@ -366,6 +366,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.metadata.annotations.support = "Red Hat"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.name = "costmanagement-metrics-operator.$(VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/costmanagement-metrics-operator"]' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
