@@ -63,8 +63,7 @@ jobs:
            sleep 30
       - name: floating ip addess assignment
         run: |
-           ibmcloud is floating-ip-reserve $ZVSI_FIP_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} --zone $ZVSI_ZONE -q --output JSON | jq 'del(.resource_group)'
-           ibmcloud is floating-ip-update $ZVSI_FIP_NAME --nic primary --in $ZVSI_INS_NAME -q --output JSON | jq 'del(.resource_group)'
+           ibmcloud is floating-ip-reserve $ZVSI_FIP_NAME --resource-group-id ${{ secrets.IBMCLOUD_RESOURCE_GROUP_ID }} --vni $(ibmcloud is instance-network-attachment $ZVSI_INS_NAME $(ibmcloud is instance $ZVSI_INS_NAME -q --output JSON | jq -r .primary_network_interface.id) -q --output JSON | jq -r .virtual_network_interface.id) -q --output JSON | jq 'del(.resource_group)'
       - name: setup floating ip address for ssh connection
         run: |
            echo "ZVSI_FIP_ADD=$(ibmcloud is floating-ip $ZVSI_FIP_NAME -q --output JSON | jq -r .address)" >> $GITHUB_ENV
