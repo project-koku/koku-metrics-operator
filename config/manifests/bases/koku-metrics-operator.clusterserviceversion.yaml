@@ -63,6 +63,9 @@ spec:
   - management
   - usage
   - monitor
+  links:
+  - name: Koku Metrics Operator source code repository
+    url: https://github.com/project-koku/koku-metrics-operator
   maintainers:
   - email: costmanagement@redhat.com
     name: costmanagement

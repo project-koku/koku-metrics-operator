@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator@sha256:197346c3e394b38034d47d3aa2736144b8199997e1fee6843d29c903ed6ba247
-    createdAt: "2024-03-18T15:19:03Z"
+    createdAt: "2024-04-03T14:22:53Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
@@ -589,6 +589,9 @@ spec:
     - management
     - usage
     - monitor
+  links:
+    - name: Koku Metrics Operator source code repository
+      url: https://github.com/project-koku/koku-metrics-operator
   maintainers:
     - email: costmanagement@redhat.com
       name: costmanagement
