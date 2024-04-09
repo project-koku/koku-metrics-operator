@@ -4,7 +4,6 @@ ARG TARGETOS
 ARG TARGETARCH
 
 USER root
-RUN yum -y update && yum clean all
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
