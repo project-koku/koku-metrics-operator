@@ -1,7 +1,6 @@
 run:
   timeout: 5m
 
-
 linters-settings:
   goimports:
     # Put imports beginning with prefix after 3rd-party packages.
@@ -14,6 +13,7 @@ linters:
     ## enabled by default
     - errcheck
     - gosimple
+    - gofmt
     - govet
     - ineffassign
     - staticcheck

@@ -1,10 +1,24 @@
-# Current Operator version
-PREVIOUS_VERSION ?= 2.0.0
-VERSION ?= 2.0.1
+# VERSION defines the project version for the bundle.
+# Update this value when you upgrade the version of your project.
+# To re-generate a bundle for another specific version without changing the standard setup, you can:
+# - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
+# - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
+PREVIOUS_VERSION ?= 3.2.0
+VERSION ?= 3.2.1
+
+MIN_KUBE_VERSION = 1.24.0
+MIN_OCP_VERSION = 4.12
+
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
+PREVIOUS_BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(PREVIOUS_VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
+DOWNSTREAM_IMAGE_TAG ?= registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:$(VERSION)
+
+# Image URL to use all building/pushing image targets
+IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
+
 # Options for 'bundle-build'
 DEFAULT_CHANNEL ?= beta
 ifneq ($(origin CHANNELS), undefined)
@@ -15,15 +29,10 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
-# Image URL to use all building/pushing image targets
-IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 # CRD_OPTIONS ?= "crd:trivialVersions=true"
 CRD_OPTIONS ?= "crd:crdVersions={v1}"
 
-# Use git branch for dev team deployment of pushed branches
-GITBRANCH=$(shell git branch --show-current)
-GITBRANCH_IMG="quay.io/project-koku/koku-metrics-operator:${GITBRANCH}"
 GIT_COMMIT=$(shell git rev-parse HEAD)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -39,131 +48,191 @@ IMAGE_SHA=$(shell docker inspect --format='{{index .RepoDigests 0}}' ${IMG})
 OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 
-DOCKER := $(shell which docker 2>/dev/null)
-export DOCKER_DEFAULT_PLATFORM = linux/x86_64
+# CONTAINER_TOOL defines the container tool to be used for building images.
+# Be aware that the target commands are only tested with Docker which is
+# scaffolded by default. However, you might want to replace it to use other
+# tools. (i.e. podman)
+CONTAINER_TOOL ?= docker
 
-help:
-	@echo "Please use \`make <target>' where <target> is one of:"
-	@echo "--- Bundle Commands ---"
-	@echo "  bundle                             Generate bundle manifests and metadata, then validate generated files."
-	@echo "      DEFAULT_CHANNEL=<channel>                  @param - Required. The default channel for the bundle."
-	@echo "  bundle-build                       Build the bundle image."
-	@echo "      BUNDLE_IMG=<quay.io image>                 @param - Optional. The quay.io image name."
-	@echo "  bundle-push                        Push the bundle image."
-	@echo "      BUNDLE_IMG=<quay.io image>                 @param - Optional. The quay.io image name."
-	@echo "--- Setup Commands ---"
-	@echo "  manager                            build the manager binary"
-	@echo "  docker-build                       build the docker image"
-	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
-	@echo "  docker-push                        push the docker image to quay.io"
-	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
-	@echo "  deploy                             deploy the latest image you have pushed to your cluster"
-	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
-	@echo "  build-deploy                       build and deploy the operator image."
-	@echo "      IMG=<quay.io image>                        @param - Required. The quay.io image name."
-	@echo "  docker-build-user                  build the docker image"
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
-	@echo "  docker-push-user                   push the docker image to quay.io"
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
-	@echo "  deploy-user                        deploy the latest image you have pushed to your cluster"
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
-	@echo "  build-deploy-user                  build and deploy the operator image."
-	@echo "      USER=<quay.io username>                    @param - Required. The quay.io username for building the image."
-	@echo "  install                            create and register the CRD"
-	@echo "--- General Commands ---"
-	@echo "  run                                run the operator locally outside of the cluster"
-	@echo "  deploy-cr                          copy and configure the sample CR and deploy it. Will also create auth secret depending on parameters"
-	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
-	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
-	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
-	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
-	@echo "  deploy-local-cr                    copy and configure the sample CR to use external prometheus route and deploy it. Will also create auth secret depending on parameters"
-	@echo "      AUTH=<basic/token>                         @param - Optional. Must specify basic if you want basic auth. Default is token."
-	@echo "      USER=<cloud.rh.com username>               @param - Optional. Must specify USER if you choose basic auth. Default is token."
-	@echo "      PASS=<cloud.rh.com username>               @param - Optional. Must specify PASS if you choose basic auth. Default is token."
-	@echo "      CI=<true/false>                            @param - Optional. Will replace api_url with CI url. Default is false."
-	@echo "--- Testing Commands ---"
-	@echo "  test                                run unit tests"
-	@echo "  fmt                                 run go fmt"
-	@echo "  lint                                run pre-commit"
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
 
-all: manager
+.PHONY: all
+all: build
 
-# Run tests
-test: generate fmt vet manifests
-	go test ./... -coverprofile cover.out
+##@ General
 
-# Run pre-commit
-lint:
-	pre-commit run --all-files
+# The help target prints out all targets with their descriptions organized
+# beneath their categories. The categories are represented by '##@' and the
+# target descriptions by '##'. The awk command is responsible for reading the
+# entire set of makefiles included in this invocation, looking for lines of the
+# file as xyz: ## something, and then pretty-format the target and help. Then,
+# if there's a line with ##@ something, that gets pretty-printed as a category.
+# More info on the usage of ANSI control characters for terminal formatting:
+# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
+# More info on the awk command:
+# http://linuxcommand.org/lc3_adv_awk.php
 
-# Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager main.go
+.PHONY: help
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-SECRET_ABSPATH ?= ./testing
-WATCH_NAMESPACE ?= koku-metrics-operator
-# Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
-	kubectl apply -f testing/sa.yaml
-	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run ./main.go
-
-# Install CRDs into a cluster
-install: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-
-# Uninstall CRDs from a cluster
-uninstall: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
-
-
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE_SHA}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
-
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config using USER arg
-deploy-user: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=quay.io/${USER}/koku-metrics-operator:v0.0.1
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
-
-deploy-branch:
-	IMG=${GITBRANCH_IMG} $(MAKE) deploy
-
-# replaces the username and password with your base64 encoded username and password and looks up the token value for you
+.PHONY: setup-auth
 setup-auth:
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),console.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
 	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),console.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
 
+.PHONY: add-prom-route
 add-prom-route:
 	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
+.PHONY: add-auth
 add-auth:
 	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
+.PHONY: local-validate-cert
 local-validate-cert:
 	@sed -i "" '/upload/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '  upload:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
+.PHONY: add-ci-route
 add-ci-route:
 	@echo '  api_url: https://ci.console.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
+.PHONY: add-spec
 add-spec:
 	@echo 'spec:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
-deploy-cr:
+##@ Development
+
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+.PHONY: generate
+generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: lint
+lint: ## Run pre-commit
+	pre-commit run --all-files
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
+.PHONY: vendor
+vendor: ## Run `go mod vendor`.
+	go get -u
+	go mod tidy
+	go mod vendor
+
+.PHONY: verify-manifests
+verify-manifests: ## Verify manifests are up to date.
+	./hack/verify-manifests.sh
+
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.29.x
+.PHONY: test
+test: envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+
+.PHONY: test-qemu
+test-qemu: envtest-not-local ## Run tests - specific for multiarch in github action
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST_NOT_LOCAL) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./...
+
+##@ Build
+
+.PHONY: build
+build: manifests generate fmt vet vendor ## Build manager binary.
+	go build -o bin/manager cmd/main.go
+
+SECRET_ABSPATH ?= ./testing
+WATCH_NAMESPACE ?= koku-metrics-operator
+# Run against the configured Kubernetes cluster in ~/.kube/config
+.PHONY: run
+run: manifests generate fmt vet ## Run a controller from your host.
+	kubectl apply -f testing/sa.yaml
+	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run cmd/main.go
+
+# If you wish to build the manager image targeting other platforms you can use the --platform flag.
+# (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
+# More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+PLATFORM ?= linux/amd64
+.PHONY: docker-build
+docker-build: ## Build docker image with the manager.
+	$(CONTAINER_TOOL) build --platform=$(PLATFORM) -t ${IMG} .
+
+.PHONY: docker-push
+docker-push: ## Push docker image with the manager.
+	$(CONTAINER_TOOL) push ${IMG}
+
+# PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
+# architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
+# - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
+# - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+# - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
+# To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
+PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+.PHONY: docker-buildx
+docker-buildx: ## Build and push docker image for the manager for cross-platform support
+	- $(CONTAINER_TOOL) buildx create --name operator-builder --driver-opt image=moby/buildkit:v0.12.4
+	- $(CONTAINER_TOOL) buildx use operator-builder
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --provenance=false --tag ${IMG} .
+	- $(CONTAINER_TOOL) buildx rm operator-builder
+
+##@ Deployment
+
+ifndef ignore-not-found
+  ignore-not-found = false
+endif
+
+.PHONY: install
+install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
+
+.PHONY: uninstall
+uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: deploy
+deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+
+.PHONY: deploy-to-file
+deploy-to-file: manifests kustomize ## Create a deployment file
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default > testing/deployment.yaml
+
+.PHONY: undeploy
+undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: deploy-cr
+deploy-cr:  ## Deploy a KokuMetricsConfig CR for controller running in K8s cluster.
 	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else ifeq ($(AUTH), service-account)
+	$(MAKE) setup-sa-auth
+	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -173,13 +242,18 @@ ifeq ($(CI), true)
 endif
 	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
-deploy-local-cr:
+.PHONY: deploy-local-cr
+deploy-local-cr:  ## Deploy a KokuMetricsConfig CR for controller running on local host.
 	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
 ifeq ($(AUTH), basic)
 	$(MAKE) setup-auth
 	$(MAKE) add-auth
+	oc apply -f testing/authentication_secret.yaml
+else ifeq ($(AUTH), service-account)
+	$(MAKE) setup-sa-auth
+	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -190,134 +264,204 @@ endif
 	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
 
 SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
-get-token-and-cert:
+.PHONY: get-token-and-cert
+get-token-and-cert:  ## Get a token from a running K8s cluster for local development.
 	printf "%s" "$(shell oc whoami --show-token)" > $(SECRET_ABSPATH)/token
 	oc get -o template $(SECRET_NAME) -o go-template=='{{index .data "service-ca.crt"|base64decode}}' > $(SECRET_ABSPATH)/service-ca.crt
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+##@ Build Bundle and Test Catalog
 
-# Run go fmt against code
-fmt:
-	go fmt ./...
-
-# Run go vet against code
-vet:
-	go vet ./...
-
-# Generate code
-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
-# Build the docker image
-docker-build: test
-	$(DOCKER) build -t ${IMG} .
-
-# Build the docker image
-docker-build-no-test:
-	$(DOCKER) build -t ${IMG} .
-
-# Push the docker image
-docker-push:
-	$(DOCKER) push ${IMG}
-
-# Build, push, and deploy the image
-build-deploy: docker-build docker-push deploy
-
-# Build the docker image
-docker-build-user: test
-	$(DOCKER) build . -t quay.io/${USER}/koku-metrics-operator:v0.0.1
-
-# Push the docker image
-docker-push-user:
-	$(DOCKER) push quay.io/${USER}/koku-metrics-operator:v0.0.1
-
-# Build, push, and deploy the image
-build-deploy-user: docker-build-user docker-push-user deploy-user
-
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.2 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
-
-kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
-
-NAMESPACE ?= ""
-# Generate bundle manifests and metadata, then validate generated files.
-bundle: manifests kustomize
+.PHONY: bundle
+bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	mkdir -p koku-metrics-operator/$(VERSION)/
 	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
-	operator-sdk generate kustomize manifests
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMAGE_SHA}
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-	operator-sdk bundle validate ./bundle
+	$(OPERATOR_SDK) generate kustomize manifests
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(IMAGE_SHA)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.relatedImages = [{"name": "koku-metrics-operator", "image": "$(IMAGE_SHA)"}]' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "koku-metrics-operator.v$(PREVIOUS_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+ifdef NAMESPACE
+	$(YQ) -i '.metadata.namespace = "$(NAMESPACE)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+endif
+	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
+
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) ${IMAGE_SHA} --namespace=${NAMESPACE}
+	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
 
-# Build the bundle image.
-bundle-build:
-	cd koku-metrics-operator/$(VERSION) && $(DOCKER) build -t $(BUNDLE_IMG) .
+.PHONY: bundle-build
+bundle-build: ## Build the bundle image.
+	cd koku-metrics-operator/$(VERSION) && $(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) .
 
-# Push the bundle image.
-bundle-push:
-	$(DOCKER) push $(BUNDLE_IMG)
+.PHONY: bundle-push
+bundle-push: ## Push the bundle image.
+	$(CONTAINER_TOOL) push $(BUNDLE_IMG)
 
-# Build a test-catalog
-test-catalog: opm
-	$(OPM) index add --from-index quay.io/project-koku/kmc-test-catalog:v${PREVIOUS_VERSION} --bundles ${BUNDLE_IMG} --tag ${CATALOG_IMG} --container-tool docker
+.PHONY: bundle-deploy-previous
+bundle-deploy-previous: operator-sdk ## Deploy previous bundle into a cluster.
+	$(OPERATOR_SDK) run bundle $(PREVIOUS_BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace
 
-# Push the test-catalog
-test-catalog-push:
-	$(DOCKER) push ${CATALOG_IMG}
+.PHONY: bundle-deploy
+bundle-deploy: operator-sdk ## Deploy current bundle into a cluster.
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) --namespace=koku-metrics-operator --install-mode=OwnNamespace --security-context-config restricted
 
-.PHONY: opm
-OPM = ./bin/opm
-opm:
-ifeq (,$(wildcard $(OPM)))
-ifeq (,$(shell which opm 2>/dev/null))
+.PHONY: bundle-deploy-upgrade
+bundle-deploy-upgrade: operator-sdk ## Test a bundle upgrade. The previous bundle must have been deployed first.
+	$(OPERATOR_SDK) run bundle-upgrade $(BUNDLE_IMG) --namespace=koku-metrics-operator
+
+.PHONY: bundle-deploy-cleanup
+bundle-deploy-cleanup: operator-sdk ## Delete the entirety of the deployed bundle
+	$(OPERATOR_SDK) cleanup koku-metrics-operator --delete-crds --delete-all --namespace=koku-metrics-operator
+
+##@ Generate downstream file changes
+
+#### Updates code for downstream release
+REMOVE_FILES = koku-metrics-operator/ config/scorecard/
+UPSTREAM_LOWERCASE = koku
+UPSTREAM_UPPERCASE = Koku
+DOWNSTREAM_LOWERCASE = costmanagement
+DOWNSTREAM_UPPERCASE = CostManagement
+.PHONY: downstream
+downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
+	rm -rf $(REMOVE_FILES)
+	# sed replace everything but the Makefile
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+
+	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# fix the cert
+	- sed -i '' 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
+	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
+	# clean up the other files
+	# - git clean -fx
+	# mv the sample to the correctly named file
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+
+	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
+	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
+	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
+	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
+
+	$(MAKE) manifests
+
+	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
+
+	$(OPERATOR_SDK) generate kustomize manifests
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) --default-channel=stable --channels=stable
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+
+	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.certified = "true"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.support = "Red Hat"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.name = "costmanagement-metrics-operator.$(VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/costmanagement-metrics-operator"]' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	# scripts/update_bundle_dockerfile.py
+	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
+	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
+	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
+	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
+
+	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
+	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
+
+##@ Build Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+KUBECTL ?= kubectl
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go env GOARCH)/setup-envtest
+
+## Tool Versions
+KUSTOMIZE_VERSION ?= v5.3.0
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
+SETUP_ENVTEST_VERSION ?= v0.0.0-20240318095156-c7e1dc9b5302
+YQ_VERSION ?= v4.2.0
+
+# Set the Operator SDK version to use. By default, what is installed on the system is used.
+# This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
+OPERATOR_SDK_VERSION ?= v1.33.0
+
+.PHONY: yq
+YQ ?= $(LOCALBIN)/yq
+yq: ## Download yq locally if necessary.
+ifeq (,$(wildcard $(YQ)))
+ifeq (, $(shell which yq 2>/dev/null))
 	@{ \
 	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.26.2/$(OS)-$(ARCH)-opm ;\
-	chmod +x $(OPM) ;\
+	mkdir -p $(dir $(YQ)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_${{ARCH}} && chmod +x $(YQ)
 	}
 else
-OPM = $(shell which opm)
+YQ = $(shell which yq)
 endif
 endif
-BUNDLE_IMGS ?= $(BUNDLE_IMG)
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION) ifneq ($(origin CATALOG_BASE_IMG), undefined) FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG) endif
-.PHONY: catalog-build
-catalog-build: opm
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
 
-.PHONY: catalog-push
-catalog-push: ## Push the catalog image.
-	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
+$(KUSTOMIZE): $(LOCALBIN)
+	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
+		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
+		rm -rf $(LOCALBIN)/kustomize; \
+	fi
+	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
+
+.PHONY: envtest-not-local
+envtest-not-local: ## Download envtest-setup for qemu unit tests - specific to github action.
+	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
+
+.PHONY: operator-sdk
+OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
+operator-sdk: ## Download operator-sdk locally if necessary.
+ifeq (,$(wildcard $(OPERATOR_SDK)))
+ifeq (, $(shell which operator-sdk 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPERATOR_SDK)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$${OS}_$${ARCH} ;\
+	chmod +x $(OPERATOR_SDK) ;\
+	}
+else
+OPERATOR_SDK = $(shell which operator-sdk)
+endif
+endif

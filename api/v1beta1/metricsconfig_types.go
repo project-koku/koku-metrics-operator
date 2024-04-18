@@ -40,7 +40,7 @@ const (
 // Only one of the following authentication types may be specified.
 // If none of the following types are specified, the default one
 // is Token.
-// +kubebuilder:validation:Enum=token;basic
+// +kubebuilder:validation:Enum=token;basic;service-account
 type AuthenticationType string
 
 const (
@@ -49,6 +49,9 @@ const (
 
 	// Token allows upload of data using token authentication.
 	Token AuthenticationType = "token"
+
+	// ServiceAccount allow upload of data using service account authentication
+	ServiceAccount AuthenticationType = "service-account"
 )
 
 // EmbeddedObjectMetadata contains a subset of the fields included in k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta
@@ -95,9 +98,10 @@ type EmbeddedPersistentVolumeClaim struct {
 // AuthenticationSpec defines the desired state of Authentication object in the KokuMetricsConfigSpec.
 type AuthenticationSpec struct {
 
-	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	// Valid values are:
-	// - "basic" : Enables authentication using user and password from authentication secret.
+	// - "basic" (deprecated) : Enables authentication using user and password from authentication secret.
+	// - "service-account" : Enables authentication using client_id and client_secret from the secret containing service account information.
 	// - "token" (default): Uses cluster token for authentication.
 	// +kubebuilder:default="token"
 	AuthType AuthenticationType `json:"type"`
@@ -105,6 +109,12 @@ type AuthenticationSpec struct {
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
+
+	// FOR DEVELOPMENT ONLY.
+	// TokenURL is a field of KokuMetricsConfig to represent the endpoint used to obtain the service account token.
+	// The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
+	// +kubebuilder:default=`https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`
+	TokenURL string `json:"token_url,omitempty"`
 }
 
 // PackagingSpec defines the desired state of the Packaging object in the KokuMetricsConfigSpec.
@@ -198,20 +208,20 @@ type PrometheusSpec struct {
 type CloudDotRedHatSourceSpec struct {
 
 	// FOR DEVELOPMENT ONLY.
-	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
+	// sources_path is the prefix of the Sources API on console.redhat.com.
 	// The default is `/api/sources/v1.0/`.
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
 
-	// SourceName is a field of KokuMetricsConfigSpec to represent the source name on console.redhat.com.
+	// name is the desired name of the integration to create on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// CreateSource is a field of KokuMetricsConfigSpec to represent if the source should be created if not found.
+	// create_source toggles the creation of the integration on console.redhat.com.
 	// +kubebuilder:default=false
 	CreateSource *bool `json:"create_source"`
 
-	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule
+	// check_cycle is the number of minutes between each integration status check on console.redhat.com.
 	// The default is 1440 min (24 hours).
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=1440
@@ -250,7 +260,7 @@ type KokuMetricsConfigSpec struct {
 	// PrometheusConfig is a field of KokuMetricsConfig to represent the configuration of Prometheus connection.
 	PrometheusConfig PrometheusSpec `json:"prometheus_config"`
 
-	// Source is a field of KokuMetricsConfig to represent the desired source on console.redhat.com.
+	// source represents the desired integration on console.redhat.com.
 	Source CloudDotRedHatSourceSpec `json:"source"`
 
 	// VolumeClaimTemplate is a field of KokuMetricsConfig to represent a PVC template.
@@ -260,7 +270,7 @@ type KokuMetricsConfigSpec struct {
 // AuthenticationStatus defines the desired state of Authentication object in the KokuMetricsConfigStatus.
 type AuthenticationStatus struct {
 
-	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic or token.
+	// AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
 	AuthType AuthenticationType `json:"type,omitempty"`
 
 	// AuthenticationSecretName is a field of KokuMetricsConfig to represent the secret with the user and password used for uploads.
@@ -278,6 +288,9 @@ type AuthenticationStatus struct {
 	// LastVerificationTime is a field of KokuMetricsConfig to represent the last time credentials were verified.
 	// +nullable
 	LastVerificationTime *metav1.Time `json:"last_credential_verification_time,omitempty"`
+
+	// TokenURL is a field of KokuMetricsConfig to represent the url used to generate a service account token.
+	TokenURL string `json:"token_url,omitempty"`
 }
 
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.
@@ -351,32 +364,32 @@ type UploadStatus struct {
 // CloudDotRedHatSourceStatus defines the observed state of CloudDotRedHatSource object in the KokuMetricsConfigStatus.
 type CloudDotRedHatSourceStatus struct {
 
-	// SourcesAPIPath is a field of KokuMetricsConfig to represent the path of the Sources API service.
+	// sources_path is the prefix of the Sources API on console.redhat.com.
 	// +optional
 	SourcesAPIPath string `json:"sources_path,omitempty"`
 
-	// SourceName is a field of KokuMetricsConfigStatus to represent the source name on console.redhat.com.
+	// name represents the name of the integration that the operator attempted to create on console.redhat.com.
 	// +optional
 	SourceName string `json:"name,omitempty"`
 
-	// SourceDefined is a field of KokuMetricsConfigStatus to represent if the source exists as defined on console.redhat.com.
+	// source_defined represents whether the defined integration name exists on console.redhat.com.
 	// +optional
 	SourceDefined *bool `json:"source_defined,omitempty"`
 
-	// CreateSource is a field of KokuMetricsConfigStatus to represent if the source should be created if not found.
-	// A source will not be created if upload_toggle is `false`.
+	// create_source represents the toggle used during the creation of the integration on console.redhat.com.
+	// An Integration will not be created if upload_toggle is `false`.
 	// +optional
 	CreateSource *bool `json:"create_source,omitempty"`
 
-	// SourceError is a field of KokuMetricsConfigStatus to represent the error encountered creating the source.
+	// error represents any errors encountered when creating the integration.
 	// +optional
 	SourceError string `json:"error,omitempty"`
 
-	// LastSourceCheckTime is a field of KokuMetricsConfig that shows the time that the last check was attempted.
+	// last_check_time is the time that the last integration status check was attempted.
 	// +nullable
 	LastSourceCheckTime metav1.Time `json:"last_check_time,omitempty"`
 
-	// CheckCycle is a field of KokuMetricsConfig to represent the number of minutes between each source check schedule.
+	// check_cycle is the number of minutes between each integration status check on console.redhat.com.
 	// The default is 1440 min (24 hours).
 	CheckCycle *int64 `json:"check_cycle,omitempty"`
 }
@@ -488,7 +501,7 @@ type KokuMetricsConfigStatus struct {
 	// Reports represents the status of report generation.
 	Reports ReportsStatus `json:"reports,omitempty"`
 
-	// Source is a field of KokuMetricsConfig to represent the observed state of the source on console.redhat.com.
+	// source represents the observed state of the integration on console.redhat.com.
 	// +optional
 	Source CloudDotRedHatSourceStatus `json:"source,omitempty"`
 
