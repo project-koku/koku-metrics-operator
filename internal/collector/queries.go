@@ -18,7 +18,7 @@ var (
 		"cost:persistentvolumeclaim_capacity_bytes": "kubelet_volume_stats_capacity_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
 		"cost:persistentvolumeclaim_request_bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
 		"cost:persistentvolumeclaim_usage_bytes":    "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
-		"cost:persistentvolume_labels":              "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass) max by(namespace, persistentvolume, storageclass) (kube_persistentvolume_info)",
+		"cost:persistentvolume_labels":              "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass, csi_driver, csi_volume_handle) max by(namespace, persistentvolume, storageclass, csi_driver, csi_volume_handle) (kube_persistentvolume_info)",
 		"cost:persistentvolumeclaim_labels":         "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
 
 		"cost:pod_limit_cpu_cores":      "sum by (pod, namespace, node) (kube_pod_container_resource_limits{pod!='', namespace!='', node!='', resource='cpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
@@ -154,7 +154,7 @@ var (
 		query{
 			Name:           "persistentvolume-labels",
 			QueryString:    QueryMap["cost:persistentvolume_labels"],
-			MetricKey:      staticFields{"storageclass": "storageclass", "persistentvolume": "persistentvolume"},
+			MetricKey:      staticFields{"storageclass": "storageclass", "persistentvolume": "persistentvolume", "csi_driver": "csi_driver", "csi_volume_handle": "csi_volume_handle"},
 			MetricKeyRegex: regexFields{"persistentvolume_labels": "label_*"},
 			RowKey:         []model.LabelName{"persistentvolume"},
 		},
