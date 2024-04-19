@@ -203,6 +203,8 @@ type storageRow struct {
 	PersistentVolumeClaim                    string `mapstructure:"persistentvolumeclaim"`
 	PersistentVolume                         string `mapstructure:"persistentvolume"`
 	StorageClass                             string `mapstructure:"storageclass"`
+	CSIDriver                                string `mapstructure:"csi_driver"`
+	CSIVolumeHandle                          string `mapstructure:"csi_volume_handle"`
 	PersistentVolumeClaimCapacityBytes       string `mapstructure:"persistentvolumeclaim-capacity-bytes"`
 	PersistentVolumeClaimCapacityByteSeconds string `mapstructure:"persistentvolumeclaim-capacity-byte-seconds"`
 	VolumeRequestStorageByteSeconds          string `mapstructure:"persistentvolumeclaim-request-byte-seconds"`
@@ -223,6 +225,8 @@ func (storageRow) csvHeader() []string {
 		"persistentvolumeclaim",
 		"persistentvolume",
 		"storageclass",
+		"csi_driver",
+		"csi_volume_handle",
 		"persistentvolumeclaim_capacity_bytes",
 		"persistentvolumeclaim_capacity_byte_seconds",
 		"volume_request_storage_byte_seconds",
@@ -243,6 +247,8 @@ func (row storageRow) csvRow() []string {
 		row.PersistentVolumeClaim,
 		row.PersistentVolume,
 		row.StorageClass,
+		row.CSIDriver,
+		row.CSIVolumeHandle,
 		row.PersistentVolumeClaimCapacityBytes,
 		row.PersistentVolumeClaimCapacityByteSeconds,
 		row.VolumeRequestStorageByteSeconds,
