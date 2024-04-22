@@ -13,7 +13,7 @@ require (
 	github.com/openshift/api v0.0.0-20231130134125-f6ae1072b499
 	github.com/operator-framework/api v0.23.0
 	github.com/prometheus/client_golang v1.19.0
-	github.com/prometheus/common v0.52.3
+	github.com/prometheus/common v0.53.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.3
