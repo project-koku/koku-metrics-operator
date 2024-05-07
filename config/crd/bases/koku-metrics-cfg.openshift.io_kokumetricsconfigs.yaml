@@ -508,6 +508,10 @@ spec:
                     description: AuthenticationCredentialsFound is a field of KokuMetricsConfig
                       to represent if used for uploads were found.
                     type: boolean
+                  deprecation_message:
+                    description: DeprecationMessage is a field of KokuMetricsConfig
+                      to repesent a deprecation warning or message.
+                    type: string
                   error:
                     description: AuthErrorMessage is a field of KokuMetricsConfig
                       to represent an `invalid credentials` error message.

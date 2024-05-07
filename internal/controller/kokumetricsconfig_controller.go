@@ -384,6 +384,7 @@ func setClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 
 func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
 	log := log.WithName("setAuthentication")
+	cr.Status.Authentication.DeprecationMessage = ""
 	cr.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token {
 		cr.Status.Authentication.ValidBasicAuth = nil
@@ -409,6 +410,10 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 	}
 
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Basic {
+		// set basic auth deprecation message
+		deprecationMsg := "Basic authentication is deprecated and will be removed after December 31, 2024. Please switch to token or service-account authentication methods."
+		cr.Status.Authentication.DeprecationMessage = deprecationMsg
+
 		// Get user and password from auth secret in namespace
 		err := GetAuthSecret(r, cr, authConfig, reqNamespace)
 		if err != nil {
