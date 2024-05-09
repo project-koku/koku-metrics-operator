@@ -291,6 +291,9 @@ type AuthenticationStatus struct {
 
 	// TokenURL is a field of KokuMetricsConfig to represent the url used to generate a service account token.
 	TokenURL string `json:"token_url,omitempty"`
+
+	// DeprecationNotice is a field of KokuMetricsConfig to represent a deprecation notice.
+	DeprecationNotice string `json:"deprecation_notice,omitempty"`
 }
 
 // PackagingStatus defines the observed state of the Packing object in the KokuMetricsConfigStatus.
