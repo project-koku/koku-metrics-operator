@@ -21,7 +21,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 ## New in v3.3.0:
 * __DEPRECATION NOTICE:__
-  Basic authentication is deprecated and will not be supported beyond December 31, 2024. You should consider switching to token(default) or [service account](https://console.redhat.com/iam/service-accounts) authentication methods, [more on creating a service account](https://access.redhat.com/articles/7036194). Once you have created your service account, follow the [documentation](https://access.redhat.com/documentation/en-us/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#service-account-authentication_adding-an-ocp-int) on how to configure your operator to use service account authentication.
+  Basic authentication is deprecated and will not be supported beyond December 31, 2024. You should consider switching to [service account](https://console.redhat.com/iam/service-accounts) authentication methods, [more on creating a service account](https://access.redhat.com/articles/7036194). Once you have created your service account, follow the [documentation](https://access.redhat.com/documentation/en-us/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#service-account-authentication_adding-an-ocp-int) on how to configure your operator to use service account authentication.
 
 ## New in v3.2.1:
 * The minimum supported configuration for `upload_cycle` is now 60 (minutes).
