@@ -38,3 +38,6 @@ updates:
       testing-framework:
         patterns:
           - "github.com/onsi/*"
+      prometheus:
+        patterns:
+          - "github.com/prometheus/*"
