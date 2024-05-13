@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.17.3
-	github.com/onsi/gomega v1.33.0
+	github.com/onsi/gomega v1.33.1
 	github.com/openshift/api v0.0.0-20231130134125-f6ae1072b499
 	github.com/operator-framework/api v0.23.0
 	github.com/prometheus/client_golang v1.19.1
