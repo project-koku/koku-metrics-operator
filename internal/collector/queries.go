@@ -128,7 +128,7 @@ var (
 				Method:          "max",
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
-			RowKey: []model.LabelName{"volumename"},
+			RowKey: []model.LabelName{"persistentvolume"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-request-bytes",
