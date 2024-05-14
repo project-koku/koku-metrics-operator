@@ -209,12 +209,12 @@ func (c *PrometheusCollector) GetPromConn(
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *mappedResults, retries int) error {
+func (c *PrometheusCollector) getQueryRangeResults(queries querys, results *mappedResults, retries int) error {
 	log := log.WithName("getQueryRangeResults")
 
 	queriesToRetry := querys{}
 
-	for _, query := range *queries {
+	for _, query := range queries {
 		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
@@ -243,17 +243,24 @@ func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *map
 		waitTime := time.Duration(sleep) * time.Second
 		log.Info(fmt.Sprintf("retrying failed queries after %s seconds", waitTime))
 		time.Sleep(waitTime)
-		return c.getQueryRangeResults(&queriesToRetry, results, retries)
+		return c.getQueryRangeResults(queriesToRetry, results, retries)
 	}
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, results *mappedResults, retries int) error {
+func (c *PrometheusCollector) getQueryResultsWithParams(ts time.Time, queries querys, results *mappedResults, retries int, params ...any) error {
+	for _, query := range queries {
+		query.QueryString = fmt.Sprintf(query.QueryString, params)
+	}
+	return c.getQueryResults(ts, queries, results, retries)
+}
+
+func (c *PrometheusCollector) getQueryResults(ts time.Time, queries querys, results *mappedResults, retries int) error {
 	log := log.WithName("getQueryResults")
 
 	queriesToRetry := querys{}
 
-	for _, query := range *queries {
+	for _, query := range queries {
 		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
 
@@ -284,7 +291,7 @@ func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, res
 		waitTime := time.Duration(sleep) * time.Second
 		log.Info(fmt.Sprintf("retrying failed queries after %s seconds", waitTime))
 		time.Sleep(waitTime)
-		return c.getQueryResults(ts, &queriesToRetry, results, retries)
+		return c.getQueryResults(ts, queriesToRetry, results, retries)
 	}
 
 	return nil

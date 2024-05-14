@@ -6,6 +6,7 @@
 package collector
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -386,6 +387,11 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	ts := c.TimeSeries.End
 	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
+	defer cancel()
+	queryResult, warnings, err := c.PromConn.Query(ctx, rosNamespaceFilter.QueryString, ts)
+
 	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
 		return err
 	}

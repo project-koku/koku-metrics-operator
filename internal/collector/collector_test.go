@@ -135,15 +135,15 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []querys{nodeQueries, namespaceQueries, podQueries, volQueries}
 	for _, q := range queryList {
-		for _, query := range *q {
+		for _, query := range q {
 			res := &model.Matrix{}
 			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
@@ -186,15 +186,15 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []querys{nodeQueries, namespaceQueries, podQueries, volQueries}
 	for _, q := range queryList {
-		for _, query := range *q {
+		for _, query := range q {
 			res := &model.Matrix{}
 			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
@@ -228,15 +228,15 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []querys{nodeQueries, namespaceQueries, podQueries, volQueries}
 	for _, q := range queryList {
-		for _, query := range *q {
+		for _, query := range q {
 			res := &model.Matrix{}
 			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
@@ -279,22 +279,22 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		TimeSeries: &fakeTimeRange,
 	}
 
-	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries}
+	queryList := []querys{nodeQueries, podQueries, volQueries, namespaceQueries}
 	for _, q := range queryList {
-		for _, query := range *q {
+		for _, query := range q {
 			res := &model.Matrix{}
 			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
 	resourceOptimizationError := "resourceOptimization error"
-	for _, q := range *resourceOptimizationQueries {
+	for _, q := range resourceOptimizationQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(resourceOptimizationError)}
 	}
 	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -303,7 +303,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	}
 
 	namespaceError := "namespace error"
-	for _, q := range *namespaceQueries {
+	for _, q := range namespaceQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(namespaceError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -311,7 +311,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		t.Errorf("GenerateReports %s was expected, got %v", namespaceError, err)
 	}
 	storageError := "storage error"
-	for _, q := range *volQueries {
+	for _, q := range volQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(storageError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -319,7 +319,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		t.Errorf("GenerateReports %s was expected, got %v", storageError, err)
 	}
 	podError := "pod error"
-	for _, q := range *podQueries {
+	for _, q := range podQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(podError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -327,7 +327,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		t.Errorf("GenerateReports %s was expected, got %v", podError, err)
 	}
 	nodeError := "node error"
-	for _, q := range *nodeQueries {
+	for _, q := range nodeQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(nodeError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -341,9 +341,9 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 
 func TestGenerateReportsNoNodeData(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries}
+	queryList := []querys{nodeQueries}
 	for _, q := range queryList {
-		for _, query := range *q {
+		for _, query := range q {
 			res := &model.Matrix{}
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}

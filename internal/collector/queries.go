@@ -28,34 +28,41 @@ var (
 		"cost:pod_request_memory_bytes": "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
 
-		"ros:image_owners":                   "max_over_time(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]) * on(pod, namespace) group_left(owner_kind, owner_name) max by(pod, namespace, owner_kind, owner_name) (max_over_time(kube_pod_owner{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:image_workloads":                "max_over_time(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]) * on(pod, namespace) group_left(workload, workload_type) max by(pod, namespace, workload, workload_type) (max_over_time(namespace_workload_pod:kube_pod_owner:relabel{pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_request_container_avg":      "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:cpu_request_container_sum":      "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:cpu_limit_container_avg":        "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:cpu_limit_container_sum":        "sum by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:cpu_usage_container_avg":        "avg by(container, pod, namespace, node) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_usage_container_min":        "min by(container, pod, namespace, node) (min_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_usage_container_max":        "max by(container, pod, namespace, node) (max_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_usage_container_sum":        "sum by(container, pod, namespace, node) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_throttle_container_avg":     "avg by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_throttle_container_max":     "max by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:cpu_throttle_container_sum":     "sum by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_request_container_avg":   "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:memory_request_container_sum":   "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:memory_limit_container_avg":     "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:memory_limit_container_sum":     "sum by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
-		"ros:memory_usage_container_avg":     "avg by(container, pod, namespace, node) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_usage_container_min":     "min by(container, pod, namespace, node) (min_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_usage_container_max":     "max by(container, pod, namespace, node) (max_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_usage_container_sum":     "sum by(container, pod, namespace, node) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_rss_usage_container_avg": "avg by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_rss_usage_container_min": "min by(container, pod, namespace, node) (min_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_rss_usage_container_max": "max by(container, pod, namespace, node) (max_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
-		"ros:memory_rss_usage_container_sum": "sum by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'kube-.*|openshift|openshift-.*'}[15m]))",
+		"ros:namespace_filter":               "kube_namespace_labels{insights_cost_management_optimizations_enabled='true'}",
+		"ros:image_owners":                   "max_over_time(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]) * on(pod, namespace) group_left(owner_kind, owner_name) max by(pod, namespace, owner_kind, owner_name) (max_over_time(kube_pod_owner{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:image_workloads":                "max_over_time(kube_pod_container_info{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]) * on(pod, namespace) group_left(workload, workload_type) max by(pod, namespace, workload, workload_type) (max_over_time(namespace_workload_pod:kube_pod_owner:relabel{pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_request_container_avg":      "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:cpu_request_container_sum":      "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:cpu_limit_container_avg":        "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:cpu_limit_container_sum":        "sum by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='cpu', unit='core'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:cpu_usage_container_avg":        "avg by(container, pod, namespace, node) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_usage_container_min":        "min by(container, pod, namespace, node) (min_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_usage_container_max":        "max by(container, pod, namespace, node) (max_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_usage_container_sum":        "sum by(container, pod, namespace, node) (avg_over_time(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_throttle_container_avg":     "avg by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_throttle_container_max":     "max by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:cpu_throttle_container_sum":     "sum by(container, pod, namespace, node) (rate(container_cpu_cfs_throttled_seconds_total{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_request_container_avg":   "avg by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:memory_request_container_sum":   "sum by(container, pod, namespace, node) (kube_pod_container_resource_requests{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:memory_limit_container_avg":     "avg by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:memory_limit_container_sum":     "sum by(container, pod, namespace, node) (kube_pod_container_resource_limits{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s', resource='memory', unit='byte'} * on(pod, namespace) group_left max by (container, pod, namespace) (kube_pod_status_phase{phase='Running'}))",
+		"ros:memory_usage_container_avg":     "avg by(container, pod, namespace, node) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_usage_container_min":     "min by(container, pod, namespace, node) (min_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_usage_container_max":     "max by(container, pod, namespace, node) (max_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_usage_container_sum":     "sum by(container, pod, namespace, node) (avg_over_time(container_memory_working_set_bytes{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_rss_usage_container_avg": "avg by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_rss_usage_container_min": "min by(container, pod, namespace, node) (min_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_rss_usage_container_max": "max by(container, pod, namespace, node) (max_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
+		"ros:memory_rss_usage_container_sum": "sum by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!='', namespace!='', namespace!~'%s'}[15m]))",
 	}
 
-	nodeQueries = &querys{
+	rosNamespaceFilter = query{
+		Name:        "namespace-filter",
+		QueryString: QueryMap["ros:namespace_filter"],
+		MetricKey:   staticFields{"namespace": "namespace"},
+	}
+
+	nodeQueries = querys{
 		query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: QueryMap["cost:node_allocatable_cpu_cores"],
@@ -113,7 +120,7 @@ var (
 			RowKey:         []model.LabelName{"node"},
 		},
 	}
-	volQueries = &querys{
+	volQueries = querys{
 		query{
 			Name:        "persistentvolume-pod-info",
 			QueryString: QueryMap["cost:persistentvolume_pod_info"],
@@ -128,7 +135,7 @@ var (
 				Method:          "max",
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
-			RowKey: []model.LabelName{"volumename"},
+			RowKey: []model.LabelName{"persistentvolume"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-request-bytes",
@@ -166,7 +173,7 @@ var (
 			RowKey:         []model.LabelName{"volumename"},
 		},
 	}
-	podQueries = &querys{
+	podQueries = querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
 			QueryString: QueryMap["cost:pod_limit_cpu_cores"],
@@ -241,7 +248,7 @@ var (
 			RowKey:         []model.LabelName{"pod", "namespace"},
 		},
 	}
-	namespaceQueries = &querys{
+	namespaceQueries = querys{
 		query{
 			Name:           "namespace-labels",
 			QueryString:    "kube_namespace_labels",
@@ -250,7 +257,7 @@ var (
 			RowKey:         []model.LabelName{"namespace"},
 		},
 	}
-	resourceOptimizationQueries = &querys{
+	resourceOptimizationQueries = querys{
 		query{
 			Name:        "container-image-owner",
 			QueryString: QueryMap["ros:image_owners"],

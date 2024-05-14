@@ -97,14 +97,14 @@ func TestGetQueryRangeResultsSuccess(t *testing.T) {
 	}
 	getQueryRangeResultsSuccessTests := []struct {
 		name          string
-		queries       *querys
+		queries       querys
 		queriesResult mappedMockPromResult
 		wantedResult  mappedResults
 		wantedError   error
 	}{
 		{
 			name: "get query results no errors",
-			queries: &querys{
+			queries: querys{
 				query{
 					Name:        "usage-cpu-cores",
 					QueryString: "query1",
@@ -282,7 +282,7 @@ func TestGetQueryRangeResultsError(t *testing.T) {
 				t:            t,
 			}
 			got := mappedResults{}
-			err := c.getQueryRangeResults(&querys{query{QueryString: "fake-query"}}, &got, 5)
+			err := c.getQueryRangeResults(querys{query{QueryString: "fake-query"}}, &got, 5)
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s got: nil error, want: error", tt.name)
 			}
