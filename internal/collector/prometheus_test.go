@@ -44,12 +44,12 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	if m.mappedResults != nil {
 		res, ok = (*m.mappedResults)[query]
 		if !ok {
-			m.t.Fatalf("Could not find test result!")
+			m.t.Fatalf("Could not find test result for query: %s", query)
 		}
 	} else if m.singleResult != nil {
 		res = m.singleResult
 	} else {
-		m.t.Fatalf("Could not find test result!")
+		m.t.Fatalf("Could not find test result for query: %s", query)
 	}
 	return res.value, res.warnings, res.err
 }
@@ -60,12 +60,12 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	if m.mappedResults != nil {
 		res, ok = (*m.mappedResults)[query]
 		if !ok {
-			m.t.Fatalf("Could not find test result!")
+			m.t.Fatalf("Could not find test result for query: %s", query)
 		}
 	} else if m.singleResult != nil {
 		res = m.singleResult
 	} else {
-		m.t.Fatalf("Could not find test result!")
+		m.t.Fatalf("Could not find test result for query: %s", query)
 	}
 	return res.value, res.warnings, res.err
 }

@@ -143,7 +143,8 @@ func TestGenerateReports(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range resourceOptimizationQueries {
+	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range ql {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
@@ -194,7 +195,8 @@ func TestGenerateReportsNoROS(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range resourceOptimizationQueries {
+	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range ql {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
@@ -236,7 +238,8 @@ func TestGenerateReportsNoCost(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range resourceOptimizationQueries {
+	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range ql {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
@@ -287,7 +290,8 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range resourceOptimizationQueries {
+	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range ql {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}

@@ -57,7 +57,7 @@ var (
 	}
 
 	rosNamespaceFilter = query{
-		Name:        "namespace-filter",
+		Name:        "ros-namespace-filter",
 		QueryString: QueryMap["ros:namespace_filter"],
 		MetricKey:   staticFields{"namespace": "namespace"},
 	}
@@ -135,7 +135,7 @@ var (
 				Method:          "max",
 				TransformedName: "persistentvolumeclaim-capacity-byte-seconds",
 			},
-			RowKey: []model.LabelName{"persistentvolume"},
+			RowKey: []model.LabelName{"volumename"},
 		},
 		query{
 			Name:        "persistentvolumeclaim-request-bytes",
