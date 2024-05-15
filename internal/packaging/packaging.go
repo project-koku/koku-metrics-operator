@@ -294,7 +294,7 @@ func (p *FilePackager) writePart(fileName string, csvReader *csv.Reader, csvHead
 	}
 	for {
 		row, err := csvReader.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			writer.Flush()
 			return splitFile, true, nil
 		} else if err != nil {
@@ -535,7 +535,7 @@ func (p *FilePackager) PackageReports(cr *metricscfgv1beta1.MetricsConfig) error
 
 	// move CSV reports from data directory to staging directory
 	filesToPackage, err := p.moveOrCopyFiles(cr)
-	if err == ErrNoReports {
+	if errors.Is(err, ErrNoReports) {
 		log.Info("no payload to generate")
 		return nil
 	} else if err != nil {
