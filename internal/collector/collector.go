@@ -35,7 +35,8 @@ var (
 
 	log = logr.Log.WithName("collector")
 
-	ErrNoData = errors.New("no data to collect")
+	ErrNoData                 = errors.New("no data to collect")
+	ErrROSNoEnabledNamespaces = errors.New("no enabled namespaces for ROS")
 )
 
 type mappedCSVStruct map[string]csvStruct
@@ -229,6 +230,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	}
 
 	// ######## generate resource-optimization reports
+	returnROSwarning := false
 	if cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization {
 		rosCollector := &PrometheusCollector{
 			PromConn:           c.PromConn,
@@ -239,17 +241,26 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 		timeRange := c.TimeSeries
 		start := timeRange.Start.Add(1 * time.Second)
 		end := start.Add(14*time.Minute + 59*time.Second)
+		var err error
 		for i := 1; i < 5; i++ {
 			timeRange.Start = start
 			timeRange.End = end
 			rosCollector.TimeSeries = timeRange
-			if err := generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
-				return err
+			if err = generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
+				if errors.Is(err, ErrROSNoEnabledNamespaces) {
+					returnROSwarning = true
+				} else {
+					return err
+				}
 			}
 			start = start.Add(15 * time.Minute)
 			end = end.Add(15 * time.Minute)
 		}
 
+		if returnROSwarning && err != nil {
+			// if we are here, we truly have not collected ROS data because nothing is enabled, so return the not-enabled error
+			return ErrROSNoEnabledNamespaces
+		}
 	}
 
 	//################################################################################################################
@@ -390,6 +401,9 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	namespaces, err := getNamespaces(c, ts)
 	if err != nil {
 		return err
+	}
+	if namespaces == "" {
+		return ErrROSNoEnabledNamespaces
 	}
 
 	if err := c.getQueryResultsWithParams(ts, resourceOptimizationQueries, &rosResults, MaxRetries, namespaces); err != nil {

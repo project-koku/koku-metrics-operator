@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -183,10 +184,15 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 	log.Info("generating reports for range", "start", formattedStart, "end", formattedEnd)
 	if err := collector.GenerateReports(cr, dirCfg, r.promCollector); err != nil {
 		cr.Status.Reports.DataCollected = false
-		if err == collector.ErrNoData {
+		if errors.Is(err, collector.ErrNoData) {
 			cr.Status.Prometheus.LastQuerySuccessTime = t
 			cr.Status.Reports.DataCollectionMessage = "No data to report for the hour queried."
 			log.Info("no data available to generate reports")
+		} else if errors.Is(err, collector.ErrROSNoEnabledNamespaces) {
+			cr.Status.Prometheus.LastQuerySuccessTime = t
+			cr.Status.Reports.DataCollected = true
+			cr.Status.Reports.DataCollectionMessage = "No namespaces contain the `insights_cost_management_optimizations='true'` label, so no resource optimzation metrics were collected."
+			log.Info("no namespaces contain the `insights_cost_management_optimizations='true'` label, so no resource optimzation metrics were collected")
 		} else {
 			retryTracker[timeRange.Start]++
 			cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
