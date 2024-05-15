@@ -228,6 +228,50 @@ func TestGenerateReportsNoROS(t *testing.T) {
 	}
 }
 
+func TestGenerateReportsNoEnabledROS(t *testing.T) {
+	mapResults := make(mappedMockPromResult)
+	queryList := []querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	for _, q := range queryList {
+		for _, query := range q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range ql {
+		res := &model.Vector{}
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &fakeTimeRange,
+	}
+	var err error
+	if err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err == nil {
+		t.Errorf("Something failed: %v", err)
+	}
+	if !errors.Is(err, ErrROSNoEnabledNamespaces) {
+		t.Errorf("incorrect error returned: %v", err)
+	}
+
+	// ####### everything below compares the generated reports to the expected reports #######
+	expectedMap := getFiles("expected_reports", t)
+	generatedMap := getFiles("test_reports", t)
+	expectedDiff := 1 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+
+	if len(expectedMap)-len(generatedMap) != expectedDiff {
+		t.Errorf("incorrect number of reports generated")
+	}
+	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
+		t.Fatal("failed to cleanup reports directory")
+	}
+}
+
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
 	queryList := []querys{nodeQueries, namespaceQueries, podQueries, volQueries}
@@ -261,7 +305,7 @@ func TestGenerateReportsNoCost(t *testing.T) {
 	// ####### everything below compares the generated reports to the expected reports #######
 	expectedMap := getFiles("expected_reports", t)
 	generatedMap := getFiles("test_reports", t)
-	expectedDiff := 4 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+	expectedDiff := 4 // The expected diff is equal to the number of Cost reports we generate. If we add or remove reports, this number should change
 
 	if len(expectedMap)-len(generatedMap) != expectedDiff {
 		t.Errorf("incorrect number of reports generated")
