@@ -143,12 +143,18 @@ func TestGenerateReports(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
-	for _, query := range ql {
+
+	// substitute the namespaces into the ROS querystrings
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[query.QueryString] = &mockPromResult{value: *res}
+		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
 	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -195,12 +201,18 @@ func TestGenerateReportsNoROS(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
-	for _, query := range ql {
+
+	// substitute the namespaces into the ROS querystrings
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[query.QueryString] = &mockPromResult{value: *res}
+		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
 	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -238,11 +250,18 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
-	for _, query := range ql {
+
+	// substitute the namespaces into the ROS querystrings
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
-		mapResults[query.QueryString] = &mockPromResult{value: *res}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
 	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -282,12 +301,18 @@ func TestGenerateReportsNoCost(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
-	for _, query := range ql {
+
+	// substitute the namespaces into the ROS querystrings
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[query.QueryString] = &mockPromResult{value: *res}
+		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
 	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -334,12 +359,18 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	ql := append(resourceOptimizationQueries, rosNamespaceFilter)
-	for _, query := range ql {
+
+	// substitute the namespaces into the ROS querystrings
+	for _, query := range resourceOptimizationQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[query.QueryString] = &mockPromResult{value: *res}
+		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
 	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	resourceOptimizationError := "resourceOptimization error"
 	for _, q := range resourceOptimizationQueries {
