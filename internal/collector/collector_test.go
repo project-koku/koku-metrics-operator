@@ -156,12 +156,13 @@ func TestGenerateReports(t *testing.T) {
 	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
 	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
@@ -214,12 +215,13 @@ func TestGenerateReportsNoROS(t *testing.T) {
 	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
 	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	noRosCR := fakeCR.DeepCopy()
 	noRosCR.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
@@ -251,24 +253,17 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 		}
 	}
 
-	// substitute the namespaces into the ROS querystrings
-	for _, query := range resourceOptimizationQueries {
-		res := &model.Vector{}
-		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
-	}
-
 	// add the namespace specific query
 	res := &model.Vector{}
-	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
 	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	var err error
 	if err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err == nil {
@@ -314,12 +309,13 @@ func TestGenerateReportsNoCost(t *testing.T) {
 	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
 	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	noCostCR := fakeCR.DeepCopy()
 	noCostCR.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement = &trueDef
@@ -343,12 +339,13 @@ func TestGenerateReportsNoCost(t *testing.T) {
 func TestGenerateReportsQueryErrors(t *testing.T) {
 	MaxRetries = 1
 	mapResults := make(mappedMockPromResult)
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 
 	queryList := []querys{nodeQueries, podQueries, volQueries, namespaceQueries}
@@ -360,13 +357,6 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		}
 	}
 
-	// substitute the namespaces into the ROS querystrings
-	for _, query := range resourceOptimizationQueries {
-		res := &model.Vector{}
-		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[fmt.Sprintf(query.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{value: *res}
-	}
-
 	// add the namespace specific query
 	res := &model.Vector{}
 	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
@@ -374,7 +364,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 
 	resourceOptimizationError := "resourceOptimization error"
 	for _, q := range resourceOptimizationQueries {
-		mapResults[q.QueryString] = &mockPromResult{err: errors.New(resourceOptimizationError)}
+		mapResults[fmt.Sprintf(q.QueryString, "costmanagement-metrics-operator|koku-metrics-operator")] = &mockPromResult{err: errors.New(resourceOptimizationError)}
 	}
 	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), resourceOptimizationError) {
@@ -428,12 +418,13 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 		}
 	}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil && err != ErrNoData {
 		t.Errorf("Failed to generate reports: %v", err)
