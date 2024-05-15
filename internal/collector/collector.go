@@ -6,7 +6,6 @@
 package collector
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -388,11 +387,12 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
-	defer cancel()
-	queryResult, warnings, err := c.PromConn.Query(ctx, rosNamespaceFilter.QueryString, ts)
+	namespaces, err := getNamespaces(c, ts)
+	if err != nil {
+		return err
+	}
 
-	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
+	if err := c.getQueryResultsWithParams(ts, resourceOptimizationQueries, &rosResults, MaxRetries, namespaces); err != nil {
 		return err
 	}
 
@@ -428,6 +428,23 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 		return fmt.Errorf("failed to write resource-optimization report: %v", err)
 	}
 	return nil
+}
+
+func getNamespaces(c *PrometheusCollector, ts time.Time) (string, error) {
+	vector, err := c.getVectorQuerySimple(rosNamespaceFilter, ts)
+	if err != nil {
+		return "", fmt.Errorf("failed to query for namespaces: %v", err)
+	}
+
+	namespaces := "kube-.*|openshift|openshift-.*"
+
+	for _, sample := range vector {
+		for _, field := range rosNamespaceFilter.MetricKey {
+			namespaces = fmt.Sprintf("%s|%s", namespaces, string(sample.Metric[field]))
+		}
+	}
+	return namespaces, nil
+
 }
 
 func findFields(input model.Metric, str string) string {
