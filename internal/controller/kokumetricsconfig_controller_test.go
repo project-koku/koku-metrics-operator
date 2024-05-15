@@ -1355,7 +1355,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("test error"))
 
 		})
-		FIt("query returns node data only", func() {
+		It("query returns node data only", func() {
 			resetReconciler(WithSecretOverride(true))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
