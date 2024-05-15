@@ -5,7 +5,11 @@
 
 package collector
 
-import "github.com/prometheus/common/model"
+import (
+	"fmt"
+
+	"github.com/prometheus/common/model"
+)
 
 var (
 	QueryMap = map[string]string{
@@ -490,6 +494,10 @@ type query struct {
 	MetricKeyRegex regexFields
 	QueryValue     *saveQueryValue
 	RowKey         []model.LabelName
+}
+
+func (q *query) substituteQuery(params ...any) {
+	q.QueryString = fmt.Sprintf(q.QueryString, params...)
 }
 
 type staticFields map[string]model.LabelName

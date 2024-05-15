@@ -249,10 +249,12 @@ func (c *PrometheusCollector) getQueryRangeResults(queries querys, results *mapp
 }
 
 func (c *PrometheusCollector) getQueryResultsWithParams(ts time.Time, queries querys, results *mappedResults, retries int, params ...any) error {
+	modifiedQueries := querys{}
 	for _, query := range queries {
-		query.QueryString = fmt.Sprintf(query.QueryString, params)
+		query.substituteQuery(params...)
+		modifiedQueries = append(modifiedQueries, query)
 	}
-	return c.getQueryResults(ts, queries, results, retries)
+	return c.getQueryResults(ts, modifiedQueries, results, retries)
 }
 
 func (c *PrometheusCollector) getQueryResults(ts time.Time, queries querys, results *mappedResults, retries int) error {

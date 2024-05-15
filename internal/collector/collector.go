@@ -451,14 +451,12 @@ func getNamespaces(c *PrometheusCollector, ts time.Time) (string, error) {
 	}
 
 	namespaces := []string{}
-
 	for _, sample := range vector {
 		for _, field := range rosNamespaceFilter.MetricKey {
 			namespaces = append(namespaces, string(sample.Metric[field]))
 		}
 	}
 	return strings.Join(namespaces, "|"), nil
-
 }
 
 func findFields(input model.Metric, str string) string {
