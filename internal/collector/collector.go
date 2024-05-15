@@ -436,14 +436,14 @@ func getNamespaces(c *PrometheusCollector, ts time.Time) (string, error) {
 		return "", fmt.Errorf("failed to query for namespaces: %v", err)
 	}
 
-	namespaces := "kube-.*|openshift|openshift-.*"
+	namespaces := []string{}
 
 	for _, sample := range vector {
 		for _, field := range rosNamespaceFilter.MetricKey {
-			namespaces = fmt.Sprintf("%s|%s", namespaces, string(sample.Metric[field]))
+			namespaces = append(namespaces, string(sample.Metric[field]))
 		}
 	}
-	return namespaces, nil
+	return strings.Join(namespaces, "|"), nil
 
 }
 
