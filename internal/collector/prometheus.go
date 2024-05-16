@@ -209,12 +209,12 @@ func (c *PrometheusCollector) GetPromConn(
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryRangeResults(queries querys, results *mappedResults, retries int) error {
+func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *mappedResults, retries int) error {
 	log := log.WithName("getQueryRangeResults")
 
 	queriesToRetry := querys{}
 
-	for _, query := range queries {
+	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
 		queryResult, warnings, err := c.PromConn.QueryRange(ctx, query.QueryString, *c.TimeSeries)
@@ -243,26 +243,26 @@ func (c *PrometheusCollector) getQueryRangeResults(queries querys, results *mapp
 		waitTime := time.Duration(sleep) * time.Second
 		log.Info(fmt.Sprintf("retrying failed queries after %s seconds", waitTime))
 		time.Sleep(waitTime)
-		return c.getQueryRangeResults(queriesToRetry, results, retries)
+		return c.getQueryRangeResults(&queriesToRetry, results, retries)
 	}
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryResultsWithParams(ts time.Time, queries querys, results *mappedResults, retries int, params ...any) error {
+func (c *PrometheusCollector) getQueryResultsWithParams(ts time.Time, queries *querys, results *mappedResults, retries int, params ...any) error {
 	modifiedQueries := querys{}
-	for _, query := range queries {
+	for _, query := range *queries {
 		query.substituteQuery(params...)
 		modifiedQueries = append(modifiedQueries, query)
 	}
-	return c.getQueryResults(ts, modifiedQueries, results, retries)
+	return c.getQueryResults(ts, &modifiedQueries, results, retries)
 }
 
-func (c *PrometheusCollector) getQueryResults(ts time.Time, queries querys, results *mappedResults, retries int) error {
+func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, results *mappedResults, retries int) error {
 	log := log.WithName("getQueryResults")
 
 	queriesToRetry := querys{}
 
-	for _, query := range queries {
+	for _, query := range *queries {
 		ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
 		defer cancel()
 
@@ -293,7 +293,7 @@ func (c *PrometheusCollector) getQueryResults(ts time.Time, queries querys, resu
 		waitTime := time.Duration(sleep) * time.Second
 		log.Info(fmt.Sprintf("retrying failed queries after %s seconds", waitTime))
 		time.Sleep(waitTime)
-		return c.getQueryResults(ts, queriesToRetry, results, retries)
+		return c.getQueryResults(ts, &queriesToRetry, results, retries)
 	}
 
 	return nil

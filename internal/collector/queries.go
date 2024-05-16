@@ -66,7 +66,7 @@ var (
 		MetricKey:   staticFields{"namespace": "namespace"},
 	}
 
-	nodeQueries = querys{
+	nodeQueries = &querys{
 		query{
 			Name:        "node-allocatable-cpu-cores",
 			QueryString: QueryMap["cost:node_allocatable_cpu_cores"],
@@ -124,7 +124,7 @@ var (
 			RowKey:         []model.LabelName{"node"},
 		},
 	}
-	volQueries = querys{
+	volQueries = &querys{
 		query{
 			Name:        "persistentvolume-pod-info",
 			QueryString: QueryMap["cost:persistentvolume_pod_info"],
@@ -177,7 +177,7 @@ var (
 			RowKey:         []model.LabelName{"volumename"},
 		},
 	}
-	podQueries = querys{
+	podQueries = &querys{
 		query{
 			Name:        "pod-limit-cpu-cores",
 			QueryString: QueryMap["cost:pod_limit_cpu_cores"],
@@ -252,7 +252,7 @@ var (
 			RowKey:         []model.LabelName{"pod", "namespace"},
 		},
 	}
-	namespaceQueries = querys{
+	namespaceQueries = &querys{
 		query{
 			Name:           "namespace-labels",
 			QueryString:    "kube_namespace_labels",
@@ -261,7 +261,7 @@ var (
 			RowKey:         []model.LabelName{"namespace"},
 		},
 	}
-	resourceOptimizationQueries = querys{
+	resourceOptimizationQueries = &querys{
 		query{
 			Name:        "container-image-owner",
 			QueryString: QueryMap["ros:image_owners"],
