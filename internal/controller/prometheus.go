@@ -191,8 +191,8 @@ func collectPromStats(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 		} else if errors.Is(err, collector.ErrROSNoEnabledNamespaces) {
 			cr.Status.Prometheus.LastQuerySuccessTime = t
 			cr.Status.Reports.DataCollected = true
-			cr.Status.Reports.DataCollectionMessage = "No namespaces contain the `insights_cost_management_optimizations='true'` label, so no resource optimization metrics were collected."
-			log.Info("no namespaces contain the `insights_cost_management_optimizations='true'` label, so no resource optimization metrics were collected")
+			cr.Status.Reports.DataCollectionMessage = "No namespaces contain the `insights_cost_management_optimizations=\"true\"` label, so no resource optimization metrics were collected."
+			log.Info("no namespaces contain the `insights_cost_management_optimizations=\"true\"` label, so no resource optimization metrics were collected")
 		} else {
 			retryTracker[timeRange.Start]++
 			cr.Status.Reports.DataCollectionMessage = fmt.Sprintf("error: %v", err)
