@@ -289,3 +289,21 @@ func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, res
 
 	return nil
 }
+
+func (c *PrometheusCollector) getVectorQuerySimple(q query, ts time.Time) (model.Vector, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.ContextTimeout)
+	defer cancel()
+
+	queryResult, warnings, err := c.PromConn.Query(ctx, q.QueryString, ts)
+	if err != nil {
+		return nil, fmt.Errorf("query: %s: error querying prometheus: %v", q.QueryString, err)
+	}
+	if len(warnings) > 0 {
+		log.Info("query warnings", "Warnings", warnings)
+	}
+	vector, ok := queryResult.(model.Vector)
+	if !ok {
+		return vector, fmt.Errorf("expected a vector in response to query, got a %v", queryResult.Type())
+	}
+	return vector, nil
+}

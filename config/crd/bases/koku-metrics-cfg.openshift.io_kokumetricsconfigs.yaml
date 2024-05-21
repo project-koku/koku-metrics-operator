@@ -865,7 +865,7 @@ spec:
                     default: true
                     description: |-
                       DisabledMetricsCollectionResourceOptimization is a field of KokuMetricsConfigStatus to represent whether or not collecting
-                      resource-optimzation metrics is disabled. The default is true.
+                      resource-optimization metrics is disabled. The default is true.
                     type: boolean
                   last_query_start_time:
                     description: LastQueryStartTime is a field of KokuMetricsConfigStatus

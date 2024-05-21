@@ -35,7 +35,8 @@ var (
 
 	log = logr.Log.WithName("collector")
 
-	ErrNoData = errors.New("no data to collect")
+	ErrNoData                 = errors.New("no data to collect")
+	ErrROSNoEnabledNamespaces = errors.New("no enabled namespaces for ROS")
 )
 
 type mappedCSVStruct map[string]csvStruct
@@ -239,17 +240,23 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 		timeRange := c.TimeSeries
 		start := timeRange.Start.Add(1 * time.Second)
 		end := start.Add(14*time.Minute + 59*time.Second)
+		var err error
 		for i := 1; i < 5; i++ {
 			timeRange.Start = start
 			timeRange.End = end
 			rosCollector.TimeSeries = timeRange
-			if err := generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
-				return err
+			if err = generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
+				if !errors.Is(err, ErrROSNoEnabledNamespaces) {
+					return err
+				}
 			}
 			start = start.Add(15 * time.Minute)
 			end = end.Add(15 * time.Minute)
 		}
 
+		if errors.Is(err, ErrROSNoEnabledNamespaces) {
+			return ErrROSNoEnabledNamespaces
+		}
 	}
 
 	//################################################################################################################
@@ -386,6 +393,15 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	ts := c.TimeSeries.End
 	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
+
+	namespacesAreEnabled, err := areNamespacesEnabled(c, ts)
+	if err != nil {
+		return err
+	}
+	if !namespacesAreEnabled {
+		return ErrROSNoEnabledNamespaces
+	}
+
 	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
 		return err
 	}
@@ -422,6 +438,21 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 		return fmt.Errorf("failed to write resource-optimization report: %v", err)
 	}
 	return nil
+}
+
+func areNamespacesEnabled(c *PrometheusCollector, ts time.Time) (bool, error) {
+	vector, err := c.getVectorQuerySimple(rosNamespaceFilter, ts)
+	if err != nil {
+		return false, fmt.Errorf("failed to query for namespaces: %v", err)
+	}
+
+	namespaces := []string{}
+	for _, sample := range vector {
+		for _, field := range rosNamespaceFilter.MetricKey {
+			namespaces = append(namespaces, string(sample.Metric[field]))
+		}
+	}
+	return len(namespaces) > 0, nil
 }
 
 func findFields(input model.Metric, str string) string {
