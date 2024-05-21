@@ -248,15 +248,6 @@ func (c *PrometheusCollector) getQueryRangeResults(queries *querys, results *map
 	return nil
 }
 
-func (c *PrometheusCollector) getQueryResultsWithParams(ts time.Time, queries *querys, results *mappedResults, retries int, params ...any) error {
-	modifiedQueries := querys{}
-	for _, query := range *queries {
-		query.substituteQuery(params...)
-		modifiedQueries = append(modifiedQueries, query)
-	}
-	return c.getQueryResults(ts, &modifiedQueries, results, retries)
-}
-
 func (c *PrometheusCollector) getQueryResults(ts time.Time, queries *querys, results *mappedResults, retries int) error {
 	log := log.WithName("getQueryResults")
 

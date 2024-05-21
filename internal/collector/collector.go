@@ -230,7 +230,6 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	}
 
 	// ######## generate resource-optimization reports
-	returnROSwarning := false
 	if cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization {
 		rosCollector := &PrometheusCollector{
 			PromConn:           c.PromConn,
@@ -247,9 +246,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 			timeRange.End = end
 			rosCollector.TimeSeries = timeRange
 			if err = generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
-				if errors.Is(err, ErrROSNoEnabledNamespaces) {
-					returnROSwarning = true
-				} else {
+				if !errors.Is(err, ErrROSNoEnabledNamespaces) {
 					return err
 				}
 			}
@@ -257,8 +254,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 			end = end.Add(15 * time.Minute)
 		}
 
-		if returnROSwarning && err != nil {
-			// if we are here, we truly have not collected ROS data because nothing is enabled, so return the not-enabled error
+		if errors.Is(err, ErrROSNoEnabledNamespaces) {
 			return ErrROSNoEnabledNamespaces
 		}
 	}
@@ -398,15 +394,15 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
 
-	namespaces, err := getNamespaces(c, ts)
+	namespacesAreLabeled, err := getNamespaces(c, ts)
 	if err != nil {
 		return err
 	}
-	if namespaces == "" {
+	if !namespacesAreLabeled {
 		return ErrROSNoEnabledNamespaces
 	}
 
-	if err := c.getQueryResultsWithParams(ts, resourceOptimizationQueries, &rosResults, MaxRetries, namespaces); err != nil {
+	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
 		return err
 	}
 
@@ -444,10 +440,10 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	return nil
 }
 
-func getNamespaces(c *PrometheusCollector, ts time.Time) (string, error) {
+func getNamespaces(c *PrometheusCollector, ts time.Time) (bool, error) {
 	vector, err := c.getVectorQuerySimple(rosNamespaceFilter, ts)
 	if err != nil {
-		return "", fmt.Errorf("failed to query for namespaces: %v", err)
+		return false, fmt.Errorf("failed to query for namespaces: %v", err)
 	}
 
 	namespaces := []string{}
@@ -456,7 +452,7 @@ func getNamespaces(c *PrometheusCollector, ts time.Time) (string, error) {
 			namespaces = append(namespaces, string(sample.Metric[field]))
 		}
 	}
-	return strings.Join(namespaces, "|"), nil
+	return len(namespaces) > 0, nil
 }
 
 func findFields(input model.Metric, str string) string {
