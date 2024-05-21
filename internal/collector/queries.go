@@ -5,9 +5,7 @@
 
 package collector
 
-import (
-	"github.com/prometheus/common/model"
-)
+import "github.com/prometheus/common/model"
 
 var (
 	QueryMap = map[string]string{
