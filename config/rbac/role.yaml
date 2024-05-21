@@ -73,12 +73,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-- apiGroups:
   - koku-metrics-cfg.openshift.io
   resources:
   - kokumetricsconfigs
