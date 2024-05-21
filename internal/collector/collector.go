@@ -394,11 +394,11 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
 	rosResults := mappedResults{}
 
-	namespacesAreLabeled, err := getNamespaces(c, ts)
+	namespacesAreEnabled, err := areNamespacesEnabled(c, ts)
 	if err != nil {
 		return err
 	}
-	if !namespacesAreLabeled {
+	if !namespacesAreEnabled {
 		return ErrROSNoEnabledNamespaces
 	}
 
@@ -440,7 +440,7 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	return nil
 }
 
-func getNamespaces(c *PrometheusCollector, ts time.Time) (bool, error) {
+func areNamespacesEnabled(c *PrometheusCollector, ts time.Time) (bool, error) {
 	vector, err := c.getVectorQuerySimple(rosNamespaceFilter, ts)
 	if err != nil {
 		return false, fmt.Errorf("failed to query for namespaces: %v", err)
