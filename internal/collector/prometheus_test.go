@@ -44,12 +44,12 @@ func (m mockPrometheusConnection) QueryRange(ctx context.Context, query string, 
 	if m.mappedResults != nil {
 		res, ok = (*m.mappedResults)[query]
 		if !ok {
-			m.t.Fatalf("Could not find test result!")
+			m.t.Fatalf("Could not find test result for query: %s", query)
 		}
 	} else if m.singleResult != nil {
 		res = m.singleResult
 	} else {
-		m.t.Fatalf("Could not find test result!")
+		m.t.Fatalf("Could not find test result for query: %s", query)
 	}
 	return res.value, res.warnings, res.err
 }
@@ -60,12 +60,12 @@ func (m mockPrometheusConnection) Query(ctx context.Context, query string, ts ti
 	if m.mappedResults != nil {
 		res, ok = (*m.mappedResults)[query]
 		if !ok {
-			m.t.Fatalf("Could not find test result!")
+			m.t.Fatalf("Could not find test result for query: %s", query)
 		}
 	} else if m.singleResult != nil {
 		res = m.singleResult
 	} else {
-		m.t.Fatalf("Could not find test result!")
+		m.t.Fatalf("Could not find test result for query: %s", query)
 	}
 	return res.value, res.warnings, res.err
 }
@@ -667,6 +667,151 @@ func TestSetPrometheusConfig(t *testing.T) {
 			}
 			if got == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetVectorQuerySimpleSuccess(t *testing.T) {
+	c := PrometheusCollector{
+		TimeSeries: &promv1.Range{},
+	}
+	getVectorQuerySimpleSuccessTests := []struct {
+		name         string
+		query        query
+		queryResult  mappedMockPromResult
+		wantedResult model.Vector
+		wantedError  error
+	}{
+		{
+			name: "get query results no errors",
+			query: query{
+				Name:        "usage-cpu-cores",
+				QueryString: "query1",
+				MetricKey:   staticFields{"id": "id"},
+				QueryValue: &saveQueryValue{
+					ValName:         "usage-cpu-cores",
+					Method:          "max",
+					TransformedName: "usage-cpu-core-seconds",
+				},
+				RowKey: []model.LabelName{"id"},
+			},
+			queryResult: mappedMockPromResult{
+				"query1": &mockPromResult{
+					value: model.Vector{
+						{
+							Metric: model.Metric{
+								"id":           "1",
+								"random-field": "42",
+							},
+							Value:     model.SampleValue(32),
+							Timestamp: 1604339460,
+						}},
+					warnings: nil,
+					err:      nil,
+				},
+			},
+			wantedResult: model.Vector{{
+				Metric: model.Metric{
+					"id":           "1",
+					"random-field": "42",
+				},
+				Value:     model.SampleValue(32),
+				Timestamp: 1604339460,
+			},
+			},
+			wantedError: nil,
+		},
+	}
+	for _, tt := range getVectorQuerySimpleSuccessTests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.PromConn = mockPrometheusConnection{
+				mappedResults: &tt.queryResult,
+				t:             t,
+			}
+			got, err := c.getVectorQuerySimple(tt.query, c.TimeSeries.End)
+			if tt.wantedError == nil && err != nil {
+				t.Errorf("got unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.wantedResult) {
+				t.Errorf("getQueryRangeResults got:\n\t%s\n  want:\n\t%s", got, tt.wantedResult)
+			}
+		})
+	}
+}
+
+func TestGetVectorQuerySimpleError(t *testing.T) {
+	c := PrometheusCollector{
+		ContextTimeout: defaultContextTimeout,
+		TimeSeries:     &promv1.Range{},
+	}
+	getVectorQuerySimpleErrorsTests := []struct {
+		name         string
+		queryResult  *mockPromResult
+		wantedResult model.Vector
+		wantedError  error
+	}{
+		{
+			name:         "return incorrect type (model.Scalar)",
+			queryResult:  &mockPromResult{value: &model.Scalar{}},
+			wantedResult: nil,
+			wantedError:  errTest,
+		},
+		{
+			name:         "return incorrect type (model.Matrix)",
+			queryResult:  &mockPromResult{value: &model.Matrix{}},
+			wantedResult: nil,
+			wantedError:  errTest,
+		},
+		{
+			name:         "return incorrect type (model.String)",
+			queryResult:  &mockPromResult{value: &model.String{}},
+			wantedResult: nil,
+			wantedError:  errTest,
+		},
+		{
+			name: "warnings with no error",
+			queryResult: &mockPromResult{
+				value:    model.Vector{},
+				warnings: promv1.Warnings{"This is a warning."},
+				err:      nil,
+			},
+			wantedResult: model.Vector{},
+			wantedError:  nil,
+		},
+		{
+			name: "error with no warnings",
+			queryResult: &mockPromResult{
+				value:    model.Matrix{},
+				warnings: nil,
+				err:      errTest,
+			},
+			wantedResult: nil,
+			wantedError:  errTest,
+		},
+		{
+			name: "error with warnings",
+			queryResult: &mockPromResult{
+				value:    model.Matrix{},
+				warnings: promv1.Warnings{"This is another warning."},
+				err:      errTest,
+			},
+			wantedResult: nil,
+			wantedError:  errTest,
+		},
+	}
+	for _, tt := range getVectorQuerySimpleErrorsTests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.PromConn = mockPrometheusConnection{
+				singleResult: tt.queryResult,
+				t:            t,
+			}
+			got, err := c.getVectorQuerySimple(query{QueryString: "fake-query"}, c.TimeSeries.End)
+			if tt.wantedError != nil && err == nil {
+				t.Errorf("%s got: nil error, want: error", tt.name)
+			}
+			if !reflect.DeepEqual(got, tt.wantedResult) {
+				t.Errorf("%s got: %s want: %s", tt.name, got, tt.wantedResult)
 			}
 		})
 	}

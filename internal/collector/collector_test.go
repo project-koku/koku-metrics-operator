@@ -143,18 +143,21 @@ func TestGenerateReports(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+
+	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range qs {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
@@ -194,23 +197,70 @@ func TestGenerateReportsNoROS(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+
+	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range qs {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	noRosCR := fakeCR.DeepCopy()
 	noRosCR.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization = &trueDef
 	if err := GenerateReports(noRosCR, fakeDirCfg, fakeCollector); err != nil {
 		t.Errorf("Failed to generate reports: %v", err)
+	}
+
+	// ####### everything below compares the generated reports to the expected reports #######
+	expectedMap := getFiles("expected_reports", t)
+	generatedMap := getFiles("test_reports", t)
+	expectedDiff := 1 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+
+	if len(expectedMap)-len(generatedMap) != expectedDiff {
+		t.Errorf("incorrect number of reports generated")
+	}
+	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
+		t.Fatal("failed to cleanup reports directory")
+	}
+}
+
+func TestGenerateReportsNoEnabledROS(t *testing.T) {
+	mapResults := make(mappedMockPromResult)
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+	var err error
+	if err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err == nil {
+		t.Errorf("Something failed: %v", err)
+	}
+	if !errors.Is(err, ErrROSNoEnabledNamespaces) {
+		t.Errorf("incorrect error returned: %v", err)
 	}
 
 	// ####### everything below compares the generated reports to the expected reports #######
@@ -236,18 +286,21 @@ func TestGenerateReportsNoCost(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
+
+	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
+	for _, query := range qs {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	noCostCR := fakeCR.DeepCopy()
 	noCostCR.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement = &trueDef
@@ -258,7 +311,7 @@ func TestGenerateReportsNoCost(t *testing.T) {
 	// ####### everything below compares the generated reports to the expected reports #######
 	expectedMap := getFiles("expected_reports", t)
 	generatedMap := getFiles("test_reports", t)
-	expectedDiff := 4 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+	expectedDiff := 4 // The expected diff is equal to the number of Cost reports we generate. If we add or remove reports, this number should change
 
 	if len(expectedMap)-len(generatedMap) != expectedDiff {
 		t.Errorf("incorrect number of reports generated")
@@ -271,12 +324,13 @@ func TestGenerateReportsNoCost(t *testing.T) {
 func TestGenerateReportsQueryErrors(t *testing.T) {
 	MaxRetries = 1
 	mapResults := make(mappedMockPromResult)
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 
 	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries}
@@ -287,11 +341,11 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 			mapResults[query.QueryString] = &mockPromResult{value: *res}
 		}
 	}
-	for _, query := range *resourceOptimizationQueries {
-		res := &model.Vector{}
-		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-		mapResults[query.QueryString] = &mockPromResult{value: *res}
-	}
+
+	// add the namespace specific query
+	res := &model.Vector{}
+	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	resourceOptimizationError := "resourceOptimization error"
 	for _, q := range *resourceOptimizationQueries {
@@ -349,12 +403,13 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 		}
 	}
 
+	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
 			mappedResults: &mapResults,
 			t:             t,
 		},
-		TimeSeries: &fakeTimeRange,
+		TimeSeries: &copyfakeTimeRange,
 	}
 	if err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector); err != nil && err != ErrNoData {
 		t.Errorf("Failed to generate reports: %v", err)

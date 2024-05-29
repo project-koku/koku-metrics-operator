@@ -10,7 +10,7 @@
 			"persistentvolumeclaim": "hive-metastore-db-data",
 			"prometheus": "openshift-monitoring/k8s",
 			"service": "kubelet",
-			"volumename": "pvc-025604dc-93ff-4801-ac06-316243ccd45a"
+			"persistentvolume": "pvc-025604dc-93ff-4801-ac06-316243ccd45a"
 		},
 		"values": [
 			[

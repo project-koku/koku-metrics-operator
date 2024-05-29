@@ -34,3 +34,10 @@ updates:
       k8s.io-dependencies:
         patterns:
           - "*k8s.io*"
+          - "github.com/operator-framework/*"
+      testing-framework:
+        patterns:
+          - "github.com/onsi/*"
+      prometheus:
+        patterns:
+          - "github.com/prometheus/*"

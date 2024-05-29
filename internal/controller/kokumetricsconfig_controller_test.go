@@ -1409,6 +1409,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
+			Expect(fetched.Status.Reports.DataCollectionMessage).To(ContainSubstring("namespaces contain the `insights_cost_management_optimizations=\"true\"`"))
 		})
 		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
 			// slow test, always run this one last
