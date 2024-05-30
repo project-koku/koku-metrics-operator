@@ -20,6 +20,12 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v3.3.0:
+* Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
+* The PVC capacity is now populated using the `kube_persistentvolume_capacity_bytes` metric instead of `kubelet_volume_stats_capacity_bytes`.
+* Resource optimizations are now opt-in per namespace. All namespaces for which recommendations are wanted must be labeled with `insights_cost_management_optimizations='true'`. Namespaces can be labeled with:
+```
+oc label namespaces {namespace1,namespace2,etc} insights_cost_management_optimizations="true" --overwrite=true
+```
 * __DEPRECATION NOTICE__: Basic authentication is deprecated and will not be supported beyond December 31, 2024. If the default token authentication method cannot be used, you must switch to [service account](https://console.redhat.com/iam/service-accounts) authentication ([more on creating a service account](https://access.redhat.com/articles/7036194)). Once you have created your service account, follow [this documentation](https://access.redhat.com/documentation/en-us/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#service-account-authentication_adding-an-ocp-int) on how to configure your operator to use service account authentication.
 
 ## New in v3.2.1:
