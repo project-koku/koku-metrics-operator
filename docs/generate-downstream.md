@@ -24,7 +24,7 @@
     $ make downstream
     ```
 
-    d. Add/commit/push:
+    c. Add/commit/push:
     ```
     $ git add/commit/push
     ```
