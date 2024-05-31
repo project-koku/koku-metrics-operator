@@ -22,7 +22,7 @@ The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects
 ## New in v3.3.0:
 * Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
 * The PVC capacity is now populated using the `kube_persistentvolume_capacity_bytes` metric instead of `kubelet_volume_stats_capacity_bytes`.
-* Resource optimizations are now opt-in per namespace. All namespaces for which recommendations are wanted must be labeled with `insights_cost_management_optimizations='true'`. Namespaces can be labeled with:
+* To receive resource optimization recommendations for your namespaces, you must now first enable each namespace. To enable a namespace, label it with `insights_cost_management_optimizations='true'`. In the CLI, run:
   ```
     oc label namespace NAMESPACE insights_cost_management_optimizations="true" --overwrite=true
   ```

@@ -10,7 +10,7 @@
     git push
     ```
 
-2. Branch `downstream-vX.Y.Z` so we can make the updates for the downstream code. The only difference between upstream and downstream is the name of the API. We rename `koku` to `costmanagement` in the downstream code.
+2. Branch `downstream-vX.Y.Z` so we can make the updates for the downstream code. The only difference between upstream and downstream is the name of the API. We rename `costmanagement` to `costmanagement` in the downstream code.
 
     a. Checkout a branch that will be merged into the `downstream-vX.Y.Z` branch:
     ```
