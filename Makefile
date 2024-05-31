@@ -352,6 +352,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	$(MAKE) manifests
 
+	mkdir -p costmanagement-metrics-operator/$(VERSION)/
 	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
 
 	$(OPERATOR_SDK) generate kustomize manifests
