@@ -1,4 +1,4 @@
-**Prerequisite:** 
+**Prerequisite:**
 * rename ([install with Homebrew on OSX](https://formulae.brew.sh/formula/rename#default))
 
 **Steps:**
@@ -7,12 +7,10 @@
     ```
     git fetch origin
     git switch --no-track -c downstream-vX.Y.Z origin/main
-    git push downstream-vX.Y.Z
+    git push
     ```
 
-2. Branch `downstream-vX.Y.Z` so we can make the updates for the downstream code:
-
-    When generating the downstream code, we must vendor the packages. This directory is very large and makes reviewing the PR in Github difficult. To make the review process easier, we should separate the code changes and the package vendoring into separate commits:
+2. Branch `downstream-vX.Y.Z` so we can make the updates for the downstream code. The only difference between upstream and downstream is the name of the API. We rename `koku` to `costmanagement` in the downstream code.
 
     a. Checkout a branch that will be merged into the `downstream-vX.Y.Z` branch:
     ```
@@ -24,12 +22,7 @@
     $ make downstream
     ```
 
-    c. Vendor the packages:
-    ```
-    $ make downstream-vendor
-    ```
-
-    d. Add/commit/push:
+    c. Add/commit/push:
     ```
     $ git add/commit/push
     ```
