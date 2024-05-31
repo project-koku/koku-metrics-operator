@@ -1,0 +1,24 @@
+# permissions for end users to edit costmanagementmetricsconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: costmanagementmetricsconfig-editor-role
+rules:
+- apiGroups:
+  - costmanagement-metrics-cfg.openshift.io
+  resources:
+  - costmanagementmetricsconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - costmanagement-metrics-cfg.openshift.io
+  resources:
+  - costmanagementmetricsconfigs/status
+  verbs:
+  - get
