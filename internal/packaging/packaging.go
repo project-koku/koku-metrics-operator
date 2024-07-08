@@ -351,19 +351,28 @@ func (p *FilePackager) getStartEnd(filePath string) error {
 	startInterval := firstLine[startIndex]
 	p.start, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", startInterval)
 	// need to grab the last line in the file to get the last interval end
-	allLines, err := csvReader.ReadAll()
+	lastLine, err := getLastRow(csvReader, firstLine)
 	if err != nil {
-		return fmt.Errorf("getStartEnd: error reading file: %v", err)
-	}
-	var lastLine []string
-	if len(allLines) > 0 {
-		lastLine = allLines[len(allLines)-1]
-	} else {
-		lastLine = firstLine
+		return fmt.Errorf("getStartEnd: getLastRow: %v", err)
 	}
 	endInterval := lastLine[endIndex]
 	p.end, _ = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", endInterval)
 	return nil
+}
+
+func getLastRow(csvReader *csv.Reader, firstRow []string) ([]string, error) {
+	lastRow := firstRow
+	for {
+		record, err := csvReader.Read()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		lastRow = record
+	}
+	return lastRow, nil
 }
 
 // splitFiles breaks larger files into smaller ones
