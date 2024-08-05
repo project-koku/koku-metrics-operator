@@ -32,14 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	cv "github.com/project-koku/koku-metrics-operator/internal/clusterversion"
-	"github.com/project-koku/koku-metrics-operator/internal/collector"
-	"github.com/project-koku/koku-metrics-operator/internal/crhchttp"
-	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/internal/packaging"
-	"github.com/project-koku/koku-metrics-operator/internal/sources"
-	"github.com/project-koku/koku-metrics-operator/internal/storage"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/v3/api/v1beta1"
+	cv "github.com/project-koku/koku-metrics-operator/v3/internal/clusterversion"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/collector"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/packaging"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/sources"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/storage"
 )
 
 const HOURS_IN_DAY int = 23 // first hour is 0: 0 -> 23 == 24 hrs

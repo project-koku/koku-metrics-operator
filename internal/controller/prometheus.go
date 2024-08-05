@@ -14,9 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/internal/collector"
-	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/v3/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/collector"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/dirconfig"
 )
 
 var (

@@ -19,9 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
-	"github.com/project-koku/koku-metrics-operator/internal/testutils"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/v3/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/dirconfig"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/testutils"
 )
 
 var (

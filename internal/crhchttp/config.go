@@ -16,7 +16,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/v3/api/v1beta1"
 )
 
 // AuthConfig provides the data for reconciling the CR with defaults

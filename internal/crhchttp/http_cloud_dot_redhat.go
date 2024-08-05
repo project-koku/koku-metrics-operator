@@ -24,8 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/internal/packaging"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/v3/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/packaging"
 )
 
 // Client is an http.Client
