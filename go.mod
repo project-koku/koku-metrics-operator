@@ -1,4 +1,4 @@
-module github.com/project-koku/koku-metrics-operator
+module github.com/project-koku/koku-metrics-operator/v3
 
 go 1.22
 

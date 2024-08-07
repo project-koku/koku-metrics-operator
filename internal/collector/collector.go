@@ -20,8 +20,8 @@ import (
 	"github.com/prometheus/common/model"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 
-	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
-	"github.com/project-koku/koku-metrics-operator/internal/dirconfig"
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/v3/api/v1beta1"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/dirconfig"
 )
 
 var (

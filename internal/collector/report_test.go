@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/project-koku/koku-metrics-operator/internal/strset"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/strset"
 )
 
 var (

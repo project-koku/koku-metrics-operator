@@ -14,6 +14,6 @@ resources:
     domain: openshift.io
     group: koku-metrics-cfg
     kind: KokuMetricsConfig
-    path: github.com/project-koku/koku-metrics-operator/api/v1beta1
+    path: github.com/project-koku/koku-metrics-operator/v3/api/v1beta1
     version: v1beta1
 version: "3"

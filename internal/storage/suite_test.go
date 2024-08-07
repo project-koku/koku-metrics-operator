@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/project-koku/koku-metrics-operator/internal/testutils"
+	"github.com/project-koku/koku-metrics-operator/v3/internal/testutils"
 	// +kubebuilder:scaffold:imports
 )
 
