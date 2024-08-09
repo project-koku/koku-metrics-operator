@@ -20,7 +20,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v3.3.1:
-* Optimized memory usage when reading CSV files.
+* Optimize memory usage when reading CSV files.
 
 ## New in v3.3.0:
 * Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
