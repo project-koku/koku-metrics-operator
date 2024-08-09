@@ -19,6 +19,9 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v3.3.1:
+* Optimize memory usage when reading CSV files.
+
 ## New in v3.3.0:
 * Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
 * The PVC capacity is now populated using the `kube_persistentvolume_capacity_bytes` metric instead of `kubelet_volume_stats_capacity_bytes`.
