@@ -1,0 +1,22 @@
+[
+	{
+		"metric": {
+			"label_insights_cost_management_optimizations": "true",
+			"namespace": "costmanagement-metrics-operator"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"label_insights_cost_management_optimizations": "true",
+			"namespace": "koku-metrics-operator"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	}
+]

@@ -3,14 +3,18 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.1.0
-VERSION ?= 3.2.0
+PREVIOUS_VERSION ?= 3.2.1
+VERSION ?= 3.3.0
+
+MIN_KUBE_VERSION = 1.24.0
+MIN_OCP_VERSION = 4.12
 
 # Default bundle image tag
 IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 PREVIOUS_BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(PREVIOUS_VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
+DOWNSTREAM_IMAGE_TAG ?= registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
@@ -144,7 +148,7 @@ verify-manifests: ## Verify manifests are up to date.
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.x
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
 .PHONY: test-qemu
@@ -267,7 +271,6 @@ get-token-and-cert:  ## Get a token from a running K8s cluster for local develop
 
 ##@ Build Bundle and Test Catalog
 
-NAMESPACE ?= ""
 .PHONY: bundle
 bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	mkdir -p koku-metrics-operator/$(VERSION)/
@@ -275,9 +278,21 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(IMAGE_SHA)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.relatedImages = [{"name": "koku-metrics-operator", "image": "$(IMAGE_SHA)"}]' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "koku-metrics-operator.v$(PREVIOUS_VERSION)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+ifdef NAMESPACE
+	$(YQ) -i '.metadata.namespace = "$(NAMESPACE)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
+endif
+	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
+
 	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
 	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	.venv/bin/python scripts/txt_replace.py $(VERSION) $(PREVIOUS_VERSION) $(IMAGE_SHA) --namespace=${NAMESPACE}
 	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
 	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
 
@@ -308,27 +323,68 @@ bundle-deploy-cleanup: operator-sdk ## Delete the entirety of the deployed bundl
 ##@ Generate downstream file changes
 
 #### Updates code for downstream release
-REMOVE_FILES = koku-metrics-operator/
+REMOVE_FILES = koku-metrics-operator/ config/scorecard/
 UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
-downstream: ## Generate the code changes necessary for the downstream image.
+downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+
+	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	# fix the cert
-	- sed -i -- 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
-	- sed -i -- 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
+	- sed -i '' 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
+	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
 	# clean up the other files
-	- git clean -fx
+	# - git clean -fx
 	# mv the sample to the correctly named file
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-	$(MAKE) generate
+
+	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
+	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
+	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
+	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
+
 	$(MAKE) manifests
+
+	mkdir -p costmanagement-metrics-operator/$(VERSION)/
+	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
+
+	$(OPERATOR_SDK) generate kustomize manifests
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) --default-channel=stable --channels=stable
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+
+	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.certified = "true"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.support = "Red Hat"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.name = "costmanagement-metrics-operator.$(VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/costmanagement-metrics-operator"]' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	# scripts/update_bundle_dockerfile.py
+	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
+	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
+	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
+	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
+
+	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
+	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
 
 ##@ Build Dependencies
 
@@ -347,10 +403,28 @@ ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
+SETUP_ENVTEST_VERSION ?= v0.0.0-20240318095156-c7e1dc9b5302
+YQ_VERSION ?= v4.2.0
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
 OPERATOR_SDK_VERSION ?= v1.33.0
+
+.PHONY: yq
+YQ ?= $(LOCALBIN)/yq
+yq: ## Download yq locally if necessary.
+ifeq (,$(wildcard $(YQ)))
+ifeq (, $(shell which yq 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(YQ)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_${{ARCH}} && chmod +x $(YQ)
+	}
+else
+YQ = $(shell which yq)
+endif
+endif
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -370,11 +444,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 .PHONY: envtest-not-local
 envtest-not-local: ## Download envtest-setup for qemu unit tests - specific to github action.
-	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 .PHONY: operator-sdk
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
@@ -392,9 +466,3 @@ else
 OPERATOR_SDK = $(shell which operator-sdk)
 endif
 endif
-
-.PHONY: venv
-venv: ## create venv for txt_replace script
-	@python3 -m venv .venv
-	@.venv/bin/python -m pip install -U pip
-	@.venv/bin/python -m pip install -r scripts/requirements.txt

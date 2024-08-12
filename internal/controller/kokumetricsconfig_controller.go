@@ -8,6 +8,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -19,7 +20,7 @@ import (
 	gologr "github.com/go-logr/logr"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,6 +58,8 @@ var (
 
 	falseDef = false
 	trueDef  = true
+
+	sixtyInt64 = int64(60)
 
 	dirCfg             *dirconfig.DirectoryConfig = new(dirconfig.DirectoryConfig)
 	sourceSpec         *metricscfgv1beta1.CloudDotRedHatSourceSpec
@@ -150,6 +153,11 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 		cr.Status.Upload.UploadWait = &uploadWait
 	}
 
+	// COST-4528: ensure upload_cycle is not less than 60
+	if *cr.Spec.Upload.UploadCycle < 60 {
+		cr.Spec.Upload.UploadCycle = &sixtyInt64
+	}
+
 	if !reflect.DeepEqual(cr.Spec.Upload.UploadCycle, cr.Status.Upload.UploadCycle) {
 		cr.Status.Upload.UploadCycle = cr.Spec.Upload.UploadCycle
 	}
@@ -206,10 +214,10 @@ func GetClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 // LogSecretAccessError evaluates  the type of kube secret error and logs the appropriate message.
 func LogSecretAccessError(err error, msg string) {
 	switch {
-	case errors.IsNotFound(err):
+	case k8sErrors.IsNotFound(err):
 		errMsg := fmt.Sprintf("%s does not exist", msg)
 		log.Error(err, errMsg)
-	case errors.IsForbidden(err):
+	case k8sErrors.IsForbidden(err):
 		errMsg := fmt.Sprintf("operator does not have permission to check %s", msg)
 		log.Error(err, errMsg)
 	default:
@@ -377,6 +385,7 @@ func setClusterID(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfi
 
 func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authConfig *crhchttp.AuthConfig, cr *metricscfgv1beta1.MetricsConfig, reqNamespace types.NamespacedName) error {
 	log := log.WithName("setAuthentication")
+	cr.Status.Authentication.DeprecationNotice = ""
 	cr.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token {
 		cr.Status.Authentication.ValidBasicAuth = nil
@@ -402,6 +411,9 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 	}
 
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Basic {
+		// set basic auth deprecation message
+		cr.Status.Authentication.DeprecationNotice = "Basic authentication is deprecated and will be removed after December 31, 2024. Please switch to service-account authentication."
+
 		// Get user and password from auth secret in namespace
 		err := GetAuthSecret(r, cr, authConfig, reqNamespace)
 		if err != nil {
@@ -826,7 +838,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				Step:  time.Minute,
 			}
 			if err := collectPromStats(r, cr, dirCfg, timeRange); err != nil {
-				if err == collector.ErrNoData && t.Hour() == 0 && t.Day() != endTime.Day() && r.initialDataCollection {
+				if errors.Is(err, collector.ErrNoData) && t.Hour() == 0 && t.Day() != endTime.Day() && r.initialDataCollection {
 					// if there is no data for the first hour of the day, and we are doing the
 					// initial data collection, skip to the next day so we avoid collecting
 					// partial data for a full day. This ensures we are generating a full daily
@@ -861,12 +873,12 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Initial returned result -> requeue reconcile after 5 min.
 	// This result is replaced if upload or status update results in error.
 	var result = ctrl.Result{RequeueAfter: time.Minute * 5}
-	var errors []error
+	var errorSlice []error
 
 	if cr.Spec.Upload.UploadToggle != nil && *cr.Spec.Upload.UploadToggle {
 		if err := r.setAuthAndUpload(ctx, cr, packager, req); err != nil {
 			result = ctrl.Result{}
-			errors = append(errors, err)
+			errorSlice = append(errorSlice, err)
 		}
 
 	} else {
@@ -876,24 +888,24 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// remove old reports if maximum report count has been exceeded
 	if err := packager.TrimPackages(cr); err != nil {
 		result = ctrl.Result{}
-		errors = append(errors, err)
+		errorSlice = append(errorSlice, err)
 	}
 
 	uploadFiles, err := dirCfg.Upload.GetFilesFullPath()
 	if err != nil {
 		result = ctrl.Result{}
-		errors = append(errors, err)
+		errorSlice = append(errorSlice, err)
 	}
 	cr.Status.Packaging.PackagedFiles = uploadFiles
 
 	if err := r.Status().Update(ctx, cr); err != nil {
 		log.Info("failed to update MetricsConfig status", "error", err)
 		result = ctrl.Result{}
-		errors = append(errors, err)
+		errorSlice = append(errorSlice, err)
 	}
 
 	// Requeue for processing after 5 minutes
-	return result, concatErrs(errors...)
+	return result, concatErrs(errorSlice...)
 }
 
 // SetupWithManager Setup reconciliation with manager object

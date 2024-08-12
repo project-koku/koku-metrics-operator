@@ -22,7 +22,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
       - name: Verify generated Manifests are up to date
         run: make verify-manifests
 
@@ -86,8 +86,11 @@ jobs:
         with:
           name: coverage
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4.2.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: ./cover.out
           flags: unittests
           fail_ci_if_error: true
+          plugin: pycoverage  # Only run one plugin even though we don't want any to run.

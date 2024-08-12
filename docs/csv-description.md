@@ -19,10 +19,27 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v3.3.1:
+* Optimize memory usage when reading CSV files.
+
+## New in v3.3.0:
+* Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
+* The PVC capacity is now populated using the `kube_persistentvolume_capacity_bytes` metric instead of `kubelet_volume_stats_capacity_bytes`.
+* To receive resource optimization recommendations for your namespaces, you must now first enable each namespace. To enable a namespace, label it with `insights_cost_management_optimizations='true'`. In the CLI, run:
+  ```
+    oc label namespace NAMESPACE insights_cost_management_optimizations="true" --overwrite=true
+  ```
+* __DEPRECATION NOTICE__: Basic authentication is deprecated and will not be supported beyond December 31, 2024. If the default token authentication method cannot be used, you must switch to [service account](https://console.redhat.com/iam/service-accounts) authentication ([more on creating a service account](https://access.redhat.com/articles/7036194)). Once you have created your service account, follow [this documentation](https://access.redhat.com/documentation/en-us/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#service-account-authentication_adding-an-ocp-int) on how to configure your operator to use service account authentication. Service-accounts must also be used if manually uploading payloads to console.redhat.com.
+
+## New in v3.2.1:
+* The minimum supported configuration for `upload_cycle` is now 60 (minutes).
+* (Bugfix) many-to-many matching not allowed query fix.
+* (Bugfix) Sequentially collect data during initial install.
+
 ## New in v3.2.0:
-* Support for amd64, arm64, ppc64le, s390x architectures
-* add liveness and readiness probes to controller Pod
-* update pod security settings so that the controller Pod can run in Restricted mode [more info](https://sdk.operatorframework.io/docs/best-practices/pod-security-standards/)
+* Support for amd64, arm64, ppc64le, s390x architectures.
+* add liveness and readiness probes to controller Pod.
+* update pod security settings so that the controller Pod can run in Restricted mode [more info](https://sdk.operatorframework.io/docs/best-practices/pod-security-standards/).
 
 ## New in v3.1.0:
 * Add service-account authentication type.
@@ -84,7 +101,7 @@ If these assumptions are not met, the operator will not deploy correctly. In the
     * `create_source: false` -> Toggle for whether or not the operator will create the integration in `console.redhat.com`. The default is False. This parameter should be switched to True when an integration does not already exist in `console.redhat.com` for this cluster.
     * `check_cycle: 1440` -> The time in minutes to wait between checking if an integration exists for this cluster. The default is 1440 minutes (24 hrs).
   * `upload`:
-    * `upload_cycle: 360` -> The time in minutes between payload uploads. The default is 360 (6 hours).
+    * `upload_cycle: 360` -> The time in minutes between payload uploads. The default is 360 (6 hours), minimum is 60 (1 hour).
     * `upload_toggle: true` -> Toggle to turn upload on or off -> true means upload, false means do not upload (false == air-gapped mode). The default is `true`.
     * `upload_wait` -> The amount of time (in seconds) to pause before uploading a payload. The default is a random number between 0 and 35. This is used to decrease service load, but may be set to `0` if desired.
   * `volume_claim_template` -> see the "Storage configuration prerequisite" section above.
@@ -258,6 +275,6 @@ Creating an integration:
 ## Upload the reports to cost managment
 Uploading reports to cost managment is done through curl:
 
-    $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz"  https://console.redhat.com/api/ingress/v1/upload -u USERNAME:PASS
+    $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" https://console.redhat.com/api/ingress/v1/upload -H "Authorization: Bearer ${ACCESS_TOKEN}"
 
-where `USERNAME` and `PASS` correspond to the user credentials for [console.redhat.com](https://console.redhat.com), and `FILE_NAME` is the name of the report to upload.
+where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a [service-account](https://access.redhat.com/articles/7036194).
