@@ -47,7 +47,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: manager-role
-  namespace: koku-metrics-operator
+  namespace: costmanagement-metrics-operator
 rules:
 - apiGroups:
   - apps
@@ -79,9 +79,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - koku-metrics-cfg.openshift.io
+  - costmanagement-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs
+  - costmanagementmetricsconfigs
   verbs:
   - create
   - delete
@@ -91,9 +91,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - koku-metrics-cfg.openshift.io
+  - costmanagement-metrics-cfg.openshift.io
   resources:
-  - kokumetricsconfigs/status
+  - costmanagementmetricsconfigs/status
   verbs:
   - get
   - patch
