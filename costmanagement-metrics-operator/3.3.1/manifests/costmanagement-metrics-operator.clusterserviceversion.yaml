@@ -39,7 +39,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1-test-1
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1
     createdAt: "2024-08-12T20:58:49Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/disconnected: "true"
@@ -62,7 +62,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.3.3.1-test-1
+  name: costmanagement-metrics-operator.3.3.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -448,7 +448,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1-test-1
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -612,5 +612,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 3.3.1-test-1
+  version: 3.3.1
   replaces: costmanagement-metrics-operator.3.3.0
