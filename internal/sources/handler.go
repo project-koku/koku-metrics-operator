@@ -386,7 +386,7 @@ func SourceGetOrCreate(handler *SourceHandler, client crhchttp.HTTPClient) (bool
 	log.Info("create source = " + strconv.FormatBool(*handler.Spec.CreateSource))
 	msg := fmt.Sprintf("No OpenShift source registered with name %s and Cluster ID %s.", handler.Spec.SourceName, handler.Auth.ClusterID)
 	if !*handler.Spec.CreateSource {
-		return false, metav1.Now(), fmt.Errorf(msg)
+		return false, metav1.Now(), fmt.Errorf("%s", msg)
 	}
 	log.Info(msg)
 
@@ -398,7 +398,7 @@ func SourceGetOrCreate(handler *SourceHandler, client crhchttp.HTTPClient) (bool
 	if source != nil {
 		errMsg := fmt.Sprintf("This cluster may already be registered because an OpenShift source with Cluster ID %s is already registered with a different name (%s).", handler.Auth.ClusterID, source.Name)
 		log.Info(errMsg)
-		return false, metav1.Now(), fmt.Errorf(errMsg)
+		return false, metav1.Now(), fmt.Errorf("%s", errMsg)
 	}
 
 	// Check if source name is already in use
@@ -416,7 +416,7 @@ func SourceGetOrCreate(handler *SourceHandler, client crhchttp.HTTPClient) (bool
 				handler.Spec.SourceName, source.SourceRef)
 		}
 		log.Info(errMsg)
-		return false, metav1.Now(), fmt.Errorf(errMsg)
+		return false, metav1.Now(), fmt.Errorf("%s", errMsg)
 	}
 
 	// No source is registered with this name
