@@ -297,7 +297,7 @@ func GetAuthSecret(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConf
 		if len(keys[k]) <= 0 {
 			msg := fmt.Sprintf("secret not found with expected %s data", k)
 			log.Info(msg)
-			return fmt.Errorf(msg)
+			return fmt.Errorf("%s", msg)
 		}
 	}
 
@@ -339,7 +339,7 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 		if len(keys[requiredKey]) <= 0 {
 			msg := fmt.Sprintf("service account secret not found with expected %s data", requiredKey)
 			log.Info(msg)
-			return fmt.Errorf(msg)
+			return fmt.Errorf("%s", msg)
 		}
 	}
 	log.Info("found required keys in secret")
@@ -935,7 +935,8 @@ func concatErrs(errors ...error) error {
 		errstrings = append(errstrings, e.Error())
 	}
 	if len(errstrings) > 0 {
-		err = fmt.Errorf(strings.Join(errstrings, "\n"))
+		msg := strings.Join(errstrings, "\n")
+		err = fmt.Errorf("%s", msg)
 	}
 	return err
 }

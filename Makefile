@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.2.1
-VERSION ?= 3.3.0
+PREVIOUS_VERSION ?= 3.3.0
+VERSION ?= 3.3.1
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
