@@ -1,6 +1,6 @@
-# Report Fields and Queries
+# Report Fields For Collected Metrics
 
-This document provides an overview of the fields included in the usage reports, along with their respective queries. The reports cover various metrics related to containers, persistent volumes, nodes, pods, and namespaces. Each report contains specific fields that provide valuable insights into resource utilization. The following sections outline the fields and queries for each report.
+This document provides an outline of the fields included in the collected usage metrics. These metrics relate to containers, persistent volumes, nodes, pods, and namespaces. Here are the [prometheus queries](https://github.com/project-koku/koku-metrics-operator/blob/main/internal/collector/queries.go) the operator runs to retrieve these metrics.
 
 ### 1. Common Fields
 
@@ -11,13 +11,10 @@ This document provides an overview of the fields included in the usage reports, 
 
 These common fields are included in all the reports and provide temporal information about the reporting period and interval.
 
-### 2. Container Metrics Report
+### 2. Container Metrics
 
-This report focuses on container-related metrics.
+Fields for metrics related to containers:
 
-- Query: `containerMetricsQuery`
-
-**Fields:**
 
 - `container_name`: The name of the container.
 - `pod`: The name of the pod that contains the container.
@@ -53,19 +50,13 @@ This report focuses on container-related metrics.
 - `memory_rss_usage_container_max`: Maximum RSS memory usage for the container.
 - `memory_rss_usage_container_sum`: Total RSS memory usage for the container.
 
-### 3. Persistent Volume Metrics Report
+### 3. Persistent Volume Metrics
 
-This report provides insights into metrics related to persistent volumes.
-
-- Query: `persistentVolumeMetricsQuery`
-
-**Fields:**
+Fields for metrics related to persistent volumes:
 
 - `namespace`: The namespace associated with the persistent volume claim.
 - `pod`: The name of the pod associated with the persistent volume claim.
-- `persistentvolumeclaim`: The
-
- name of the persistent volume claim.
+- `persistentvolumeclaim`: The name of the persistent volume claim.
 - `persistentvolume`: The name of the persistent volume.
 - `storageclass`: The storage class of the persistent volume claim.
 - `persistentvolumeclaim_capacity_bytes`: Capacity of the persistent volume claim in bytes.
@@ -75,24 +66,16 @@ This report provides insights into metrics related to persistent volumes.
 - `persistentvolume_labels`: Labels associated with the persistent volume.
 - `persistentvolumeclaim_labels`: Labels associated with the persistent volume claim.
 
-### 4. Node Metrics Report
+### 4. Node Metrics
 
-This report focuses on metrics related to nodes.
-
-- Query: `nodeMetricsQuery`
-
-**Fields:**
+Fields for metrics related to nodes:
 
 - `node`: The name of the node.
 - `node_labels`: Labels associated with the node.
 
-### 5. Pod Metrics Report
+### 5. Pod Metrics
 
-This report provides metrics specific to pods.
-
-- Query: `podMetricsQuery`
-
-**Fields:**
+Fields for metrics related to pods:
 
 - `node`: The name of the node.
 - `namespace`: The namespace of the pod.
@@ -113,11 +96,7 @@ This report provides metrics specific to pods.
 
 ### 6. Namespace Metrics Report
 
-This report focuses on metrics related to namespaces.
-
-- Query: `namespaceMetricsQuery`
-
-**Fields:**
+Fields for metrics related to namespaces:
 
 - `namespace`: The namespace.
 - `namespace_labels`: Labels associated with the namespace.
