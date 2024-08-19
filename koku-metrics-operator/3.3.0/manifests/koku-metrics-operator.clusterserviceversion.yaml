@@ -611,5 +611,6 @@ spec:
   version: 3.3.0
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:0c8091f0c04593c19249755bde418cc09e5d30cc55c6cbff2c5b60bdf60dfde9
+      # image: quay.io/project-koku/koku-metrics-operator@sha256:0c8091f0c04593c19249755bde418cc09e5d30cc55c6cbff2c5b60bdf60dfde9
+      image: quay.io/redhat-user-workloads/rh-ee-dnakabaa-tenant/hccm-test-operator/koku-metrics-operator 
   replaces: koku-metrics-operator.v3.2.1
