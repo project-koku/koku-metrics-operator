@@ -1,15 +1,18 @@
 # Report Fields For Collected Metrics
 
-This document provides an outline of the fields included in the collected usage metrics. These metrics relate to containers, persistent volumes, nodes, pods, and namespaces. Here are the [prometheus queries](https://github.com/project-koku/koku-metrics-operator/blob/main/internal/collector/queries.go) the operator runs to retrieve these metrics.
+This document provides an outline of the fields included in the collected usage metrics. These metrics relate to containers, persistent volumes, nodes, pods, and namespaces. 
+
 
 **NOTE:**
 
-To enable the collection ROS (Resource Optimization) metrics, ensure that the namespace(s) are labeled with `insights_cost_management_optimizations='true'`.
+- The [Prometheus queries](https://github.com/project-koku/koku-metrics-operator/blob/main/internal/collector/queries.go) used by the operator to collect metrics are detailed in the linked file. 
 
-Within the prometheus queries, any queries responsible for collecting ROS metrics are prefixed with `ros:` in the `QueryMap` and include the following filter to target the appropriately labeled namespaces:
-```
-kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}
-```
+- To enable the collection ROS (Resource Optimization) metrics, ensure that the namespace(s) are labeled with `insights_cost_management_optimizations='true'`.
+
+    - Queries responsible for collecting ROS metrics are identified in the `QueryMap` with the prefix `ros:` and include a specific filter to target the appropriately labeled namespaces:
+        ```
+        kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}
+        ```
 
 
 ### 1. Common Fields
