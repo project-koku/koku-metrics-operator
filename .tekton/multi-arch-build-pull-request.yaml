@@ -452,6 +452,8 @@ spec:
         value: $(params.output-image)
       - name: COMMIT_SHA
         value: $(tasks.clone-repository.results.commit)
+      - name: SOURCE_ARTIFACT
+        value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
       - name: IMAGES
         value:
           - $(tasks.build-container-amd64.results.IMAGE_URL)@$(tasks.build-container-amd64.results.IMAGE_DIGEST)
