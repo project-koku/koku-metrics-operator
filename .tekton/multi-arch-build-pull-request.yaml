@@ -161,10 +161,10 @@ spec:
         values:
         - "true"
       workspaces:
-      - name: basic-auth
-        workspace: git-auth
       - name: output
         value: workspace
+      - name: basic-auth
+        workspace: git-auth
     - name: clone-repository-arm64
       params:
       - name: url
