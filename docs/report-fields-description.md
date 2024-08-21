@@ -31,7 +31,7 @@ Fields for metrics related to containers:
 
 - `container_name`: The name of the container.
 - `pod`: The name of the pod that contains the container.
-- `owner_name`: The name of the owner entity (e.g., deployment, statefulset) associated with the container.
+- `owner_name`: The name of the owner entity (e.g., Deployment, StatefulSet) associated with the container.
 - `owner_kind`: The kind of the owner entity (e.g., Deployment, StatefulSet) associated with the container.
 - `workload`: The workload associated with the container.
 - `workload_type`: The type of the workload (e.g., Deployment, StatefulSet).
