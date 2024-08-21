@@ -295,7 +295,7 @@ spec:
       - name: BUILD_ARGS
         value:
         - $(params.build-args[*])
-        # - BUILDPLATFORM=linux/amd64
+        - BUILDPLATFORM=linux/amd64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
@@ -336,7 +336,7 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        # - $(params.build-args[1])
+        - $(params.build-args[*])
         - BUILDPLATFORM=linux/arm64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
@@ -378,7 +378,7 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        # - $(params.build-args[*])
+        - $(params.build-args[*])
         - BUILDPLATFORM=linux/s390x
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
