@@ -295,8 +295,8 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[*])
-        - BUILDPLATFORM=linux/amd64
+        - $(params.build-args[0])
+        # - BUILDPLATFORM=linux/amd64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
@@ -337,8 +337,8 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[*])
-        - BUILDPLATFORM=linux/arm64
+        - $(params.build-args[0])
+        # - BUILDPLATFORM=linux/arm64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
@@ -379,8 +379,8 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[*])
-        - BUILDPLATFORM=linux/s390x
+        - $(params.build-args[0])
+        # - BUILDPLATFORM=linux/s390x
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
@@ -421,8 +421,8 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[*])
-        - BUILDPLATFORM=linux/ppc64le
+        - $(params.build-args[0])
+        # - BUILDPLATFORM=linux/ppc64le
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
