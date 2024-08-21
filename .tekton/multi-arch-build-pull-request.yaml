@@ -338,8 +338,8 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[1])
-        # - BUILDPLATFORM=linux/arm64
+        - $(params.build-args[*])
+        - BUILDPLATFORM=linux/arm64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
