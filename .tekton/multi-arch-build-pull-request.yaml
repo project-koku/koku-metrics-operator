@@ -92,8 +92,8 @@ spec:
       description: Build a source image.
       name: build-source-image
       type: string
-    - default: ["BUILDPLATFORM=linux/arm64"]
-    # - default: ["linux_amd64=linux/amd64","linux_arm64=linux/arm64","linux_s390x=linux/s390x","linux_ppc64le=linux/ppc64le"]
+    # - default: ["BUILDPLATFORM=linux/arm64"]
+    - default: ["linux_amd64=linux/amd64","linux_arm64=linux/arm64","linux_s390x=linux/s390x","linux_ppc64le=linux/ppc64le"]
       description: Array of --build-arg values ("arg=value" strings) for buildah
       name: build-args
       type: array
@@ -337,7 +337,7 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[0])
+        - $(params.build-args[1])
         # - BUILDPLATFORM=linux/arm64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
@@ -379,7 +379,7 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[0])
+        - $(params.build-args[2])
         # - BUILDPLATFORM=linux/s390x
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
@@ -421,7 +421,7 @@ spec:
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
-        - $(params.build-args[0])
+        - $(params.build-args[3])
         # - BUILDPLATFORM=linux/ppc64le
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
