@@ -466,9 +466,9 @@ spec:
       taskRef:
         params:
         - name: name
-          value: build-image-manifest
+          value: buildah-oci-ta
         - name: bundle
-          value: quay.io/repository/redhat-appstudio-tekton-catalog/task-build-image-manifest:0.1@sha256:e22d1af2d33cea131f3f6ce6ba037da1e888e808ff72fafb58458ca318dff3ad
+          value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.2@sha256:563d58bde7e6209d754222666164ffba48dd05a096a5c63c144c79796359811b
         - name: kind
           value: task
         resolver: bundles
