@@ -219,8 +219,6 @@ spec:
         values:
         - "true"
       workspaces:
-      - name: output
-        value: workspace-s390x
       - name: basic-auth
         workspace: git-auth
     - name: clone-repository-ppc64le
