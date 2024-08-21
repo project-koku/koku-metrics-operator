@@ -92,7 +92,7 @@ spec:
       description: Build a source image.
       name: build-source-image
       type: string
-    - default: []
+    - default: ["BUILDPLATFORM=linux/arm64"]
     # - default: ["linux_amd64=linux/amd64","linux_arm64=linux/arm64","linux_s390x=linux/s390x","linux_ppc64le=linux/ppc64le"]
       description: Array of --build-arg values ("arg=value" strings) for buildah
       name: build-args
