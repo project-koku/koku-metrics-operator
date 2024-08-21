@@ -164,7 +164,7 @@ spec:
       - name: basic-auth
         workspace: git-auth
       - name: output
-        workspace: workspace
+        value: workspace
     - name: clone-repository-arm64
       params:
       - name: url
