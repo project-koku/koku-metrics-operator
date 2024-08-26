@@ -209,6 +209,8 @@ spec:
         value:
         - $(params.build-args[*])
         - BUILDPLATFORM=linux/arm64
+        - TARGETOS=linux
+        - TARGETARCH=arm64
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
