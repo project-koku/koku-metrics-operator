@@ -116,8 +116,7 @@ spec:
       value: $(tasks.clone-repository.results.commit)
     - description: ""
       name: JAVA_COMMUNITY_DEPENDENCIES
-      # value: $(tasks.build-container-amd64.results.JAVA_COMMUNITY_DEPENDENCIES)
-      value: $(tasks.build-container-arm64.results.JAVA_COMMUNITY_DEPENDENCIES)
+      value: $(tasks.build-container-amd64.results.JAVA_COMMUNITY_DEPENDENCIES)
     tasks:
     - name: init
       params:

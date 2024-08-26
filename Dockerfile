@@ -1,5 +1,6 @@
 # Build the manager binary
-ARG PLATFORM=linux/amd64
+ARG PLATFORM
+# =linux/amd64
 
 FROM --platform=$PLATFORM docker.io/library/golang:1.22.6 AS builder
 
