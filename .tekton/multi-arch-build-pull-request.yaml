@@ -211,6 +211,8 @@ spec:
         value:
         - $(params.build-args[*])
         - BUILDPLATFORM=linux/amd64
+        - TARGETOS=linux
+        - TARGETARCH=amd64
       - name: PLATFORM
         value: linux/amd64
       - name: BUILD_ARGS_FILE
@@ -255,6 +257,8 @@ spec:
         value:
         - $(params.build-args[*])
         - BUILDPLATFORM=linux/arm64
+        - TARGETOS=linux
+        - TARGETARCH=arm64
       - name: PLATFORM
         value: linux/arm64
       - name: BUILD_ARGS_FILE
@@ -279,94 +283,94 @@ spec:
         operator: in
         values:
         - "true"
-    - name: build-container-s390x
-      params:
-      - name: IMAGE
-        value: $(params.output-image)-s390x
-      - name: DOCKERFILE
-        value: $(params.dockerfile)
-      - name: CONTEXT
-        value: $(params.path-context)
-      - name: HERMETIC
-        value: $(params.hermetic)
-      - name: PREFETCH_INPUT
-        value: $(params.prefetch-input)
-      - name: IMAGE_EXPIRES_AFTER
-        value: $(params.image-expires-after)
-      - name: COMMIT_SHA
-        value: $(tasks.clone-repository.results.commit)
-      - name: PLATFORM
-        value: linux/s390x
-      - name: BUILD_ARGS
-        value:
-        - $(params.build-args[*])
-        - BUILDPLATFORM=linux/s390x
-      - name: BUILD_ARGS_FILE
-        value: $(params.build-args-file)
-      - name: SOURCE_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
-      - name: CACHI2_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-      runAfter:
-      - prefetch-dependencies
-      taskRef:
-        params:
-        - name: name
-          value: buildah-oci-ta
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.2@sha256:563d58bde7e6209d754222666164ffba48dd05a096a5c63c144c79796359811b
-        - name: kind
-          value: task
-        resolver: bundles
-      when:
-      - input: $(tasks.init.results.build)
-        operator: in
-        values:
-        - "true"
-    - name: build-container-ppc64le
-      params:
-      - name: IMAGE
-        value: $(params.output-image)-ppc64le
-      - name: DOCKERFILE
-        value: $(params.dockerfile)
-      - name: CONTEXT
-        value: $(params.path-context)
-      - name: HERMETIC
-        value: $(params.hermetic)
-      - name: PREFETCH_INPUT
-        value: $(params.prefetch-input)
-      - name: IMAGE_EXPIRES_AFTER
-        value: $(params.image-expires-after)
-      - name: COMMIT_SHA
-        value: $(tasks.clone-repository.results.commit)
-      - name: PLATFORM
-        value: linux/ppc64le
-      - name: BUILD_ARGS
-        value:
-        - $(params.build-args[*])
-        - BUILDPLATFORM=linux/ppc64le
-      - name: BUILD_ARGS_FILE
-        value: $(params.build-args-file)
-      - name: SOURCE_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
-      - name: CACHI2_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-      runAfter:
-      - prefetch-dependencies
-      taskRef:
-        params:
-        - name: name
-          value: buildah-oci-ta
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.2@sha256:563d58bde7e6209d754222666164ffba48dd05a096a5c63c144c79796359811b
-        - name: kind
-          value: task
-        resolver: bundles
-      when:
-      - input: $(tasks.init.results.build)
-        operator: in
-        values:
-        - "true"
+    # - name: build-container-s390x
+    #   params:
+    #   - name: IMAGE
+    #     value: $(params.output-image)-s390x
+    #   - name: DOCKERFILE
+    #     value: $(params.dockerfile)
+    #   - name: CONTEXT
+    #     value: $(params.path-context)
+    #   - name: HERMETIC
+    #     value: $(params.hermetic)
+    #   - name: PREFETCH_INPUT
+    #     value: $(params.prefetch-input)
+    #   - name: IMAGE_EXPIRES_AFTER
+    #     value: $(params.image-expires-after)
+    #   - name: COMMIT_SHA
+    #     value: $(tasks.clone-repository.results.commit)
+    #   - name: PLATFORM
+    #     value: linux/s390x
+    #   - name: BUILD_ARGS
+    #     value:
+    #     - $(params.build-args[*])
+    #     - BUILDPLATFORM=linux/s390x
+    #   - name: BUILD_ARGS_FILE
+    #     value: $(params.build-args-file)
+    #   - name: SOURCE_ARTIFACT
+    #     value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
+    #   - name: CACHI2_ARTIFACT
+    #     value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
+    #   runAfter:
+    #   - prefetch-dependencies
+    #   taskRef:
+    #     params:
+    #     - name: name
+    #       value: buildah-oci-ta
+    #     - name: bundle
+    #       value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.2@sha256:563d58bde7e6209d754222666164ffba48dd05a096a5c63c144c79796359811b
+    #     - name: kind
+    #       value: task
+    #     resolver: bundles
+    #   when:
+    #   - input: $(tasks.init.results.build)
+    #     operator: in
+    #     values:
+    #     - "true"
+    # - name: build-container-ppc64le
+    #   params:
+    #   - name: IMAGE
+    #     value: $(params.output-image)-ppc64le
+    #   - name: DOCKERFILE
+    #     value: $(params.dockerfile)
+    #   - name: CONTEXT
+    #     value: $(params.path-context)
+    #   - name: HERMETIC
+    #     value: $(params.hermetic)
+    #   - name: PREFETCH_INPUT
+    #     value: $(params.prefetch-input)
+    #   - name: IMAGE_EXPIRES_AFTER
+    #     value: $(params.image-expires-after)
+    #   - name: COMMIT_SHA
+    #     value: $(tasks.clone-repository.results.commit)
+    #   - name: PLATFORM
+    #     value: linux/ppc64le
+    #   - name: BUILD_ARGS
+    #     value:
+    #     - $(params.build-args[*])
+    #     - BUILDPLATFORM=linux/ppc64le
+    #   - name: BUILD_ARGS_FILE
+    #     value: $(params.build-args-file)
+    #   - name: SOURCE_ARTIFACT
+    #     value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
+    #   - name: CACHI2_ARTIFACT
+    #     value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
+    #   runAfter:
+    #   - prefetch-dependencies
+    #   taskRef:
+    #     params:
+    #     - name: name
+    #       value: buildah-oci-ta
+    #     - name: bundle
+    #       value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.2@sha256:563d58bde7e6209d754222666164ffba48dd05a096a5c63c144c79796359811b
+    #     - name: kind
+    #       value: task
+    #     resolver: bundles
+    #   when:
+    #   - input: $(tasks.init.results.build)
+    #     operator: in
+    #     values:
+    #     - "true"
     - name: build-container
       params:
       - name: IMAGE
