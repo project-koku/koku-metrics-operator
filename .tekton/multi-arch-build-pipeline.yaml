@@ -103,9 +103,12 @@ spec:
         - 'true'
       steps:
       - name: debug
-        script: |
-          echo "TAGET_OS: $(params.TARGET_OS)"
-          echo "TAGET_ARCH: $(params.TARGET_ARCH)"
+        script: |-
+          #!/bin/bash
+          set -e
+          set -o verbose
+          echo "TAGET_OS: $(tasks.build-container-multiarch.matrix.params.target-os)"
+          echo "TAGET_ARCH: $(tasks.build-container-multiarch.matrix.params.target-arch)"
       params:
       - name: IMAGE
         value: "$(params.output-image)-$(tasks.build-container-multiarch.matrix.params.target-arch)"
