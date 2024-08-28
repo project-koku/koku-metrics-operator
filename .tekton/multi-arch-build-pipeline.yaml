@@ -72,19 +72,34 @@ spec:
       - name: ociStorage
         value: $(params.output-image).prefetch
       - name: ociArtifactExpiresAfter
-        value: $(params.image-expires-after)
+        value: $(params.image-expires-after)      
     - name: build-container-multiarch
       matrix:
-        params:
-        - name: target-os
-          value:
-            - linux
-        - name: target-arch
-          value:
-            - amd64
-            - arm64
-            - s390x
-            - ppc64le
+        include:
+          - name: amd64
+            params:
+              - name: IMAGE
+                value: $(params.output-image)-amd64"
+              - name: PLATFORM
+                value: linux/amd64
+          - name: arm64
+            params:
+              - name: IMAGE
+                value: $(params.output-image)-arm64"
+              - name: PLATFORM
+                value: linux/arm64
+          - name: s390x
+            params:
+              - name: IMAGE
+                value: $(params.output-image)-s390x"
+              - name: PLATFORM
+                value: linux/s390x
+          - name: ppc64le
+            params:
+              - name: IMAGE
+                value: $(params.output-image)-ppc64le"
+              - name: PLATFORM
+                value: linux/ppc64le
       taskRef:
         resolver: bundles
         params:
@@ -101,17 +116,7 @@ spec:
         operator: in
         values:
         - 'true'
-      steps:
-      - name: debug
-        script: |-
-          #!/bin/bash
-          set -e
-          set -o verbose
-          echo "TAGET_OS: $(tasks.build-container-multiarch.matrix.params.target-os)"
-          echo "TAGET_ARCH: $(tasks.build-container-multiarch.matrix.params.target-arch)"
       params:
-      - name: IMAGE
-        value: "$(params.output-image)-$(tasks.build-container-multiarch.matrix.params.target-arch)"
       - name: DOCKERFILE
         value: "$(params.dockerfile)"
       - name: CONTEXT
@@ -130,12 +135,6 @@ spec:
         value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
-      - name: TARGET_OS
-        value: "$(tasks.build-container-multiarch.matrix.params.target-os)"
-      - name: TARGET_ARCH
-        value: "$(tasks.build-container-multiarch.matrix.params.target-arch)"
-      - name: PLATFORM
-        value: "$(params.TARGET_OS)/$(params.TARGET_ARCH)"
     - name: build-image-index
       params:
         - name: IMAGE
