@@ -102,9 +102,9 @@ spec:
         - 'true'
       params:
       - name: IMAGE
-        value: "$(params.output-image)-$(params.target_os)"
+        value: "$(params.output-image)-$(target_os)"
       - name: PLATFORM
-        value: "$(params.target_os)/$(params.target_arch)"
+        value: "$(target_os)/$(target_arch)"
       - name: DOCKERFILE
         value: "$(params.dockerfile)"
       - name: CONTEXT
