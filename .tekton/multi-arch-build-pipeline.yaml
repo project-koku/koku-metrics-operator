@@ -73,7 +73,18 @@ spec:
         value: $(params.output-image).prefetch
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
-    - name: build-container-amd64
+    - name: build-container-multiarch
+      matrix:
+        params:
+        - name: target-os
+          value:
+            - linux
+        - name: target-arch
+          value:
+            - amd64
+            - arm64
+            - s390x
+            - ppc64le
       taskRef:
         resolver: bundles
         params:
@@ -90,13 +101,9 @@ spec:
         operator: in
         values:
         - 'true'
-      - input: "$(params.enable-amd64-build)"
-        operator: in
-        values:
-        - 'true'
       params:
       - name: IMAGE
-        value: "$(params.output-image)-amd64"
+        value: "$(params.output-image)-$(matrix.params.target-arch)"
       - name: DOCKERFILE
         value: "$(params.dockerfile)"
       - name: CONTEXT
@@ -116,139 +123,7 @@ spec:
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: PLATFORM
-        value: $(params.amd64-platform)
-    - name: build-container-arm64
-      taskRef:
-        resolver: bundles
-        params:
-        - name: name
-          value: buildah-remote-oci-ta
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.2@sha256:f04e2c4d7beb37184c716bf481f5963c95bc6e419985d3c124921569d7753bc6
-        - name: kind
-          value: task
-      runAfter:
-        - prefetch-dependencies
-      when:
-      - input: "$(tasks.init.results.build)"
-        operator: in
-        values:
-        - 'true'
-      - input: "$(params.enable-arm64-build)"
-        operator: in
-        values:
-        - 'true'
-      params:
-      - name: IMAGE
-        value: "$(params.output-image)-arm64"
-      - name: DOCKERFILE
-        value: "$(params.dockerfile)"
-      - name: CONTEXT
-        value: "$(params.path-context)"
-      - name: HERMETIC
-        value: "$(params.hermetic)"
-      - name: PREFETCH_INPUT
-        value: "$(params.prefetch-input)"
-      - name: IMAGE_EXPIRES_AFTER
-        value: "$(params.image-expires-after)"
-      - name: COMMIT_SHA
-        value: "$(tasks.clone-repository.results.commit)"
-      - name: SOURCE_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
-      - name: CACHI2_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-      - name: BUILD_ARGS_FILE
-        value: $(params.build-args-file)
-      - name: PLATFORM
-        value: $(params.arm64-platform)
-    - name: build-container-ppc64le
-      taskRef:
-        resolver: bundles
-        params:
-        - name: name
-          value: buildah-remote-oci-ta
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.2@sha256:f04e2c4d7beb37184c716bf481f5963c95bc6e419985d3c124921569d7753bc6
-        - name: kind
-          value: task
-      runAfter:
-        - prefetch-dependencies
-      when:
-      - input: "$(tasks.init.results.build)"
-        operator: in
-        values:
-        - 'true'
-      - input: "$(params.enable-ppc64le-build)"
-        operator: in
-        values:
-        - 'true'
-      params:
-      - name: IMAGE
-        value: "$(params.output-image)-ppc64le"
-      - name: DOCKERFILE
-        value: "$(params.dockerfile)"
-      - name: CONTEXT
-        value: "$(params.path-context)"
-      - name: HERMETIC
-        value: "$(params.hermetic)"
-      - name: PREFETCH_INPUT
-        value: "$(params.prefetch-input)"
-      - name: IMAGE_EXPIRES_AFTER
-        value: "$(params.image-expires-after)"
-      - name: COMMIT_SHA
-        value: "$(tasks.clone-repository.results.commit)"
-      - name: SOURCE_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
-      - name: CACHI2_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-      - name: BUILD_ARGS_FILE
-        value: $(params.build-args-file)
-      - name: PLATFORM
-        value: $(params.ppc64le-platform)
-    - name: build-container-s390x
-      taskRef:
-        resolver: bundles
-        params:
-        - name: name
-          value: buildah-remote-oci-ta
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.2@sha256:f04e2c4d7beb37184c716bf481f5963c95bc6e419985d3c124921569d7753bc6
-        - name: kind
-          value: task
-      runAfter:
-        - prefetch-dependencies
-      when:
-      - input: "$(tasks.init.results.build)"
-        operator: in
-        values:
-        - 'true'
-      - input: "$(params.enable-s390x-build)"
-        operator: in
-        values:
-        - 'true'
-      params:
-      - name: IMAGE
-        value: "$(params.output-image)-s390x"
-      - name: DOCKERFILE
-        value: "$(params.dockerfile)"
-      - name: CONTEXT
-        value: "$(params.path-context)"
-      - name: HERMETIC
-        value: "$(params.hermetic)"
-      - name: PREFETCH_INPUT
-        value: "$(params.prefetch-input)"
-      - name: IMAGE_EXPIRES_AFTER
-        value: "$(params.image-expires-after)"
-      - name: COMMIT_SHA
-        value: "$(tasks.clone-repository.results.commit)"
-      - name: SOURCE_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
-      - name: CACHI2_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-      - name: BUILD_ARGS_FILE
-        value: $(params.build-args-file)
-      - name: PLATFORM
-        value: $(params.s390x-platform)
+        value: "$(matrix.params.target-os)/$(matrix.params.target-arch)"
     - name: build-image-index
       params:
         - name: IMAGE
@@ -257,15 +132,9 @@ spec:
           value: $(tasks.clone-repository.results.commit)
         - name: IMAGES
           value:
-            - $(tasks.build-container-amd64.results.IMAGE_URL)@$(tasks.build-container-amd64.results.IMAGE_DIGEST)
-            - $(tasks.build-container-arm64.results.IMAGE_URL)@$(tasks.build-container-arm64.results.IMAGE_DIGEST)
-            - $(tasks.build-container-s390x.results.IMAGE_URL)@$(tasks.build-container-s390x.results.IMAGE_DIGEST)
-            - $(tasks.build-container-ppc64le.results.IMAGE_URL)@$(tasks.build-container-ppc64le.results.IMAGE_DIGEST)
+            - $(tasks.build-container-multiarch.results.IMAGE_REF[*])
       runAfter:
-        - build-container-amd64
-        - build-container-arm64
-        - build-container-s390x
-        - build-container-ppc64le
+        - build-container-multiarch
       taskRef:
         params:
           - name: name
@@ -511,39 +380,6 @@ spec:
       type: string
       description: Path to a file with build arguments, see https://www.mankier.com/1/buildah-build#--build-arg-file
       default: ""
-    # We need matrix builds in order to use these "enable architecture" parameters: https://issues.redhat.com/browse/EC-654
-    - name: enable-amd64-build
-      type: string
-      description: Enable amd64 builds 
-      default: "true"
-    - name: enable-arm64-build
-      type: string
-      description: Enable arm64 builds 
-      default: "true"
-    - name: enable-ppc64le-build
-      type: string
-      description: Enable ppc64le builds 
-      default: "true"
-    - name: enable-s390x-build
-      type: string
-      description: Enable s390x builds 
-      default: "true"
-    - name: amd64-platform
-      type: string
-      description: Enable the amd64 platform to be changed from the PipelineRun file
-      default: linux/amd64
-    - name: arm64-platform
-      type: string
-      description: Enable the arm64 platform to be changed from the PipelineRun file
-      default: linux/arm64
-    - name: ppc64le-platform
-      type: string
-      description: Enable the ppc64le platform to be changed from the PipelineRun file
-      default: linux/ppc64le
-    - name: s390x-platform
-      type: string
-      description: Enable the s390x platform to be changed from the PipelineRun file
-      default: linux/s390x
     workspaces:
     - name: git-auth
       optional: true
