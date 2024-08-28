@@ -398,7 +398,7 @@ spec:
       value: "$(tasks.clone-repository.results.commit)"
     - name: JAVA_COMMUNITY_DEPENDENCIES
       description: ''
-      value: "$(tasks.build-container-amd64.results.JAVA_COMMUNITY_DEPENDENCIES)"
+      value: "$(tasks.build-container-multiarch.results.JAVA_COMMUNITY_DEPENDENCIES)"
     finally:
     - name: show-sbom
       taskRef:
