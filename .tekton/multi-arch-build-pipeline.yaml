@@ -76,15 +76,12 @@ spec:
     - name: build-container-multiarch
       matrix:
         params:
-        - name: target-os
+        - name: platform
           value:
-            - linux
-        - name: target-arch
-          value:
-            - amd64
-            - arm64
-            - s390x
-            - ppc64le
+            - "linux/amd64"
+            - "linux/arm64"
+            - "linux/s390x"
+            - "linux/ppc64le"
       taskRef:
         resolver: bundles
         params:
@@ -123,7 +120,7 @@ spec:
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: PLATFORM
-        value: "$(matrix.params.target-os)/$(matrix.params.target-arch)"
+        value: $(tasks.build-container-multiarch.matrix.params.platform)
     - name: build-image-index
       params:
         - name: IMAGE
