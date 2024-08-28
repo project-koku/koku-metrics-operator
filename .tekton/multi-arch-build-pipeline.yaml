@@ -75,31 +75,15 @@ spec:
         value: $(params.image-expires-after)      
     - name: build-container-multiarch
       matrix:
-        include:
-          - name: amd64
-            params:
-              - name: IMAGE
-                value: $(params.output-image)-amd64"
-              - name: PLATFORM
-                value: linux/amd64
-          - name: arm64
-            params:
-              - name: IMAGE
-                value: $(params.output-image)-arm64"
-              - name: PLATFORM
-                value: linux/arm64
-          - name: s390x
-            params:
-              - name: IMAGE
-                value: $(params.output-image)-s390x"
-              - name: PLATFORM
-                value: linux/s390x
-          - name: ppc64le
-            params:
-              - name: IMAGE
-                value: $(params.output-image)-ppc64le"
-              - name: PLATFORM
-                value: linux/ppc64le
+        params:
+        - name: target_os
+          value: linux
+        - name: target_arch
+          value:
+            - amd64
+            - arm64
+            - s390x
+            - ppc64le           
       taskRef:
         resolver: bundles
         params:
@@ -117,6 +101,10 @@ spec:
         values:
         - 'true'
       params:
+      - name: IMAGE
+        value: "$(params.output-image)-$(params.target_os)"
+      - name: PLATFORM
+        value: "$(params.target_os)/$(params.target_arch)"
       - name: DOCKERFILE
         value: "$(params.dockerfile)"
       - name: CONTEXT
