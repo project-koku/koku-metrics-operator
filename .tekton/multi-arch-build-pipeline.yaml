@@ -101,6 +101,11 @@ spec:
         operator: in
         values:
         - 'true'
+      steps:
+      - name: debug
+        script: |
+          echo "TAGET_OS: $(params.TARGET_OS)"
+          echo "TAGET_ARCH: $(params.TARGET_ARCH)"
       params:
       - name: IMAGE
         value: "$(params.output-image)-$(tasks.build-container-multiarch.matrix.params.target-arch)"
@@ -122,8 +127,12 @@ spec:
         value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
+      - name: TARGET_OS
+        value: "$(tasks.build-container-multiarch.matrix.params.target-os)"
+      - name: TARGET_ARCH
+        value: "$(tasks.build-container-multiarch.matrix.params.target-arch)"
       - name: PLATFORM
-        value: "$(tasks.build-container-multiarch.matrix.params.target-os)/$(tasks.build-container-multiarch.matrix.params.target-arch)"
+        value: "$(params.TARGET_OS)/$(params.TARGET_ARCH)"
     - name: build-image-index
       params:
         - name: IMAGE
