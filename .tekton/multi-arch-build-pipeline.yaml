@@ -74,6 +74,7 @@ spec:
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
     - name: build-container-multiarch
+      displayName: "build-container-multi-arch-$(params.PLATFORM)"
       matrix:
           include:
             - name: amd64
