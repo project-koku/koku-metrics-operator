@@ -74,7 +74,7 @@ spec:
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
     - name: build-container-multiarch
-      displayName: "build-container-multi-arch-$(params.PLATFORM)"
+      displayName: "build-container-multi-arch - $(params.PLATFORM)"
       matrix:
           include:
             - name: amd64
@@ -89,18 +89,18 @@ spec:
                   value: $(params.output-image)-arm64
                 - name: PLATFORM
                   value: linux/arm64
-            - name: s390x
-              params:
-                - name: IMAGE
-                  value: $(params.output-image)-s390x
-                - name: PLATFORM
-                  value: linux/s390x
-            - name: ppc64le
-              params:
-                - name: IMAGE
-                  value: $(params.output-image)-ppc64le
-                - name: PLATFORM
-                  value: linux/ppc64le      
+            # - name: s390x
+            #   params:
+            #     - name: IMAGE
+            #       value: $(params.output-image)-s390x
+            #     - name: PLATFORM
+            #       value: linux/s390x
+            # - name: ppc64le
+            #   params:
+            #     - name: IMAGE
+            #       value: $(params.output-image)-ppc64le
+            #     - name: PLATFORM
+            #       value: linux/ppc64le      
       taskRef:
         resolver: bundles
         params:
