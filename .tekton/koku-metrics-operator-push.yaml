@@ -29,10 +29,18 @@ spec:
     value: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/koku-metrics-operator/koku-metrics-operator:{{revision}}
   - name: dockerfile
     value: Dockerfile
+  - name: path-context
+    value: .
+  - name: build-platforms
+    value:
+      - linux/amd64
+      - linux/arm64
+      - linux/s390x
+      - linux/ppc64le
   pipelineRef:
-    name: multi-arch-build-pipeline
+    name: build-pipeline
+  taskRunTemplate: {}
   workspaces:
   - name: git-auth
     secret:
       secretName: '{{ git_auth_secret }}'
-status: {}
