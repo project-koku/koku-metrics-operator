@@ -39,7 +39,12 @@ LABEL \
     io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
     maintainer="Cost Management <cost-mgmt@redhat.com>" \
     name="koku-metrics-operator" \
-    summary="Koku Metrics Operator"
+    summary="Koku Metrics Operator" \
+    distribution-scope="public" \
+    vendor="Red Hat, Inc." \
+    release="3.3.1" \
+    version="3.3.1" \
+    url="https://github.com/project-koku/koku-metrics-operator/"
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
