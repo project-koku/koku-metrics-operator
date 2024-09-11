@@ -39,7 +39,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
-    containerImage: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/koku-metrics-operator@sha256:9761228437914bf52ff1cf76c3df5f12992920a43f9d8166cc5b92d1ecb2d707
+    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:fe2a887778e30850b94983038ed621d8df6e45d1028f3d1110cc8aa20439bedd
     createdAt: "2024-08-09T15:42:34Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/disconnected: "true"
@@ -447,7 +447,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/koku-metrics-operator@sha256:9761228437914bf52ff1cf76c3df5f12992920a43f9d8166cc5b92d1ecb2d707
+                    image: quay.io/project-koku/koku-metrics-operator@sha256:fe2a887778e30850b94983038ed621d8df6e45d1028f3d1110cc8aa20439bedd
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -614,5 +614,5 @@ spec:
   version: 3.3.1
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/koku-metrics-operator@sha256:9761228437914bf52ff1cf76c3df5f12992920a43f9d8166cc5b92d1ecb2d707
+      image: quay.io/project-koku/koku-metrics-operator@sha256:fe2a887778e30850b94983038ed621d8df6e45d1028f3d1110cc8aa20439bedd
   replaces: koku-metrics-operator.v3.3.0
