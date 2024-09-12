@@ -7,15 +7,15 @@ LABEL operators.operatorframework.io.bundle.metadata.v1=metadata/
 LABEL operators.operatorframework.io.bundle.package.v1=koku-metrics-operator
 LABEL operators.operatorframework.io.bundle.channels.v1=alpha,beta
 LABEL operators.operatorframework.io.bundle.channel.default.v1=beta
-LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.23.0
+LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.35.0
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
-LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v2
+LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 
 # Labels for testing.
 LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
 LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
 
 # Copy files to locations specified by labels.
-COPY manifests /manifests/
-COPY metadata /metadata/
-COPY tests/scorecard /tests/scorecard/
+COPY bundle/manifests /manifests/
+COPY bundle/metadata /metadata/
+COPY bundle/tests/scorecard /tests/scorecard/
