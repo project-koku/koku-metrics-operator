@@ -256,7 +256,7 @@ spec:
       - name: CACHI2_ARTIFACT
         value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
       - name: ARGS
-        value: --all-projects --exclude=*tests?.go,vendor,deps
+        value: "--all-projects --exclude=*_tests.go,vendor,deps"
       runAfter:
       - build-image-index
       taskRef:
