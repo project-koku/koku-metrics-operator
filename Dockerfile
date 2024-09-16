@@ -1,30 +1,50 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:v1.22 AS builder
+# Build the manager binary
+FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:v1.22 AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 USER root
 
-# cachito
-COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
-WORKDIR $REMOTE_SOURCE_DIR/app
+WORKDIR /workspace
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+COPY vendor/ vendor/
 
-RUN go version
-RUN source "$CACHITO_ENV_FILE" && CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=6b4d72a4a629527c1de086b416faf6d226fe587a" -v -o bin/costmanagement-metrics-operator ${REMOTE_SOURCE_DIR}/app/cmd/main.go
+# Copy the go source
+COPY cmd/ cmd/
+COPY api/ api/
+COPY internal/ internal/
 
+# Copy git to inject the commit during build
+COPY .git .git
+# Build
+RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
+echo " injecting GIT COMMIT: $GIT_COMMIT" && \
+CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
+go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
+
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+# FROM gcr.io/distroless/static:nonroot
 FROM registry.redhat.io/ubi8/ubi-micro:latest AS base-env
 
-WORKDIR /
-COPY --from=builder $REMOTE_SOURCE_DIR/app/bin/costmanagement-metrics-operator /usr/bin/costmanagement-metrics-operator
-COPY --from=builder /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-bundle.crt
-COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc/ssl/certs/ca-bundle.trust.crt
-
-ENTRYPOINT ["/usr/bin/costmanagement-metrics-operator"]
+# For terminal access, use this image:
+# FROM gcr.io/distroless/base:debug-nonroot
 
 LABEL \
-    com.redhat.component="costmanagement-metrics-operator-container"  \
-    description="Red Hat Cost Management Metrics Operator"  \
-    io.k8s.description="Operator to deploy and manage instances of Cost Management Metrics"  \
-    io.k8s.display-name="Cost Management Metrics Operator"  \
-    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators"  \
-    maintainer="Cost Management <cost-mgmt@redhat.com>"  \
-    name="costmanagement-metrics-operator"  \
-    summary="Red Hat Cost Management Metrics Operator"  \
-    version="3.3.1"
+    com.redhat.component="koku-metrics-operator-container" \
+    description="Koku Metrics Operator" \
+    io.k8s.description="Operator to deploy and manage instances of Koku Metrics" \
+    io.k8s.display-name="Koku Metrics Operator" \
+    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
+    maintainer="Cost Management <cost-mgmt@redhat.com>" \
+    name="koku-metrics-operator" \
+    summary="Koku Metrics Operator"
+
+WORKDIR /
+COPY --from=builder /workspace/manager .
+USER nonroot:nonroot
+
+ENTRYPOINT ["/manager"]
