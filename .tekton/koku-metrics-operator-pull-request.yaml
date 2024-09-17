@@ -36,7 +36,8 @@ spec:
       - linux/s390x
       - linux/ppc64le
   - name: prefetch-input
-    value: '{"type": "gomod", "path": "."}'
+    # value: '{"type": "gomod", "path": "."}'
+    value: '{"packages": [{"type": "gomod"}], "flags": ["gomod-vendor-check"]}'
   - name: prefetch-log-level
     value: "debug"
   pipelineRef:
