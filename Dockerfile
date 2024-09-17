@@ -7,7 +7,7 @@ COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
 WORKDIR $REMOTE_SOURCE_DIR/app
 
 RUN go version
-RUN source CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=6b4d72a4a629527c1de086b416faf6d226fe587a" -v -o bin/costmanagement-metrics-operator ${REMOTE_SOURCE_DIR}/app/cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=6b4d72a4a629527c1de086b416faf6d226fe587a" -v -o bin/costmanagement-metrics-operator ${REMOTE_SOURCE_DIR}/app/cmd/main.go
 
 FROM registry.redhat.io/ubi8/ubi-micro:latest AS base-env
 
