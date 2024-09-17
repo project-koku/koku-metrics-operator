@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:v1.22 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} docker.io/library/golang:1.22.6 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
