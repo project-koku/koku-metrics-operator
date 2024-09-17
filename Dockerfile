@@ -3,6 +3,9 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/op
 USER root
 
 WORKDIR /workspace
+COPY go.mod go.mod
+COPY go.sum go.sum
+COPY vendor/ vendor/
 
 # Copy the go source
 COPY cmd/ cmd/
