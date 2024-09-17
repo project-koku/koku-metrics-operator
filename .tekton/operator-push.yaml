@@ -1,0 +1,42 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/project-koku/koku-metrics-operator?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "konflux-downstream" 
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: koku-metrics-operator
+    appstudio.openshift.io/component: koku-metrics-operator
+    pipelines.appstudio.openshift.io/type: build
+  name: koku-metrics-operator-on-push
+  namespace: cost-mgmt-dev-tenant
+spec:
+  params:
+  - name: git-url
+    value: '{{source_url}}'
+  - name: revision
+    value: '{{revision}}'
+  - name: output-image
+    value: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/koku-metrics-operator:{{revision}}
+  - name: dockerfile
+    value: Dockerfile
+  - name: path-context
+    value: .
+  - name: build-platforms
+    value:
+      - linux/amd64
+      - linux/arm64
+      - linux/s390x
+      - linux/ppc64le
+  pipelineRef:
+    name: build-pipeline  
+  taskRunTemplate: {}
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+status: {}
