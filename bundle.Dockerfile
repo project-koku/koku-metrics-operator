@@ -12,8 +12,8 @@ LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 
 # Copy files to locations specified by labels.
-COPY manifests /manifests/
-COPY metadata /metadata/
+COPY bundle/manifests /manifests/
+COPY bundle/metadata /metadata/
 
 # Openshift specific labels
 LABEL io.k8s.display-name='Cost Management Metrics Operator'
