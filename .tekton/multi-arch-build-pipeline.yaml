@@ -93,6 +93,8 @@ spec:
         value: $(params.hermetic)
       - name: PREFETCH_INPUT
         value: $(params.prefetch-input)
+      - name: PREFETCH_LOG_LEVEL
+        value: $(params.prefetch-log-level)
       - name: IMAGE_EXPIRES_AFTER
         value: $(params.image-expires-after)
       - name: COMMIT_SHA
@@ -369,6 +371,10 @@ spec:
     - default: ""
       description: Build dependencies to be prefetched by Cachi2
       name: prefetch-input
+      type: string
+    - default: "info"
+      description: Build dependencies to be prefetched by Cachi2
+      name: prefetch-log-level
       type: string
     - default: ""
       description: Image tag expiration time, time values could be something like
