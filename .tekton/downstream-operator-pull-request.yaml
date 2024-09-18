@@ -37,6 +37,8 @@ spec:
       - linux/ppc64le
   - name: prefetch-input
     value: '{"packages": [{"type": "gomod"}], "flags": ["gomod-vendor-check"]}'
+  - name: hermetic
+    value: 'true'
   pipelineRef:
     name: build-pipeline
   taskRunTemplate: {}
