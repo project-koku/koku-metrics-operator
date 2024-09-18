@@ -7,13 +7,13 @@ metadata:
     build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "downstream-v3.3.1"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch.matches("^(downstream-v*)$"))
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: koku-metrics-operator
     appstudio.openshift.io/component: koku-metrics-operator
     pipelines.appstudio.openshift.io/type: build
-  name: downstream-operator-build
+  name: downstream-operator-pull-request
   namespace: cost-mgmt-dev-tenant
 spec:
   params:
@@ -35,6 +35,8 @@ spec:
       - linux/arm64
       - linux/s390x
       - linux/ppc64le
+  - name: prefetch-input
+    value: '{"packages": [{"type": "gomod"}], "flags": ["gomod-vendor-check"]}'
   pipelineRef:
     name: build-pipeline
   taskRunTemplate: {}
