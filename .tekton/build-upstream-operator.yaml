@@ -8,7 +8,7 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     # TODO: will use tag event for this pipeline. testing with current tag
-    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && ref.matches("^refs/tags/v\\d+\\.\\d+\\.\\d+-downstream$")
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && ref == "refs/tags/v3.3.1"
     # pipelinesascode.tekton.dev/on-cel-expression: event == "tag" && ref.matches("^refs/tags/v\\d+\\.\\d+\\.\\d+$")
   creationTimestamp: null
   labels:
