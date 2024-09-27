@@ -12,10 +12,17 @@ COPY cmd/ cmd/
 COPY api/ api/
 COPY internal/ internal/
 
-RUN go version
-RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=6b4d72a4a629527c1de086b416faf6d226fe587a" -v -o bin/costmanagement-metrics-operator -a -o manager cmd/main.go
+# Copy git to inject the commit during build
+COPY .git .git
+# Build
+RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
+    echo " injecting GIT COMMIT: $GIT_COMMIT" && \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
+    go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-FROM registry.redhat.io/ubi8/ubi-micro:latest AS base-env
+
+FROM registry.redhat.io/ubi9/ubi-micro:latest AS base-env
+
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
