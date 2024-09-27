@@ -1,8 +1,8 @@
 # koku-metrics-operator
 
-[![License: Apache-2.0](https://img.shields.io/github/license/project-koku/koku.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Build and Publish Images](https://github.com/project-koku/koku-metrics-operator/actions/workflows/build-and-publish.yaml/badge.svg?branch=main)](https://github.com/project-koku/koku-metrics-operator/actions/workflows/build-and-publish.yaml)
-[![Unit Tests](https://github.com/project-koku/koku-metrics-operator/workflows/Unit%20Tests/badge.svg)](https://github.com/project-koku/koku-metrics-operator/actions?query=branch%3Amain+workflow%3A%22Unit+Tests%22)
+[![CI](https://github.com/project-koku/koku-metrics-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/project-koku/koku-metrics-operator/actions/workflows/ci.yaml)
+[![CI Manual](https://github.com/project-koku/koku-metrics-operator/actions/workflows/ci-manual.yaml/badge.svg?branch=main)](https://github.com/project-koku/koku-metrics-operator/actions/workflows/ci-manual.yaml)
 
 ## About
 

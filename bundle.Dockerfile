@@ -7,13 +7,13 @@ LABEL operators.operatorframework.io.bundle.metadata.v1=metadata/
 LABEL operators.operatorframework.io.bundle.package.v1=costmanagement-metrics-operator
 LABEL operators.operatorframework.io.bundle.channels.v1=stable
 LABEL operators.operatorframework.io.bundle.channel.default.v1=stable
-LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.33.0
+LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.35.0
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 
 # Copy files to locations specified by labels.
-COPY manifests /manifests/
-COPY metadata /metadata/
+COPY bundle/manifests /manifests/
+COPY bundle/metadata /metadata/
 
 # Openshift specific labels
 LABEL io.k8s.display-name='Cost Management Metrics Operator'
@@ -31,4 +31,4 @@ LABEL com.redhat.openshift.versions='v4.12'
 LABEL name=openshift/costmanagement-metrics-operator-bundle
 LABEL maintainer='<costmanagement@redhat.com>'
 LABEL summary='Operator required to upload metrics data to the cost management service in console.redhat.com.'
-LABEL version=3.3.0
+LABEL version=3.3.1

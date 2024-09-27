@@ -39,8 +39,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.0
-    createdAt: "2024-05-31T16:16:46Z"
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1
+    createdAt: "2024-08-12T20:58:49Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
@@ -51,7 +51,7 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     operatorframework.io/suggested-namespace: costmanagement-metrics-operator
     operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
-    operators.operatorframework.io/builder: operator-sdk-v1.33.0
+    operators.operatorframework.io/builder: operator-sdk-v1.35.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Red Hat
@@ -62,7 +62,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.3.3.0
+  name: costmanagement-metrics-operator.3.3.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -94,6 +94,9 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v3.3.1:
+    * Optimize memory usage when reading CSV files.
 
     ## New in v3.3.0:
     * Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
@@ -445,7 +448,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.0
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -609,5 +612,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 3.3.0
-  replaces: costmanagement-metrics-operator.3.2.1
+  version: 3.3.1
+  replaces: costmanagement-metrics-operator.3.3.0
