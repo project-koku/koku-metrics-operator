@@ -34,44 +34,7 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 
 ## New in v4.0.0:
 * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
-* **Progress towards FIPS 140 Compliance:** The operator is using the Go Cryptographic Module v1.0.0 to progress toward FIPS 140 compliance. Although this module is not validated at the time of this release, the operator aims to meet stricter security standards when the module does successfully achieve FIPS validation.
-* **API Name Change:** The Custom Resource Definition (CRD) for configuring the upstream `CostManagement Metrics Operator` was renamed from `CostManagementMetricsConfig` to `CostManagementMetricsConfig`.
-
-### NOTE:
-  * The API name change impacts only users of the upstream (community) CostManagement Metrics Operator.
-  * The downstream (Red Hat-supported) Cost Management Metrics Operator is not impacted by this change and users should continue using their existing configurations.
-
-**Important Upgrade Instructions:**
-
-  If you are upgrading the upstream CostManagement Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing `CostManagementMetricsConfig` resources.
-
-  To successfully upgrade and retain your operator's configuration, complete the following steps. You can use the provided `oc` commands replacing the angle brackets (`< >`) with your specific values:
-
-  1. Backup existing configuration (recommended):
-
-     Before you upgrade, retrieve the details of your current `CostManagementMetricsConfig` instance to help you recreate it with the new API name.
-
-     ```
-     oc get costmanagementmetricsconfig -n costmanagement-metrics-operator <your-config-name> -o yaml > costmanagement-metrics-config-backup.yaml
-     ```
-
-  2. Delete the previous `CostManagementMetricsConfig` instance (recommended):
-
-      After the operator is upgraded to `version 4.0.0`, delete any existing `CostManagementMetricsConfig` resources.
-
-      ```
-      oc delete costmanagementmetricsconfig -n costmanagement-metrics-operator <your-config-name>
-      ```
-
-  3. Create the new `CostManagementMetricsConfig` instance:
-
-      Using the information from your backup (or a new configuration), create a new `CostManagementMetricsConfig` instance. Adjust the spec section based on your specific needs. For more information about configurations, [refer to the configurable parameters](#configurable-parameters).
-
-  4. Apply your new configuration:
-
-      ```
-      oc apply -f <your-costmanagementmetricsconfig-file>.yaml -n costmanagement-metrics-operator
-      ```
+* **FIPS Compliance:** Supports deployment in high-security environments when run on an OpenShift cluster with FIPS mode enabled.
 
 ## New in v3.3.2:
 * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
