@@ -44,9 +44,7 @@ internal/collector/test_files/test_reports/*
 # VSCode
 .vscode
 
-bundle/
 community-operators-prod/
-bundle.Dockerfile
 
 
 # Ignore python virtual env
