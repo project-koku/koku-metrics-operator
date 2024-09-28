@@ -51,11 +51,15 @@ func init() {
 func main() {
 	var metricsAddr string
 	var probeAddr string
+	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
 
 	// fetch leader election configurations from environment variables
-	enableLeaderElection := utils.GetEnvVarBool("LEADER_ELECTION_ENABLED", false)
+	enableLeaderElection = utils.GetEnvVarBool("LEADER_ELECTION_ENABLED", false)
 	leaseDuration := utils.GetEnvVarDuration("LEADER_ELECTION_LEASE_DURATION", "60s")
 	renewDeadline := utils.GetEnvVarDuration("LEADER_ELECTION_RENEW_DEADLINE", "30s")
 	retryPeriod := utils.GetEnvVarDuration("LEADER_ELECTION_RETRY_PERIOD", "5s")
