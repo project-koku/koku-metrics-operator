@@ -13,7 +13,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	utils "github.com/project-koku/koku-metrics-operator/utils"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -27,6 +26,7 @@ import (
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/internal/controller"
+	"github.com/project-koku/koku-metrics-operator/internal/utils"
 	// +kubebuilder:scaffold:imports
 )
 
