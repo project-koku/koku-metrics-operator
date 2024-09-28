@@ -9,9 +9,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	utils "github.com/project-koku/koku-metrics-operator/utils"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -48,13 +50,18 @@ func init() {
 
 func main() {
 	var metricsAddr string
-	var enableLeaderElection bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+
+	// fetch leader election configurations from environment variables
+	enableLeaderElection := utils.GetEnvVarBool("LEADER_ELECTION_ENABLED", false)
+	leaseDuration := utils.GetEnvVarDuration("LEADER_ELECTION_LEASE_DURATION", "60s")
+	renewDeadline := utils.GetEnvVarDuration("LEADER_ELECTION_RENEW_DEADLINE", "30s")
+	retryPeriod := utils.GetEnvVarDuration("LEADER_ELECTION_RETRY_PERIOD", "5s")
+
+	// validate leader election
+	leaseDuration, renewDeadline, retryPeriod = validateLeaderElectionConfig(leaseDuration, renewDeadline, retryPeriod)
 
 	opts := zap.Options{
 		Development: true,
@@ -83,6 +90,9 @@ func main() {
 
 		LeaderElection:   enableLeaderElection,
 		LeaderElectionID: "91c624a5.openshift.io",
+		LeaseDuration:    &leaseDuration,
+		RenewDeadline:    &renewDeadline,
+		RetryPeriod:      &retryPeriod,
 		Cache:            cache.Options{DefaultNamespaces: map[string]cache.Config{watchNamespace: {}}},
 	})
 	if err != nil {
@@ -137,4 +147,24 @@ func getWatchNamespace() (string, error) {
 		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
 	}
 	return ns, nil
+}
+
+// validateLeaderElectionConfig returns the Namespace the operator should be watching for changes
+func validateLeaderElectionConfig(leaseDuration, renewDeadline, retryPeriod time.Duration) (time.Duration, time.Duration, time.Duration) {
+
+	// validate that renewDeadlne < leaseDuration
+	if renewDeadline >= leaseDuration {
+		setupLog.Info("Invalid configuration: LEADER_ELECTION_RENEW_DEADLINE must be less that LEADER_ELECTION_LEASE_DURATION; using default values")
+		leaseDuration = 60 * time.Second
+		renewDeadline = 30 * time.Second
+	}
+
+	// validate that retryPeriod < renewDeadlne
+	if retryPeriod >= renewDeadline {
+		setupLog.Info("Invalid configuration: LEADER_ELECTION_RETRY_PERIOD must be less that LEADER_ELECTION_RENEW_DEADLINE; using default values")
+		retryPeriod = 5 * time.Second
+		renewDeadline = 30 * time.Second
+	}
+
+	return leaseDuration, renewDeadline, retryPeriod
 }
