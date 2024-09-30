@@ -19,7 +19,7 @@ metadata:
     appstudio.openshift.io/application: costmanagement-metrics-operator
     appstudio.openshift.io/component: costmanagement-metrics-operator-bundle
     pipelines.appstudio.openshift.io/type: build
-  name: costmanagement-metrics-operator-bundle-on-pull-request
+  name: downstream-operator-bundle-pr
   namespace: cost-mgmt-dev-tenant
 spec:
   params:
