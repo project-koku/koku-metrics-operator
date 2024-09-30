@@ -1,5 +1,8 @@
 FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:v1.22 AS builder
 
+ARG TARGETOS
+ARG TARGETARCH
+
 USER root
 
 WORKDIR /workspace
