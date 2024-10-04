@@ -3,6 +3,9 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/op
 ARG TARGETOS
 ARG TARGETARCH
 
+ARG TARGETOS
+ARG TARGETARCH
+
 USER root
 
 WORKDIR /workspace

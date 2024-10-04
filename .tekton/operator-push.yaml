@@ -6,14 +6,17 @@ metadata:
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
-      == "downstream"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "downstream" &&
+      (
+        ".tekton/operator-push.yaml".pathChanged() ||  
+        "Dockerfile".pathChanged() 
+      )
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: costmanagement-metrics-operator
     appstudio.openshift.io/component: costmanagement-metrics-operator
     pipelines.appstudio.openshift.io/type: build
-  name: costmanagement-metrics-operator-on-push
+  name: downstream-operator-push
   namespace: cost-mgmt-dev-tenant
 spec:
   params:
@@ -103,8 +106,10 @@ spec:
       name: build-args-file
       type: string
     - default:
-      - linux/x86_64
+      - linux/amd64
       - linux/arm64
+      - linux/s390x
+      - linux/ppc64le
       description: List of platforms to build the container images on. The available
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
