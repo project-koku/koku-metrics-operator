@@ -26,7 +26,6 @@ import (
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/internal/controller"
-	"github.com/project-koku/koku-metrics-operator/internal/utils"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -59,10 +58,9 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 
 	// fetch leader election configurations from environment variables
-	enableLeaderElection = utils.GetEnvVarBool("LEADER_ELECTION_ENABLED", false)
-	leaseDuration := utils.GetEnvVarDuration("LEADER_ELECTION_LEASE_DURATION", "60s")
-	renewDeadline := utils.GetEnvVarDuration("LEADER_ELECTION_RENEW_DEADLINE", "30s")
-	retryPeriod := utils.GetEnvVarDuration("LEADER_ELECTION_RETRY_PERIOD", "5s")
+	leaseDuration := getEnvVarDuration("LEADER_ELECTION_LEASE_DURATION", 60*time.Second)
+	renewDeadline := getEnvVarDuration("LEADER_ELECTION_RENEW_DEADLINE", 30*time.Second)
+	retryPeriod := getEnvVarDuration("LEADER_ELECTION_RETRY_PERIOD", 5*time.Second)
 
 	// validate leader election
 	leaseDuration, renewDeadline, retryPeriod = validateLeaderElectionConfig(leaseDuration, renewDeadline, retryPeriod)
@@ -151,6 +149,33 @@ func getWatchNamespace() (string, error) {
 		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
 	}
 	return ns, nil
+}
+
+// GetEnvVar returns the value from an environment variable
+// or the provided default value if the variable does not exist.
+func getEnvVarString(varName, defaultValue string) string {
+	if value, exists := os.LookupEnv(varName); exists {
+		return value
+	}
+	return defaultValue
+}
+
+// Returns time.Duration parsed from an env variable
+// or the default value if the variable does not exist or does not parse into a duration.
+func getEnvVarDuration(varName string, defaultValue time.Duration) time.Duration {
+	val := getEnvVarString(varName, "")
+
+	if val == "" {
+		return defaultValue
+	}
+
+	parsedVal, err := time.ParseDuration(val)
+	if err != nil {
+		setupLog.Error(err, "Invalid boolean format for environment variable", "Variable", varName, "Value", val)
+		return defaultValue
+	}
+	return parsedVal
+
 }
 
 // validateLeaderElectionConfig returns the Namespace the operator should be watching for changes

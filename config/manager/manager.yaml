@@ -51,8 +51,6 @@ spec:
         image: controller:latest
         name: manager
         env:
-        - name: LEADER_ELECTION_ENABLED
-          value: "true"
         - name: LEADER_ELECTION_LEASE_DURATION
           value: "60s"
         - name: LEADER_ELECTION_RENEW_DEADLINE
