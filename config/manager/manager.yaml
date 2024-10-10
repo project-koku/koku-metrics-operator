@@ -51,6 +51,12 @@ spec:
         image: controller:latest
         name: manager
         env:
+        - name: LEADER_ELECTION_LEASE_DURATION
+          value: "60s"
+        - name: LEADER_ELECTION_RENEW_DEADLINE
+          value: "30s"
+        - name: LEADER_ELECTION_RETRY_PERIOD
+          value: "5s"
         - name: IN_CLUSTER
           value: "true"
         - name: WATCH_NAMESPACE
