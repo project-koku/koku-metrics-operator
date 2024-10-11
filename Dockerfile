@@ -23,7 +23,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-FROM registry.redhat.io/ubi8/ubi-micro:latest AS base-env
+FROM registry.redhat.io/ubi9/ubi-micro:latest AS base-env
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
