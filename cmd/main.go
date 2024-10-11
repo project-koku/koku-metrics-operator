@@ -30,8 +30,11 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme               = runtime.NewScheme()
+	setupLog             = ctrl.Log.WithName("setup")
+	defaultLeaseDuration = 60 * time.Second
+	defaultRenewDeadline = 30 * time.Second
+	defaultRetryPeriod   = 5 * time.Second
 )
 
 func init() {
@@ -58,9 +61,9 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 
 	// fetch leader election configurations from environment variables
-	leaseDuration := getEnvVarDuration("LEADER_ELECTION_LEASE_DURATION", 60*time.Second)
-	renewDeadline := getEnvVarDuration("LEADER_ELECTION_RENEW_DEADLINE", 30*time.Second)
-	retryPeriod := getEnvVarDuration("LEADER_ELECTION_RETRY_PERIOD", 5*time.Second)
+	leaseDuration := getEnvVarDuration("LEADER_ELECTION_LEASE_DURATION", defaultLeaseDuration)
+	renewDeadline := getEnvVarDuration("LEADER_ELECTION_RENEW_DEADLINE", defaultRenewDeadline)
+	retryPeriod := getEnvVarDuration("LEADER_ELECTION_RETRY_PERIOD", defaultRetryPeriod)
 
 	// validate leader election
 	leaseDuration, renewDeadline, retryPeriod = validateLeaderElectionConfig(leaseDuration, renewDeadline, retryPeriod)
@@ -183,16 +186,28 @@ func validateLeaderElectionConfig(leaseDuration, renewDeadline, retryPeriod time
 
 	// validate that renewDeadlne < leaseDuration
 	if renewDeadline >= leaseDuration {
-		setupLog.Info("Invalid configuration: LEADER_ELECTION_RENEW_DEADLINE must be less that LEADER_ELECTION_LEASE_DURATION; using default values")
-		leaseDuration = 60 * time.Second
-		renewDeadline = 30 * time.Second
+
+		setupLog.Info("Invalid configuration: LEADER_ELECTION_RENEW_DEADLINE must be less that LEADER_ELECTION_LEASE_DURATION; using default values",
+			"Provided LEADER_ELECTION_LEASE_DURATION", leaseDuration,
+			"Provided LEADER_ELECTION_RENEW_DEADLINE", renewDeadline,
+			"Default LEADER_ELECTION_LEASE_DURATION", defaultLeaseDuration,
+			"Default LEADER_ELECTION_RENEW_DEADLINE", defaultRenewDeadline,
+		)
+
+		leaseDuration = defaultLeaseDuration
+		renewDeadline = defaultRenewDeadline
 	}
 
 	// validate that retryPeriod < renewDeadlne
 	if retryPeriod >= renewDeadline {
-		setupLog.Info("Invalid configuration: LEADER_ELECTION_RETRY_PERIOD must be less that LEADER_ELECTION_RENEW_DEADLINE; using default values")
-		retryPeriod = 5 * time.Second
-		renewDeadline = 30 * time.Second
+		setupLog.Info("Invalid configuration: LEADER_ELECTION_RETRY_PERIOD must be less that LEADER_ELECTION_RENEW_DEADLINE; using default values",
+			"Provided LEADER_ELECTION_RETRY_PERIOD", retryPeriod,
+			"Provided LEADER_ELECTION_RENEW_DEADLINE", renewDeadline,
+			"Default LEADER_ELECTION_RETRY_PERIOD", defaultRetryPeriod,
+			"Default LEADER_ELECTION_RENEW_DEADLINE", defaultRenewDeadline,
+		)
+		retryPeriod = defaultRetryPeriod
+		renewDeadline = defaultRenewDeadline
 	}
 
 	return leaseDuration, renewDeadline, retryPeriod
