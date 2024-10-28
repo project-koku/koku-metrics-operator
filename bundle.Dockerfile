@@ -32,3 +32,5 @@ LABEL name=openshift/costmanagement-metrics-operator-bundle
 LABEL maintainer='<costmanagement@redhat.com>'
 LABEL summary='Operator required to upload metrics data to the cost management service in console.redhat.com.'
 LABEL version=3.3.1
+LABEL description="Red Hat Cost Management Metrics Operator bundle"
+LABEL vendor="Red Hat Inc."
