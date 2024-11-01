@@ -20,7 +20,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v3.3.2:
-* Leader election timing is now configurable via the environment variables below. To update these settings, [modify the variables in a Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md) and apply the changes.
+* Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values must be specified as durations in the format `<number><unit>` where unit is `s` for seconds.
   
   ```
       kind: Subscription
@@ -30,11 +30,11 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
         ...
         config:
           env:
-            - name: LEADER_ELECTION_LEASE_DURATION  # sets the lease timeout duration
+            - name: LEADER_ELECTION_LEASE_DURATION
               value: "60s"
-            - name: LEADER_ELECTION_RENEW_DEADLINE  # specifies the deadline to renew the lease
+            - name: LEADER_ELECTION_RENEW_DEADLINE
               value: "40s"
-            - name: LEADER_ELECTION_RETRY_PERIOD    # defines the interval between retry attempts
+            - name: LEADER_ELECTION_RETRY_PERIOD
               value: "15s"
   ```
 
