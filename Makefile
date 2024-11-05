@@ -288,7 +288,6 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 ifdef NAMESPACE
 	$(YQ) -i '.metadata.namespace = "$(NAMESPACE)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
 endif
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 
 	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
 	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
