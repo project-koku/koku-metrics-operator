@@ -273,8 +273,7 @@ get-token-and-cert:  ## Get a token from a running K8s cluster for local develop
 
 .PHONY: bundle
 bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
-	mkdir -p koku-metrics-operator/$(VERSION)/
-	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
+	rm -rf ./bundle
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
@@ -289,12 +288,9 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 ifdef NAMESPACE
 	$(YQ) -i '.metadata.namespace = "$(NAMESPACE)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
 endif
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 
-	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
-	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.

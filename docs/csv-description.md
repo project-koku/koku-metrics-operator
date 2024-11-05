@@ -31,9 +31,9 @@ The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects
     config:
       env:
       - name: LEADER_ELECTION_LEASE_DURATION
-        value: "30s"
+        value: "60s"
       - name: LEADER_ELECTION_RENEW_DEADLINE
-        value: "10s"
+        value: "30s"
       - name: LEADER_ELECTION_RETRY_PERIOD
         value: "5s"
   ```
