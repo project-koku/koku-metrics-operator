@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "false"
     containerImage: quay.io/project-koku/koku-metrics-operator@sha256:c1b430cb1d699289c05fc1944d06bd6e6d09a886ab15a4f7b01f779b8ffef9b7
-    createdAt: "2024-11-05T20:33:28Z"
+    createdAt: "2024-11-05T20:59:20Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -109,9 +109,9 @@ spec:
         config:
           env:
           - name: LEADER_ELECTION_LEASE_DURATION
-            value: "30s"
+            value: "60s"
           - name: LEADER_ELECTION_RENEW_DEADLINE
-            value: "10s"
+            value: "30s"
           - name: LEADER_ELECTION_RETRY_PERIOD
             value: "5s"
       ```
