@@ -39,9 +39,12 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
-    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:fe2a887778e30850b94983038ed621d8df6e45d1028f3d1110cc8aa20439bedd
-    createdAt: "2024-08-09T15:42:34Z"
+    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:c1b430cb1d699289c05fc1944d06bd6e6d09a886ab15a4f7b01f779b8ffef9b7
+    createdAt: "2024-11-05T20:33:28Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
+    features.operators.openshift.io/cnf: "false"
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/csi: "false"
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
     features.operators.openshift.io/proxy-aware: "true"
@@ -61,7 +64,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: koku-metrics-operator.v3.3.1
+  name: koku-metrics-operator.v3.3.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -93,6 +96,25 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v3.3.2:
+    * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
+
+      ```
+      kind: Subscription
+      metadata:
+      ...
+      spec:
+        ...
+        config:
+          env:
+          - name: LEADER_ELECTION_LEASE_DURATION
+            value: "30s"
+          - name: LEADER_ELECTION_RENEW_DEADLINE
+            value: "10s"
+          - name: LEADER_ELECTION_RETRY_PERIOD
+            value: "5s"
+      ```
 
     ## New in v3.3.1:
     * Optimize memory usage when reading CSV files.
@@ -441,13 +463,19 @@ spec:
                     command:
                       - /manager
                     env:
+                      - name: LEADER_ELECTION_LEASE_DURATION
+                        value: 60s
+                      - name: LEADER_ELECTION_RENEW_DEADLINE
+                        value: 30s
+                      - name: LEADER_ELECTION_RETRY_PERIOD
+                        value: 5s
                       - name: IN_CLUSTER
                         value: "true"
                       - name: WATCH_NAMESPACE
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: quay.io/project-koku/koku-metrics-operator@sha256:fe2a887778e30850b94983038ed621d8df6e45d1028f3d1110cc8aa20439bedd
+                    image: quay.io/project-koku/koku-metrics-operator@sha256:c1b430cb1d699289c05fc1944d06bd6e6d09a886ab15a4f7b01f779b8ffef9b7
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -611,8 +639,8 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 3.3.1
+  version: 3.3.2
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:fe2a887778e30850b94983038ed621d8df6e45d1028f3d1110cc8aa20439bedd
-  replaces: koku-metrics-operator.v3.3.0
+      image: quay.io/project-koku/koku-metrics-operator@sha256:c1b430cb1d699289c05fc1944d06bd6e6d09a886ab15a4f7b01f779b8ffef9b7
+  replaces: koku-metrics-operator.v3.3.1

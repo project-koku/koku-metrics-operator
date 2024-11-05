@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.3.0
-VERSION ?= 3.3.1
+PREVIOUS_VERSION ?= 3.3.1
+VERSION ?= 3.3.2
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -273,8 +273,7 @@ get-token-and-cert:  ## Get a token from a running K8s cluster for local develop
 
 .PHONY: bundle
 bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
-	mkdir -p koku-metrics-operator/$(VERSION)/
-	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
+	rm -rf ./bundle
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
@@ -291,10 +290,8 @@ ifdef NAMESPACE
 endif
 	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 
-	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
-	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
