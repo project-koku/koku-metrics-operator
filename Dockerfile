@@ -40,7 +40,7 @@ LABEL \
     maintainer="Cost Management <cost-mgmt@redhat.com>"  \
     name="costmanagement-metrics-operator"  \
     summary="Red Hat Cost Management Metrics Operator"  \
-    version="3.3.1" \
-    vendor="Red Hat Inc."
+    version="3.3.2" \
+    vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]
