@@ -77,7 +77,7 @@ spec:
         name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
         version: v1beta1
   description: |
-    # CostManagement Metrics Operator
+    # Cost Management Metrics Operator
     ## Introduction
     The `costmanagement-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
@@ -85,7 +85,7 @@ spec:
 
     ## Features and Capabilities
     #### Metrics collection:
-    The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
+    The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
     * Querying Prometheus to gather the necessary metrics for Cost Management.
     * Writing the results of Prometheus queries to CSV report files.
     * Packaging the CSV report files into tarballs.
