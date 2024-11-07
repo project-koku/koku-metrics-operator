@@ -11,15 +11,20 @@ LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.35.0
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 
+# Labels for testing.
+LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
+LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
+
 # Copy files to locations specified by labels.
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
+COPY bundle/tests/scorecard /tests/scorecard/
 
 # Openshift specific labels
 LABEL io.k8s.display-name='Cost Management Metrics Operator'
 LABEL io.k8s.description='Component required to gather metrics from Prometheus, package and upload them to the cost management service in the cloud. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)'
-LABEL io.openshift.build.commit.id='6b4d72a4a629527c1de086b416faf6d226fe587a'
-LABEL io.openshift.build.commit.url='https://github.com/project-koku/koku-metrics-operator/commit/6b4d72a4a629527c1de086b416faf6d226fe587a'
+LABEL io.openshift.build.commit.id=REPLACE_REF
+LABEL io.openshift.build.commit.url=https://github.com/project-koku/koku-metrics-operator/commit/REPLACE_REF
 LABEL io.openshift.build.source-location=https://github.com/project-koku/koku-metrics-operator
 LABEL io.openshift.maintainer.component='Cost Management Metrics Operator'
 LABEL io.openshift.maintainer.product='OpenShift Container Platform'
@@ -31,4 +36,6 @@ LABEL com.redhat.openshift.versions='v4.12'
 LABEL name=openshift/costmanagement-metrics-operator-bundle
 LABEL maintainer='<costmanagement@redhat.com>'
 LABEL summary='Operator required to upload metrics data to the cost management service in console.redhat.com.'
-LABEL version=3.3.1
+LABEL version=3.3.2
+LABEL distribution-scope="public"
+LABEL vendor="Red Hat, Inc."

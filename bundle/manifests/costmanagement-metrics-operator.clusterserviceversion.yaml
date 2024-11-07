@@ -39,9 +39,12 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1
-    createdAt: "2024-08-12T20:58:49Z"
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.2
+    createdAt: "2024-11-06T02:03:30Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
+    features.operators.openshift.io/cnf: "false"
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/csi: "false"
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
     features.operators.openshift.io/proxy-aware: "true"
@@ -62,7 +65,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.3.3.1
+  name: costmanagement-metrics-operator.3.3.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -74,7 +77,7 @@ spec:
         name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
         version: v1beta1
   description: |
-    # Cost Management Metrics Operator
+    # CostManagement Metrics Operator
     ## Introduction
     The `costmanagement-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
@@ -82,7 +85,7 @@ spec:
 
     ## Features and Capabilities
     #### Metrics collection:
-    The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
+    The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
     * Querying Prometheus to gather the necessary metrics for Cost Management.
     * Writing the results of Prometheus queries to CSV report files.
     * Packaging the CSV report files into tarballs.
@@ -94,6 +97,25 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v3.3.2:
+    * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
+
+      ```
+      kind: Subscription
+      metadata:
+      ...
+      spec:
+        ...
+        config:
+          env:
+          - name: LEADER_ELECTION_LEASE_DURATION
+            value: "60s"
+          - name: LEADER_ELECTION_RENEW_DEADLINE
+            value: "30s"
+          - name: LEADER_ELECTION_RETRY_PERIOD
+            value: "5s"
+      ```
 
     ## New in v3.3.1:
     * Optimize memory usage when reading CSV files.
@@ -442,13 +464,19 @@ spec:
                     command:
                       - /usr/bin/costmanagement-metrics-operator
                     env:
+                      - name: LEADER_ELECTION_LEASE_DURATION
+                        value: 60s
+                      - name: LEADER_ELECTION_RENEW_DEADLINE
+                        value: 30s
+                      - name: LEADER_ELECTION_RETRY_PERIOD
+                        value: 5s
                       - name: IN_CLUSTER
                         value: "true"
                       - name: WATCH_NAMESPACE
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.1
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:3.3.2
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -603,7 +631,7 @@ spec:
     - usage
     - monitor
   links:
-    - name: Cost Management Metrics Operator source code repository
+    - name: CostManagement Metrics Operator source code repository
       url: https://github.com/project-koku/koku-metrics-operator
   maintainers:
     - email: costmanagement@redhat.com
@@ -612,5 +640,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 3.3.1
-  replaces: costmanagement-metrics-operator.3.3.0
+  version: 3.3.2
+  replaces: costmanagement-metrics-operator.3.3.1

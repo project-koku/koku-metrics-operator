@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.3.0
-VERSION ?= 3.3.1
+PREVIOUS_VERSION ?= 3.3.1
+VERSION ?= 3.3.2
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -273,8 +273,7 @@ get-token-and-cert:  ## Get a token from a running K8s cluster for local develop
 
 .PHONY: bundle
 bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
-	mkdir -p koku-metrics-operator/$(VERSION)/
-	rm -rf ./bundle koku-metrics-operator/$(VERSION)/
+	rm -rf ./bundle
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE_SHA)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
@@ -289,16 +288,13 @@ bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metada
 ifdef NAMESPACE
 	$(YQ) -i '.metadata.namespace = "$(NAMESPACE)"' bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml
 endif
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 
-	cp -r ./bundle/ koku-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile koku-metrics-operator/$(VERSION)/Dockerfile
-	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional name=multiarch
-	$(OPERATOR_SDK) bundle validate koku-metrics-operator/$(VERSION) --select-optional suite=operatorframework
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	cd koku-metrics-operator/$(VERSION) && $(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) .
+	$(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) --file bundle.Dockerfile .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
@@ -330,7 +326,6 @@ DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
-	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
@@ -348,12 +343,10 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
 	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
 	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
-	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
 
 	$(MAKE) manifests
 
-	mkdir -p costmanagement-metrics-operator/$(VERSION)/
-	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
+	rm -rf ./bundle
 
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
@@ -375,16 +368,11 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
-	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-
 	# scripts/update_bundle_dockerfile.py
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
 
-	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
 
 ##@ Build Dependencies
 
