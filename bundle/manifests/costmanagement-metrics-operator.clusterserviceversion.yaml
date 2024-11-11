@@ -631,7 +631,7 @@ spec:
     - usage
     - monitor
   links:
-    - name: CostManagement Metrics Operator source code repository
+    - name: Cost Management Metrics Operator source code repository
       url: https://github.com/project-koku/koku-metrics-operator
   maintainers:
     - email: costmanagement@redhat.com
