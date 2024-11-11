@@ -28,7 +28,7 @@ spec:
   - name: dockerfile
     value: Dockerfile
   - name: hermetic
-    value: "true"
+    value: 'true'
   pipelineSpec:
     description: |
       This pipeline is ideal for building multi-arch container images from a Containerfile while maintaining trust after pipeline customization.
