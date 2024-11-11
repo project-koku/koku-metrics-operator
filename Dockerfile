@@ -32,7 +32,7 @@ COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc
 
 LABEL \
     com.redhat.component="costmanagement-metrics-operator-container"  \
-    description="Red Hat Cost Management Metrics Operator"  \
+    description="Cost Management Metrics Operator"  \
     distribution-scope="public" \
     io.k8s.description="Operator to deploy and manage instances of Cost Management Metrics"  \
     io.k8s.display-name="Cost Management Metrics Operator"  \
