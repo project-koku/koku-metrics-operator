@@ -343,6 +343,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
 	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
 	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
+	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
 
 	$(MAKE) manifests
 
@@ -367,6 +368,8 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
 	# scripts/update_bundle_dockerfile.py
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
