@@ -1251,14 +1251,6 @@ func setEntriesInAcl(countExplicitEntries uint32, explicitEntries *EXPLICIT_ACCE
 	return
 }
 
-func GetAce(acl *ACL, aceIndex uint32, pAce **ACCESS_ALLOWED_ACE) (ret error) {
-	r0, _, _ := syscall.Syscall(procGetAce.Addr(), 3, uintptr(unsafe.Pointer(acl)), uintptr(aceIndex), uintptr(unsafe.Pointer(pAce)))
-	if r0 == 0 {
-		ret = GetLastError()
-	}
-	return
-}
-
 func SetKernelObjectSecurity(handle Handle, securityInformation SECURITY_INFORMATION, securityDescriptor *SECURITY_DESCRIPTOR) (err error) {
 	r1, _, e1 := syscall.SyscallN(procSetKernelObjectSecurity.Addr(), uintptr(handle), uintptr(securityInformation), uintptr(unsafe.Pointer(securityDescriptor)))
 	if r1 == 0 {
@@ -3638,14 +3630,6 @@ func NetGetJoinInformation(server *uint16, name **uint16, bufType *uint32) (nete
 
 func NetUserEnum(serverName *uint16, level uint32, filter uint32, buf **byte, prefMaxLen uint32, entriesRead *uint32, totalEntries *uint32, resumeHandle *uint32) (neterr error) {
 	r0, _, _ := syscall.SyscallN(procNetUserEnum.Addr(), uintptr(unsafe.Pointer(serverName)), uintptr(level), uintptr(filter), uintptr(unsafe.Pointer(buf)), uintptr(prefMaxLen), uintptr(unsafe.Pointer(entriesRead)), uintptr(unsafe.Pointer(totalEntries)), uintptr(unsafe.Pointer(resumeHandle)))
-	if r0 != 0 {
-		neterr = syscall.Errno(r0)
-	}
-	return
-}
-
-func NetUserEnum(serverName *uint16, level uint32, filter uint32, buf **byte, prefMaxLen uint32, entriesRead *uint32, totalEntries *uint32, resumeHandle *uint32) (neterr error) {
-	r0, _, _ := syscall.Syscall9(procNetUserEnum.Addr(), 8, uintptr(unsafe.Pointer(serverName)), uintptr(level), uintptr(filter), uintptr(unsafe.Pointer(buf)), uintptr(prefMaxLen), uintptr(unsafe.Pointer(entriesRead)), uintptr(unsafe.Pointer(totalEntries)), uintptr(unsafe.Pointer(resumeHandle)), 0)
 	if r0 != 0 {
 		neterr = syscall.Errno(r0)
 	}

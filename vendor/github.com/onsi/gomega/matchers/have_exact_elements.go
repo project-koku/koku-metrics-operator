@@ -74,7 +74,6 @@ func (matcher *HaveExactElementsMatcher) Match(actual any) (success bool, err er
 
 	values := valuesOf(actual)
 	lenValues := len(values)
-	success = true
 
 	for i := 0; i < lenMatchers || i < lenValues; i++ {
 		if i >= lenMatchers {
