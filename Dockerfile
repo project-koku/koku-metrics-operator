@@ -33,12 +33,14 @@ COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc
 LABEL \
     com.redhat.component="costmanagement-metrics-operator-container"  \
     description="Red Hat Cost Management Metrics Operator"  \
+    distribution-scope="public" \
     io.k8s.description="Operator to deploy and manage instances of Cost Management Metrics"  \
     io.k8s.display-name="Cost Management Metrics Operator"  \
     io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators"  \
     maintainer="Cost Management <cost-mgmt@redhat.com>"  \
     name="costmanagement-metrics-operator"  \
     summary="Red Hat Cost Management Metrics Operator"  \
-    version="3.3.1"
+    version="3.3.2" \
+    vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]
