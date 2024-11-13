@@ -15,26 +15,27 @@ LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
-LABEL name="costmanagement-metrics-operator-bundle" \
-    # Openshift specific labels
-    io.k8s.display-name="Cost Management Metrics Operator" \
-    io.k8s.description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)" \
-    io.openshift.build.commit.id="f83f111551b4aa06b49fed864945ab01c45d04d0" \
-    io.openshift.build.commit.url="https://github.com/project-koku/koku-metrics-operator/commit/f83f111551b4aa06b49fed864945ab01c45d04d0" \
-    io.openshift.build.source-location="https://github.com/project-koku/koku-metrics-operator" \
-    io.openshift.maintainer.component="Cost Management Metrics Operator" \
-    io.openshift.maintainer.product="OpenShift Container Platform" \
-    io.openshift.tags="openshift" \
-    # Labels required for release via Konflux 
-    com.redhat.component="costmanagement-metrics-operator-bundle-container" \
-    com.redhat.delivery.appregistry="false" \
-    com.redhat.delivery.operator.bundle="true" \
-    com.redhat.openshift.versions="v4.12" \
-    maintainer="Cost Management <costmanagement@redhat.com>" \
-    summary="Operator required to upload metrics data to the cost management service in console.redhat.com." \
-    version="3.3.2" \
-    release="1" \
-    distribution-scope="public" \
-    description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)" \
-    url="https://github.com/project-koku/koku-metrics-operator" \
-    vendor="Red Hat, Inc."
+# Openshift specific labels
+LABEL name="costmanagement-metrics-operator-bundle"
+LABEL io.k8s.display-name="Cost Management Metrics Operator"
+LABEL io.k8s.description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
+LABEL io.openshift.build.commit.id="078f83fc121757bd181bd85055e9d437a650318c"
+LABEL io.openshift.build.commit.url="https://github.com/project-koku/koku-metrics-operator/commit/078f83fc121757bd181bd85055e9d437a650318c"
+LABEL io.openshift.build.source-location="https://github.com/project-koku/koku-metrics-operator"
+LABEL io.openshift.maintainer.component="Cost Management Metrics Operator"
+LABEL io.openshift.maintainer.product="OpenShift Container Platform"
+LABEL io.openshift.tags="openshift"
+
+# Labels required for release via Konflux 
+LABEL com.redhat.component="costmanagement-metrics-operator-bundle-container"
+LABEL com.redhat.delivery.appregistry="false"
+LABEL com.redhat.delivery.operator.bundle="true"
+LABEL com.redhat.openshift.versions="v4.12"
+LABEL maintainer="Cost Management <costmanagement@redhat.com>"
+LABEL summary="Operator required to upload metrics data to the cost management service in console.redhat.com."
+LABEL version="3.3.2"
+LABEL release="3.3.2"
+LABEL distribution-scope="public"
+LABEL description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
+LABEL url="https://github.com/project-koku/koku-metrics-operator"
+LABEL vendor="Red Hat, Inc."
