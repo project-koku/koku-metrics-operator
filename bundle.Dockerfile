@@ -16,7 +16,6 @@ COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
 # Openshift specific labels
-LABEL name="costmanagement-metrics-operator-bundle"
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
 LABEL io.k8s.description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
 LABEL io.openshift.build.commit.id="078f83fc121757bd181bd85055e9d437a650318c"
@@ -27,6 +26,7 @@ LABEL io.openshift.maintainer.product="OpenShift Container Platform"
 LABEL io.openshift.tags="openshift"
 
 # Labels required for release via Konflux 
+LABEL name="costmanagement-metrics-operator-bundle"
 LABEL com.redhat.component="costmanagement-metrics-operator-bundle-container"
 LABEL com.redhat.delivery.appregistry="false"
 LABEL com.redhat.delivery.operator.bundle="true"
