@@ -641,4 +641,7 @@ spec:
   provider:
     name: Red Hat
   version: 3.3.2
+  relatedImages:
+    - name: costmanagement-metrics-operator
+      image: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/costmanagement-metrics-operator/costmanagement-metrics-operator@sha256:80b55e8ab5b5e4deb82cdd8d6edb46a6d7e737ba1d00696e3d7d3d003b0733af
   replaces: costmanagement-metrics-operator.3.3.1
