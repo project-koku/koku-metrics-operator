@@ -15,7 +15,7 @@ LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
-# copy LICENSE to licences dir
+# copy LICENSE to licenses dir
 COPY LICENSE /licenses/Apache-2.0.txt
 
 # Openshift specific labels
