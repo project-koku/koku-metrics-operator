@@ -16,8 +16,7 @@ COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
 # copy LICENSE to licences dir
-RUN mkdir licenses
-COPY LICENSE licenses/.
+COPY LICENSE /licenses/Apache-2.0.txt
 
 # Openshift specific labels
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
