@@ -15,9 +15,6 @@ LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
-# copy LICENSE to licenses dir
-# COPY LICENSE /licenses/Apache-2.0.txt
-
 # Openshift specific labels
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
 LABEL io.k8s.description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
@@ -42,5 +39,3 @@ LABEL distribution-scope="public"
 LABEL description="Component required to gather metrics from Prometheus and package them to be uploaded to Red Hat Insights cost management. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
 LABEL url="https://github.com/project-koku/koku-metrics-operator"
 LABEL vendor="Red Hat, Inc."
-
-# USER 1001
