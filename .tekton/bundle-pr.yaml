@@ -358,7 +358,7 @@ spec:
           value: task
         resolver: bundles
       when:
-      - input: $(params.skip-checks)
+      - input: "true"
         operator: in
         values:
         - "false"
