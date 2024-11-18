@@ -1,4 +1,4 @@
-FROM registry.redhat.io/ubi9/ubi-micro
+FROM scratch
 
 # Core bundle labels.
 LABEL operators.operatorframework.io.bundle.mediatype.v1=registry+v1
@@ -16,7 +16,7 @@ COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
 # copy LICENSE to licenses dir
-COPY LICENSE /licenses/Apache-2.0.txt
+# COPY LICENSE /licenses/Apache-2.0.txt
 
 # Openshift specific labels
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
@@ -43,4 +43,4 @@ LABEL description="Component required to gather metrics from Prometheus and pack
 LABEL url="https://github.com/project-koku/koku-metrics-operator"
 LABEL vendor="Red Hat, Inc."
 
-USER 1001
+# USER 1001
