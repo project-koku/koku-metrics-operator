@@ -29,7 +29,7 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY --from=builder /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-bundle.crt
 COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc/ssl/certs/ca-bundle.trust.crt
-COPY LICENSE /licenses/.
+COPY LICENSE /licenses/Apache-2.0.txt
 
 USER 65532:65532
 
