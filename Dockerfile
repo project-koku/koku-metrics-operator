@@ -26,7 +26,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 FROM registry.redhat.io/ubi9/ubi-micro:latest AS base-env
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/manager /usr/bin/costmanagement-metrics-operator
 COPY --from=builder /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-bundle.crt
 COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc/ssl/certs/ca-bundle.trust.crt
 COPY LICENSE /licenses/Apache-2.0.txt
