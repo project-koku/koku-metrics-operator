@@ -1,4 +1,11 @@
-# Cost Management Metrics Operator (CMMO)
+# Cost Management Metrics Operator (CMMO) Konflux Flow
+
+
+## Helpful Links
+
+* [Konflux internal release docs](https://konflux.pages.redhat.com/docs/users/releasing/preparing-for-release.html)
+* [Cost Management Konflux docs](https://docs.google.com/document/d/1a8HWRrPxnW-CvaBqmzmmHeOwLuJgrVCKdz1v4OHkgaM/)
+* [Konflux config folder for the Cost Management Metrics Operator](https://gitlab.cee.redhat.com/releng/konflux-release-data/-/tree/main/tenants-config/cluster/stone-prd-rh01/tenants/cost-mgmt-dev-tenant/costmanagement-metrics-operator)
 
 
 ## Prerequisites:
@@ -130,7 +137,9 @@ Once the images are released in stage, follow the [instructions to gather the FB
 
 #### 2. Configure release in konflux-release-data
 
-- Update `product_version` in [prod ReleasePlanAdmission](https://gitlab.cee.redhat.com/releng/konflux-release-data/-/blob/main/config/stone-prd-rh01.pg1f.p1/product/ReleasePlanAdmission/cost-mgmt-dev/costmanagement-metrics-operator-prod.yaml)
+* Update `product_version` in [prod ReleasePlanAdmission](https://gitlab.cee.redhat.com/releng/konflux-release-data/-/blob/main/config/stone-prd-rh01.pg1f.p1/product/ReleasePlanAdmission/cost-mgmt-dev/costmanagement-metrics-operator-prod.yaml)
+
+* The CMMO is [released with an advisory](https://konflux.pages.redhat.com/docs/users/releasing/releasing-with-an-advisory.html) and additional relevant release notes such as issues and CVEs fixed should be listed in the `Release` object not in RPA.
 
 
 #### 3. Release operator upon successful QE testing
@@ -138,13 +147,6 @@ Once the images are released in stage, follow the [instructions to gather the FB
 - TBD
 
 
-## Help
+## Get Help
 
 * For help with konflux related questions, reach out to [#konflux-users](https://redhat.enterprise.slack.com/archives/C04PZ7H0VA8) slack channel.
-
-
-## Docs
-
-* Konflux internal release docs - https://konflux.pages.redhat.com/docs/users/releasing/preparing-for-release.html
-* Cost Management Konflux docs - https://docs.google.com/document/d/1a8HWRrPxnW-CvaBqmzmmHeOwLuJgrVCKdz1v4OHkgaM/
-* Konflux config folder for the Cost Management Metrics Operator - https://gitlab.cee.redhat.com/releng/konflux-release-data/-/tree/main/tenants-config/cluster/stone-prd-rh01/tenants/cost-mgmt-dev-tenant/costmanagement-metrics-operator
