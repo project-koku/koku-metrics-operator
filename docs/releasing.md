@@ -128,3 +128,5 @@ v4.17 catalog validation passed
 Finally, create a PR in the community-operators-prod repo with the Makefile, catalog template, and catalogs changed above.
 
 Example PR: [redhat-openshift-ecosystem/community-operators-prod#5588](https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/5588)
+
+Once this PR is merged and the pipeline runs on the merged commit, the latest version of the operator will become available.
