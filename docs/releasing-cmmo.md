@@ -10,7 +10,7 @@
 
 ## Prerequisites:
 
-- Application added in konflux
+* Application added in konflux
 
 
 ## Build:
@@ -49,10 +49,13 @@
 
 ## Release:
 
-### Pre-reqs
+### Pre-reqs:
 
-- A jira ticket for the CMMO version to be released, refer to previous [COST-5604](https://issues.redhat.com/browse/COST-5604).
-- A snapshot that has passed the integration test pipeline, see example, [costmanagement-metrics-operator-dt9d7](https://console.redhat.com/application-pipeline/workspaces/cost-mgmt-dev/applications/costmanagement-metrics-operator/snapshots/costmanagement-metrics-operator-dt9d7/pipelineruns).
+* A jira ticket for the CMMO version to be released, refer to previous [COST-5604](https://issues.redhat.com/browse/COST-5604).
+
+* A snapshot that has passed the integration test pipeline. See [example snapshot](https://console.redhat.com/application-pipeline/workspaces/cost-mgmt-dev/applications/costmanagement-metrics-operator/snapshots/costmanagement-metrics-operator-dt9d7/pipelineruns).
+
+* CLI access to the public Konflux cluster, refer to [Cost Management Konflux docs](#helpful-links).
 
 
 ### Stage
@@ -135,6 +138,7 @@ Once the images are released in stage, follow the [instructions to gather the FB
   
 * If you move to a new universal base image, a new repository that matches that rhel version is required. That can be created via a merge request in [Pyxis Repo Configs](https://gitlab.cee.redhat.com/releng/pyxis-repo-configs/-/tree/main/products/costmanagement-metrics).
 
+
 #### 2. Configure release in konflux-release-data
 
 * Update `product_version` in [prod ReleasePlanAdmission](https://gitlab.cee.redhat.com/releng/konflux-release-data/-/blob/main/config/stone-prd-rh01.pg1f.p1/product/ReleasePlanAdmission/cost-mgmt-dev/costmanagement-metrics-operator-prod.yaml)
@@ -144,7 +148,27 @@ Once the images are released in stage, follow the [instructions to gather the FB
 
 #### 3. Release operator upon successful QE testing
 
-- TBD
+* Release operator and operator-bundle snapshot
+  
+  * Create a release object for the new operator version and submit a pr for review. See [exampe pr](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/28). 
+
+  * After the pr is reviewed and merged, apply the release via CLI. 
+
+    `KUBECONFIG=~/<path/to/your/konfluxKubeConfig> kubectl apply -f <path/to/your/cost-management-metrics-operator-fbc/releases/costmanagement-metrics-operator-VERSION.yaml> -n cost-mgmt-dev-tenant`
+  
+  * The `RELEASE STATUS` MUST be `Succeeded`. If not, [ask for help](#get-help).
+  
+* Next proceed to release the FBCs
+
+  * Create release objects for each OCP version and submit a pull request. See [example PR](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/29)
+
+  * Once pr is reviewd and merged, apply the release via CLI.
+
+    `KUBECONFIG=~/<path/to/your/konfluxKubeConfig> kubectl apply -f <path/to/your/cost-management-metrics-operator-fbc/releases/costmanagement-metrics-operator-fbc-VERSION.yaml> -n cost-mgmt-dev-tenant`
+
+  * The `RELEASE STATUS` MUST be `Succeeded`. If not, [ask for help](#get-help).
+
+* Create a github release for the new operator version released, see [example release](https://github.com/project-koku/koku-metrics-operator/releases/tag/v3.3.2-downstream).
 
 
 ## Get Help
