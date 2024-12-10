@@ -726,8 +726,8 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 // +kubebuilder:rbac:groups=operators.coreos.com,namespace=koku-metrics-operator,resources=clusterserviceversions,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,resourceNames=pull-secret,namespace=openshift-config,verbs=get
+// +kubebuilder:rbac:groups=core,resources=configmaps,resourceNames=cluster-monitoring-config,namespace=openshift-monitoring,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace=koku-metrics-operator,resources=pods;services;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;serviceaccounts,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=apps,namespace=koku-metrics-operator,resources=deployments,verbs=get;list;patch;watch
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses/api,verbs=get;create;update

@@ -15,25 +15,11 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
   verbs:
   - get
   - list
   - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -107,4 +93,36 @@ rules:
   - list
   - patch
   - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manager-role
+  namespace: openshift-config
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - pull-secret
+  resources:
+  - secrets
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manager-role
+  namespace: openshift-monitoring
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - cluster-monitoring-config
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
   - watch
