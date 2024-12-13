@@ -4,7 +4,7 @@
 ## Helpful Links
 
 * [Konflux internal release docs](https://konflux.pages.redhat.com/docs/users/releasing/preparing-for-release.html)
-* [Cost Management Konflux docs](https://docs.google.com/document/d/1a8HWRrPxnW-CvaBqmzmmHeOwLuJgrVCKdz1v4OHkgaM/)
+* [Cost Management Konflux docs](https://inscope.corp.redhat.com/catalog/default/component/hccm-app/docs/konflux/)
 * [Konflux config folder for the Cost Management Metrics Operator](https://gitlab.cee.redhat.com/releng/konflux-release-data/-/tree/main/tenants-config/cluster/stone-prd-rh01/tenants/cost-mgmt-dev-tenant/costmanagement-metrics-operator)
 
 
