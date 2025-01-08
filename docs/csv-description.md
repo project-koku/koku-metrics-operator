@@ -20,7 +20,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v3.3.3:
-* Security fix for [CVE-2024-45338](https://access.redhat.com/security/cve/cve-2024-45338).
+* Dependency updates and security fix.
 
 ## New in v3.3.2:
 * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
