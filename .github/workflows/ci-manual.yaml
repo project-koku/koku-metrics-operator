@@ -22,7 +22,7 @@ jobs:
 
   unit-tests-s390x:
     name: unit-test-zvsi (s390x)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       ZVSI_SSH_KEY: koku-ci-ssh-key-${{ github.run_id }}-${{ github.run_number }}
       ZVSI_VPC_NAME: koku-ci-vpc-${{ github.run_id }}-${{ github.run_number }}
