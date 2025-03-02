@@ -1,12 +1,13 @@
 module github.com/project-koku/koku-metrics-operator
 
 go 1.22
+
 toolchain go1.22.7
 
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/golang/mock v1.6.0
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.20.2
