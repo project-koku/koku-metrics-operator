@@ -90,7 +90,7 @@ jobs:
               fi
             done
       - name: go unit test in zvsi
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ env.ZVSI_FIP_ADD }}
           username: root
