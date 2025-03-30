@@ -1,6 +1,7 @@
 module github.com/project-koku/koku-metrics-operator
 
 go 1.22
+
 toolchain go1.22.7
 
 require (
@@ -37,7 +38,7 @@ require (
 	github.com/go-openapi/swag v0.22.9 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
