@@ -1,7 +1,8 @@
 module github.com/project-koku/koku-metrics-operator
 
-go 1.22
-toolchain go1.22.7
+go 1.23
+
+toolchain go1.23.7
 
 require (
 	github.com/go-logr/logr v1.4.2
@@ -41,7 +42,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
+	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
