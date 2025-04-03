@@ -2,8 +2,6 @@ module github.com/project-koku/koku-metrics-operator
 
 go 1.24
 
-toolchain go1.24.1
-
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/golang/mock v1.6.0
@@ -12,10 +10,10 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
-	github.com/openshift/api v0.0.0-20250327202946-4521905c611e
-	github.com/operator-framework/api v0.30.0
+	github.com/openshift/api v0.0.0-20241210144725-fa836ae33dad
+	github.com/operator-framework/api v0.27.0
 	github.com/prometheus/client_golang v1.21.1
-	github.com/prometheus/common v0.63.0
+	github.com/prometheus/common v0.62.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.32.3
