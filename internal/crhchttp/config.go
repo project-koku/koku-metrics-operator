@@ -37,7 +37,6 @@ type AuthConfig struct {
 type ServiceAccountData struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
-	GrantType    string `json:"grant_type"`
 }
 
 // ServiceAccountToken holds the structure of the token response.
@@ -75,7 +74,8 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	data := url.Values{}
 	data.Set("client_id", ac.ServiceAccountData.ClientID)
 	data.Set("client_secret", ac.ServiceAccountData.ClientSecret)
-	data.Set("grant_type", ac.ServiceAccountData.GrantType)
+	data.Set("grant_type", "client_credentials")
+	data.Set("grant_type", "api.console api.iam.service_accounts")
 
 	// // Making the HTTP POST request
 	cxt, cancel := context.WithTimeout(cxt, 5*time.Second)
