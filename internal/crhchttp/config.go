@@ -75,7 +75,7 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	data.Set("client_id", ac.ServiceAccountData.ClientID)
 	data.Set("client_secret", ac.ServiceAccountData.ClientSecret)
 	data.Set("grant_type", "client_credentials")
-	data.Set("scope", "api.console api.iam.service_accounts")
+	data.Set("scope", "api.console")
 
 	// // Making the HTTP POST request
 	cxt, cancel := context.WithTimeout(cxt, 5*time.Second)
