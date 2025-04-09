@@ -120,7 +120,7 @@ func (s *sourceGetReq) getRequest(handler *SourceHandler) ([]byte, error) {
 	uri := s.root + s.endpoint
 	req, err := crhchttp.SetupRequest(handler.Auth, "", "GET", uri, &bytes.Buffer{})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to construct request for %s from Sources API: %v.", s.errKey, err)
+		return nil, fmt.Errorf("failed to construct request for %s from Sources API: %v", s.errKey, err)
 	}
 
 	q := req.URL.Query()
@@ -138,11 +138,11 @@ func (s *sourcePostReq) jsonRequest(handler *SourceHandler) ([]byte, error) {
 	uri := s.root + s.endpoint
 	jsonValue, err := json.Marshal(s.values)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to construct body for call to create a Source with the Sources API: %v.", err)
+		return nil, fmt.Errorf("failed to construct body for call to create an Integration with the Sources API: %v", err)
 	}
 	req, err := crhchttp.SetupRequest(handler.Auth, "application/json", "POST", uri, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to construct request for %s from Sources API: %v.", s.errKey, err)
+		return nil, fmt.Errorf("failed to construct request for %s from Sources API: %v", s.errKey, err)
 	}
 
 	log.Info("POST Request - " + req.URL.Path)
@@ -153,7 +153,7 @@ func doRequest(handler *SourceHandler, r *http.Request, client crhchttp.HTTPClie
 	log := log.WithName("doRequest")
 	resp, err := client.Do(r)
 	if err != nil {
-		return nil, fmt.Errorf("Failed request to Sources API (%s) for %s: %v.", r.URL.Path, errKey, err)
+		return nil, fmt.Errorf("failed request to Sources API (%s) for %s: %v", r.URL.Path, errKey, err)
 	}
 	defer resp.Body.Close()
 
@@ -162,7 +162,7 @@ func doRequest(handler *SourceHandler, r *http.Request, client crhchttp.HTTPClie
 
 	byteBody, err := crhchttp.ProcessResponse(resp)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to process the response for %s: %v.", errKey, err)
+		return nil, fmt.Errorf("failed to process the response for %s: %v", errKey, err)
 	}
 
 	return byteBody, nil
@@ -190,13 +190,13 @@ func GetSourceTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (string
 	err = json.Unmarshal(bodyBytes, &data)
 	if err != nil {
 		log.Error(err, "could not parse output of response")
-		return "", fmt.Errorf("Failed to parse OpenShift source type response from Sources API: %v.", err)
+		return "", fmt.Errorf("failed to parse OpenShift source type response from Sources API: %v", err)
 	}
 
 	if data.Meta.Count != 1 {
 		err = fmt.Errorf("the openshift source type was not found, response count was %d", data.Meta.Count)
 		log.Error(err, "unexpected response from source type API")
-		return "", fmt.Errorf("Failed to obtain the source type ID for OpenShift: %v.", err)
+		return "", fmt.Errorf("failed to obtain the source type ID for OpenShift: %v", err)
 	}
 
 	return data.Data[0].ID, nil
@@ -246,7 +246,7 @@ func CheckSourceExists(handler *SourceHandler, client crhchttp.HTTPClient, sourc
 	var data SourceResponse
 	err = json.Unmarshal(bodyBytes, &data)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse OpenShift source response from Sources API: %v.", err)
+		return nil, fmt.Errorf("failed to parse OpenShift source response from Sources API: %v", err)
 	}
 
 	if data.Meta.Count != 1 {
@@ -279,13 +279,13 @@ func GetApplicationTypeID(handler *SourceHandler, client crhchttp.HTTPClient) (s
 	err = json.Unmarshal(bodyBytes, &data)
 	if err != nil {
 		log.Error(err, "could not parse output of response")
-		return "", fmt.Errorf("Failed to parse Cost Management application type response from Sources API: %v.", err)
+		return "", fmt.Errorf("failed to parse Cost Management application type response from Sources API: %v", err)
 	}
 
 	if data.Meta.Count != 1 {
 		err = fmt.Errorf("the cost management application type was not found, response count was %d", data.Meta.Count)
 		log.Error(err, "unexpected response from application type API")
-		return "", fmt.Errorf("Failed to obtain the application type ID for Cost Management: %v.", err)
+		return "", fmt.Errorf("failed to obtain the application type ID for Cost Management: %v", err)
 	}
 
 	return data.Data[0].ID, nil
@@ -315,7 +315,7 @@ func PostSource(handler *SourceHandler, client crhchttp.HTTPClient, sourceTypeID
 	err = json.Unmarshal(bodyBytes, &data)
 	if err != nil {
 		log.Error(err, "could not parse output of response")
-		return nil, fmt.Errorf("Failed to parse Source response from Sources API: %v.", err)
+		return nil, fmt.Errorf("failed to parse Source response from Sources API: %v", err)
 	}
 	return &data, nil
 }
