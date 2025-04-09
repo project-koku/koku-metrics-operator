@@ -349,7 +349,6 @@ func (r *MetricsConfigReconciler) GetServiceAccountSecret(ctx context.Context, c
 	authConfig.ServiceAccountData = crhchttp.ServiceAccountData{
 		ClientID:     keys[authClientId],
 		ClientSecret: keys[authClientSecret],
-		GrantType:    "client_credentials",
 	}
 
 	return nil
