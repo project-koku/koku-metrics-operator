@@ -296,4 +296,4 @@ Uploading reports to cost managment is done through curl:
 
     $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" https://console.redhat.com/api/ingress/v1/upload -H "Authorization: Bearer ${ACCESS_TOKEN}"
 
-where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a [service-account](https://access.redhat.com/articles/7036194).
+where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a service account. See documentation on [creating and managing a service account](https://docs.redhat.com/en/documentation/red_hat_customer_portal/1/html/creating_and_managing_service_accounts).
