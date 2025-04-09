@@ -30,4 +30,4 @@ comment:
 
 ignore:
   - "internal/testutils/**"
-  - "**/zz_generated.deepcopy"
+  - "**/zz_generated.deepcopy.go"
