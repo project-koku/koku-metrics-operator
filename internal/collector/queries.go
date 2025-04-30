@@ -268,7 +268,6 @@ var (
 			MetricKey: staticFields{
 				"name":      "name",
 				"namespace": "namespace",
-				"resource":  "resource",
 			},
 			QueryValue: &saveQueryValue{
 				ValName:         "vm_cpu_limit_cores",
@@ -283,7 +282,6 @@ var (
 			MetricKey: staticFields{
 				"name":      "name",
 				"namespace": "namespace",
-				"resource":  "resource",
 			},
 			QueryValue: &saveQueryValue{
 				ValName:         "vm_cpu_request_cores",
@@ -298,7 +296,6 @@ var (
 			MetricKey: staticFields{
 				"name":      "name",
 				"namespace": "namespace",
-				"resource":  "resource",
 			},
 			QueryValue: &saveQueryValue{
 				ValName:         "vm_cpu_request_sockets",
@@ -313,7 +310,6 @@ var (
 			MetricKey: staticFields{
 				"name":      "name",
 				"namespace": "namespace",
-				"resource":  "resource",
 			},
 			QueryValue: &saveQueryValue{
 				ValName:         "vm_cpu_request_threads",
@@ -342,7 +338,6 @@ var (
 			MetricKey: staticFields{
 				"name":      "name",
 				"namespace": "namespace",
-				"resource":  "resource",
 			},
 			QueryValue: &saveQueryValue{
 				ValName:         "vm_memory_limit_bytes",
