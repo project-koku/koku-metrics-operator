@@ -272,18 +272,18 @@ type vmRow struct {
 	GuestOSName               string `mapstructure:"guest_os_name"`
 	GuestOSVersionId          string `mapstructure:"guest_os_version_id"`
 	UptimeSeconds             string `mapstructure:"vm_uptime_total_seconds"`
-	CPULimit                  string `mapstructure:"vm_cpu_limit_seconds"`
-	CPULimitUnit              string `mapstructure:"vm_cpu_limit_unit"`
-	CPURequest                string `mapstructure:"vm_cpu_request_seconds"`
-	CPURequestUnit            string `mapstructure:"vm_cpu_request_unit"`
-	CPUUsageSeconds           string `mapstructure:"vm_cpu_usage_seconds"`
-	MemoryLimitBytes          string `mapstructure:"vm_memory_limit_bytes_seconds"`
-	MemoryRequestBytes        string `mapstructure:"vm_memory_request_bytes_seconds"`
-	MemoryUsageBytes          string `mapstructure:"vm_memory_usage_bytes_seconds"`
+	CPULimitCores             string `mapstructure:"vm_cpu_limit_core_seconds"`
+	CPURequestCores           string `mapstructure:"vm_cpu_request_core_seconds"`
+	CPURequestSockets         string `mapstructure:"vm_cpu_request_socket_seconds"`
+	CPURequestThreads         string `mapstructure:"vm_cpu_request_thread_seconds"`
+	CPUUsageSeconds           string `mapstructure:"vm_cpu_usage_total_seconds"`
+	MemoryLimitBytes          string `mapstructure:"vm_memory_limit_byte_seconds"`
+	MemoryRequestBytes        string `mapstructure:"vm_memory_request_byte_seconds"`
+	MemoryUsageBytes          string `mapstructure:"vm_memory_usage_byte_seconds"`
 	Device                    string `mapstructure:"device"`
 	VolumeMode                string `mapstructure:"volume_mode"`
 	PersistentVolumeClaimName string `mapstructure:"persistentvolumeclaim_name"`
-	DiskAllocatedSizeBytes    string `mapstructure:"vm_disk_allocated_size_bytes_seconds"`
+	DiskAllocatedSizeBytes    string `mapstructure:"vm_disk_allocated_size_byte_seconds"`
 }
 
 func (vmRow) csvHeader() []string {
@@ -301,18 +301,18 @@ func (vmRow) csvHeader() []string {
 		"vm_guest_os_name",
 		"vm_guest_os_version_id",
 		"vm_uptime_total_seconds",
-		"vm_cpu_limit_seconds",
-		"vm_cpu_limit_unit",
-		"vm_cpu_request_seconds",
-		"vm_cpu_request_unit",
-		"vm_cpu_usage_seconds",
-		"vm_memory_limit_bytes_seconds",
-		"vm_memory_request_bytes_seconds",
-		"vm_memory_usage_bytes_seconds",
+		"vm_cpu_limit_core_seconds",
+		"vm_cpu_request_core_seconds",
+		"vm_cpu_request_socket_seconds",
+		"vm_cpu_request_thread_seconds",
+		"vm_cpu_usage_total_seconds",
+		"vm_memory_limit_byte_seconds",
+		"vm_memory_request_byte_seconds",
+		"vm_memory_usage_byte_seconds",
 		"vm_device",
 		"vm_volume_mode",
 		"vm_persistentvolumeclaim_name",
-		"vm_disk_allocated_size_bytes_seconds",
+		"vm_disk_allocated_size_byte_seconds",
 	}
 }
 
@@ -331,10 +331,10 @@ func (row vmRow) csvRow() []string {
 		row.GuestOSName,
 		row.GuestOSVersionId,
 		row.UptimeSeconds,
-		row.CPULimit,
-		row.CPULimitUnit,
-		row.CPURequest,
-		row.CPURequestUnit,
+		row.CPULimitCores,
+		row.CPURequestCores,
+		row.CPURequestSockets,
+		row.CPURequestThreads,
 		row.CPUUsageSeconds,
 		row.MemoryLimitBytes,
 		row.MemoryRequestBytes,
