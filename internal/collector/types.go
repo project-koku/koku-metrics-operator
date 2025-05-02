@@ -273,9 +273,9 @@ type vmRow struct {
 	GuestOSVersionId          string `mapstructure:"guest_os_version_id"`
 	UptimeSeconds             string `mapstructure:"vm_uptime_total_seconds"`
 	CPULimitCores             string `mapstructure:"vm_cpu_limit_core_seconds"`
-	CPURequestCores           string `mapstructure:"vm_cpu_request_core_seconds"`
-	CPURequestSockets         string `mapstructure:"vm_cpu_request_socket_seconds"`
-	CPURequestThreads         string `mapstructure:"vm_cpu_request_thread_seconds"`
+	CPURequestCoreSeconds     string `mapstructure:"vm_cpu_request_core_seconds"`
+	CPURequestSocketSeconds   string `mapstructure:"vm_cpu_request_socket_seconds"`
+	CPURequestThreadSeconds   string `mapstructure:"vm_cpu_request_thread_seconds"`
 	CPUUsageSeconds           string `mapstructure:"vm_cpu_usage_total_seconds"`
 	MemoryLimitBytes          string `mapstructure:"vm_memory_limit_byte_seconds"`
 	MemoryRequestBytes        string `mapstructure:"vm_memory_request_byte_seconds"`
@@ -332,9 +332,9 @@ func (row vmRow) csvRow() []string {
 		row.GuestOSVersionId,
 		row.UptimeSeconds,
 		row.CPULimitCores,
-		row.CPURequestCores,
-		row.CPURequestSockets,
-		row.CPURequestThreads,
+		row.CPURequestCoreSeconds,
+		row.CPURequestSocketSeconds,
+		row.CPURequestThreadSeconds,
 		row.CPUUsageSeconds,
 		row.MemoryLimitBytes,
 		row.MemoryRequestBytes,

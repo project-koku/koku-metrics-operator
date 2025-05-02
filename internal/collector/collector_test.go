@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -189,7 +189,7 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -234,7 +234,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -278,7 +278,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -311,7 +311,7 @@ func TestGenerateReportsNoCost(t *testing.T) {
 	// ####### everything below compares the generated reports to the expected reports #######
 	expectedMap := getFiles("expected_reports", t)
 	generatedMap := getFiles("test_reports", t)
-	expectedDiff := 4 // The expected diff is equal to the number of Cost reports we generate. If we add or remove reports, this number should change
+	expectedDiff := 5 // The expected diff is equal to the number of Cost reports we generate. If we add or remove reports, this number should change
 
 	if len(expectedMap)-len(generatedMap) != expectedDiff {
 		t.Errorf("incorrect number of reports generated")
@@ -333,7 +333,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		TimeSeries: &copyfakeTimeRange,
 	}
 
-	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries}
+	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -379,6 +379,14 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), podError) {
 		t.Errorf("GenerateReports %s was expected, got %v", podError, err)
+	}
+	vmError := "vm error"
+	for _, q := range *vmQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(vmError)}
+	}
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), podError) {
+		t.Errorf("GenerateReports %s was expected, got %v", vmError, err)
 	}
 	nodeError := "node error"
 	for _, q := range *nodeQueries {
