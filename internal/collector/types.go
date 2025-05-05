@@ -263,27 +263,29 @@ func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type vmRow struct {
 	*dateTimes
-	Node                      string `mapstructure:"node"`
-	Namespace                 string `mapstructure:"namespace"`
-	VMName                    string `mapstructure:"name"`
-	InstanceType              string `mapstructure:"instance_type"`
-	OS                        string `mapstructure:"os"`
-	GuestOSArch               string `mapstructure:"guest_os_arch"`
-	GuestOSName               string `mapstructure:"guest_os_name"`
-	GuestOSVersionId          string `mapstructure:"guest_os_version_id"`
-	UptimeSeconds             string `mapstructure:"vm_uptime_total_seconds"`
-	CPULimitCores             string `mapstructure:"vm_cpu_limit_core_seconds"`
-	CPURequestCoreSeconds     string `mapstructure:"vm_cpu_request_core_seconds"`
-	CPURequestSocketSeconds   string `mapstructure:"vm_cpu_request_socket_seconds"`
-	CPURequestThreadSeconds   string `mapstructure:"vm_cpu_request_thread_seconds"`
-	CPUUsageSeconds           string `mapstructure:"vm_cpu_usage_total_seconds"`
-	MemoryLimitBytes          string `mapstructure:"vm_memory_limit_byte_seconds"`
-	MemoryRequestBytes        string `mapstructure:"vm_memory_request_byte_seconds"`
-	MemoryUsageBytes          string `mapstructure:"vm_memory_usage_byte_seconds"`
-	Device                    string `mapstructure:"device"`
-	VolumeMode                string `mapstructure:"volume_mode"`
-	PersistentVolumeClaimName string `mapstructure:"persistentvolumeclaim_name"`
-	DiskAllocatedSizeBytes    string `mapstructure:"vm_disk_allocated_size_byte_seconds"`
+	Node                        string `mapstructure:"node"`
+	Namespace                   string `mapstructure:"namespace"`
+	VMName                      string `mapstructure:"name"`
+	InstanceType                string `mapstructure:"instance_type"`
+	OS                          string `mapstructure:"os"`
+	GuestOSArch                 string `mapstructure:"guest_os_arch"`
+	GuestOSName                 string `mapstructure:"guest_os_name"`
+	GuestOSVersionId            string `mapstructure:"guest_os_version_id"`
+	UptimeSeconds               string `mapstructure:"vm_uptime_total_seconds"`
+	CPULimitCores               string `mapstructure:"vm_cpu_limit_core_seconds"`
+	CPURequestCoreSeconds       string `mapstructure:"vm_cpu_request_core_seconds"`
+	CPURequestSocketSeconds     string `mapstructure:"vm_cpu_request_socket_seconds"`
+	CPURequestThreadSeconds     string `mapstructure:"vm_cpu_request_thread_seconds"`
+	CPUUsageSeconds             string `mapstructure:"vm_cpu_usage_total_seconds"`
+	MemoryLimitBytes            string `mapstructure:"vm_memory_limit_byte_seconds"`
+	MemoryRequestBytes          string `mapstructure:"vm_memory_request_byte_seconds"`
+	MemoryUsageBytes            string `mapstructure:"vm_memory_usage_byte_seconds"`
+	Device                      string `mapstructure:"device"`
+	VolumeMode                  string `mapstructure:"volume_mode"`
+	PersistentVolumeClaimName   string `mapstructure:"persistentvolumeclaim_name"`
+	DiskAllocatedSizeBytes      string `mapstructure:"vm_disk_allocated_size_byte_seconds"`
+	PodLabels                   string `mapstructure:"vm_pod_labels"`
+	PersistentVolumeClaimLabels string `mapstructure:"vm_persistentvolumeclaim_labels"`
 }
 
 func (vmRow) csvHeader() []string {
@@ -313,6 +315,8 @@ func (vmRow) csvHeader() []string {
 		"vm_volume_mode",
 		"vm_persistentvolumeclaim_name",
 		"vm_disk_allocated_size_byte_seconds",
+		"vm_pod_labels",
+		"vm_persistentvolumeclaim_labels",
 	}
 }
 
@@ -343,6 +347,8 @@ func (row vmRow) csvRow() []string {
 		row.VolumeMode,
 		row.PersistentVolumeClaimName,
 		row.DiskAllocatedSizeBytes,
+		row.PodLabels,
+		row.PersistentVolumeClaimLabels,
 	}
 }
 
