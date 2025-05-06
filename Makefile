@@ -137,6 +137,7 @@ vet: ## Run go vet against code.
 
 .PHONY: vendor
 vendor: ## Run `go mod vendor`.
+	go get -u
 	go mod tidy
 	go mod vendor
 
