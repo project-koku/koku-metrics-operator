@@ -25,8 +25,7 @@ metadata:
         "apiVersion": "koku-metrics-cfg.openshift.io/v1beta1",
         "kind": "KokuMetricsConfig",
         "metadata": {
-          "name": "kokumetricscfg-sample-v1beta1",
-          "namespace": "koku-metrics-operator"
+          "name": "kokumetricscfg-sample-v1beta1"
         },
         "spec": {
           "authentication": {
