@@ -412,6 +412,16 @@ var (
 			RowKey: []model.LabelName{"name", "namespace"},
 		},
 		query{
+			Name:        "vm_labels",
+			QueryString: "kubevirt_vm_labels{name!='', namespace!=''}",
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			MetricKeyRegex: regexFields{"vm_labels": "label_*"},
+			RowKey:         []model.LabelName{"name", "namespace"},
+		},
+		query{
 			Name:        "vm_pod_labels",
 			QueryString: "kube_pod_labels{namespace!='', label_vm_kubevirt_io_name!=''}",
 			MetricKey: staticFields{
