@@ -27,6 +27,7 @@ var (
 		"cost:pod_limit_memory_bytes":   "sum by (pod, namespace, node) (kube_pod_container_resource_limits{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_request_memory_bytes": "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
+		"cost:pod_labels":               "kube_pod_labels{namespace!='',pod!=''}",
 
 		// virtual machine metrics queries
 		"cost:vm_cpu_limit_cores":              "sum by (name, namespace) (kubevirt_vm_resource_limits{name!='', namespace!='', resource='cpu'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
@@ -40,6 +41,7 @@ var (
 		"cost:vm_info":                         "sum by (name, namespace, node, os, instance_type, guest_os_name, guest_os_version_id, guest_os_arch) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_disk_allocated_size_bytes":    "sum by (name, namespace, device, persistentvolumeclaim, volume_mode) (kubevirt_vm_disk_allocated_size_bytes{name!='', namespace!=''}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_persistentvolumeclaim_labels": "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(name) max by(name, namespace, persistentvolumeclaim) (kubevirt_vm_disk_allocated_size_bytes{persistentvolumeclaim != ''}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_labels":                       "kubevirt_vm_labels{name!='', namespace!=''}",
 
 		"ros:namespace_filter":               "kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}",
 		"ros:image_owners":                   "(max_over_time(kube_pod_container_info{container!='', container!='POD'}[15m]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}) * on(pod, namespace) group_left(owner_kind, owner_name) max by(pod, namespace, owner_kind, owner_name) (max_over_time(kube_pod_owner{container!='', container!='POD', pod!=''}[15m]))",
@@ -255,7 +257,7 @@ var (
 		},
 		query{
 			Name:           "pod-labels",
-			QueryString:    "kube_pod_labels{namespace!='',pod!=''}",
+			QueryString:    QueryMap["cost:pod_labels"],
 			MetricKey:      staticFields{"pod": "pod", "namespace": "namespace"},
 			MetricKeyRegex: regexFields{"pod_labels": "label_*"},
 			RowKey:         []model.LabelName{"pod", "namespace"},
@@ -413,34 +415,12 @@ var (
 		},
 		query{
 			Name:        "vm_labels",
-			QueryString: "kubevirt_vm_labels{name!='', namespace!=''}",
+			QueryString: QueryMap["cost:vm_labels"],
 			MetricKey: staticFields{
 				"name":      "name",
 				"namespace": "namespace",
 			},
 			MetricKeyRegex: regexFields{"vm_labels": "label_*"},
-			RowKey:         []model.LabelName{"name", "namespace"},
-		},
-		query{
-			Name:        "vm_pod_labels",
-			QueryString: "kube_pod_labels{namespace!='', label_vm_kubevirt_io_name!=''}",
-			MetricKey: staticFields{
-				"name":      "label_vm_kubevirt_io_name",
-				"namespace": "namespace",
-				"pod":       "pod",
-			},
-			MetricKeyRegex: regexFields{"vm_pod_labels": "label_*"},
-			RowKey:         []model.LabelName{"label_vm_kubevirt_io_name", "namespace"},
-		},
-		query{
-			Name:        "vm_persistentvolumeclaim_labels",
-			QueryString: QueryMap["cost:vm_persistentvolumeclaim_labels"],
-			MetricKey: staticFields{
-				"name":                  "name",
-				"namespace":             "namespace",
-				"persistentvolumeclaim": "persistentvolumeclaim",
-			},
-			MetricKeyRegex: regexFields{"vm_persistentvolumeclaim_labels": "label_*"},
 			RowKey:         []model.LabelName{"name", "namespace"},
 		},
 	}
