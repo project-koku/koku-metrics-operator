@@ -1,17 +1,17 @@
 [
-	{
-		"metric": {
-			"namespace": "default",
+    {
+        "metric": {
+            "namespace": "default",
             "name": "rhel-9-anaconda-98",
-			"persistentvolumeclaim": "rhel-9-anaconda-98-volume",
-            "label_app":"containerized-data-importer",
-            "label_app_kubernetes_io_component":"storage",
-            "label_app_kubernetes_io_managed_by":"cdi-controller",
-            "label_app_kubernetes_io_part_of":"hyperconverged-cluster",
-            "label_app_kubernetes_io_version":"4.18.1",
-            "label_instancetype_kubevirt_io_default_instancetype":"u1.medium",
-            "label_instancetype_kubevirt_io_default_preference":"rhel.9",
-            "label_kubevirt_io_created_by":"a794b490-460f-457c-bb17-e6b36b4969dc"
-		}
-	}
+            "persistentvolumeclaim": "rhel-9-anaconda-98-volume",
+            "label_app": "containerized-data-importer",
+            "label_app_kubernetes_io_component": "storage",
+            "label_app_kubernetes_io_managed_by": "cdi-controller",
+            "label_app_kubernetes_io_part_of": "hyperconverged-cluster",
+            "label_app_kubernetes_io_version": "4.18.1",
+            "label_instancetype_kubevirt_io_default_instancetype": "u1.medium",
+            "label_instancetype_kubevirt_io_default_preference": "rhel.9",
+            "label_kubevirt_io_created_by": "a794b490-460f-457c-bb17-e6b36b4969dc"
+        }
+    }
 ]

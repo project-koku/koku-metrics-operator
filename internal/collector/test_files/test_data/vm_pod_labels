@@ -1,13 +1,13 @@
 [
-    {
-		"metric": {
-            "namespace": "default",
-            "name": "rhel-9-anaconda-98",
-            "label_kubevirt_io" :"virt-launcher",
-            "label_kubevirt_io_created_by":"80309825-e3b6-4590-ae2f-d4fd8dfad7dc",
-            "label_kubevirt_io_node_name":"ip-10-0-150-20.us-east-2.compute.internal",
-            "label_network_kubevirt_io_headless_service":"headless",
-            "label_vm_kubevirt_io_name":"rhel-9-anaconda-98"
-		}
-	}
+      {
+            "metric": {
+                  "namespace": "default",
+                  "name": "rhel-9-anaconda-98",
+                  "label_kubevirt_io": "virt-launcher",
+                  "label_kubevirt_io_created_by": "80309825-e3b6-4590-ae2f-d4fd8dfad7dc",
+                  "label_kubevirt_io_node_name": "ip-10-0-150-20.us-east-2.compute.internal",
+                  "label_network_kubevirt_io_headless_service": "headless",
+                  "label_vm_kubevirt_io_name": "rhel-9-anaconda-98"
+            }
+      }
 ]

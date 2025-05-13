@@ -1,7 +1,8 @@
 [
-    {"metric": {
-            "name": "rhel-9-anaconda-98",
-            "namespace": "default"
+	{
+		"metric": {
+			"name": "rhel-9-anaconda-98",
+			"namespace": "default"
 		},
 		"values": [
 			[
@@ -9,5 +10,5 @@
 				"500"
 			]
 		]
-    }
+	}
 ]
