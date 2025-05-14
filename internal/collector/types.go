@@ -50,6 +50,7 @@ func newNamespaceRow(ts *promv1.Range) namespaceRow { return namespaceRow{dateTi
 func newNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{dateTimes: newDates(ts)} }
 func newPodRow(ts *promv1.Range) podRow             { return podRow{dateTimes: newDates(ts)} }
 func newStorageRow(ts *promv1.Range) storageRow     { return storageRow{dateTimes: newDates(ts)} }
+func newVMRow(ts *promv1.Range) vmRow               { return vmRow{dateTimes: newDates(ts)} }
 func newROSRow(ts *promv1.Range) resourceOptimizationRow {
 	return resourceOptimizationRow{dateTimes: newDates(ts)}
 }
@@ -259,6 +260,114 @@ func (row storageRow) csvRow() []string {
 }
 
 func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }
+
+type vmRow struct {
+	*dateTimes
+	Node                      string `mapstructure:"node"`
+	Namespace                 string `mapstructure:"namespace"`
+	VMName                    string `mapstructure:"name"`
+	InstanceType              string `mapstructure:"instance_type"`
+	OS                        string `mapstructure:"os"`
+	GuestOSArch               string `mapstructure:"guest_os_arch"`
+	GuestOSName               string `mapstructure:"guest_os_name"`
+	GuestOSVersionId          string `mapstructure:"guest_os_version_id"`
+	UptimeSeconds             string `mapstructure:"vm_uptime_total_seconds"`
+	CPULimitCores             string `mapstructure:"vm_cpu_limit_cores"`
+	CPULimitCoreSeconds       string `mapstructure:"vm_cpu_limit_core_seconds"`
+	CPURequestCores           string `mapstructure:"vm_cpu_request_cores"`
+	CPURequestCoreSeconds     string `mapstructure:"vm_cpu_request_core_seconds"`
+	CPURequestSockets         string `mapstructure:"vm_cpu_request_sockets"`
+	CPURequestSocketSeconds   string `mapstructure:"vm_cpu_request_socket_seconds"`
+	CPURequestThreads         string `mapstructure:"vm_cpu_request_threads"`
+	CPURequestThreadSeconds   string `mapstructure:"vm_cpu_request_thread_seconds"`
+	CPUUsageSeconds           string `mapstructure:"vm_cpu_usage_total_seconds"`
+	MemoryLimitBytes          string `mapstructure:"vm_memory_limit_bytes"`
+	MemoryLimitByteSeconds    string `mapstructure:"vm_memory_limit_byte_seconds"`
+	MemoryRequestBytes        string `mapstructure:"vm_memory_request_bytes"`
+	MemoryRequestByteSeconds  string `mapstructure:"vm_memory_request_byte_seconds"`
+	MemoryUsageBytes          string `mapstructure:"vm_memory_usage_byte_seconds"`
+	Device                    string `mapstructure:"device"`
+	VolumeMode                string `mapstructure:"volume_mode"`
+	PersistentVolumeClaimName string `mapstructure:"persistentvolumeclaim_name"`
+	DiskAllocatedSizeBytes    string `mapstructure:"vm_disk_allocated_size_byte_seconds"`
+	VMLabels                  string `mapstructure:"vm_labels"`
+}
+
+func (vmRow) csvHeader() []string {
+	return []string{
+		"report_period_start",
+		"report_period_end",
+		"interval_start",
+		"interval_end",
+		"node",
+		"namespace",
+		"vm_name",
+		"vm_instance_type",
+		"vm_os",
+		"vm_guest_os_arch",
+		"vm_guest_os_name",
+		"vm_guest_os_version_id",
+		"vm_uptime_total_seconds",
+		"vm_cpu_limit_cores",
+		"vm_cpu_limit_core_seconds",
+		"vm_cpu_request_cores",
+		"vm_cpu_request_core_seconds",
+		"vm_cpu_request_sockets",
+		"vm_cpu_request_socket_seconds",
+		"vm_cpu_request_threads",
+		"vm_cpu_request_thread_seconds",
+		"vm_cpu_usage_total_seconds",
+		"vm_memory_limit_bytes",
+		"vm_memory_limit_byte_seconds",
+		"vm_memory_request_bytes",
+		"vm_memory_request_byte_seconds",
+		"vm_memory_usage_byte_seconds",
+		"vm_device",
+		"vm_volume_mode",
+		"vm_persistentvolumeclaim_name",
+		"vm_disk_allocated_size_byte_seconds",
+		"vm_labels",
+	}
+}
+
+func (row vmRow) csvRow() []string {
+	return []string{
+		row.ReportPeriodStart,
+		row.ReportPeriodEnd,
+		row.IntervalStart,
+		row.IntervalEnd,
+		row.Node,
+		row.Namespace,
+		row.VMName,
+		row.InstanceType,
+		row.OS,
+		row.GuestOSArch,
+		row.GuestOSName,
+		row.GuestOSVersionId,
+		row.UptimeSeconds,
+		row.CPULimitCores,
+		row.CPULimitCoreSeconds,
+		row.CPURequestCores,
+		row.CPURequestCoreSeconds,
+		row.CPURequestSockets,
+		row.CPURequestSocketSeconds,
+		row.CPURequestThreads,
+		row.CPURequestThreadSeconds,
+		row.CPUUsageSeconds,
+		row.MemoryLimitBytes,
+		row.MemoryLimitByteSeconds,
+		row.MemoryRequestBytes,
+		row.MemoryRequestByteSeconds,
+		row.MemoryUsageBytes,
+		row.Device,
+		row.VolumeMode,
+		row.PersistentVolumeClaimName,
+		row.DiskAllocatedSizeBytes,
+		row.VMLabels,
+	}
+}
+
+func (row vmRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type resourceOptimizationRow struct {
 	*dateTimes

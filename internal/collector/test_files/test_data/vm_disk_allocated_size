@@ -1,0 +1,17 @@
+[
+	{
+		"metric": {
+			"name": "rhel-9-anaconda-98",
+			"namespace": "default",
+			"device": "rootdisk",
+			"volume_mode": "Block",
+			"persistentvolumeclaim": "rhel-9-anaconda-98-volume"
+		},
+		"values": [
+			[
+				1604685600,
+				"10000"
+			]
+		]
+	}
+]
