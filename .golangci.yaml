@@ -7,6 +7,13 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
 
 issues:
   max-issues-per-linter: 0
