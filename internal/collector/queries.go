@@ -38,7 +38,7 @@ var (
 		"cost:vm_memory_limit_bytes":        "sum by (name, namespace) (kubevirt_vm_resource_limits{name!='', namespace!='', resource='memory'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_memory_request_bytes":      "sum by (name, namespace) (kubevirt_vm_resource_requests{name!='', namespace!='', resource='memory'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_memory_usage_bytes":        "sum by (name, namespace) (sum_over_time(kubevirt_vmi_memory_used_bytes{name!='', namespace!=''}[5m])) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
-		"cost:vm_info":                      "sum by (name, namespace, node, os, instance_type, guest_os_name, guest_os_version_id, guest_os_arch) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_info":                      "sum by (name, namespace, node, os, instance_type, guest_os_name, guest_os_version_id, guest_os_arch) (kubevirt_vmi_info{phase='running'}) * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info)",
 		"cost:vm_disk_allocated_size_bytes": "sum by (name, namespace, device, persistentvolumeclaim, volume_mode) (kubevirt_vm_disk_allocated_size_bytes{name!='', namespace!=''}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_labels":                    "kubevirt_vm_labels{name!='', namespace!=''}",
 
@@ -381,6 +381,7 @@ var (
 			QueryString: QueryMap["cost:vm_info"],
 			MetricKey: staticFields{
 				"node":                "node",
+				"provider_id":         "provider_id",
 				"name":                "name",
 				"namespace":           "namespace",
 				"instance_type":       "instance_type",
