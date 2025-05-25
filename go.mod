@@ -11,7 +11,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
-	github.com/openshift/api v0.0.0-20231130134125-f6ae1072b499
+	github.com/openshift/api 998cd533c060
 	github.com/operator-framework/api v0.23.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
