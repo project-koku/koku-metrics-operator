@@ -87,31 +87,31 @@ setup-auth:
 
 .PHONY: add-prom-route
 add-prom-route:
-	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@sed -i "" '/prometheus_config/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '  prometheus_config:' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    skip_tls_verification: true' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-auth
 add-auth:
-	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@sed -i "" '/authentication/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '  authentication:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    type: basic'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: local-validate-cert
 local-validate-cert:
-	@sed -i "" '/upload/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '  upload:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@sed -i "" '/upload/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '  upload:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    validate_cert: false'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-ci-route
 add-ci-route:
-	@echo '  api_url: https://ci.console.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  api_url: https://ci.console.redhat.com'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-spec
 add-spec:
-	@echo 'spec:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo 'spec:' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 ##@ Development
 
@@ -224,13 +224,9 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy-cr
-deploy-cr:  ## Deploy a KokuMetricsConfig CR for controller running in K8s cluster.
-	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-ifeq ($(AUTH), basic)
-	$(MAKE) setup-auth
-	$(MAKE) add-auth
-	oc apply -f testing/authentication_secret.yaml
-else ifeq ($(AUTH), service-account)
+deploy-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running in K8s cluster.
+	@cp testing/costmanagementmetricsconfig-template.yaml testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+ifeq ($(AUTH), service-account)
 	$(MAKE) setup-sa-auth
 	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
@@ -240,18 +236,14 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: deploy-local-cr
-deploy-local-cr:  ## Deploy a KokuMetricsConfig CR for controller running on local host.
-	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+deploy-local-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running on local host.
+	@cp testing/costmanagementmetricsconfig-template.yaml testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
-ifeq ($(AUTH), basic)
-	$(MAKE) setup-auth
-	$(MAKE) add-auth
-	oc apply -f testing/authentication_secret.yaml
-else ifeq ($(AUTH), service-account)
+ifeq ($(AUTH), service-account)
 	$(MAKE) setup-sa-auth
 	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
@@ -261,7 +253,7 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
 .PHONY: get-token-and-cert
@@ -294,7 +286,7 @@ endif
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	cd koku-metrics-operator/$(VERSION) && $(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) .
+	$(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) -f bundle.Dockerfile .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
