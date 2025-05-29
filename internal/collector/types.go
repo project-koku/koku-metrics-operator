@@ -264,6 +264,7 @@ func (row storageRow) string() string { return strings.Join(row.csvRow(), ",") }
 type vmRow struct {
 	*dateTimes
 	Node                      string `mapstructure:"node"`
+	ResourceID                string `mapstructure:"resource_id"`
 	Namespace                 string `mapstructure:"namespace"`
 	VMName                    string `mapstructure:"name"`
 	InstanceType              string `mapstructure:"instance_type"`
@@ -300,13 +301,14 @@ func (vmRow) csvHeader() []string {
 		"interval_start",
 		"interval_end",
 		"node",
+		"resource_id",
 		"namespace",
 		"vm_name",
 		"vm_instance_type",
 		"vm_os",
 		"vm_guest_os_arch",
 		"vm_guest_os_name",
-		"vm_guest_os_version_id",
+		"vm_guest_os_version",
 		"vm_uptime_total_seconds",
 		"vm_cpu_limit_cores",
 		"vm_cpu_limit_core_seconds",
@@ -337,6 +339,7 @@ func (row vmRow) csvRow() []string {
 		row.IntervalStart,
 		row.IntervalEnd,
 		row.Node,
+		row.ResourceID,
 		row.Namespace,
 		row.VMName,
 		row.InstanceType,
