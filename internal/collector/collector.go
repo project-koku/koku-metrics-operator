@@ -363,6 +363,11 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 		return err
 	}
 
+	for vm, val := range vmResults {
+		resourceID := getResourceID(val["provider_id"])
+		vmResults[vm]["resource_id"] = resourceID
+	}
+
 	vmRows := make(mappedCSVStruct)
 	for vm, val := range vmResults {
 		usage := newVMRow(c.TimeSeries)
