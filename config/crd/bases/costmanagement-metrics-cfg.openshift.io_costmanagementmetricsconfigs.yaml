@@ -4,20 +4,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: kokumetricsconfigs.koku-metrics-cfg.openshift.io
+  name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
 spec:
-  group: koku-metrics-cfg.openshift.io
+  group: costmanagement-metrics-cfg.openshift.io
   names:
-    kind: KokuMetricsConfig
-    listKind: KokuMetricsConfigList
-    plural: kokumetricsconfigs
-    singular: kokumetricsconfig
+    kind: CostManagementMetricsConfig
+    listKind: CostManagementMetricsConfigList
+    plural: costmanagementmetricsconfigs
+    singular: costmanagementmetricsconfig
   scope: Namespaced
   versions:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: KokuMetricsConfig is the Schema for the kokumetricsconfig API
+        description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig
+          API
         properties:
           apiVersion:
             description: |-
@@ -37,21 +38,22 @@ spec:
           metadata:
             type: object
           spec:
-            description: KokuMetricsConfigSpec defines the desired state of KokuMetricsConfig.
+            description: CostManagementMetricsConfigSpec defines the desired state
+              of CostManagementMetricsConfig.
             properties:
               api_url:
                 default: https://console.redhat.com
                 description: |-
                   FOR DEVELOPMENT ONLY.
-                  APIURL is a field of KokuMetricsConfig to represent the url of the API endpoint for service interaction.
+                  APIURL is a field of CostManagementMetricsConfig to represent the url of the API endpoint for service interaction.
                   The default is `https://console.redhat.com`.
                 type: string
               authentication:
-                description: Authentication is a field of KokuMetricsConfig to represent
-                  the authentication object.
+                description: Authentication is a field of CostManagementMetricsConfig
+                  to represent the authentication object.
                 properties:
                   secret_name:
-                    description: AuthenticationSecretName is a field of KokuMetricsConfig
+                    description: AuthenticationSecretName is a field of CostManagementMetricsConfig
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
@@ -59,13 +61,13 @@ spec:
                     default: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
                     description: |-
                       FOR DEVELOPMENT ONLY.
-                      TokenURL is a field of KokuMetricsConfig to represent the endpoint used to obtain the service account token.
+                      TokenURL is a field of CostManagementMetricsConfig to represent the endpoint used to obtain the service account token.
                       The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
                     type: string
                   type:
                     default: token
                     description: |-
-                      AuthType is a field of KokuMetricsConfig to represent the authentication type to be used basic, service-account or token.
+                      AuthType is a field of CostManagementMetricsConfig to represent the authentication type to be used basic, service-account or token.
                       Valid values are:
                       - "basic" (deprecated) : Enables authentication using user and password from authentication secret.
                       - "service-account" : Enables authentication using client_id and client_secret from the secret containing service account information.
@@ -80,22 +82,22 @@ spec:
                 type: object
               clusterID:
                 description: |-
-                  ClusterID is a field of KokuMetricsConfig to represent the cluster UUID. Normally this value should not be
+                  ClusterID is a field of CostManagementMetricsConfig to represent the cluster UUID. Normally this value should not be
                   specified. Only set this value if the clusterID cannot be obtained from the ClusterVersion.
                 type: string
               clusterVersion:
                 description: |-
-                  ClusterVersion is a field of KokuMetricsConfig to represent the cluster version. Normally this value should not be
+                  ClusterVersion is a field of CostManagementMetricsConfig to represent the cluster version. Normally this value should not be
                   specified. Only set this value if the clusterVersion cannot be obtained from the ClusterVersion.
                 type: string
               packaging:
-                description: Packaging is a field of KokuMetricsConfig to represent
-                  the packaging object.
+                description: Packaging is a field of CostManagementMetricsConfig to
+                  represent the packaging object.
                 properties:
                   max_reports_to_store:
                     default: 30
                     description: |-
-                      MaxReports is a field of KokuMetricsConfig to represent the maximum number of reports to store.
+                      MaxReports is a field of CostManagementMetricsConfig to represent the maximum number of reports to store.
                       The default is 30 reports which corresponds to approximately 7 days worth of data given the other default values.
                     format: int64
                     minimum: 1
@@ -103,7 +105,7 @@ spec:
                   max_size_MB:
                     default: 100
                     description: |-
-                      MaxSize is a field of KokuMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
+                      MaxSize is a field of CostManagementMetricsConfig to represent the max file size in megabytes that will be compressed for upload to Ingress.
                       The default is 100.
                     format: int64
                     maximum: 100
@@ -114,20 +116,20 @@ spec:
                 - max_size_MB
                 type: object
               prometheus_config:
-                description: PrometheusConfig is a field of KokuMetricsConfig to represent
-                  the configuration of Prometheus connection.
+                description: PrometheusConfig is a field of CostManagementMetricsConfig
+                  to represent the configuration of Prometheus connection.
                 properties:
                   collect_previous_data:
                     default: true
                     description: |-
-                      CollectPreviousData is a field of KokuMetricsConfig to represent whether or not the operator will gather previous data upon KokuMetricsConfig
-                      creation. This toggle only changes operator behavior when a new KokuMetricsConfig is created. When `true`, the operator will gather all
+                      CollectPreviousData is a field of CostManagementMetricsConfig to represent whether or not the operator will gather previous data upon CostManagementMetricsConfig
+                      creation. This toggle only changes operator behavior when a new CostManagementMetricsConfig is created. When `true`, the operator will gather all
                       existing Prometheus data for the current month. The default is true.
                     type: boolean
                   context_timeout:
                     default: 120
                     description: |-
-                      ContextTimeout is a field of KokuMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
+                      ContextTimeout is a field of CostManagementMetricsConfig to represent how long a query to prometheus should run in seconds before timing out.
                       The default is 120 seconds.
                     format: int64
                     maximum: 180
@@ -136,27 +138,27 @@ spec:
                   disable_metrics_collection_cost_management:
                     default: false
                     description: |-
-                      DisableMetricsCollectionCostManagement is a field of KokuMetricsConfig to represent whether or not the operator will generate
+                      DisableMetricsCollectionCostManagement is a field of CostManagementMetricsConfig to represent whether or not the operator will generate
                       reports for cost-management metrics. The default is false.
                     type: boolean
                   disable_metrics_collection_resource_optimization:
                     default: false
                     description: |-
-                      DisableMetricsCollectionResourceOptimization is a field of KokuMetricsConfig to represent whether or not the operator will generate
+                      DisableMetricsCollectionResourceOptimization is a field of CostManagementMetricsConfig to represent whether or not the operator will generate
                       reports for resource-optimization metrics. The default is false.
                     type: boolean
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: |-
                       FOR DEVELOPMENT ONLY.
-                      SvcAddress is a field of KokuMetricsConfig to represent the thanos-querier address.
+                      SvcAddress is a field of CostManagementMetricsConfig to represent the thanos-querier address.
                       The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
                     type: string
                   skip_tls_verification:
                     default: false
                     description: |-
                       FOR DEVELOPMENT ONLY.
-                      SkipTLSVerification is a field of KokuMetricsConfig to represent if the thanos-querier endpoint must be certificate validated.
+                      SkipTLSVerification is a field of CostManagementMetricsConfig to represent if the thanos-querier endpoint must be certificate validated.
                       The default is false.
                     type: boolean
                 required:
@@ -196,20 +198,20 @@ spec:
                 - sources_path
                 type: object
               upload:
-                description: Upload is a field of KokuMetricsConfig to represent the
-                  upload object.
+                description: Upload is a field of CostManagementMetricsConfig to represent
+                  the upload object.
                 properties:
                   ingress_path:
                     default: /api/ingress/v1/upload
                     description: |-
                       FOR DEVELOPMENT ONLY.
-                      IngressAPIPath is a field of KokuMetricsConfig to represent the path of the Ingress API service.
+                      IngressAPIPath is a field of CostManagementMetricsConfig to represent the path of the Ingress API service.
                       The default is `/api/ingress/v1/upload`.
                     type: string
                   upload_cycle:
                     default: 360
                     description: |-
-                      UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
+                      UploadCycle is a field of CostManagementMetricsConfig to represent the number of minutes between each upload schedule.
                       The default is 360 min (6 hours).
                     format: int64
                     minimum: 0
@@ -217,20 +219,20 @@ spec:
                   upload_toggle:
                     default: true
                     description: |-
-                      UploadToggle is a field of KokuMetricsConfig to represent if the operator is installed in a restricted-network.
+                      UploadToggle is a field of CostManagementMetricsConfig to represent if the operator is installed in a restricted-network.
                       If `false`, the operator will not upload to console.redhat.com or check/create sources.
                       The default is true.
                     type: boolean
                   upload_wait:
-                    description: UploadWait is a field of KokuMetricsConfig to represent
-                      the time to wait before sending an upload.
+                    description: UploadWait is a field of CostManagementMetricsConfig
+                      to represent the time to wait before sending an upload.
                     format: int64
                     minimum: 0
                     type: integer
                   validate_cert:
                     default: true
-                    description: ValidateCert is a field of KokuMetricsConfig to represent
-                      if the Ingress endpoint must be certificate validated.
+                    description: ValidateCert is a field of CostManagementMetricsConfig
+                      to represent if the Ingress endpoint must be certificate validated.
                     type: boolean
                 required:
                 - ingress_path
@@ -239,8 +241,8 @@ spec:
                 - validate_cert
                 type: object
               volume_claim_template:
-                description: VolumeClaimTemplate is a field of KokuMetricsConfig to
-                  represent a PVC template.
+                description: VolumeClaimTemplate is a field of CostManagementMetricsConfig
+                  to represent a PVC template.
                 properties:
                   apiVersion:
                     description: |-
@@ -497,108 +499,109 @@ spec:
             - upload
             type: object
           status:
-            description: KokuMetricsConfigStatus defines the observed state of KokuMetricsConfig.
+            description: CostManagementMetricsConfigStatus defines the observed state
+              of CostManagementMetricsConfig.
             properties:
               api_url:
-                description: APIURL is a field of KokuMetricsConfig to represent the
-                  url of the API endpoint for service interaction.
+                description: APIURL is a field of CostManagementMetricsConfig to represent
+                  the url of the API endpoint for service interaction.
                 type: string
               authentication:
-                description: Authentication is a field of KokuMetricsConfig to represent
-                  the authentication status.
+                description: Authentication is a field of CostManagementMetricsConfig
+                  to represent the authentication status.
                 properties:
                   credentials_found:
-                    description: AuthenticationCredentialsFound is a field of KokuMetricsConfig
+                    description: AuthenticationCredentialsFound is a field of CostManagementMetricsConfig
                       to represent if used for uploads were found.
                     type: boolean
                   deprecation_notice:
-                    description: DeprecationNotice is a field of KokuMetricsConfig
+                    description: DeprecationNotice is a field of CostManagementMetricsConfig
                       to represent a deprecation notice.
                     type: string
                   error:
-                    description: AuthErrorMessage is a field of KokuMetricsConfig
+                    description: AuthErrorMessage is a field of CostManagementMetricsConfig
                       to represent an `invalid credentials` error message.
                     type: string
                   last_credential_verification_time:
-                    description: LastVerificationTime is a field of KokuMetricsConfig
+                    description: LastVerificationTime is a field of CostManagementMetricsConfig
                       to represent the last time credentials were verified.
                     format: date-time
                     nullable: true
                     type: string
                   secret_name:
-                    description: AuthenticationSecretName is a field of KokuMetricsConfig
+                    description: AuthenticationSecretName is a field of CostManagementMetricsConfig
                       to represent the secret with the user and password used for
                       uploads.
                     type: string
                   token_url:
-                    description: TokenURL is a field of KokuMetricsConfig to represent
-                      the url used to generate a service account token.
+                    description: TokenURL is a field of CostManagementMetricsConfig
+                      to represent the url used to generate a service account token.
                     type: string
                   type:
-                    description: AuthType is a field of KokuMetricsConfig to represent
-                      the authentication type to be used basic, service-account or
-                      token.
+                    description: AuthType is a field of CostManagementMetricsConfig
+                      to represent the authentication type to be used basic, service-account
+                      or token.
                     enum:
                     - token
                     - basic
                     - service-account
                     type: string
                   valid_basic_auth:
-                    description: ValidBasicAuth is a field of KokuMetricsConfig to
-                      represent if the given basic auth credentials are valid.
+                    description: ValidBasicAuth is a field of CostManagementMetricsConfig
+                      to represent if the given basic auth credentials are valid.
                     type: boolean
                 type: object
               clusterID:
-                description: ClusterID is a field of KokuMetricsConfig to represent
-                  the cluster UUID.
+                description: ClusterID is a field of CostManagementMetricsConfig to
+                  represent the cluster UUID.
                 type: string
               clusterVersion:
-                description: ClusterVersion is a field of KokuMetricsConfig to represent
-                  the cluster version.
+                description: ClusterVersion is a field of CostManagementMetricsConfig
+                  to represent the cluster version.
                 type: string
               operator_commit:
-                description: OperatorCommit is a field of KokuMetricsConfig that shows
-                  the commit hash of the operator.
+                description: OperatorCommit is a field of CostManagementMetricsConfig
+                  that shows the commit hash of the operator.
                 type: string
               packaging:
-                description: Packaging is a field of KokuMetricsConfig to represent
-                  the packaging status
+                description: Packaging is a field of CostManagementMetricsConfig to
+                  represent the packaging status
                 properties:
                   error:
-                    description: PackagingError is a field of KokuMetricsConfig to
-                      represent the error encountered packaging the reports.
+                    description: PackagingError is a field of CostManagementMetricsConfig
+                      to represent the error encountered packaging the reports.
                     type: string
                   last_successful_packaging_time:
-                    description: LastSuccessfulPackagingTime is a field of KokuMetricsConfig
+                    description: LastSuccessfulPackagingTime is a field of CostManagementMetricsConfig
                       that shows the time of the last successful file packaging.
                     format: date-time
                     nullable: true
                     type: string
                   max_reports_to_store:
-                    description: MaxReports is a field of KokuMetricsConfig to represent
-                      the maximum number of reports to store.
+                    description: MaxReports is a field of CostManagementMetricsConfig
+                      to represent the maximum number of reports to store.
                     format: int64
                     type: integer
                   max_size_MB:
-                    description: MaxSize is a field of KokuMetricsConfig to represent
-                      the max file size in megabytes that will be compressed for upload
-                      to Ingress.
+                    description: MaxSize is a field of CostManagementMetricsConfig
+                      to represent the max file size in megabytes that will be compressed
+                      for upload to Ingress.
                     format: int64
                     type: integer
                   number_reports_stored:
-                    description: ReportCount is a field of KokuMetricsConfig to represent
-                      the number of reports in storage.
+                    description: ReportCount is a field of CostManagementMetricsConfig
+                      to represent the number of reports in storage.
                     format: int64
                     type: integer
                   packaged_files:
-                    description: PackagedFiles is a field of KokuMetricsConfig to
-                      represent the list of file packages in storage.
+                    description: PackagedFiles is a field of CostManagementMetricsConfig
+                      to represent the list of file packages in storage.
                     items:
                       type: string
                     type: array
                 type: object
               persistent_volume_claim:
-                description: PersistentVolumeClaim is a field of KokuMetricsConfig
+                description: PersistentVolumeClaim is a field of CostManagementMetricsConfig
                   to represent a PVC.
                 properties:
                   apiVersion:
@@ -852,11 +855,11 @@ spec:
                 description: Prometheus represents the status of premetheus queries.
                 properties:
                   configuration_error:
-                    description: ConfigError is a field of KokuMetricsConfigStatus
+                    description: ConfigError is a field of CostManagementMetricsConfigStatus
                       to represent errors during prometheus configuration.
                     type: string
                   context_timeout:
-                    description: ContextTimeout is a field of KokuMetricsConfigState
+                    description: ContextTimeout is a field of CostManagementMetricsConfigState
                       to represent how long a query to prometheus should run in seconds
                       before timing out.
                     format: int64
@@ -864,23 +867,23 @@ spec:
                   disabled_metrics_collection_cost_management:
                     default: false
                     description: |-
-                      DisabledMetricsCollectionCostManagement is a field of KokuMetricsConfigStatus to represent whether or not collecting
+                      DisabledMetricsCollectionCostManagement is a field of CostManagementMetricsConfigStatus to represent whether or not collecting
                       cost-management metrics is disabled. The default is false.
                     type: boolean
                   disabled_metrics_collection_resource_optimization:
                     default: true
                     description: |-
-                      DisabledMetricsCollectionResourceOptimization is a field of KokuMetricsConfigStatus to represent whether or not collecting
+                      DisabledMetricsCollectionResourceOptimization is a field of CostManagementMetricsConfigStatus to represent whether or not collecting
                       resource-optimization metrics is disabled. The default is true.
                     type: boolean
                   last_query_start_time:
-                    description: LastQueryStartTime is a field of KokuMetricsConfigStatus
+                    description: LastQueryStartTime is a field of CostManagementMetricsConfigStatus
                       to represent the last time queries were started.
                     format: date-time
                     nullable: true
                     type: string
                   last_query_success_time:
-                    description: LastQuerySuccessTime is a field of KokuMetricsConfigStatus
+                    description: LastQuerySuccessTime is a field of CostManagementMetricsConfigStatus
                       to represent the last time queries were successful.
                     format: date-time
                     nullable: true
@@ -888,26 +891,26 @@ spec:
                   previous_data_collected:
                     default: false
                     description: |-
-                      PreviousDataCollected is a field of KokuMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
-                      data upon KokuMetricsConfig creation.
+                      PreviousDataCollected is a field of CostManagementMetricsConfigStatus to represent whether or not the operator gathered the available Prometheus
+                      data upon CostManagementMetricsConfig creation.
                     type: boolean
                   prometheus_configured:
-                    description: PrometheusConfigured is a field of KokuMetricsConfigStatus
+                    description: PrometheusConfigured is a field of CostManagementMetricsConfigStatus
                       to represent if the operator is configured to connect to prometheus.
                     type: boolean
                   prometheus_connected:
-                    description: PrometheusConnected is a field of KokuMetricsConfigStatus
+                    description: PrometheusConnected is a field of CostManagementMetricsConfigStatus
                       to represent if prometheus can be queried.
                     type: boolean
                   prometheus_connection_error:
-                    description: ConnectionError is a field of KokuMetricsConfigStatus
+                    description: ConnectionError is a field of CostManagementMetricsConfigStatus
                       to represent errors during prometheus test query.
                     type: string
                   service_address:
                     description: SvcAddress is the internal thanos-querier address.
                     type: string
                   skip_tls_verification:
-                    description: SkipTLSVerification is a field of KokuMetricsConfigStatus
+                    description: SkipTLSVerification is a field of CostManagementMetricsConfigStatus
                       to represent if the thanos-querier endpoint must be certificate
                       validated.
                     type: boolean
@@ -919,20 +922,20 @@ spec:
                 description: Reports represents the status of report generation.
                 properties:
                   data_collected:
-                    description: DataCollected is a field of KokuMetricsConfigStatus
+                    description: DataCollected is a field of CostManagementMetricsConfigStatus
                       to represent whether or not data was collected for the last
                       query.
                     type: boolean
                   data_collection_message:
-                    description: DataCollectionMessage is a field of KokuMetricsConfigStatus
+                    description: DataCollectionMessage is a field of CostManagementMetricsConfigStatus
                       to represent a message associated with the data_collected status.
                     type: string
                   last_hour_queried:
-                    description: LastHourQueried is a field of KokuMetricsConfigStatus
+                    description: LastHourQueried is a field of CostManagementMetricsConfigStatus
                       to represent the time range for which metrics were last queried.
                     type: string
                   report_month:
-                    description: ReportMonth is a field of KokuMetricsConfigStatus
+                    description: ReportMonth is a field of CostManagementMetricsConfigStatus
                       to represent the month for which reports are being generated.
                     type: string
                 type: object
@@ -987,65 +990,65 @@ spec:
                     type: string
                 type: object
               upload:
-                description: Upload is a field of KokuMetricsConfig to represent the
-                  upload object.
+                description: Upload is a field of CostManagementMetricsConfig to represent
+                  the upload object.
                 properties:
                   error:
-                    description: UploadError is a field of KokuMetricsConfigStatus
+                    description: UploadError is a field of CostManagementMetricsConfigStatus
                       to represent the error encountered uploading reports.
                     type: string
                   ingress_path:
-                    description: IngressAPIPath is a field of KokuMetricsConfig to
-                      represent the path of the Ingress API service.
+                    description: IngressAPIPath is a field of CostManagementMetricsConfig
+                      to represent the path of the Ingress API service.
                     type: string
                   last_payload_files:
-                    description: LastPayloadFiles is a field of KokuMetricsConfig
+                    description: LastPayloadFiles is a field of CostManagementMetricsConfig
                       to represent the list of files in the last payload that was
                       sent.
                     items:
                       type: string
                     type: array
                   last_payload_manifest_id:
-                    description: LastPayloadManifest is a field of KokuMetricsConfig
+                    description: LastPayloadManifest is a field of CostManagementMetricsConfig
                       that shows the manifestID of the last payload.
                     type: string
                   last_payload_name:
-                    description: LastPayloadName is a field of KokuMetricsConfig that
-                      shows the name of the last payload file.
+                    description: LastPayloadName is a field of CostManagementMetricsConfig
+                      that shows the name of the last payload file.
                     type: string
                   last_payload_request_id:
-                    description: LastPayloadRequestID is a field of KokuMetricsConfig
+                    description: LastPayloadRequestID is a field of CostManagementMetricsConfig
                       that shows the insights request id of the last payload.
                     type: string
                   last_successful_upload_time:
-                    description: LastSuccessfulUploadTime is a field of KokuMetricsConfig
+                    description: LastSuccessfulUploadTime is a field of CostManagementMetricsConfig
                       that shows the time of the last successful upload.
                     format: date-time
                     nullable: true
                     type: string
                   last_upload_status:
-                    description: LastUploadStatus is a field of KokuMetricsConfig
+                    description: LastUploadStatus is a field of CostManagementMetricsConfig
                       that shows the http status of the last upload.
                     type: string
                   upload:
                     description: |-
-                      UploadToggle is a field of KokuMetricsConfig to represent if the operator should upload to console.redhat.com.
+                      UploadToggle is a field of CostManagementMetricsConfig to represent if the operator should upload to console.redhat.com.
                       The default is true
                     type: boolean
                   upload_cycle:
                     description: |-
-                      UploadCycle is a field of KokuMetricsConfig to represent the number of minutes between each upload schedule.
+                      UploadCycle is a field of CostManagementMetricsConfig to represent the number of minutes between each upload schedule.
                       The default is 360 min (6 hours).
                     format: int64
                     type: integer
                   upload_wait:
-                    description: UploadWait is a field of KokuMetricsConfig to represent
-                      the time to wait before sending an upload.
+                    description: UploadWait is a field of CostManagementMetricsConfig
+                      to represent the time to wait before sending an upload.
                     format: int64
                     type: integer
                   validate_cert:
-                    description: ValidateCert is a field of KokuMetricsConfig to represent
-                      if the Ingress endpoint must be certificate validated.
+                    description: ValidateCert is a field of CostManagementMetricsConfig
+                      to represent if the Ingress endpoint must be certificate validated.
                     type: boolean
                 type: object
             type: object
