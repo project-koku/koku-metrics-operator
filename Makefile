@@ -136,8 +136,8 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: vendor
-vendor: ## Run `go mod vendor`.
-	go get -u
+vendor: ## Update deps, tidy and vendor modules.
+	go get -u ./...
 	go mod tidy
 	go mod vendor
 

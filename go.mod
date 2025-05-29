@@ -2,6 +2,8 @@ module github.com/project-koku/koku-metrics-operator
 
 go 1.24.0
 
+toolchain go1.24.3
+
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/golang/mock v1.6.0
