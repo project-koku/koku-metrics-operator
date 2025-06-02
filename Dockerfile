@@ -21,7 +21,7 @@ COPY internal/ internal/
 COPY .git .git
 
 # Use FIPS crypto module at build time
-ENV GOFIPS140=v1.0.0
+ARG GOFIPS140=v1.0.0
 
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
