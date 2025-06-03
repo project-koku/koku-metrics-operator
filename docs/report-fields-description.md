@@ -137,7 +137,7 @@ Fields for metrics related to running virtual machines and their associated reso
 * `vm_os`: The operating system reported by the VM's info.
 * `vm_guest_os_arch`: The guest operating system architecture reported by the VM (e.g., `x86_64`).
 * `vm_guest_os_name`: The guest operating system name reported by the VM (e.g., `RHEL`, `Fedora`).
-* `vm_guest_os_version_id`: The guest operating system version ID reported by the VM (e.g., `8.6`).
+* `vm_guest_os_version`: The guest operating system version ID reported by the VM (e.g., `8.6`).
 * `vm_uptime_total_seconds`: The total uptime of the VMI in seconds since it started.
 * `vm_cpu_limit_cores`: CPU core limit configured, representing the maximum number of cores the VM can use.
 * `vm_cpu_limit_core_seconds`: Total CPU core seconds limited for the VM over the reporting period.
