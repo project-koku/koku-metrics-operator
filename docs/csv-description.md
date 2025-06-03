@@ -19,6 +19,46 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.0.0:
+* **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports specifically for running virtual machines within your OpenShift environment.
+* **FIPS 140 Compliance:** The operator is now enabled for FIPS 140 compliance, meeting stricter security standards.
+* **API Name Change (`KokuMetricsConfig` to `CostManagementMetricsConfig`):** The Custom Resource Definition (CRD) for configuring the upstream `Koku Metrics Operator` has been renamed from `KokuMetricsConfig` to `CostManagementMetricsConfig`.
+
+### NOTE:
+  * The API name change only impacts users of the upstream (community) Koku Metrics Operator.
+  * The downstream (Red Hat-supported) Cost Management Metrics Operator is not impacted by this change and users should continue using their existing configurations.
+
+**Important Upgrade Instructions:**
+
+  If you are upgrading the upstream Koku Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing KokuMetricsConfig resources.
+
+  To successfully upgrade and retain your operator's configuration:
+
+  1. Backup Existing Configuration (Optional but Recommended):
+
+     Before upgrading, retrieve the details of your current KokuMetricsConfig instance. This will help you recreate it with the new API name.
+
+     ```
+     oc get kokumetricsconfig -n koku-metrics-operator <your-config-name> -o yaml > koku-metrics-config-backup.yaml
+     ```
+  2. Delete the Old KokuMetricsConfig Instance:
+
+      Once the operator has been upgraded to v4.0.0, you must delete any existing KokuMetricsConfig resources.
+
+      ```
+      oc delete kokumetricsconfig -n koku-metrics-operator <your-config-name>
+      ```
+
+  3. Create the New CostManagementMetricsConfig Instance:
+
+      Using the information from your backup (or a new configuration), create a new CostManagementMetricsConfig instance. Adjust the spec section based on your specific needs. [Refer to the configurable parameters](#configurable-parameters).
+
+  4. Apply your new configuration:
+
+      ```
+      oc apply -f <your-costmanagementmetricsconfig-file>.yaml -n koku-metrics-operator
+      ```
+
 ## New in v3.3.2:
 * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
 
