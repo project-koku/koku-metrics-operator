@@ -19,11 +19,15 @@ COPY internal/ internal/
 
 # Copy git to inject the commit during build
 COPY .git .git
+
+# Use FIPS crypto module at build time
+ARG GOFIPS140=v1.0.0
+
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
-echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
-go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
+    echo " injecting GIT COMMIT: $GIT_COMMIT" && \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
+    go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
@@ -31,6 +35,9 @@ FROM gcr.io/distroless/static:nonroot
 
 # For terminal access, use this image:
 # FROM gcr.io/distroless/base:debug-nonroot
+
+# Enable FIPS mode at runtime
+ENV GODEBUG=fips140=on
 
 LABEL \
     com.redhat.component="koku-metrics-operator-container" \
