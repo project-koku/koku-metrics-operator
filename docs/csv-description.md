@@ -21,7 +21,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 ## New in v4.0.0:
 * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports specifically for running virtual machines within your OpenShift environment.
-* **FIPS 140 Compliance:** The operator is now enabled for FIPS 140 compliance, meeting stricter security standards.
+* **Progress towards FIPS 140 Compliance:** The operator is now enabled for its journey towards FIPS 140 compliance through the use of the Go Cryptographic Module v1.0.0. It is important to note that the validation of this module was not finalized at the time of the release. This initiative targets adherence to stricter security standards once the module's FIPS validation is successfully archieved.
 * **API Name Change (`KokuMetricsConfig` to `CostManagementMetricsConfig`):** The Custom Resource Definition (CRD) for configuring the upstream `Koku Metrics Operator` has been renamed from `KokuMetricsConfig` to `CostManagementMetricsConfig`.
 
 ### NOTE:
@@ -41,9 +41,9 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
      ```
      oc get kokumetricsconfig -n koku-metrics-operator <your-config-name> -o yaml > koku-metrics-config-backup.yaml
      ```
-  2. Delete the Old KokuMetricsConfig Instance:
+  2. Delete the Old KokuMetricsConfig Instance (Optional but Recommended):
 
-      Once the operator has been upgraded to v4.0.0, you must delete any existing KokuMetricsConfig resources.
+      Once the operator has been upgraded to `version 4.0.0`, delete any existing KokuMetricsConfig resources.
 
       ```
       oc delete kokumetricsconfig -n koku-metrics-operator <your-config-name>
