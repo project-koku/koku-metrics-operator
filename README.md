@@ -162,7 +162,7 @@ Verify that the koku-metrics-operator is up and running:
 $ oc get deployment
 ```
 
-## Create a KokuMetricsConfig CR
+## Create a CostManagementMetricsConfig CR
 
 Create the CR with the default token authentication:
 

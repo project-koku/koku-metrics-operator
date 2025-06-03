@@ -1,0 +1,21 @@
+[
+    {
+        "metric": {
+            "node": "ip-10-0-184-152.us-east-2.compute.internal",
+            "provider_id": "i-0d747f55dc1009705",
+            "name": "rhel-9-anaconda-98",
+            "namespace": "default",
+            "instance_type": "u1.medium",
+            "os": "linux",
+            "guest_os_arch": "x86_64",
+            "guest_os_name": "Red Hat Enterprise Linux",
+            "guest_os_version_id": "9.5"
+        },
+        "values": [
+            [
+                1604685600,
+                "60"
+            ]
+        ]
+    }
+]

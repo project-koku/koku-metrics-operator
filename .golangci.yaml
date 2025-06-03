@@ -1,29 +1,29 @@
-run:
-  timeout: 5m
-
-linters-settings:
-  goimports:
-    # Put imports beginning with prefix after 3rd-party packages.
-    # It's a comma-separated list of prefixes.
-    local-prefixes: github.com/project-koku/koku-metrics-operator
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    ## enabled by default
     - errcheck
-    - gosimple
-    - gofmt
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
-
-    - goimports
-    # - gosec
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   fix: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/project-koku/koku-metrics-operator

@@ -22,19 +22,17 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 			ServiceAccountData: ServiceAccountData{
 				ClientID:     "testClientId",
 				ClientSecret: "testClientSecret",
-				GrantType:    "testGrantType",
 			},
 		}
 	})
 
 	// Helper function to create an AuthConfig and call GetAccessToken.
-	getTokenWithConfig := func(clientID, clientSecret, grantType string) error {
+	getTokenWithConfig := func(clientID, clientSecret string) error {
 		config := &AuthConfig{
 			Authentication: serviceaccount,
 			ServiceAccountData: ServiceAccountData{
 				ClientID:     clientID,
 				ClientSecret: clientSecret,
-				GrantType:    grantType,
 			},
 		}
 		return config.GetAccessToken(ctx, badMockTS.URL+tokenurlsuffix)
@@ -111,7 +109,7 @@ var _ = Describe("GetAccessToken Functional Tests", func() {
 
 		for _, tc := range testCases {
 			It("Should return error for invalid credentials", func() {
-				err := getTokenWithConfig(tc.ClientID, tc.ClientSecret, tc.GrantType)
+				err := getTokenWithConfig(tc.ClientID, tc.ClientSecret)
 				if tc.ShouldError {
 					Expect(err).To(HaveOccurred())
 					Expect(authConfig.BearerTokenString).To(BeEmpty())

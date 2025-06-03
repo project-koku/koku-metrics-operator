@@ -32,7 +32,7 @@ Testing an upgrade is composed of the following general steps:
     $ oc new-project koku-metrics-operator
     $ make bundle-deploy-previous
     ```
-    Check the `koku-metrics-operator` namespace and ensure the previous version deployed correctly. Create a KokuMetricsConfig so that the PVC is created and data is collected, if available.
+    Check the `koku-metrics-operator` namespace and ensure the previous version deployed correctly. Create a CostManagementMetricsConfig so that the PVC is created and data is collected, if available.
 
 1. Generate the new controller image, and push to your Quay repo:
 

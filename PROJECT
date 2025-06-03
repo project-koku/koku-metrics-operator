@@ -12,8 +12,8 @@ resources:
       namespaced: true
     controller: true
     domain: openshift.io
-    group: koku-metrics-cfg
-    kind: KokuMetricsConfig
+    group: costmanagement-metrics-cfg
+    kind: CostManagementMetricsConfig
     path: github.com/project-koku/koku-metrics-operator/api/v1beta1
     version: v1beta1
 version: "3"
