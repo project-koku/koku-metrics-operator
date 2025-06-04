@@ -20,38 +20,39 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
 ## New in v4.0.0:
-* **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports specifically for running virtual machines within your OpenShift environment.
-* **Progress towards FIPS 140 Compliance:** The operator is now enabled for its journey towards FIPS 140 compliance through the use of the Go Cryptographic Module v1.0.0. It is important to note that the validation of this module was not finalized at the time of the release. This initiative targets adherence to stricter security standards once the module's FIPS validation is successfully archieved.
-* **API Name Change (`KokuMetricsConfig` to `CostManagementMetricsConfig`):** The Custom Resource Definition (CRD) for configuring the upstream `Koku Metrics Operator` has been renamed from `KokuMetricsConfig` to `CostManagementMetricsConfig`.
+* **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
+* **Progress towards FIPS 140 Compliance:** The operator is using the Go Cryptographic Module v1.0.0 to progress toward FIPS 140 compliance. Although this module is not validated at the time of this release, the operator aims to meet stricter security standards when the module does successfully achieve FIPS validation.
+* **API Name Change:** The Custom Resource Definition (CRD) for configuring the upstream `Koku Metrics Operator` was renamed from `KokuMetricsConfig` to `CostManagementMetricsConfig`.
 
 ### NOTE:
-  * The API name change only impacts users of the upstream (community) Koku Metrics Operator.
+  * The API name change impacts only users of the upstream (community) Koku Metrics Operator.
   * The downstream (Red Hat-supported) Cost Management Metrics Operator is not impacted by this change and users should continue using their existing configurations.
 
 **Important Upgrade Instructions:**
 
-  If you are upgrading the upstream Koku Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing KokuMetricsConfig resources.
+  If you are upgrading the upstream Koku Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing `KokuMetricsConfig` resources.
 
-  To successfully upgrade and retain your operator's configuration:
+  To successfully upgrade and retain your operator's configuration, complete the following steps. You can use the provided `oc` commands replacing the angle brackets with respective values:
 
-  1. Backup Existing Configuration (Optional but Recommended):
+  1. Backup existing configuration (recommended):
 
-     Before upgrading, retrieve the details of your current KokuMetricsConfig instance. This will help you recreate it with the new API name.
+     Before you upgrade, retrieve the details of your current `KokuMetricsConfig` instance to help you recreate it with the new API name.
 
      ```
      oc get kokumetricsconfig -n koku-metrics-operator <your-config-name> -o yaml > koku-metrics-config-backup.yaml
      ```
-  2. Delete the Old KokuMetricsConfig Instance (Optional but Recommended):
 
-      Once the operator has been upgraded to `version 4.0.0`, delete any existing KokuMetricsConfig resources.
+  2. Delete the previous `KokuMetricsConfig` instance (recommended):
+
+      After the operator is upgraded to `version 4.0.0`, delete any existing `KokuMetricsConfig` resources.
 
       ```
       oc delete kokumetricsconfig -n koku-metrics-operator <your-config-name>
       ```
 
-  3. Create the New CostManagementMetricsConfig Instance:
+  3. Create the new `CostManagementMetricsConfig` instance:
 
-      Using the information from your backup (or a new configuration), create a new CostManagementMetricsConfig instance. Adjust the spec section based on your specific needs. [Refer to the configurable parameters](#configurable-parameters).
+      Using the information from your backup (or a new configuration), create a new `CostManagementMetricsConfig` instance. Adjust the spec section based on your specific needs. For more information about configurations, [refer to the configurable parameters](#configurable-parameters).
 
   4. Apply your new configuration:
 
