@@ -7,7 +7,7 @@ This document provides an outline of the fields included in the collected usage 
 
 * The [Prometheus queries](https://github.com/project-koku/koku-metrics-operator/blob/main/internal/collector/queries.go) that the operator uses to collect metrics are detailed in the linked file.
 
-* To enable the collection ROS (Resource Optimization) metrics, ensure that the namespace(s) are labeled with `insights_cost_management_optimizations='true'`.
+* To enable the collection ROS (Resource Optimization) metrics, ensure that the namespaces are labeled with `insights_cost_management_optimizations='true'`.
 
     * Queries responsible for collecting ROS metrics are identified in the `QueryMap` with the prefix `ros:` and include a specific filter to target the appropriately labeled namespaces:
         ```
