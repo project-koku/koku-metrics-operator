@@ -32,7 +32,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
   If you are upgrading the upstream Koku Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing `KokuMetricsConfig` resources.
 
-  To successfully upgrade and retain your operator's configuration, complete the following steps. You can use the provided `oc` commands replacing the angle brackets with respective values:
+  To successfully upgrade and retain your operator's configuration, complete the following steps. You can use the provided `oc` commands replacing the angle brackets (`< >`) with your specific values:
 
   1. Backup existing configuration (recommended):
 

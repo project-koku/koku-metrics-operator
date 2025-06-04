@@ -31,7 +31,7 @@ These common fields are included in all the reports and provide temporal informa
 Fields for metrics related to containers:
 
 * `container_name`: The name of the container.
-* `pod`: The name of the pod that contains the container.
+* `pod`: The name of the pod that associated with the container.
 * `owner_name`: The name of the owner entity that is associated with the container. For example Deployment or StatefulSet.
 * `owner_kind`: The kind of the owner entity that is associated with the container. For example Deployment or StatefulSet.
 * `workload`: The workload associated with the container.
@@ -129,7 +129,7 @@ Fields for metrics related to namespaces:
 
 Fields for metrics related to running virtual machines (VMs) and their associated resources:
 
-* `node`: The name of the node where the VM instance (VMI) is currently running.
+* `node`: The name of the node where the virtual machine instance (VMI) is currently running.
 * `namespace`: The namespace where the virtual machine (VM) is defined.
 * `resource_id`: The unique identifier of the VM on the node. This is derived from the `provider_id` of the node, specifically the segment after the last `/` character. For example, if the `provider_id` is `aws:///us-east-1a/i-0abcdef1234567890`, the `resource_id` is `i-0abcdef1234567890`.
 * `vm_name`: The name of the VM.
