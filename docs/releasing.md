@@ -1,132 +1,107 @@
-## Releasing a new version of the koku-metrics-operator
+# Releasing a new version of the Koku Metrics Operator
 
-Before releasing a new version of the operator, testing should be performed as described [here](release-testing.md).
+This guide outlines the steps for releasing a new version of the Koku Metrics Operator, from creating a github release to submitting the bundle to the `community-operators-prod` repository for File-Based Catalog (FBC) auto-release.
+
+Before proceeding, ensure all necessary testing has been performed as described in the [release-testing.md](release-testing.md) documentation.
 
 
-### Create a github release and push the operator image
-Create a GitHub release that corresponds with the operator release version. The [previous releases](https://github.com/project-koku/koku-metrics-operator/releases) can be used as a template.
+## Create a github release and push the operator image
 
-Update the release version at the top of the `Makefile` to match the release version of the operator:
+First, create a github release that corresponds to the new operator version. You can use [previous releases](https://github.com/project-koku/koku-metrics-operator/releases) as a template.
 
-```
-# Current Operator version
+Make sure the `VERSION` variable at the top of your operator's `Makefile` matches the release version:
+
+```makefile
+# Current operator version
 VERSION ?= <release-version>
 ```
 
-> After creating the GitHub release/tag, a Quay hook should pull the image. Check the [quay repo](https://quay.io/repository/project-koku/koku-metrics-operator?tab=tags) and ensure the new tag was pulled. If the tag does not exist, the following should be run to build and push the image:
-> ```
-> make docker-build
-> make docker-push
-> ```
+After creating the github release and tag, a Quay hook should automatically pull and tag the new image. Verify this by checking for the new tag in the [Quay.io repository](https://quay.io/repository/project-koku/koku-metrics-operator?tab=tags). If the tag doesn't appear, you'll need to manually build and push the image:
 
-### Generate the release bundle
-Run the following command to generate the release bundle:
-
+```bash
+make docker-build
+make docker-push
 ```
+
+
+
+## Generate the release bundle
+
+**Note:** Ensure the operator image is available locally or pulled to your system so that the `operator-sdk` can correctly embed its reference within the bundle's manifests.
+
+Run the following command to generate the OLM bundle for the new operator version:
+
+```bash
 make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta
 ```
-This will generate a new bundle inside of the `bundle/` directory within the repository.
 
-Once the release bundle has been generated, fork & clone the [community-operators-prod repository](https://github.com/redhat-openshift-ecosystem/community-operators-prod/tree/main). Create a branch, and copy the generated bundle to the `community-operators-prod/operators/koku-metrics-operator/<VERSION>/` directory in your cloned fork.
+This command generates a new bundle inside the `bundle/` directory within your repository.
 
-For example, if the bundle was generated for a `1.0.0` release, the directory structure would look like the following:
 
-```
-koku-metrics-operator/
-├── 0.9.0
-│   ├── manifests
-│   │   ├── koku-metrics-cfg.openshift.io_kokumetricsconfigs.yaml
-│   │   └── koku-metrics-operator.clusterserviceversion.yaml
-│   ├── metadata
-│   │   └── annotations.yaml
-├── 1.0.0
-│   ├── manifests
-│   │   ├── koku-metrics-cfg.v1.0.0.openshift.io_kokumetricsconfigs.yaml
-│   │   └── koku-metrics-operator.v1.0.0.clusterserviceversion.yaml
-│   ├── metadata
-│   │   └── annotations.yaml
-```
+## Submit the Generated bundle to `community-operators-prod`
 
-### Create the operator-bundle pull-request
-Commit, sign, and push the branch to the fork of the community-operators repo. Once pushed, open a PR against the community-operators repo and fill out the resulting checklist:
+After the bundle is generated, you need to contribute it to the `community-operators-prod` repository.
 
-```
+### 1. Fork, clone, and copy the bundle
+
+1. Start by forking the [community-operators-prod repository](https://github.com/redhat-openshift-ecosystem/community-operators-prod/tree/main) and cloning your fork locally.
+2. Create a new branch for your changes. For example `koku-metrics-operator-v4.0.0`.
+3. Copy the contents of the generated `bundle/` directory into a new version-specific directory within your cloned fork. The path should be `community-operators-prod/operators/koku-metrics-operator/<VERSION>/`.
+ For example, if you're releasing `version 4.0.0`, the directory structure in your `community-operators-prod` fork would look like this:
+
+    ```
+    community-operators-prod/
+    └── operators/
+        └── koku-metrics-operator/
+            ├── 3.3.2/
+            │   ├── manifests/
+            │   │   ├── koku-metrics-cfg.openshift.io_kokumetricsconfigs.yaml
+            │   │   └── koku-metrics-operator.clusterserviceversion.yaml
+            │   └── metadata/
+            │       └── annotations.yaml
+            └── 4.0.0/  <-- New bundle Directory
+                ├── manifests/
+                │   ├── costmanagement-metrics-cfg.openshift.io_costmanagementmetricsconfigs.yaml
+                │   └── koku-metrics-operator.clusterserviceversion.yaml
+                ├── metadata/
+                │   └── annotations.yaml
+    ```
+
+### 2. Configure File-Based Catalog (FBC) auto-release
+
+To enable the auto-release feature for the File-Based Catalogs (FBCs), you must add a `release-config.yaml` file to the bundle directory. For more information, refer to the [File-Based Catalog auto-release documentation](https://redhat-openshift-ecosystem.github.io/operator-pipelines/users/fbc_autorelease/).
+
+1. Create a file named `release-config.yaml` directly inside the new version directory. For example `community-operators-prod/operators/koku-metrics-operator/4.0.0/`.
+
+    ```
+    community-operators-prod/
+    └── operators/
+        └── koku-metrics-operator/
+            └── 4.0.0/
+                ├── manifests/
+                ├── metadata/
+                └── release-config.yaml  <-- New file
+    ```
+
+2. The contents of the `release-config.yaml` should be similar to the example below. This file tells the FBC generation automation how to include this bundle in specific channels and manage upgrade paths.
+
+    ```yaml
+    ---
+    catalog_templates:
+      - template_name: basic.yaml
+        channels: [beta, alpha] # list of channels this bundle should be available in.
+        replaces: koku-metrics-operator.v3.3.2 # the bundle this new version replaces in these channels.
+    ```
+
+### 3. Create the operator bundle pull request
+
+Finally, commit your changes, sign the commit, and push your branch to your fork. Then, open a pull request against the main `redhat-openshift-ecosystem/community-operators-prod` repository.
+
+```bash
 git commit -s -m "<commit-message>"
-git push origin branch
+git push origin your-branch-name
 ```
 
-Example PR: [redhat-openshift-ecosystem/community-operators-prod#5587](https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/5587)
+Once pushed, open a pull and complete the checklist provided. For an example, you can refer to [redhat-openshift-ecosystem/community-operators-prod#6824](https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/6824).
 
-Once this PR merges, a pipeline will kick off to generate the bundle. When the bundle is generated, the FBC needs to be updated to push out a release.
-
-### Update the File Based Catalog (FBC)
-
-A few make commands are available in the community-operators koku-metrics-operator directory. First, update the version at the top of the file:
-```
-PREVIOUS_VERSION ?= 3.3.1
-VERSION ?= 3.3.2
-```
-
-The gather the new bundle pullspec. The following command will pull the latest bundle for the defined `VERSION` and output the sha of the pullspec:
-
-```
-$ make get-bundle
-docker pull quay.io/community-operator-pipeline-prod/koku-metrics-operator:3.3.2
-3.3.2: Pulling from community-operator-pipeline-prod/koku-metrics-operator
-Digest: sha256:9114f72f6adca60e18616786019d680883bb1c1dc88d317e7adeeec787054469
-Status: Image is up to date for quay.io/community-operator-pipeline-prod/koku-metrics-operator:3.3.2
-quay.io/community-operator-pipeline-prod/koku-metrics-operator:3.3.2
-docker inspect --format '{{.RepoDigests}}' quay.io/community-operator-pipeline-prod/koku-metrics-operator:3.3.2
-[quay.io/community-operator-pipeline-prod/koku-metrics-operator@sha256:9114f72f6adca60e18616786019d680883bb1c1dc88d317e7adeeec787054469] <<<<
-```
-
-Copy the `PULLSPEC` and update the value in the Makefile:
-```
-PULLSPEC ?= quay.io/community-operator-pipeline-prod/koku-metrics-operator@sha256:9114f72f6adca60e18616786019d680883bb1c1dc88d317e7adeeec787054469
-```
-
-Then add the new version to the catalog template:
-```
-make add-new-version
-```
-
-Inspect the template to ensure the `name` and `replaces` are correct for both the `alpha` and `beta` channels, and ensure the `olm.bundle` image has been added:
-```
-...
-      - name: koku-metrics-operator.v3.3.1
-        replaces: koku-metrics-operator.v3.3.0
-      - name: koku-metrics-operator.v3.3.2       <<<<
-        replaces: koku-metrics-operator.v3.3.1   <<<<
-    name: alpha
-...
-      - name: koku-metrics-operator.v3.3.1
-        replaces: koku-metrics-operator.v3.3.0
-      - name: koku-metrics-operator.v3.3.2       <<<<
-        replaces: koku-metrics-operator.v3.3.1   <<<<
-    name: beta
-...
-  - image: quay.io/community-operator-pipeline-prod/koku-metrics-operator@sha256:5c501ae285fe463608c4a2ca2d58bd9bb96b8faee7caef1076eee607eeaeb664
-    schema: olm.bundle
-  - image: quay.io/community-operator-pipeline-prod/koku-metrics-operator@sha256:9114f72f6adca60e18616786019d680883bb1c1dc88d317e7adeeec787054469  <<<<
-    schema: olm.bundle                                                                                                                             <<<<
-schema: olm.template.basic
-```
-
-Next, create and validate the catalogs:
-```
-$ make catalogs
-
-...
-v4.12 catalog validation passed
-v4.13 catalog validation passed
-v4.14 catalog validation passed
-v4.15 catalog validation passed
-v4.16 catalog validation passed
-v4.17 catalog validation passed
-```
-
-Finally, create a PR in the community-operators-prod repo with the Makefile, catalog template, and catalogs changed above.
-
-Example PR: [redhat-openshift-ecosystem/community-operators-prod#5588](https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/5588)
-
-Once this PR is merged and the pipeline runs on the merged commit, the latest version of the operator will become available.
+After your pull request merges, a new pull request will automatically be generated to update the catalog with the new bundle for all the supported OCP versions similar to [redhat-openshift-ecosystem/community-operators-prod#6825](https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/6825). Once this subsequent FBC pull request merges, the new version of the community release will be pushed out to the OperatorHub.
