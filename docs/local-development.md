@@ -16,11 +16,11 @@
 
 ## Running the operator locally
 
-1. Log into your OCP cluster from a terminal, create an `koku-metrics-operator` namespace, and switch to the new namespace:
+1. Log into your OCP cluster from a terminal, create a `costmanagement-metrics-operator` namespace, and switch to the new namespace:
 
     ```
     $ oc login --token=<token> --server=<server>
-    $ oc new-project koku-metrics-operator
+    $ oc new-project costmanagement-metrics-operator
     ```
 
 2. Build the manager binary:
@@ -41,7 +41,7 @@
     $ oc apply -f testing/sa.yaml
     ```
 
-5. The `token` and `service-ca.crt` need to be copied from one of the created `koku-metrics-manager-role-token-*` secrets.
+5. The `token` and `service-ca.crt` need to be copied from one of the created `costmanagement-metrics-manager-role-token-*` secrets.
 A make command exists to help:
 
     ```
@@ -62,7 +62,7 @@ This will place the `token` and `service-ca.crt` in the `testing` directory. To 
 
     At this point, you will see the operator spin up in your terminal. After a few seconds, you should see something similar to the following output:
     ```
-    2020-10-21T09:31:37.195-0400    INFO    controller-runtime.controller   Starting workers        {"controller": "kokumetricsconfig", "worker count": 1}
+    2020-10-21T09:31:37.195-0400    INFO    controller-runtime.controller   Starting workers        {"controller": "costmanagementmetricsconfig", "worker count": 1}
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
@@ -71,7 +71,7 @@ This will place the `token` and `service-ca.crt` in the `testing` directory. To 
     ```
     $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
     ```
-    This command uses the CR defined in `config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml`. The command then deploys this CR to the cluster.
+    This command uses the CR defined in `config/samples/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml`. The command then deploys this CR to the cluster.
 
     After this CR has been created in the cluster, reconciliation will begin.
 
