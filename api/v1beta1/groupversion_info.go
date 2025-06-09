@@ -15,7 +15,7 @@ import (
 
 var (
 	// NamePrefix is the prefix used to distinguish upstream and downstream operators
-	NamePrefix = "koku"
+	NamePrefix = "costmanagement"
 
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: "costmanagement-metrics-cfg.openshift.io", Version: "v1beta1"}

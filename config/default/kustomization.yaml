@@ -1,16 +1,16 @@
 # Adds namespace to all resources.
-namespace: koku-metrics-operator
+namespace: costmanagement-metrics-operator
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
 # "wordpress" becomes "alices-wordpress".
 # Note that it should also match with the prefix (text before '-') of the namespace
 # field above.
-namePrefix: koku-metrics-
+namePrefix: costmanagement-metrics-
 
 # Labels to add to all resources and selectors.
 commonLabels:
-  app: koku-metrics-operator
+  app: costmanagement-metrics-operator
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
