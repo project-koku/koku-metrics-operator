@@ -98,7 +98,7 @@ jobs:
           script: |
             apt update -y && apt install -y make
             git clone -b ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} koku-zvsi-clone
-            cd koku-zvsi-clone && snap install go --classic --channel=$(grep -m 1 go go.mod | cut -d' ' -f2 | sed 's/\.0$//')/stable && cd ..
+            cd koku-zvsi-clone && snap install go --classic --channel=$(grep -m 1 go go.mod | cut -d' ' -f2 | cut -d. -f1,2')/stable && cd ..
             adduser --disabled-password --gecos "" runner
             cp -r koku-zvsi-clone /home/runner/koku-zvsi-clone
             chmod -R 777 /home/runner/koku-zvsi-clone
