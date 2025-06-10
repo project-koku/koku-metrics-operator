@@ -340,8 +340,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	$(MAKE) manifests
 
-	mkdir -p costmanagement-metrics-operator/$(VERSION)/
-	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
+	rm -rf ./bundle
 
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
@@ -365,14 +364,11 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
-	# scripts/update_bundle_dockerfile.py
+	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
 	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
-
-	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
 
 ##@ Build Dependencies
 
