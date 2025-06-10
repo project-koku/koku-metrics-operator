@@ -35,6 +35,7 @@ spec:
     value: "true"
   - name: build-source-image
     value: "true"
+
   pipelineSpec:
     description: |
       This pipeline is ideal for building multi-arch container images from a Containerfile while maintaining trust after pipeline customization.
@@ -113,10 +114,10 @@ spec:
       name: build-args-file
       type: string
     - default:
-      - linux/amd64
+      # - linux/amd64
       - linux/arm64
       # - linux/s390x
-      - linux/ppc64le
+      # - linux/ppc64le
       description: List of platforms to build the container images on. The available
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
@@ -152,6 +153,7 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+
     - name: clone-repository
       params:
       - name: url
@@ -181,6 +183,7 @@ spec:
       workspaces:
       - name: basic-auth
         workspace: git-auth
+
     - name: prefetch-dependencies
       params:
       - name: input
@@ -207,6 +210,7 @@ spec:
         workspace: git-auth
       - name: netrc
         workspace: netrc
+
     - matrix:
         params:
         - name: PLATFORM
@@ -255,6 +259,7 @@ spec:
         operator: in
         values:
         - "true"
+
     - name: build-image-index
       params:
       - name: IMAGE
@@ -284,6 +289,7 @@ spec:
         operator: in
         values:
         - "true"
+
     - name: build-source-image
       params:
       - name: BINARY_IMAGE
@@ -312,6 +318,7 @@ spec:
         operator: in
         values:
         - "true"
+
     - name: deprecated-base-image-check
       params:
       - name: IMAGE_URL
@@ -334,6 +341,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: clair-scan
       params:
       - name: image-digest
@@ -356,6 +364,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: ecosystem-cert-preflight-checks
       params:
       - name: image-url
@@ -376,6 +385,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: sast-snyk-check
       params:
       - name: image-digest
@@ -402,6 +412,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: clamav-scan
       params:
       - name: image-digest
@@ -424,6 +435,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: sast-shell-check
       params:
       - name: image-digest
@@ -477,6 +489,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: apply-tags
       params:
       - name: IMAGE
@@ -492,6 +505,7 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+
     - name: push-dockerfile
       params:
       - name: IMAGE
@@ -515,6 +529,7 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+
     - name: rpms-signature-scan
       params:
       - name: image-digest
@@ -537,7 +552,10 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-costmanagement-metrics-operator
+
   workspaces:
   - name: git-auth
     secret:
