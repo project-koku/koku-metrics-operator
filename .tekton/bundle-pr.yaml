@@ -22,6 +22,9 @@ metadata:
   name: downstream-operator-bundle-pr
   namespace: cost-mgmt-dev-tenant
 spec:
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-costmanagement-metrics-operator-bundle
+
   params:
   - name: git-url
     value: '{{source_url}}'
@@ -470,7 +473,6 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
   workspaces:
   - name: git-auth
     secret:
