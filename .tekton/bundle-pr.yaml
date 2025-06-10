@@ -9,10 +9,10 @@ metadata:
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "downstream" &&
       (
-        ".tekton/bundle-pr.yaml".pathChanged() || 
-        "bundle/metadata/***".pathChanged() || 
-        "bundle/manifests/***".pathChanged() || 
-        "bundle.Dockerfile".pathChanged() 
+        ".tekton/bundle-pr.yaml".pathChanged() ||
+        "bundle/metadata/***".pathChanged() ||
+        "bundle/manifests/***".pathChanged() ||
+        "bundle.Dockerfile".pathChanged()
       )
   creationTimestamp: null
   labels:
@@ -37,6 +37,7 @@ spec:
     value: "true"
   - name: build-source-image
     value: "true"
+
   pipelineSpec:
     description: |
       This pipeline is ideal for building container images from a Containerfile while maintaining trust after pipeline customization.
@@ -145,6 +146,7 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+
     - name: clone-repository
       params:
       - name: url
@@ -174,6 +176,7 @@ spec:
       workspaces:
       - name: basic-auth
         workspace: git-auth
+
     - name: prefetch-dependencies
       params:
       - name: input
@@ -200,6 +203,7 @@ spec:
         workspace: git-auth
       - name: netrc
         workspace: netrc
+
     - name: build-container
       params:
       - name: IMAGE
@@ -241,6 +245,7 @@ spec:
         operator: in
         values:
         - "true"
+
     - name: build-image-index
       params:
       - name: IMAGE
@@ -270,6 +275,7 @@ spec:
         operator: in
         values:
         - "true"
+
     - name: build-source-image
       params:
       - name: BINARY_IMAGE
@@ -298,6 +304,7 @@ spec:
         operator: in
         values:
         - "true"
+
     - name: deprecated-base-image-check
       params:
       - name: IMAGE_URL
@@ -320,6 +327,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: clair-scan
       params:
       - name: image-digest
@@ -342,6 +350,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: ecosystem-cert-preflight-checks
       params:
       - name: image-url
@@ -362,6 +371,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: sast-snyk-check
       params:
       - name: image-digest
@@ -388,6 +398,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: clamav-scan
       params:
       - name: image-digest
@@ -410,6 +421,7 @@ spec:
         operator: in
         values:
         - "false"
+
     - name: apply-tags
       params:
       - name: IMAGE
@@ -425,6 +437,7 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+
     - name: push-dockerfile
       params:
       - name: IMAGE
@@ -448,6 +461,7 @@ spec:
         - name: kind
           value: task
         resolver: bundles
+
     - name: rpms-signature-scan
       params:
       - name: image-digest
@@ -470,7 +484,10 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-costmanagement-metrics-operator-bundle
+
   workspaces:
   - name: git-auth
     secret:

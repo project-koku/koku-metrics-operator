@@ -6,12 +6,12 @@ metadata:
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "downstream" && 
-      ( 
-        ".tekton/bundle-push.yaml".pathChanged() || 
-        "bundle/metadata/***".pathChanged() || 
-        "bundle/manifests/***".pathChanged() || 
-        "bundle.Dockerfile".pathChanged() 
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "downstream" &&
+      (
+        ".tekton/bundle-push.yaml".pathChanged() ||
+        "bundle/metadata/***".pathChanged() ||
+        "bundle/manifests/***".pathChanged() ||
+        "bundle.Dockerfile".pathChanged()
       )
   creationTimestamp: null
   labels:
@@ -467,7 +467,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-costmanagement-metrics-operator-bundle
   workspaces:
   - name: git-auth
     secret:
