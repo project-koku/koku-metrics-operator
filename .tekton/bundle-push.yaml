@@ -467,7 +467,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-costmanagement-metrics-operator-bundle
   workspaces:
   - name: git-auth
     secret:
