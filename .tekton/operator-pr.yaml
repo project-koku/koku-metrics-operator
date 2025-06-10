@@ -114,7 +114,7 @@ spec:
       name: build-args-file
       type: string
     - default:
-      # - linux/amd64
+      - linux/amd64
       - linux/arm64
       # - linux/s390x
       # - linux/ppc64le
