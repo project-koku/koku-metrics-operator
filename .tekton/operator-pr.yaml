@@ -20,9 +20,6 @@ metadata:
   name: downstream-operator-pr
   namespace: cost-mgmt-dev-tenant
 spec:
-  taskRunTemplate:
-    serviceAccountName: build-pipeline-costmanagement-metrics-operator
-
   params:
   - name: git-url
     value: '{{source_url}}'
