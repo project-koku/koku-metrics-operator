@@ -387,7 +387,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-snyk-check
+    - name: sast-snyk-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
@@ -414,7 +414,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-shell-check
+    - name: sast-shell-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
@@ -441,7 +441,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-unicode-check
+    - name: sast-unicode-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
