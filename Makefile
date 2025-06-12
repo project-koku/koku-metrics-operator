@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.3.1
-VERSION ?= 3.3.2
+PREVIOUS_VERSION ?= 3.3.2
+VERSION ?= 4.0.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -87,31 +87,31 @@ setup-auth:
 
 .PHONY: add-prom-route
 add-prom-route:
-	@sed -i "" '/prometheus_config/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '  prometheus_config:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    skip_tls_verification: true' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@sed -i "" '/prometheus_config/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '  prometheus_config:' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    skip_tls_verification: true' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-auth
 add-auth:
-	@sed -i "" '/authentication/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '  authentication:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    type: basic'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    secret_name: dev-auth-secret' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@sed -i "" '/authentication/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '  authentication:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    type: basic'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    secret_name: dev-auth-secret' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: local-validate-cert
 local-validate-cert:
-	@sed -i "" '/upload/d' testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '  upload:'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-	@echo '    validate_cert: false'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@sed -i "" '/upload/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '  upload:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    validate_cert: false'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-ci-route
 add-ci-route:
-	@echo '  api_url: https://ci.console.redhat.com'  >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo '  api_url: https://ci.console.redhat.com'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-spec
 add-spec:
-	@echo 'spec:' >> testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	@echo 'spec:' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 ##@ Development
 
@@ -136,8 +136,8 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: vendor
-vendor: ## Run `go mod vendor`.
-	go get -u
+vendor: ## Update deps, tidy and vendor modules.
+	go get -u ./...
 	go mod tidy
 	go mod vendor
 
@@ -224,13 +224,9 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy-cr
-deploy-cr:  ## Deploy a KokuMetricsConfig CR for controller running in K8s cluster.
-	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
-ifeq ($(AUTH), basic)
-	$(MAKE) setup-auth
-	$(MAKE) add-auth
-	oc apply -f testing/authentication_secret.yaml
-else ifeq ($(AUTH), service-account)
+deploy-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running in K8s cluster.
+	@cp testing/costmanagementmetricsconfig-template.yaml testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+ifeq ($(AUTH), service-account)
 	$(MAKE) setup-sa-auth
 	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
@@ -240,18 +236,14 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: deploy-local-cr
-deploy-local-cr:  ## Deploy a KokuMetricsConfig CR for controller running on local host.
-	@cp testing/kokumetricsconfig-template.yaml testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+deploy-local-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running on local host.
+	@cp testing/costmanagementmetricsconfig-template.yaml testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
-ifeq ($(AUTH), basic)
-	$(MAKE) setup-auth
-	$(MAKE) add-auth
-	oc apply -f testing/authentication_secret.yaml
-else ifeq ($(AUTH), service-account)
+ifeq ($(AUTH), service-account)
 	$(MAKE) setup-sa-auth
 	$(MAKE) add-sa-auth
 	oc apply -f testing/authentication_secret.yaml
@@ -261,7 +253,7 @@ endif
 ifeq ($(CI), true)
 	$(MAKE) add-ci-route
 endif
-	oc apply -f testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml
+	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
 .PHONY: get-token-and-cert
@@ -294,7 +286,7 @@ endif
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	$(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) --file bundle.Dockerfile .
+	$(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) -f bundle.Dockerfile .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
@@ -326,6 +318,7 @@ DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
 .PHONY: downstream
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
+	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
@@ -371,11 +364,11 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
-	# scripts/update_bundle_dockerfile.py
+	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
+	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
-
 
 ##@ Build Dependencies
 
@@ -393,13 +386,13 @@ ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go 
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
 SETUP_ENVTEST_VERSION ?= v0.0.0-20240318095156-c7e1dc9b5302
 YQ_VERSION ?= v4.2.0
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.33.0
+OPERATOR_SDK_VERSION ?= v1.39.2
 
 .PHONY: yq
 YQ ?= $(LOCALBIN)/yq

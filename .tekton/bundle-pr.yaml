@@ -22,9 +22,6 @@ metadata:
   name: downstream-operator-bundle-pr
   namespace: cost-mgmt-dev-tenant
 spec:
-  taskRunTemplate:
-    serviceAccountName: build-pipeline-costmanagement-metrics-operator-bundle
-
   params:
   - name: git-url
     value: '{{source_url}}'
@@ -375,7 +372,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-snyk-check
+    - name: sast-snyk-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
@@ -402,7 +399,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-shell-check
+    - name: sast-shell-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
@@ -429,7 +426,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-unicode-check
+    - name: sast-unicode-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)

@@ -1,4 +1,4 @@
-# CostManagement Metrics Operator
+# Cost Management Metrics Operator
 ## Introduction
 The `costmanagement-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
@@ -6,7 +6,7 @@ This operator is capable of functioning within a disconnected/restricted network
 
 ## Features and Capabilities
 #### Metrics collection:
-The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
+The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
 * Querying Prometheus to gather the necessary metrics for Cost Management.
 * Writing the results of Prometheus queries to CSV report files.
 * Packaging the CSV report files into tarballs.
@@ -18,6 +18,9 @@ The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects
 * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+## New in v4.0.0:
+* **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
 
 ## New in v3.3.2:
 * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
@@ -296,4 +299,4 @@ Uploading reports to cost managment is done through curl:
 
     $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" https://console.redhat.com/api/ingress/v1/upload -H "Authorization: Bearer ${ACCESS_TOKEN}"
 
-where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a [service-account](https://access.redhat.com/articles/7036194).
+where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a service account. See documentation on [creating and managing a service account](https://docs.redhat.com/en/documentation/red_hat_customer_portal/1/html/creating_and_managing_service_accounts).

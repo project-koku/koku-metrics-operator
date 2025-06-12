@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.22 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:v1.24 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -17,6 +17,10 @@ COPY internal/ internal/
 
 # Copy git to inject the commit during build
 COPY .git .git
+
+# Use FIPS crypto module at build time
+# ARG GOFIPS140=v1.0.0
+
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     echo " injecting GIT COMMIT: $GIT_COMMIT" && \
@@ -33,6 +37,9 @@ COPY LICENSE /licenses/Apache-2.0.txt
 
 USER 65532:65532
 
+# Enable FIPS mode at runtime
+ENV GODEBUG=fips140=on
+
 LABEL \
     com.redhat.component="costmanagement-metrics-operator-container"  \
     description="Red Hat Cost Management Metrics Operator"  \
@@ -43,7 +50,7 @@ LABEL \
     maintainer="Cost Management <cost-mgmt@redhat.com>"  \
     name="costmanagement-metrics-operator"  \
     summary="Red Hat Cost Management Metrics Operator"  \
-    version="3.3.2" \
+    version="4.0.0" \
     vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]

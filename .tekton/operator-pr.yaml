@@ -20,9 +20,6 @@ metadata:
   name: downstream-operator-pr
   namespace: cost-mgmt-dev-tenant
 spec:
-  taskRunTemplate:
-    serviceAccountName: build-pipeline-costmanagement-metrics-operator
-
   params:
   - name: git-url
     value: '{{source_url}}'
@@ -120,7 +117,7 @@ spec:
       - linux/amd64
       - linux/arm64
       # - linux/s390x
-      # - linux/ppc64le
+      - linux/ppc64le
       description: List of platforms to build the container images on. The available
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
@@ -389,7 +386,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-snyk-check
+    - name: sast-snyk-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
@@ -416,7 +413,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-shell-check
+    - name: sast-shell-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
@@ -443,7 +440,7 @@ spec:
         values:
         - "false"
 
-    - name: sast-unicode-check
+    - name: sast-unicode-check-oci-ta
       params:
       - name: image-digest
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)

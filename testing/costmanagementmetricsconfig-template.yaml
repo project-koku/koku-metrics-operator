@@ -1,0 +1,10 @@
+apiVersion: costmanagement-metrics-cfg.openshift.io/v1beta1
+kind: CostManagementMetricsConfig
+metadata:
+  name: costmanagementmetricscfg-sample
+spec:
+  authentication: {}
+  packaging: {}
+  prometheus_config: {}
+  source: {}
+  upload: {}

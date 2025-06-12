@@ -27,6 +27,20 @@ var (
 		"cost:pod_limit_memory_bytes":   "sum by (pod, namespace, node) (kube_pod_container_resource_limits{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_request_memory_bytes": "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
+		"cost:pod_labels":               "kube_pod_labels{namespace!='',pod!=''}",
+
+		// virtual machine metrics queries
+		"cost:vm_cpu_limit_cores":           "sum by (name, namespace) (kubevirt_vm_resource_limits{name!='', namespace!='', resource='cpu'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_cpu_request_cores":         "sum by (name, namespace) (kubevirt_vm_resource_requests{name!='', namespace!='', resource='cpu', unit='cores'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_cpu_request_sockets":       "sum by (name, namespace) (kubevirt_vm_resource_requests{name!='', namespace!='', resource='cpu', unit='sockets'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_cpu_request_threads":       "sum by (name, namespace) (kubevirt_vm_resource_requests{name!='', namespace!='', resource='cpu', unit='threads'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_cpu_usage":                 "sum by (name, namespace) (rate(kubevirt_vmi_cpu_usage_seconds_total{name!='', namespace!=''}[5m])) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_memory_limit_bytes":        "sum by (name, namespace) (kubevirt_vm_resource_limits{name!='', namespace!='', resource='memory'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_memory_request_bytes":      "sum by (name, namespace) (kubevirt_vm_resource_requests{name!='', namespace!='', resource='memory'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_memory_usage_bytes":        "sum by (name, namespace) (sum_over_time(kubevirt_vmi_memory_used_bytes{name!='', namespace!=''}[5m])) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_info":                      "sum by (name, namespace, node, os, instance_type, guest_os_name, guest_os_version_id, guest_os_arch) (kubevirt_vmi_info{phase='running'}) * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info)",
+		"cost:vm_disk_allocated_size_bytes": "sum by (name, namespace, device, persistentvolumeclaim, volume_mode) (kubevirt_vm_disk_allocated_size_bytes{name!='', namespace!=''}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
+		"cost:vm_labels":                    "kubevirt_vm_labels{name!='', namespace!=''}",
 
 		"ros:namespace_filter":               "kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}",
 		"ros:image_owners":                   "(max_over_time(kube_pod_container_info{container!='', container!='POD'}[15m]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}) * on(pod, namespace) group_left(owner_kind, owner_name) max by(pod, namespace, owner_kind, owner_name) (max_over_time(kube_pod_owner{container!='', container!='POD', pod!=''}[15m]))",
@@ -242,10 +256,172 @@ var (
 		},
 		query{
 			Name:           "pod-labels",
-			QueryString:    "kube_pod_labels{namespace!='',pod!=''}",
+			QueryString:    QueryMap["cost:pod_labels"],
 			MetricKey:      staticFields{"pod": "pod", "namespace": "namespace"},
 			MetricKeyRegex: regexFields{"pod_labels": "label_*"},
 			RowKey:         []model.LabelName{"pod", "namespace"},
+		},
+	}
+	vmQueries = &querys{
+		query{
+			Name:        "vm_cpu_limit_cores",
+			QueryString: QueryMap["cost:vm_cpu_limit_cores"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_cpu_limit_cores",
+				Method:          "max",
+				TransformedName: "vm_cpu_limit_core_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_cpu_request_cores",
+			QueryString: QueryMap["cost:vm_cpu_request_cores"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_cpu_request_cores",
+				Method:          "max",
+				TransformedName: "vm_cpu_request_core_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_cpu_request_sockets",
+			QueryString: QueryMap["cost:vm_cpu_request_sockets"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_cpu_request_sockets",
+				Method:          "max",
+				TransformedName: "vm_cpu_request_socket_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_cpu_request_threads",
+			QueryString: QueryMap["cost:vm_cpu_request_threads"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_cpu_request_threads",
+				Method:          "max",
+				TransformedName: "vm_cpu_request_thread_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_cpu_usage",
+			QueryString: QueryMap["cost:vm_cpu_usage"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_cpu_usage",
+				Method:          "sum",
+				TransformedName: "vm_cpu_usage_total_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_memory_limit_bytes",
+			QueryString: QueryMap["cost:vm_memory_limit_bytes"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_memory_limit_bytes",
+				Method:          "max",
+				TransformedName: "vm_memory_limit_byte_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_memory_request_bytes",
+			QueryString: QueryMap["cost:vm_memory_request_bytes"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+				"resource":  "resource",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_memory_request_bytes",
+				Method:          "max",
+				TransformedName: "vm_memory_request_byte_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_memory_usage",
+			QueryString: QueryMap["cost:vm_memory_usage_bytes"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_memory_usage_bytes",
+				Method:          "sum",
+				TransformedName: "vm_memory_usage_byte_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_info",
+			QueryString: QueryMap["cost:vm_info"],
+			MetricKey: staticFields{
+				"node":                "node",
+				"provider_id":         "provider_id",
+				"name":                "name",
+				"namespace":           "namespace",
+				"instance_type":       "instance_type",
+				"os":                  "os",
+				"guest_os_arch":       "guest_os_arch",
+				"guest_os_name":       "guest_os_name",
+				"guest_os_version_id": "guest_os_version_id",
+			},
+			QueryValue: &saveQueryValue{
+				Method:          "sum",
+				TransformedName: "vm_uptime_total_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_disk_allocated_size",
+			QueryString: QueryMap["cost:vm_disk_allocated_size_bytes"],
+			MetricKey: staticFields{
+				"name":                       "name",
+				"namespace":                  "namespace",
+				"device":                     "device",
+				"volume_mode":                "volume_mode",
+				"persistentvolumeclaim_name": "persistentvolumeclaim",
+			},
+			QueryValue: &saveQueryValue{
+				ValName:         "vm_disk_allocated_size_bytes",
+				Method:          "max",
+				TransformedName: "vm_disk_allocated_size_byte_seconds",
+			},
+			RowKey: []model.LabelName{"name", "namespace"},
+		},
+		query{
+			Name:        "vm_labels",
+			QueryString: QueryMap["cost:vm_labels"],
+			MetricKey: staticFields{
+				"name":      "name",
+				"namespace": "namespace",
+			},
+			MetricKeyRegex: regexFields{"vm_labels": "label_*"},
+			RowKey:         []model.LabelName{"name", "namespace"},
 		},
 	}
 	namespaceQueries = &querys{

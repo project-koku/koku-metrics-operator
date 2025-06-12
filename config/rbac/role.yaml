@@ -5,24 +5,9 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - config.openshift.io
-  resources:
-  - clusterversions
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - ""
   resources:
   - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
   verbs:
   - get
@@ -34,6 +19,14 @@ rules:
   - secrets
   verbs:
   - get
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - clusterversions
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -49,15 +42,6 @@ metadata:
   name: manager-role
   namespace: costmanagement-metrics-operator
 rules:
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - get
-  - list
-  - patch
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -77,6 +61,15 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - patch
   - watch
 - apiGroups:
   - costmanagement-metrics-cfg.openshift.io

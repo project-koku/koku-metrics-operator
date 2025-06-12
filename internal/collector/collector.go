@@ -27,6 +27,7 @@ import (
 var (
 	podFilePrefix       = "cm-openshift-pod-usage-"
 	volFilePrefix       = "cm-openshift-storage-usage-"
+	vmFilePrefix        = "cm-openshift-vm-usage-"
 	nodeFilePrefix      = "cm-openshift-node-usage-"
 	namespaceFilePrefix = "cm-openshift-namespace-usage-"
 	rosFilePrefix       = "ros-openshift-"
@@ -352,6 +353,43 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 	log.WithName("writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
 	if err := volReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write volume report: %v", err)
+	}
+
+	//################################################################################################################
+
+	log.Info("querying for virtual machine metrics")
+	vmResults := mappedResults{}
+	if err := c.getQueryRangeResults(vmQueries, &vmResults, MaxRetries); err != nil {
+		return err
+	}
+
+	for vm, val := range vmResults {
+		resourceID := getResourceID(val["provider_id"])
+		vmResults[vm]["resource_id"] = resourceID
+	}
+
+	vmRows := make(mappedCSVStruct)
+	for vm, val := range vmResults {
+		usage := newVMRow(c.TimeSeries)
+		if err := getStruct(val, &usage, vmRows, vm); err != nil {
+			return err
+		}
+	}
+	emptyVmRow := newVMRow(c.TimeSeries)
+	vmReport := report{
+		file: &file{
+			name: vmFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: vmRows,
+			headers:   emptyVmRow.csvHeader(),
+			prefix:    emptyVmRow.dateTimes.string(),
+		},
+	}
+	log.WithName("writeResults").Info("writing virtual machine results to file", "filename", vmReport.file.getName())
+	if err := vmReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write virtual machine report: %v", err)
 	}
 
 	//################################################################################################################
