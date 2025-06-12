@@ -39,7 +39,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:aaff1e2e5ceae6e1ba91c32e60e5260883a8d4842895ed367d273afab303d1f2
+    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:8f24233545ec45528d5b1f636c42ff2b027b4825c12a51236c0ee4c7dfb80224
     createdAt: "2025-06-10T13:37:20Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
@@ -511,7 +511,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:aaff1e2e5ceae6e1ba91c32e60e5260883a8d4842895ed367d273afab303d1f2
+                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:8f24233545ec45528d5b1f636c42ff2b027b4825c12a51236c0ee4c7dfb80224
                     livenessProbe:
                       httpGet:
                         path: /healthz
