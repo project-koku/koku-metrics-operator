@@ -27,7 +27,7 @@ var (
 		"cost:pod_limit_memory_bytes":   "sum by (pod, namespace, node) (kube_pod_container_resource_limits{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_request_memory_bytes": "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='memory'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_usage_memory_bytes":   "sum by (pod, namespace, node) (container_memory_usage_bytes{container!='', container!='POD', pod!='', namespace!='', node!=''})",
-		"cost:pod_labels":               "kube_pod_labels{namespace!='',pod!=''}",
+		"cost:pod_labels":               "kube_pod_labels{namespace!='',pod!=''} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})",
 
 		// virtual machine metrics queries
 		"cost:vm_cpu_limit_cores":           "sum by (name, namespace) (kubevirt_vm_resource_limits{name!='', namespace!='', resource='cpu'}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
