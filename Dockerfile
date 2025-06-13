@@ -26,7 +26,17 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-FROM registry.redhat.io/ubi9/ubi-micro:latest AS base-env
+
+# Add ubi9-micro-openssl
+FROM registry.access.redhat.com/ubi9/ubi AS ubi-micro-build
+RUN mkdir -p /mnt/rootfs
+RUN yum install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --nodocs -y coreutils-single glibc-minimal-langpack openssl; yum clean all
+RUN rm -rf /mnt/rootfs/var/cache/*
+
+FROM registry.access.redhat.com/ubi9/ubi-micro AS ubi9-micro
+COPY --from=ubi-micro-build /mnt/rootfs/ /
+CMD /usr/bin/openssl
+
 
 WORKDIR /
 COPY --from=builder /workspace/manager /manager
