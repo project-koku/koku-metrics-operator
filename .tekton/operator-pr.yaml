@@ -35,6 +35,8 @@ spec:
       value: "true"
     - name: build-source-image
       value: "true"
+    - name: prefetch-input
+      value: '{"type": "rpm", "path": "."}'
     - name: build-platforms
       value:
         - linux/x86_64
