@@ -1,0 +1,21 @@
+# lockfile specification for the costmanagement-metrics-operator
+installWeakDeps: false
+contentOrigin:
+  # repositories to be used for resolving RPMs
+  # corresponding to the build environment.
+  repofiles:
+    - ubi9.repo
+packages:
+  # list of all packages installed via yum in  build stage.
+  - openssl
+  - coreutils-single
+  - glibc-minimal-langpack
+arches:
+  - x86_64
+  - aarch64
+  # - s390x
+  # - ppc64le
+context:
+  containerfile:
+    file: Dockerfile
+    stageName: ubi9-micro

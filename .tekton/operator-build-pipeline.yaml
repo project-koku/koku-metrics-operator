@@ -140,6 +140,8 @@ spec:
         value: $(params.output-image).prefetch
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
+      - name: ACTIVATION_KEY
+        value: "operator-activation-key"
       runAfter:
       - clone-repository
       taskRef:
@@ -189,6 +191,8 @@ spec:
         value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
       - name: IMAGE_APPEND_PLATFORM
         value: "true"
+      - name: ACTIVATION_KEY
+        value: "operator-activation-key"
       runAfter:
       - prefetch-dependencies
       taskRef:
