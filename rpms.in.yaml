@@ -4,12 +4,12 @@ contentOrigin:
   # repositories to be used for resolving RPMs
   # corresponding to the build environment.
   repofiles:
-    - ubi9.repo
+    - ./ubi9.repo
 packages:
   # list of all packages installed via yum in  build stage.
   - openssl
-  - coreutils-single
-  - glibc-minimal-langpack
+  # - coreutils-single
+  # - glibc-minimal-langpack
 arches:
   - x86_64
   - aarch64

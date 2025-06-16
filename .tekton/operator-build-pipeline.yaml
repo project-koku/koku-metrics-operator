@@ -143,7 +143,7 @@ spec:
       - name: ACTIVATION_KEY
         value: "operator-activation-key"
       - name: dev-package-managers
-        value: "true"
+        value: $(params.prefetch-dev-package-managers-enabled)
       runAfter:
       - clone-repository
       taskRef:
