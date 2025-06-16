@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:v1.24 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.24_test AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -18,27 +18,33 @@ COPY internal/ internal/
 # Copy git to inject the commit during build
 COPY .git .git
 
-# Use FIPS crypto module at build time
-# ARG GOFIPS140=v1.0.0
+# Set the GOEXPERIMENT to enable the strict FIPS runtime check.
+ENV GOEXPERIMENT=strictfipsruntime
 
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
+    CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-FROM registry.redhat.io/ubi9/ubi-micro:latest AS base-env
+# ubi9-micro-openssl
+FROM registry.access.redhat.com/ubi9/ubi AS ubi-micro-build
+RUN mkdir -p /mnt/rootfs
+RUN yum install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --nodocs -y coreutils-single glibc-minimal-langpack openssl; yum clean all
+RUN rm -rf /mnt/rootfs/var/cache/*
+
+FROM registry.access.redhat.com/ubi9/ubi-micro AS ubi9-micro
+COPY --from=ubi-micro-build /mnt/rootfs/ /
+CMD /usr/bin/openssl
 
 WORKDIR /
-COPY --from=builder /workspace/manager /usr/bin/costmanagement-metrics-operator
+COPY --from=builder /workspace/manager /manager
 COPY --from=builder /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-bundle.crt
 COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc/ssl/certs/ca-bundle.trust.crt
 COPY LICENSE /licenses/Apache-2.0.txt
 
 USER 65532:65532
 
-# Enable FIPS mode at runtime
-ENV GODEBUG=fips140=on
 
 LABEL \
     com.redhat.component="costmanagement-metrics-operator-container"  \
