@@ -8,8 +8,8 @@ contentOrigin:
 packages:
   # list of all packages installed via yum in  build stage.
   - openssl
-  # - coreutils-single
-  # - glibc-minimal-langpack
+  - coreutils-single
+  - glibc-minimal-langpack
 arches:
   - x86_64
   - aarch64
