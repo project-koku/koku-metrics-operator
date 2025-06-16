@@ -4,7 +4,8 @@ contentOrigin:
   # repositories to be used for resolving RPMs
   # corresponding to the build environment.
   repofiles:
-    - ./ubi9.repo
+    - ./ubi.repo
+    - ./redhat.repo
 packages:
   # list of all packages installed via yum in  build stage.
   - openssl
