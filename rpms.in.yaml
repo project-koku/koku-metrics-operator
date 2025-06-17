@@ -5,7 +5,6 @@ contentOrigin:
   # corresponding to the build environment.
   repofiles:
     - ./ubi.repo
-    - ./redhat.repo
 packages:
   # list of all packages installed via yum in  build stage.
   - coreutils-single
@@ -14,10 +13,8 @@ packages:
 arches:
   - x86_64
   - aarch64
-  # - s390x
-  # - ppc64le
+  - s390x
+  - ppc64le
 context:
   containerfile:
     file: Dockerfile
-    # stageName: ubi9-micro
-
