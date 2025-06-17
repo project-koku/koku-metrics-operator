@@ -19,4 +19,5 @@ arches:
 context:
   containerfile:
     file: Dockerfile
-    stageName: ubi9-micro
+    # stageName: ubi9-micro
+
