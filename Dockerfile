@@ -27,7 +27,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-# ubi9-micro-openssl
+# Prepare a ubi micro base with openssl and its dependencies.
 FROM registry.access.redhat.com/ubi9/ubi AS ubi-micro-build
 RUN mkdir -p /mnt/rootfs
 RUN rpm --root /mnt/rootfs --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
