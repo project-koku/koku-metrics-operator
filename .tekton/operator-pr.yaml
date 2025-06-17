@@ -9,6 +9,7 @@ metadata:
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "downstream" &&
       (
+        ".tekton/operator-build-pipeline.yaml".pathChanged() ||
         ".tekton/operator-pr.yaml".pathChanged() ||
         "Dockerfile".pathChanged()
       )
@@ -35,12 +36,16 @@ spec:
       value: "true"
     - name: build-source-image
       value: "true"
+    - name: prefetch-input
+      value: '{"type": "rpm", "path": "."}'
+    - name: prefetch-dev-package-managers-enabled
+      value: "true"
     - name: build-platforms
       value:
         - linux/x86_64
         - linux/arm64
         - linux/ppc64le
-        # - linux/s390x
+        - linux/s390x
   pipelineRef:
     name: operator-build-pipeline
   taskRunTemplate:
