@@ -38,7 +38,7 @@ FROM registry.access.redhat.com/ubi9/ubi-micro AS ubi9-micro
 COPY --from=ubi-micro-build /mnt/rootfs/ /
 
 WORKDIR /
-COPY --from=builder /workspace/manager /us/bin/costmanagement-metrics-operator
+COPY --from=builder /workspace/manager /usr/bin/costmanagement-metrics-operator
 COPY --from=builder /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-bundle.crt
 COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc/ssl/certs/ca-bundle.trust.crt
 COPY LICENSE /licenses/Apache-2.0.txt
