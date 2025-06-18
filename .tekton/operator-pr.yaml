@@ -36,12 +36,16 @@ spec:
       value: "true"
     - name: build-source-image
       value: "true"
+    - name: prefetch-input
+      value: '{"type": "rpm", "path": "."}'
+    - name: prefetch-dev-package-managers-enabled
+      value: "true"
     - name: build-platforms
       value:
         - linux/x86_64
         - linux/arm64
         - linux/ppc64le
-        # - linux/s390x
+        - linux/s390x
   pipelineRef:
     name: operator-build-pipeline
   taskRunTemplate:
