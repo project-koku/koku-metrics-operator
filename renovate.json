@@ -7,5 +7,9 @@
         "includePaths": [
         ".tekton/**"
         ]
-    }
+    },
+    "ignorePaths": [
+        "go.mod",
+        "go.sum"
+    ]
 }
