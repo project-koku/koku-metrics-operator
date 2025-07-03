@@ -9,7 +9,8 @@
         ]
     },
     "ignorePaths": [
-        "go.mod",
-        "go.sum"
+        "**/go.mod",
+        "**/go.sum",
+        "**/vendor/**"
     ]
 }
