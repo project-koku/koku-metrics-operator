@@ -85,7 +85,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 ## New in v3.3.0:
 * Storage reports now contain `node`, `csi_driver`, and `csi_volume_handle` fields.
 * The PVC capacity is now populated using the `kube_persistentvolume_capacity_bytes` metric instead of `kubelet_volume_stats_capacity_bytes`.
-* To receive resource optimization recommendations for your namespaces, you must now first enable each namespace. To enable a namespace, label it with `cost_management_optimizations='true'`. In the CLI, run:
+* To receive resource optimization recommendations for your namespaces, you must now first enable each namespace. To enable a namespace, label it with `insights_cost_management_optimizations='true'`. In the CLI, run:
   ```
     oc label namespace NAMESPACE insights_cost_management_optimizations="true" --overwrite=true
   ```
