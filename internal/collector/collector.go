@@ -25,12 +25,13 @@ import (
 )
 
 var (
-	podFilePrefix       = "cm-openshift-pod-usage-"
-	volFilePrefix       = "cm-openshift-storage-usage-"
-	vmFilePrefix        = "cm-openshift-vm-usage-"
-	nodeFilePrefix      = "cm-openshift-node-usage-"
-	namespaceFilePrefix = "cm-openshift-namespace-usage-"
-	rosFilePrefix       = "ros-openshift-"
+	podFilePrefix          = "cm-openshift-pod-usage-"
+	volFilePrefix          = "cm-openshift-storage-usage-"
+	vmFilePrefix           = "cm-openshift-vm-usage-"
+	nodeFilePrefix         = "cm-openshift-node-usage-"
+	namespaceFilePrefix    = "cm-openshift-namespace-usage-"
+	rosFilePrefix          = "ros-openshift-"
+	rosNamespaceFilePrefix = "ros-openshift-namespace-"
 
 	statusTimeFormat = "2006-01-02 15:04:05"
 
@@ -429,9 +430,6 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 
 func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
 	ts := c.TimeSeries.End
-	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
-	rosResults := mappedResults{}
-
 	namespacesAreEnabled, err := areNamespacesEnabled(c, ts)
 	if err != nil {
 		return err
@@ -439,6 +437,9 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	if !namespacesAreEnabled {
 		return ErrROSNoEnabledNamespaces
 	}
+
+	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
+	rosResults := mappedResults{}
 
 	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
 		return err
@@ -475,6 +476,39 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	if err := rosReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write resource-optimization report: %v", err)
 	}
+
+	//resource optimization namespace reports
+	log.Info(fmt.Sprintf("querying for resource-optimization namespace metrics for ts: %+v", ts))
+	rosNamespaceResults := mappedResults{}
+
+	if err := c.getQueryResults(ts, rosNamespaceQueries, &rosNamespaceResults, MaxRetries); err != nil {
+		return err
+	}
+
+	rosNamespaceRows := make(mappedCSVStruct)
+	for rosNs, val := range rosNamespaceResults {
+		usage := newROSNamespaceRow(c.TimeSeries)
+		if err := getStruct(val, &usage, rosNamespaceRows, rosNs); err != nil {
+			return err
+		}
+	}
+	emptyROSNamespaceRow := newROSNamespaceRow(c.TimeSeries)
+	rosNamespaceReport := report{
+		file: &file{
+			name: rosNamespaceFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: rosNamespaceRows,
+			headers:   emptyROSNamespaceRow.csvHeader(),
+			prefix:    emptyROSNamespaceRow.dateTimes.string(),
+		},
+	}
+	log.WithName("writeResults").Info("writing resource-optimization namespace results to file", "filename", rosNamespaceReport.file.getName())
+	if err := rosNamespaceReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write resource-optimization namespace report: %v", err)
+	}
+
 	return nil
 }
 

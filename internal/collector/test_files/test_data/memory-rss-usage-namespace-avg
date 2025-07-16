@@ -1,0 +1,20 @@
+[
+	{
+		"metric": {
+			"namespace": "costmanagement-metrics-operator"
+		},
+		"value": [
+			1677009600,
+			"12249088"
+		]
+	},
+	{
+		"metric": {
+			"namespace": "koku-metrics-operator"
+		},
+		"value": [
+			1677009600,
+			"13213696"
+		]
+	}
+]
