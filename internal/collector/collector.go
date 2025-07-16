@@ -30,7 +30,7 @@ var (
 	vmFilePrefix           = "cm-openshift-vm-usage-"
 	nodeFilePrefix         = "cm-openshift-node-usage-"
 	namespaceFilePrefix    = "cm-openshift-namespace-usage-"
-	rosFilePrefix          = "ros-openshift-"
+	rosContainerFilePrefix = "ros-openshift-container-"
 	rosNamespaceFilePrefix = "ros-openshift-namespace-"
 
 	statusTimeFormat = "2006-01-02 15:04:05"
@@ -438,7 +438,7 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 		return ErrROSNoEnabledNamespaces
 	}
 
-	log.Info(fmt.Sprintf("querying for resource-optimization for ts: %+v", ts))
+	log.Info(fmt.Sprintf("querying for resource-optimization container metrics for ts: %+v", ts))
 	rosResults := mappedResults{}
 
 	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
@@ -463,7 +463,7 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 	emptyROSRow := newROSRow(c.TimeSeries)
 	rosReport := report{
 		file: &file{
-			name: rosFilePrefix + yearMonth + ".csv",
+			name: rosContainerFilePrefix + yearMonth + ".csv",
 			path: dirCfg.Reports.Path,
 		},
 		data: &data{
@@ -472,9 +472,9 @@ func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollecto
 			prefix:    emptyROSRow.dateTimes.string(),
 		},
 	}
-	log.WithName("writeResults").Info("writing resource-optimization results to file", "filename", rosReport.file.getName())
+	log.WithName("writeResults").Info("writing resource-optimization container results to file", "filename", rosReport.file.getName())
 	if err := rosReport.writeReport(); err != nil {
-		return fmt.Errorf("failed to write resource-optimization report: %v", err)
+		return fmt.Errorf("failed to write resource-optimization container report: %v", err)
 	}
 
 	//resource optimization namespace reports
