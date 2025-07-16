@@ -11,7 +11,7 @@
 	},
 	{
 		"metric": {
-			"label_insights_cost_management_optimizations": "true",
+			"label_cost_management_optimizations": "true",
 			"namespace": "koku-metrics-operator"
 		},
 		"value": [
