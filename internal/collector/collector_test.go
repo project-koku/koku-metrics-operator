@@ -151,6 +151,13 @@ func TestGenerateReports(t *testing.T) {
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
+	// Add ros namespace queries
+	for _, query := range *rosNamespaceQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
 	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -205,6 +212,13 @@ func TestGenerateReportsNoROS(t *testing.T) {
 		mapResults[query.QueryString] = &mockPromResult{value: *res}
 	}
 
+	// Add ros namespace queries
+	for _, query := range *rosNamespaceQueries {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
 	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -222,7 +236,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 	// ####### everything below compares the generated reports to the expected reports #######
 	expectedMap := getFiles("expected_reports", t)
 	generatedMap := getFiles("test_reports", t)
-	expectedDiff := 1 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+	expectedDiff := 2 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
 
 	if len(expectedMap)-len(generatedMap) != expectedDiff {
 		t.Errorf("incorrect number of reports generated")
@@ -266,7 +280,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	// ####### everything below compares the generated reports to the expected reports #######
 	expectedMap := getFiles("expected_reports", t)
 	generatedMap := getFiles("test_reports", t)
-	expectedDiff := 1 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
+	expectedDiff := 2 // The expected diff is equal to the number of ROS reports we generate. If we add or remove reports, this number should change
 
 	if len(expectedMap)-len(generatedMap) != expectedDiff {
 		t.Errorf("incorrect number of reports generated")
@@ -289,6 +303,13 @@ func TestGenerateReportsNoCost(t *testing.T) {
 
 	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
 	for _, query := range qs {
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+		mapResults[query.QueryString] = &mockPromResult{value: *res}
+	}
+
+	// Add ros namespace queries
+	for _, query := range *rosNamespaceQueries {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
 		mapResults[query.QueryString] = &mockPromResult{value: *res}

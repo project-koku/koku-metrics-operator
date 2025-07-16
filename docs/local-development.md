@@ -41,17 +41,21 @@
     $ oc apply -f testing/sa.yaml
     ```
 
-5. The `token` and `service-ca.crt` need to be copied from one of the created `koku-metrics-manager-role-token-*` secrets.
-A make command exists to help:
 
-    ```
-    $ make get-token-and-cert
+5.  Retrieve ServiceAccount Token and CA Certificate:
+
+    The operator's local environment needs a serviceAccount token and the cluster's service CA certificate to authenticate with the Kubernetes API. The `get-token-and-cert` Make command handles this retrieval:
+
+    ```bash
+    make get-token-and-cert
     ```
 
-This will place the `token` and `service-ca.crt` in the `testing` directory. To place these files somewhere else, you can also use the command like this:
+    This generates a new token for the `koku-metrics-controller-manager` ServiceAccount and retrieves the cluster's Service CA certificate from the `kube-root-ca.crt` ConfigMap.
 
-    ```
-    $ SECRET_ABSPATH=/absolute/path/to/local/secrets make get-token-and-cert
+    These files (`token` and `service-ca.crt`) will be placed in the `testing` directory but you can specify a different output location by setting the `SECRET_ABSPATH` environment variable:
+
+    ```bash
+    SECRET_ABSPATH=/absolute/path/to/local/secrets make get-token-and-cert
     ```
 
 6. Deploy the operator
