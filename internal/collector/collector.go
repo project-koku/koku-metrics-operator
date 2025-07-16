@@ -247,7 +247,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 			timeRange.Start = start
 			timeRange.End = end
 			rosCollector.TimeSeries = timeRange
-			if err = generateResourceOpimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
+			if err = generateResourceOptimizationReports(log, rosCollector, dirCfg, nodeRows, yearMonth); err != nil {
 				if !errors.Is(err, ErrROSNoEnabledNamespaces) {
 					return err
 				}
@@ -428,7 +428,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 	return nil
 }
 
-func generateResourceOpimizationReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
+func generateResourceOptimizationReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
 	ts := c.TimeSeries.End
 	namespacesAreEnabled, err := areNamespacesEnabled(c, ts)
 	if err != nil {

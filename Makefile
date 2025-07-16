@@ -256,8 +256,8 @@ endif
 	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: get-token-and-cert
-get-token-and-cert:
-	printf "%s" "$(shell oc whoami --show-token)" > $(SECRET_ABSPATH)/token
+get-token-and-cert: ## Get a token and the cluster's service CA certificate from a running K8s cluster for local development. The --duration flag is optional but useful in development for longer-lived tokens.
+	oc create token koku-metrics-controller-manager -n koku-metrics-operator --duration=8760h > $(SECRET_ABSPATH)/token
 	oc get configmap kube-root-ca.crt -n koku-metrics-operator -o jsonpath='{.data.ca\.crt}' > $(SECRET_ABSPATH)/service-ca.crt
 
 ##@ Build Bundle and Test Catalog
