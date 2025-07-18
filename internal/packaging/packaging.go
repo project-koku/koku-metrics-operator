@@ -183,13 +183,13 @@ func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr
 	// setup the manifest
 	manifestDate := metav1.Now()
 	var costFiles []string
-	for idx := range archiveFiles.costfiles {
-		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+	for idx, costFile := range archiveFiles.costfiles {
+		uploadName := p.createCSVUploadName(costFile, idx)
 		costFiles = append(costFiles, uploadName)
 	}
 	var rosFiles []string
-	for idx := range archiveFiles.rosfiles {
-		uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+	for idx, rosFile := range archiveFiles.rosfiles {
+		uploadName := p.createCSVUploadName(rosFile, idx)
 		rosFiles = append(rosFiles, uploadName)
 	}
 	p.manifest = manifestInfo{
@@ -262,7 +262,7 @@ func (p *FilePackager) writeTarball(tarFileName, manifestFileName string, archiv
 	// add the files to the tarFile
 	for idx, filePath := range archiveFiles {
 		if strings.HasSuffix(filePath, ".csv") {
-			uploadName := p.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+			uploadName := p.createCSVUploadName(filePath, idx)
 			if err := p.addFileToTarWriter(uploadName, filePath, tw); err != nil {
 				return fmt.Errorf("writeTarball: failed to create tar file: %v", err)
 			}
@@ -637,4 +637,12 @@ func (p *FilePackager) GetFileInfo(file string) (FileInfoManifest, error) {
 		break // exit `for` loop after processing the manifest.json
 	}
 	return fileInfo, nil
+}
+
+// createCSVUploadName creates a csv filename from the base file name that reflects file contents.
+func (p *FilePackager) createCSVUploadName(filePath string, idx int) string {
+	baseFileName := filepath.Base(filePath)
+	fileNameWithoutExt := strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName))
+	uploadName := fileNameWithoutExt + "." + strconv.Itoa(idx) + ".csv"
+	return uploadName
 }

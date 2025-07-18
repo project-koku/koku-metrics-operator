@@ -560,13 +560,13 @@ func TestGetAndRenderManifest(t *testing.T) {
 			}
 			// Define the expected manifest
 			var expectedCostFiles []string
-			for idx := range csvFileNames.costfiles {
-				uploadName := testPackager.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+			for idx, costFile := range csvFileNames.costfiles {
+				uploadName := testPackager.createCSVUploadName(costFile, idx)
 				expectedCostFiles = append(expectedCostFiles, uploadName)
 			}
 			var expectedRosFiles []string
-			for idx := range csvFileNames.rosfiles {
-				uploadName := testPackager.uid + "_openshift_usage_report." + strconv.Itoa(idx) + ".csv"
+			for idx, rosFile := range csvFileNames.rosfiles {
+				uploadName := testPackager.createCSVUploadName(rosFile, idx)
 				expectedRosFiles = append(expectedRosFiles, uploadName)
 			}
 			manifestDate := metav1.Now()
