@@ -255,11 +255,10 @@ ifeq ($(CI), true)
 endif
 	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
-SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
 .PHONY: get-token-and-cert
-get-token-and-cert:  ## Get a token from a running K8s cluster for local development.
-	printf "%s" "$(shell oc whoami --show-token)" > $(SECRET_ABSPATH)/token
-	oc get -o template $(SECRET_NAME) -o go-template=='{{index .data "service-ca.crt"|base64decode}}' > $(SECRET_ABSPATH)/service-ca.crt
+get-token-and-cert: ## Get a token and the cluster's service CA certificate from a running K8s cluster for local development. The --duration flag is optional but useful in development for longer-lived tokens.
+	oc create token koku-metrics-controller-manager -n koku-metrics-operator --duration=8760h > $(SECRET_ABSPATH)/token
+	oc get configmap kube-root-ca.crt -n koku-metrics-operator -o jsonpath='{.data.ca\.crt}' > $(SECRET_ABSPATH)/service-ca.crt
 
 ##@ Build Bundle and Test Catalog
 
