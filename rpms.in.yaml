@@ -1,5 +1,4 @@
 # lockfile specification for the costmanagement-metrics-operator
-installWeakDeps: false
 contentOrigin:
   # repositories to be used for resolving RPMs
   # corresponding to the build environment.
