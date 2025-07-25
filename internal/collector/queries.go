@@ -87,10 +87,10 @@ var (
 		"ros:memory_rss_usage_namespace_avg": "(avg_over_time(sum by(namespace) (container_memory_rss{container!='', container!='POD', pod!=''})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or avg_over_time(sum by(namespace) (container_memory_rss{container!='', container!='POD', pod!=''})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
 		"ros:memory_rss_usage_namespace_max": "(max_over_time(sum by(namespace) (container_memory_rss{container!='', container!='POD', pod!=''})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or max_over_time(sum by(namespace) (container_memory_rss{container!='', container!='POD', pod!=''})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
 		"ros:memory_rss_usage_namespace_min": "(min_over_time(sum by(namespace) (container_memory_rss{container!='', container!='POD', pod!=''})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or min_over_time(sum by(namespace) (container_memory_rss{container!='', container!='POD', pod!=''})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
-		"ros:pods_running_namespace_max":     "(max_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or max_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
-		"ros:pods_running_namespace_avg":     "(avg_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or avg_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
-		"ros:pods_total_namespace_max":       "(max_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or max_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
-		"ros:pods_total_namespace_avg":       "(avg_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or avg_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
+		"ros:namespace_running_pods_max":     "(max_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or max_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
+		"ros:namespace_running_pods_avg":     "(avg_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or avg_over_time(sum by(namespace) (kube_pod_status_phase{phase='Running'})[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
+		"ros:namespace_total_pods_max":       "(max_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or max_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
+		"ros:namespace_total_pods_avg":       "(avg_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or avg_over_time(sum by(namespace) (kube_pod_info)[15m:]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})",
 	}
 
 	rosNamespaceFilter = query{
@@ -826,7 +826,7 @@ var (
 		},
 		query{
 			Name:        "pods-running-namespace-max",
-			QueryString: QueryMap["ros:pods_running_namespace_max"],
+			QueryString: QueryMap["ros:namespace_running_pods_max"],
 			MetricKey:   staticFields{"namespace": "namespace"},
 			QueryValue: &saveQueryValue{
 				ValName: "pods-running-namespace-max",
@@ -835,7 +835,7 @@ var (
 		},
 		query{
 			Name:        "pods-running-namespace-avg",
-			QueryString: QueryMap["ros:pods_running_namespace_avg"],
+			QueryString: QueryMap["ros:namespace_running_pods_avg"],
 			MetricKey:   staticFields{"namespace": "namespace"},
 			QueryValue: &saveQueryValue{
 				ValName: "pods-running-namespace-avg",
@@ -844,7 +844,7 @@ var (
 		},
 		query{
 			Name:        "pods-total-namespace-max",
-			QueryString: QueryMap["ros:pods_total_namespace_max"],
+			QueryString: QueryMap["ros:namespace_total_pods_max"],
 			MetricKey:   staticFields{"namespace": "namespace"},
 			QueryValue: &saveQueryValue{
 				ValName: "pods-total-namespace-max",
@@ -853,7 +853,7 @@ var (
 		},
 		query{
 			Name:        "pods-total-namespace-avg",
-			QueryString: QueryMap["ros:pods_total_namespace_avg"],
+			QueryString: QueryMap["ros:namespace_total_pods_avg"],
 			MetricKey:   staticFields{"namespace": "namespace"},
 			QueryValue: &saveQueryValue{
 				ValName: "pods-total-namespace-avg",

@@ -545,10 +545,10 @@ func (rosNamespaceRow) csvHeader() []string {
 		"memory_rss_usage_namespace_avg",
 		"memory_rss_usage_namespace_max",
 		"memory_rss_usage_namespace_min",
-		"pods_running_namespace_max",
-		"pods_running_namespace_avg",
-		"pods_total_namespace_max",
-		"pods_total_namespace_avg",
+		"namespace_running_pods_max",
+		"namespace_running_pods_avg",
+		"namespace_total_pods_max",
+		"namespace_total_pods_avg",
 	}
 }
 
