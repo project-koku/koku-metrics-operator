@@ -11,7 +11,9 @@ metadata:
       (
         ".tekton/operator-build-pipeline.yaml".pathChanged() ||
         ".tekton/operator-pr.yaml".pathChanged() ||
-        "Dockerfile".pathChanged()
+        "Dockerfile".pathChanged() ||
+        "go.mod".pathChanged() ||
+        "go.sum".pathChanged()
       )
   creationTimestamp: null
   labels:
