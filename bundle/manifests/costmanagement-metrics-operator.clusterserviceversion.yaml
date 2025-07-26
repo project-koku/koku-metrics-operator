@@ -39,7 +39,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:956a9708ed3c881044c4c249ae2a51d647afc854649a74854a8bc132058e303f
+    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:290a34cd6393b53c55ab479670e9ffb1b3c6629bf3ceca46a69ab3da1cb6858d
     createdAt: "2025-06-10T13:37:20Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
