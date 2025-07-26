@@ -512,7 +512,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:956a9708ed3c881044c4c249ae2a51d647afc854649a74854a8bc132058e303f
+                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:290a34cd6393b53c55ab479670e9ffb1b3c6629bf3ceca46a69ab3da1cb6858d
                     livenessProbe:
                       httpGet:
                         path: /healthz
