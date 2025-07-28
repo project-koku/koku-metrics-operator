@@ -7,8 +7,8 @@ contentOrigin:
     - ./ubi.repo
 packages:
   # list of all packages installed via yum in  build stage.
-  - coreutils-single
-  - glibc-minimal-langpack
+  # - coreutils-single
+  # - glibc-minimal-langpack
   - openssl
 arches:
   - x86_64
