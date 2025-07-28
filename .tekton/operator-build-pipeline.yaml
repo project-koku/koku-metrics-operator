@@ -137,7 +137,7 @@ spec:
     - name: ociArtifactExpiresAfter
       value: $(params.image-expires-after)
     - name: ACTIVATION_KEY
-      value: "operator-activation-key"
+      value: "activation-key"
     - name: dev-package-managers
       value: $(params.prefetch-dev-package-managers-enabled)
     runAfter:
