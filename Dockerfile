@@ -31,7 +31,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 FROM registry.access.redhat.com/ubi9/ubi AS ubi-micro-build
 RUN mkdir -p /mnt/rootfs
 RUN rpm --root /mnt/rootfs --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
-RUN dnf install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --nodocs -y coreutils-single glibc-minimal-langpack openssl; dnf clean all
+RUN yum install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --nodocs -y coreutils-single glibc-minimal-langpack openssl; yum clean all
 RUN rm -rf /mnt/rootfs/var/cache/*
 
 FROM registry.access.redhat.com/ubi9/ubi-micro AS ubi9-micro
