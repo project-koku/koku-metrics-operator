@@ -3,7 +3,7 @@ contentOrigin:
   # repositories to be used for resolving RPMs
   # corresponding to the build environment.
   repofiles:
-    - ./ubi.repo
+    - ./redhat.repo
 packages:
   # list of all packages installed via yum in  build stage.
   - coreutils-single
