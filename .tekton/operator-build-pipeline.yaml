@@ -189,7 +189,7 @@ spec:
     - name: IMAGE_APPEND_PLATFORM
       value: "true"
     - name: ACTIVATION_KEY
-      value: "operator-activation-key"
+      value: "activation-key"
     runAfter:
     - prefetch-dependencies
     taskRef:
