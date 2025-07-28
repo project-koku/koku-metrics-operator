@@ -13,7 +13,10 @@ metadata:
         ".tekton/operator-pr.yaml".pathChanged() ||
         "Dockerfile".pathChanged() ||
         "go.mod".pathChanged() ||
-        "go.sum".pathChanged()
+        "go.sum".pathChanged() ||
+        "redhat.repo".pathChanged() ||
+        "rpms.in.yaml".pathChanged() ||
+        "rpms.lock.yaml".pathChanged()
       )
   creationTimestamp: null
   labels:
