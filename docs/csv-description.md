@@ -19,6 +19,11 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.1.0:
+* Enabled gathering and reporting namespace metrics to provide more granular data for resource optimization.
+* Updated CSV report filenames to be more descriptive, replacing the previous generic UID-based names with content-reflective names.
+* Introduced a new generic label, `cost_management_optimizations`, for resource optimization while ensuring backward compatibility with the older `insights_cost_management_optimizations` label.
+
 ## New in v4.0.0:
 * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
 * **Progress towards FIPS 140 Compliance:** The operator is using the Go Cryptographic Module v1.0.0 to progress toward FIPS 140 compliance. Although this module is not validated at the time of this release, the operator aims to meet stricter security standards when the module does successfully achieve FIPS validation.
