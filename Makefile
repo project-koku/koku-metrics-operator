@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.3.2
-VERSION ?= 4.0.0
+PREVIOUS_VERSION ?= 4.0.0
+VERSION ?= 4.1.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -395,7 +395,7 @@ YQ_VERSION ?= v4.2.0
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.39.2
+OPERATOR_SDK_VERSION ?= v1.41.1
 
 .PHONY: yq
 YQ ?= $(LOCALBIN)/yq
