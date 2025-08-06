@@ -39,8 +39,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
-    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:6881531e66c4c11c6a8bd60e535040d5c5974848dc6446297c1d9a5feef6f864
-    createdAt: "2025-06-05T14:45:42Z"
+    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:e9f2145ab2a54e9a491c6e9082490fe3296a22a992e23f86bb8130a8bf70ca36
+    createdAt: "2025-08-05T20:59:49Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -93,7 +93,7 @@ metadata:
       }
     operatorframework.io/suggested-namespace: koku-metrics-operator
     operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
-    operators.operatorframework.io/builder: operator-sdk-v1.39.2
+    operators.operatorframework.io/builder: operator-sdk-v1.41.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Management
@@ -103,7 +103,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: koku-metrics-operator.v4.0.0
+  name: koku-metrics-operator.v4.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -135,6 +135,11 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.1.0:
+    * Enabled gathering and reporting namespace metrics to provide more granular data for resource optimization.
+    * Updated CSV report filenames to be more descriptive, replacing the previous generic UID-based names with content-reflective names.
+    * Introduced a new generic label, `cost_management_optimizations`, for resource optimization while ensuring backward compatibility with the older `insights_cost_management_optimizations` label.
 
     ## New in v4.0.0:
     * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
@@ -548,7 +553,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: quay.io/project-koku/koku-metrics-operator@sha256:6881531e66c4c11c6a8bd60e535040d5c5974848dc6446297c1d9a5feef6f864
+                    image: quay.io/project-koku/koku-metrics-operator@sha256:e9f2145ab2a54e9a491c6e9082490fe3296a22a992e23f86bb8130a8bf70ca36
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -712,8 +717,8 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.0.0
+  version: 4.1.0
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:6881531e66c4c11c6a8bd60e535040d5c5974848dc6446297c1d9a5feef6f864
-  replaces: koku-metrics-operator.v3.3.2
+      image: quay.io/project-koku/koku-metrics-operator@sha256:e9f2145ab2a54e9a491c6e9082490fe3296a22a992e23f86bb8130a8bf70ca36
+  replaces: koku-metrics-operator.v4.0.0
