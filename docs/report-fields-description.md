@@ -35,7 +35,6 @@ Fields for metrics related to nodes:
 * `node`: The name of the node.
 * `node_labels`: The labels associated with the node.
 
----
 
 ### 2. Namespace Metrics
 
@@ -44,7 +43,6 @@ Fields for metrics related to namespaces:
 * `namespace`: The namespace.
 * `namespace_labels`: The labels associated with the namespace.
 
----
 
 ### 3. Pod Metrics
 
@@ -67,7 +65,6 @@ Fields for metrics related to pods:
 * `resource_id`: The unique identifier of the resource.
 * `pod_labels`: The labels associated with the pod.
 
----
 
 ### 4. Virtual Machine Metrics
 
@@ -103,7 +100,6 @@ Fields for metrics related to running virtual machines (VMs) and their associate
 * `vm_disk_allocated_size_byte_seconds`: The total allocated disk size for the VM's storage in byte seconds over the reporting period.
 * `vm_labels`: A JSON string representing key-value pairs of labels applied to the VM.
 
----
 
 ### 5. Persistent Volume Metrics
 
@@ -121,7 +117,6 @@ Fields for metrics related to Persistent Volumes (PVs):
 * `persistentvolume_labels`: The labels associated with the persistent volume.
 * `persistentvolumeclaim_labels`: The labels associated with the persistent volume claim.
 
----
 
 
 ## Resource Optimization (ROS) Reports:
@@ -164,7 +159,6 @@ Fields for metrics related to containers:
 * `memory_rss_usage_container_max`: The maximum RSS memory usage for the container.
 * `memory_rss_usage_container_sum`: The total RSS memory usage for the container.
 
----
 
 ### 2. Namespace Metrics
 
