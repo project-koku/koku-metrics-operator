@@ -32,7 +32,7 @@ func TestGetClient(t *testing.T) {
 	for _, tt := range getClientTests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			result := GetClient(&tt.config)
+			result := GetClient(tt.config.ValidateCert)
 			client, ok := result.(*http.Client)
 			if !ok {
 				t.Errorf("'%s' expected client to be http.Client type, got %T", tt.name, result)

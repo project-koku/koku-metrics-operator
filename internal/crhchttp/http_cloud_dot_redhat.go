@@ -108,7 +108,7 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 }
 
 // GetClient Return client with certificate handling based on configuration
-func GetClient(authConfig *AuthConfig) HTTPClient {
+func GetClient(validateCert bool) HTTPClient {
 	log := log.WithName("GetClient")
 
 	// copy of http.DefaultTransport
@@ -125,7 +125,7 @@ func GetClient(authConfig *AuthConfig) HTTPClient {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	if !authConfig.ValidateCert {
+	if !validateCert {
 		log.Info("disabling certificate validation")
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
@@ -173,7 +173,7 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
 
-	client := GetClient(authConfig)
+	client := GetClient(authConfig.ValidateCert)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", currentTime, "", fmt.Errorf("could not send the request: %v", err)
