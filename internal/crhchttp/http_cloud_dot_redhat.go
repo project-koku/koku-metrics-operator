@@ -126,11 +126,13 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := log.WithName("GetClient")
-	transport, _ := http.DefaultTransport.(*http.Transport)
+	transport := http.DefaultTransport.(*http.Transport)
 
 	if !authConfig.ValidateCert {
 		log.Info("disabling certificate validation")
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	} else {
+		transport.TLSClientConfig = &tls.Config{}
 	}
 
 	return &http.Client{Timeout: 30 * time.Second, Transport: transport}
