@@ -71,7 +71,7 @@ var (
 	ErrNoReports = errors.New("reports not found")
 
 	// Set boolean on whether community or certified
-	isCertified bool = false
+	IsCertified bool = false
 
 	log = logr.Log.WithName("packaging")
 )
@@ -202,7 +202,7 @@ func (p *FilePackager) getManifest(archiveFiles fileTracker, filePath string, cr
 			ROSFiles:     rosFiles,
 			Start:        p.start.UTC(),
 			End:          p.end.UTC(),
-			Certified:    isCertified,
+			Certified:    IsCertified,
 			CRStatus:     cr.Status,
 			DailyReports: true,
 		},

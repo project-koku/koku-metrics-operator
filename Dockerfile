@@ -3,6 +3,7 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} docker.io/library/golang:1.24.4 AS
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG IS_CERTIFIED=false
 
 USER root
 
@@ -27,7 +28,7 @@ ARG GOFIPS140=v1.0.0
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     echo " injecting GIT COMMIT: $GIT_COMMIT" && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
-    go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
+    go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT -X github.com/project-koku/koku-metrics-operator/internal/packaging.IsCertified=${IS_CERTIFIED}" -a -o manager cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
