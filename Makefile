@@ -323,6 +323,8 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 
 	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# fix the cert
+	- sed -i '' 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
 	# clean up the other files
 	# - git clean -fx
 	# mv the sample to the correctly named file
