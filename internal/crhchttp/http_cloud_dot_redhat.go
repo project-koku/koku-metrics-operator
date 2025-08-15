@@ -8,6 +8,7 @@ package crhchttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -28,7 +29,6 @@ import (
 
 // Client is an http.Client
 var Client HTTPClient
-var cacerts = "/etc/ssl/certs/ca-certificates.crt"
 var log = logr.Log.WithName("crc_http")
 
 // DefaultTransport is a copy from the golang http package
@@ -125,26 +125,15 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
-	// log := log.WithName("GetClient")
-	// transport := DefaultTransport
+	log := log.WithName("GetClient")
+	transport, _ := http.DefaultTransport.(*http.Transport)
 
-	// if transport, ok := transport.(*http.Transport); ok {
-	// 	transport.TLSClientConfig = &tls.Config{}
+	if !authConfig.ValidateCert {
+		log.Info("disabling certificate validation")
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 
-	// 	if authConfig.ValidateCert {
-	// 		// create the client specifying the ca cert file for transport
-	// 		caCert, err := os.ReadFile(cacerts)
-	// 		if err != nil {
-	// 			log.Error(err, "The following error occurred: ") // TODO fix this error handling
-	// 		}
-	// 		caCertPool := x509.NewCertPool()
-	// 		caCertPool.AppendCertsFromPEM(caCert)
-
-	// 		transport.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
-	// 	}
-	// }
-	// Default the client
-	return http.DefaultClient
+	return &http.Client{Timeout: 30 * time.Second, Transport: transport}
 }
 
 // ProcessResponse Log response for request and return valid
