@@ -48,8 +48,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          build-args: |
-            IS_CERTIFIED=false
           platforms: linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
           provenance: false
           push: ${{ github.event_name != 'pull_request' }}
