@@ -87,7 +87,8 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	log.Info("requesting service-account access token")
-	resp, err := http.DefaultClient.Do(req)
+	client := GetClient(ac.ValidateCert)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to make HTTP request to acquire token: %w", err)
 	}
