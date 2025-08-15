@@ -41,7 +41,10 @@ func TestGetClient(t *testing.T) {
 			if !ok {
 				t.Errorf("'%s' expected transport to be http.Transport type, got %T", tt.name, client.Transport)
 			}
-			if tt.insecureSkipVerify != transport.TLSClientConfig.InsecureSkipVerify {
+			if tt.insecureSkipVerify && (tt.insecureSkipVerify != transport.TLSClientConfig.InsecureSkipVerify) {
+				t.Errorf("'%s' expected insecureSkipVerify to be %v, got %v", tt.name, tt.insecureSkipVerify, transport.TLSClientConfig.InsecureSkipVerify)
+			}
+			if !tt.insecureSkipVerify && (transport.TLSClientConfig != nil) {
 				t.Errorf("'%s' expected insecureSkipVerify to be %v, got %v", tt.name, tt.insecureSkipVerify, transport.TLSClientConfig.InsecureSkipVerify)
 			}
 		})

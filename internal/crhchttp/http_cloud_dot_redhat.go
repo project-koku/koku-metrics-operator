@@ -30,22 +30,6 @@ import (
 // Client is an http.Client
 var Client HTTPClient
 var log = logr.Log.WithName("crc_http")
-
-// DefaultTransport is a copy from the golang http package
-var DefaultTransport = &http.Transport{
-	Proxy: http.ProxyFromEnvironment,
-	DialContext: (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-		DualStack: true,
-	}).DialContext,
-	ForceAttemptHTTP2:     true,
-	MaxIdleConns:          100,
-	IdleConnTimeout:       90 * time.Second,
-	TLSHandshakeTimeout:   10 * time.Second,
-	ExpectContinueTimeout: 1 * time.Second,
-}
-
 var delimeter = strings.Repeat("=", 100)
 
 // HTTPClient gives us a testable interface
@@ -126,13 +110,24 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 // GetClient Return client with certificate handling based on configuration
 func GetClient(authConfig *AuthConfig) HTTPClient {
 	log := log.WithName("GetClient")
-	transport := http.DefaultTransport.(*http.Transport)
+
+	// copy of http.DefaultTransport
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 
 	if !authConfig.ValidateCert {
 		log.Info("disabling certificate validation")
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	} else {
-		transport.TLSClientConfig = &tls.Config{}
 	}
 
 	return &http.Client{Timeout: 30 * time.Second, Transport: transport}
