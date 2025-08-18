@@ -14,7 +14,7 @@ metadata:
     features.operators.openshift.io/cni: "false"
     features.operators.openshift.io/csi: "false"
     features.operators.openshift.io/disconnected: "true"
-    features.operators.openshift.io/fips-compliant: "false"
+    features.operators.openshift.io/fips-compliant: "true"
     features.operators.openshift.io/proxy-aware: "true"
     features.operators.openshift.io/tls-profiles: "false"
     features.operators.openshift.io/token-auth-aws: "false"
@@ -63,7 +63,7 @@ metadata:
     operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
     operators.operatorframework.io/builder: operator-sdk-v1.33.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
-    repository: https://github.com/project-koku/koku-metrics-operator
+    repository: https://github.com/project-costmanagement/costmanagement-metrics-operator
     support: Cost Management
   labels:
     operatorframework.io/arch.amd64: supported

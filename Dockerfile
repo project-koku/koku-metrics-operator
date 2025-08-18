@@ -1,5 +1,4 @@
-# Build the manager binary
-FROM --platform=${BUILDPLATFORM:-linux/amd64} docker.io/library/golang:1.24.4 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.24 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -7,7 +6,6 @@ ARG TARGETARCH
 USER root
 
 WORKDIR /workspace
-# Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
 COPY vendor/ vendor/
@@ -20,37 +18,47 @@ COPY internal/ internal/
 # Copy git to inject the commit during build
 COPY .git .git
 
-# Use FIPS crypto module at build time
-ARG GOFIPS140=v1.0.0
+# Set the GOEXPERIMENT to enable the strict FIPS runtime check.
+ENV GOEXPERIMENT=strictfipsruntime
 
 # Build
 RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     echo " injecting GIT COMMIT: $GIT_COMMIT" && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
+    CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM registry.redhat.io/ubi9-micro@sha256:233cce2df15dc7cd790f7f1ddbba5d4f59f31677c13a47703db3c2ca2fea67b6 AS target-base
 
-# For terminal access, use this image:
-# FROM gcr.io/distroless/base:debug-nonroot
+# Prepare a ubi micro base with openssl and its dependencies.
+FROM registry.access.redhat.com/ubi9/ubi AS ubi-micro-build
+COPY --from=target-base / /mnt/rootfs
+RUN rpm --root /mnt/rootfs --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+RUN yum install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --setopt reposdir=/etc/yum.repos.d --nodocs -y coreutils-single glibc-minimal-langpack openssl; yum clean all
+RUN rm -rf /mnt/rootfs/var/cache/*
 
-# Enable FIPS mode at runtime
-ENV GODEBUG=fips140=on
-
-LABEL \
-    com.redhat.component="koku-metrics-operator-container" \
-    description="Koku Metrics Operator" \
-    io.k8s.description="Operator to deploy and manage instances of Koku Metrics" \
-    io.k8s.display-name="Koku Metrics Operator" \
-    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators" \
-    maintainer="Cost Management <cost-mgmt@redhat.com>" \
-    name="koku-metrics-operator" \
-    summary="Koku Metrics Operator"
+FROM registry.access.redhat.com/ubi9/ubi-micro AS ubi9-micro
+COPY --from=ubi-micro-build /mnt/rootfs/ /
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
-USER nonroot:nonroot
+COPY --from=builder /workspace/manager /usr/bin/costmanagement-metrics-operator
+COPY --from=builder /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-bundle.crt
+COPY --from=builder /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt /etc/ssl/certs/ca-bundle.trust.crt
+COPY LICENSE /licenses/Apache-2.0.txt
+
+USER 65532:65532
+
+
+LABEL \
+    com.redhat.component="costmanagement-metrics-operator-container"  \
+    description="Red Hat Cost Management Metrics Operator"  \
+    distribution-scope="public" \
+    io.k8s.description="Operator to deploy and manage instances of Cost Management Metrics"  \
+    io.k8s.display-name="Cost Management Metrics Operator"  \
+    io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators"  \
+    maintainer="Cost Management <cost-mgmt@redhat.com>"  \
+    name="costmanagement-metrics-operator"  \
+    summary="Red Hat Cost Management Metrics Operator"  \
+    version="4.0.0" \
+    vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]
