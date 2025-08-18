@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "true"
     containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:8f0ae76636e3d3f937c733e9178426db16dad24dc54cd02c1a80fcf95cb46821
-    createdAt: "2025-06-10T13:37:20Z"
+    createdAt: "2025-08-18T12:10:15Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -93,7 +93,7 @@ metadata:
       }
     operatorframework.io/suggested-namespace: costmanagement-metrics-operator
     operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
-    operators.operatorframework.io/builder: operator-sdk-v1.39.2
+    operators.operatorframework.io/builder: operator-sdk-v1.41.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Red Hat
@@ -104,7 +104,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.4.0.0
+  name: costmanagement-metrics-operator.4.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -136,6 +136,11 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.1.0:
+    * Enabled gathering and reporting namespace metrics to provide more granular data for resource optimization.
+    * Updated CSV report filenames to be more descriptive, replacing the previous generic UID-based names with content-reflective names.
+    * Introduced a new generic label, `cost_management_optimizations`, for resource optimization while ensuring backward compatibility with the older `insights_cost_management_optimizations` label.
 
     ## New in v4.0.0:
     * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
@@ -676,5 +681,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.0.0
-  replaces: costmanagement-metrics-operator.3.3.2
+  version: 4.1.0
+  replaces: costmanagement-metrics-operator.4.0.0

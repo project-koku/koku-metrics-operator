@@ -1,3 +1,22 @@
+## 1.38.0
+
+### Features
+- gstruct handles extra unexported fields [4ee7ed0]
+
+### Fixes
+- support [] in IgnoringTopFunction function signatures (#851) [36bbf72]
+
+### Maintenance
+- Bump golang.org/x/net from 0.40.0 to 0.41.0 (#846) [529d408]
+- Fix typo [acd1f55]
+- Bump google.golang.org/protobuf from 1.36.5 to 1.36.6 (#835) [bae65a0]
+- Bump nokogiri from 1.18.4 to 1.18.8 in /docs (#842) [8dda91f]
+- Bump golang.org/x/net from 0.39.0 to 0.40.0 (#843) [212d812]
+- Bump github.com/onsi/ginkgo/v2 from 2.23.3 to 2.23.4 (#839) [59bd7f9]
+- Bump nokogiri from 1.18.1 to 1.18.4 in /docs (#834) [328c729]
+- Bump uri from 1.0.2 to 1.0.3 in /docs (#826) [9a798a1]
+- Bump golang.org/x/net from 0.37.0 to 0.39.0 (#841) [04a72c6]
+
 ## 1.37.0
 
 ### Features
@@ -115,7 +134,7 @@ Require Go 1.22+
 
 ### Maintenance
 - Migrate github.com/golang/protobuf to google.golang.org/protobuf [436a197]
-  
+
   This release drops the deprecated github.com/golang/protobuf and adopts google.golang.org/protobuf.  Care was taken to ensure the release is backwards compatible (thanks @jbduncan !).  Please open an issue if you run into one.
 
 - chore: test with Go 1.22 (#733) [32ef35e]
@@ -411,7 +430,7 @@ These improvements are all documented in [Gomega's docs](https://onsi.github.io/
   This enables integration with Ginkgo 2.3.0's interruptible nodes and node timeouts.
 - Introduces Eventually.Within.ProbeEvery with tests and documentation (#591) [f633800]
 - New BeKeyOf matcher with documentation and unit tests (#590) [fb586b3]
-    
+
 ## Fixes
 - Cover the entire gmeasure suite with leak detection [8c54344]
 - Fix gmeasure leak [119d4ce]

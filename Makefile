@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 3.3.2
-VERSION ?= 4.0.0
+PREVIOUS_VERSION ?= 4.0.0
+VERSION ?= 4.1.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -255,11 +255,10 @@ ifeq ($(CI), true)
 endif
 	oc apply -f testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
-SECRET_NAME = $(shell oc get secrets -o name | grep -m 1 koku-metrics-controller-manager-token-)
 .PHONY: get-token-and-cert
-get-token-and-cert:  ## Get a token from a running K8s cluster for local development.
-	printf "%s" "$(shell oc whoami --show-token)" > $(SECRET_ABSPATH)/token
-	oc get -o template $(SECRET_NAME) -o go-template=='{{index .data "service-ca.crt"|base64decode}}' > $(SECRET_ABSPATH)/service-ca.crt
+get-token-and-cert: ## Get a token and the cluster's service CA certificate from a running K8s cluster for local development. The --duration flag is optional but useful in development for longer-lived tokens.
+	oc create token koku-metrics-controller-manager -n koku-metrics-operator --duration=8760h > $(SECRET_ABSPATH)/token
+	oc get configmap kube-root-ca.crt -n koku-metrics-operator -o jsonpath='{.data.ca\.crt}' > $(SECRET_ABSPATH)/service-ca.crt
 
 ##@ Build Bundle and Test Catalog
 
@@ -392,7 +391,7 @@ YQ_VERSION ?= v4.2.0
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.39.2
+OPERATOR_SDK_VERSION ?= v1.41.1
 
 .PHONY: yq
 YQ ?= $(LOCALBIN)/yq
