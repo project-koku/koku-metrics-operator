@@ -18,8 +18,8 @@ COPY bundle/metadata /metadata/
 # Openshift specific labels
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
 LABEL io.k8s.description="Component required to gather metrics from Prometheus, package and upload them to the cost management service in the cloud. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
-LABEL io.openshift.build.commit.id=REPLACE_REF
-LABEL io.openshift.build.commit.url=https://github.com/project-koku/koku-metrics-operator/commit/REPLACE_REF
+LABEL io.openshift.build.commit.id="2ff0caa6db959b1eb4deb75b692c2daf87e7a171"
+LABEL io.openshift.build.commit.url="https://github.com/project-koku/koku-metrics-operator/commit/2ff0caa6db959b1eb4deb75b692c2daf87e7a171"
 LABEL io.openshift.build.source-location="https://github.com/project-koku/koku-metrics-operator"
 LABEL io.openshift.maintainer.component="Cost Management Metrics Operator"
 LABEL io.openshift.maintainer.product="OpenShift Container Platform"
