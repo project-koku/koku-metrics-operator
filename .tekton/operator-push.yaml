@@ -10,7 +10,12 @@ metadata:
       (
         ".tekton/operator-build-pipeline.yaml".pathChanged() ||
         ".tekton/operator-push.yaml".pathChanged() ||
-        "Dockerfile".pathChanged()
+        "Dockerfile".pathChanged() ||
+        "go.mod".pathChanged() ||
+        "go.sum".pathChanged() ||
+        "redhat.repo".pathChanged() ||
+        "rpms.in.yaml".pathChanged() ||
+        "rpms.lock.yaml".pathChanged()
       )
   creationTimestamp: null
   labels:
@@ -32,6 +37,10 @@ spec:
     - name: hermetic
       value: "true"
     - name: build-source-image
+      value: "true"
+    - name: prefetch-input
+      value: '{"type": "rpm", "path": "."}'
+    - name: prefetch-dev-package-managers-enabled
       value: "true"
     - name: build-platforms
       value:

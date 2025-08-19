@@ -54,6 +54,9 @@ func newVMRow(ts *promv1.Range) vmRow               { return vmRow{dateTimes: ne
 func newROSRow(ts *promv1.Range) resourceOptimizationRow {
 	return resourceOptimizationRow{dateTimes: newDates(ts)}
 }
+func newROSNamespaceRow(ts *promv1.Range) rosNamespaceRow {
+	return rosNamespaceRow{dateTimes: newDates(ts)}
+}
 
 type namespaceRow struct {
 	*dateTimes
@@ -493,3 +496,90 @@ func (row resourceOptimizationRow) csvRow() []string {
 }
 
 func (row resourceOptimizationRow) string() string { return strings.Join(row.csvRow(), ",") }
+
+type rosNamespaceRow struct {
+	*dateTimes
+	Namespace         string `mapstructure:"namespace"`
+	CPURequestSum     string `mapstructure:"cpu-request-namespace-sum"`
+	CPULimitSum       string `mapstructure:"cpu-limit-namespace-sum"`
+	CPUUsageAvg       string `mapstructure:"cpu-usage-namespace-avg"`
+	CPUUsageMax       string `mapstructure:"cpu-usage-namespace-max"`
+	CPUUsageMin       string `mapstructure:"cpu-usage-namespace-min"`
+	CPUThrottleAvg    string `mapstructure:"cpu-throttle-namespace-avg"`
+	CPUThrottleMax    string `mapstructure:"cpu-throttle-namespace-max"`
+	CPUThrottleMin    string `mapstructure:"cpu-throttle-namespace-min"`
+	MemoryRequestSum  string `mapstructure:"memory-request-namespace-sum"`
+	MemoryLimitSum    string `mapstructure:"memory-limit-namespace-sum"`
+	MemoryUsageAvg    string `mapstructure:"memory-usage-namespace-avg"`
+	MemoryUsageMax    string `mapstructure:"memory-usage-namespace-max"`
+	MemoryUsageMin    string `mapstructure:"memory-usage-namespace-min"`
+	MemoryRSSUsageAvg string `mapstructure:"memory-rss-usage-namespace-avg"`
+	MemoryRSSUsageMax string `mapstructure:"memory-rss-usage-namespace-max"`
+	MemoryRSSUsageMin string `mapstructure:"memory-rss-usage-namespace-min"`
+	PodsRunningMax    string `mapstructure:"pods-running-namespace-max"`
+	PodsRunningAvg    string `mapstructure:"pods-running-namespace-avg"`
+	PodsTotalMax      string `mapstructure:"pods-total-namespace-max"`
+	PodsTotalAvg      string `mapstructure:"pods-total-namespace-avg"`
+}
+
+func (rosNamespaceRow) csvHeader() []string {
+	return []string{
+		"report_period_start",
+		"report_period_end",
+		"interval_start",
+		"interval_end",
+		"namespace",
+		"cpu_request_namespace_sum",
+		"cpu_limit_namespace_sum",
+		"cpu_usage_namespace_avg",
+		"cpu_usage_namespace_max",
+		"cpu_usage_namespace_min",
+		"cpu_throttle_namespace_avg",
+		"cpu_throttle_namespace_max",
+		"cpu_throttle_namespace_min",
+		"memory_request_namespace_sum",
+		"memory_limit_namespace_sum",
+		"memory_usage_namespace_avg",
+		"memory_usage_namespace_max",
+		"memory_usage_namespace_min",
+		"memory_rss_usage_namespace_avg",
+		"memory_rss_usage_namespace_max",
+		"memory_rss_usage_namespace_min",
+		"namespace_running_pods_max",
+		"namespace_running_pods_avg",
+		"namespace_total_pods_max",
+		"namespace_total_pods_avg",
+	}
+}
+
+func (row rosNamespaceRow) csvRow() []string {
+	return []string{
+		row.ReportPeriodStart,
+		row.ReportPeriodEnd,
+		row.IntervalStart,
+		row.IntervalEnd,
+		row.Namespace,
+		row.CPURequestSum,
+		row.CPULimitSum,
+		row.CPUUsageAvg,
+		row.CPUUsageMax,
+		row.CPUUsageMin,
+		row.CPUThrottleAvg,
+		row.CPUThrottleMax,
+		row.CPUThrottleMin,
+		row.MemoryRequestSum,
+		row.MemoryLimitSum,
+		row.MemoryUsageAvg,
+		row.MemoryUsageMax,
+		row.MemoryUsageMin,
+		row.MemoryRSSUsageAvg,
+		row.MemoryRSSUsageMax,
+		row.MemoryRSSUsageMin,
+		row.PodsRunningMax,
+		row.PodsRunningAvg,
+		row.PodsTotalMax,
+		row.PodsTotalAvg,
+	}
+}
+
+func (row rosNamespaceRow) string() string { return strings.Join(row.csvRow(), ",") }
