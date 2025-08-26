@@ -3,14 +3,21 @@
     "extends": [
         "github>konflux-ci/mintmaker-presets:group-python-poetry"
     ],
-     "tekton": {
+    "tekton": {
         "includePaths": [
-        ".tekton/**"
+            ".tekton/**"
         ]
     },
+    "enabledManagers": ["tekton", "docker"],
     "ignorePaths": [
-        "**/go.mod",
-        "**/go.sum",
-        "**/vendor/**"
-    ]
+        "go.mod",
+        "go.sum",
+        "vendor/**"
+    ],
+    "golang": {
+        "enabled": false
+    },
+    "gomod": {
+        "enabled": false
+    }
 }
