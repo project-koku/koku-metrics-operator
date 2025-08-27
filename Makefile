@@ -82,8 +82,8 @@ help: ## Display this help.
 .PHONY: setup-auth
 setup-auth:
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),console.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),console.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/eW91ci1jbGllbnQtaWQK/$(shell printf "$(shell echo $(or $(CLIENT_ID),console.redhat.com client_id))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/eW91ci1jbGllbnQtc2VjcmV0Cg==/$(shell printf "$(shell echo $(or $(CLIENT_SECRET),console.redhat.com client_secret))" | base64)/g' testing/authentication_secret.yaml
 
 .PHONY: add-prom-route
 add-prom-route:
@@ -96,7 +96,7 @@ add-prom-route:
 add-auth:
 	@sed -i "" '/authentication/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '  authentication:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
-	@echo '    type: basic'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    type: service-account'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: local-validate-cert
@@ -227,8 +227,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 deploy-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running in K8s cluster.
 	@cp testing/costmanagementmetricsconfig-template.yaml testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 ifeq ($(AUTH), service-account)
-	$(MAKE) setup-sa-auth
-	$(MAKE) add-sa-auth
+	$(MAKE) setup-auth
+	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -244,8 +244,8 @@ deploy-local-cr:  ## Deploy a CostManagementMetricsConfig CR for controller runn
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
 ifeq ($(AUTH), service-account)
-	$(MAKE) setup-sa-auth
-	$(MAKE) add-sa-auth
+	$(MAKE) setup-auth
+	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -337,8 +337,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	$(MAKE) manifests
 
-	mkdir -p costmanagement-metrics-operator/$(VERSION)/
-	rm -rf ./bundle costmanagement-metrics-operator/$(VERSION)/
+	rm -rf ./bundle
 
 	$(OPERATOR_SDK) generate kustomize manifests
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
@@ -362,14 +361,11 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
-	# scripts/update_bundle_dockerfile.py
+	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
 	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
-
-	cp -r ./bundle/ costmanagement-metrics-operator/$(VERSION)/
-	cp bundle.Dockerfile costmanagement-metrics-operator/$(VERSION)/Dockerfile
 
 ##@ Build Dependencies
 
