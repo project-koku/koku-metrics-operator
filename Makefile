@@ -227,6 +227,11 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 create-air-gapped-cr: ## Create a CostManagementMetricsConfig CR for air-gapped environment.
 	$(KUSTOMIZE) build testing-demo/components/air-gapped > testing/air-gapped-cr.yaml
 
+.PHONY: create-service-account-cr
+create-service-account-cr: ## Create a CostManagementMetricsConfig CR for service account environment.
+	CLIENT_ID=$(CLIENT_ID) CLIENT_SECRET=$(CLIENT_SECRET) 
+	printf "client_id=$(CLIENT_ID)\nclient_secret=$(CLIENT_SECRET)" > testing-demo/components/service-account/sa.env
+	$(KUSTOMIZE) build testing-demo/components/service-account > testing/service-account-cr.yaml
 
 .PHONY: deploy-cr
 deploy-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running in K8s cluster.
