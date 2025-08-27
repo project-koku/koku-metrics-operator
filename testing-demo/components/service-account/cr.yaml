@@ -1,0 +1,8 @@
+- op: replace
+  path: /spec/authentication
+  value:
+    secret_name: service-account-secret
+    type: service-account
+- op: replace
+  path: /spec/source/create_source
+  value: true
