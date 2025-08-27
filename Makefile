@@ -82,8 +82,8 @@ help: ## Display this help.
 .PHONY: setup-auth
 setup-auth: ## Populate authentication secret with client_id and client_secret.
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
-	$(YQ) -i '.stringData.client_id = "$(CLIENT_ID)"' testing/authentication_secret.yaml
-	$(YQ) -i '.stringData.client_secret = "$(CLIENT_SECRET)"' testing/authentication_secret.yaml
+	@sed -i "" 's/eW91ci1jbGllbnQtaWQK/$(shell printf "$(shell echo $(or $(CLIENT_ID),console.redhat.com client_id))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/eW91ci1jbGllbnQtc2VjcmV0Cg==/$(shell printf "$(shell echo $(or $(CLIENT_SECRET),console.redhat.com client_secret))" | base64)/g' testing/authentication_secret.yaml
 
 .PHONY: add-prom-route
 add-prom-route:
