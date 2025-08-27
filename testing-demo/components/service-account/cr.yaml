@@ -1,4 +1,7 @@
 - op: replace
+  path: /metadata/name
+  value: service-account-cr
+- op: replace
   path: /spec/authentication
   value:
     secret_name: service-account-secret
