@@ -1,3 +1,13 @@
+## 1.38.2
+
+- roll back to go 1.23.0 [c404969]
+
+## 1.38.1
+
+### Fixes
+
+Numerous minor fixes and dependency bumps
+
 ## 1.38.0
 
 ### Features
@@ -134,7 +144,7 @@ Require Go 1.22+
 
 ### Maintenance
 - Migrate github.com/golang/protobuf to google.golang.org/protobuf [436a197]
-
+  
   This release drops the deprecated github.com/golang/protobuf and adopts google.golang.org/protobuf.  Care was taken to ensure the release is backwards compatible (thanks @jbduncan !).  Please open an issue if you run into one.
 
 - chore: test with Go 1.22 (#733) [32ef35e]
@@ -430,7 +440,7 @@ These improvements are all documented in [Gomega's docs](https://onsi.github.io/
   This enables integration with Ginkgo 2.3.0's interruptible nodes and node timeouts.
 - Introduces Eventually.Within.ProbeEvery with tests and documentation (#591) [f633800]
 - New BeKeyOf matcher with documentation and unit tests (#590) [fb586b3]
-
+    
 ## Fixes
 - Cover the entire gmeasure suite with leak detection [8c54344]
 - Fix gmeasure leak [119d4ce]
