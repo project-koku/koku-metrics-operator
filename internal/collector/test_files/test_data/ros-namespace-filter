@@ -18,5 +18,25 @@
 			1677009600,
 			"1"
 		]
+	},
+	{
+		"metric": {
+			"label_cost_management_optimizations": "true",
+			"namespace": "gpu-test"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
+	},
+	{
+		"metric": {
+			"label_cost_management_optimizations": "true",
+			"namespace": "ai-project"
+		},
+		"value": [
+			1677009600,
+			"1"
+		]
 	}
 ]
