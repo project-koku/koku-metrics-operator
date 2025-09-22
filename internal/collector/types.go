@@ -396,6 +396,7 @@ type rosContainerRow struct {
 	CPUUsageContainerSum               string `mapstructure:"cpu-usage-container-sum"`
 	CPUThrottleContainerAvg            string `mapstructure:"cpu-throttle-container-avg"`
 	CPUThrottleContainerMax            string `mapstructure:"cpu-throttle-container-max"`
+	CPUThrottleContainerMin            string `mapstructure:"cpu-throttle-container-min"`
 	CPUThrottleContainerSum            string `mapstructure:"cpu-throttle-container-sum"`
 	MemoryRequestContainerAvg          string `mapstructure:"memory-request-container-avg"`
 	MemoryRequestContainerSum          string `mapstructure:"memory-request-container-sum"`
@@ -448,6 +449,7 @@ func (rosContainerRow) csvHeader() []string {
 		"cpu_usage_container_sum",
 		"cpu_throttle_container_avg",
 		"cpu_throttle_container_max",
+		"cpu_throttle_container_min",
 		"cpu_throttle_container_sum",
 		"memory_request_container_avg",
 		"memory_request_container_sum",
@@ -501,6 +503,7 @@ func (row rosContainerRow) csvRow() []string {
 		row.CPUUsageContainerSum,
 		row.CPUThrottleContainerAvg,
 		row.CPUThrottleContainerMax,
+		row.CPUThrottleContainerMin,
 		row.CPUThrottleContainerSum,
 		row.MemoryRequestContainerAvg,
 		row.MemoryRequestContainerSum,
