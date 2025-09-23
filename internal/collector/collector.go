@@ -441,13 +441,13 @@ func generateResourceOptimizationReports(log gologr.Logger, c *PrometheusCollect
 	log.Info(fmt.Sprintf("querying for resource-optimization container metrics for ts: %+v", ts))
 	rosResults := mappedResults{}
 
-	if err := c.getQueryResults(ts, resourceOptimizationQueries, &rosResults, MaxRetries); err != nil {
+	if err := c.getQueryResults(ts, rosContainerQueries, &rosResults, MaxRetries); err != nil {
 		return err
 	}
 
 	rosRows := make(mappedCSVStruct)
 	for ros, val := range rosResults {
-		usage := newROSRow(c.TimeSeries)
+		usage := newROSContainerRow(c.TimeSeries)
 		if err := getStruct(val, &usage, rosRows, ros); err != nil {
 			return err
 		}
@@ -460,7 +460,7 @@ func generateResourceOptimizationReports(log gologr.Logger, c *PrometheusCollect
 			}
 		}
 	}
-	emptyROSRow := newROSRow(c.TimeSeries)
+	emptyROSRow := newROSContainerRow(c.TimeSeries)
 	rosReport := report{
 		file: &file{
 			name: rosContainerFilePrefix + yearMonth + ".csv",
