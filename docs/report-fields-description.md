@@ -145,6 +145,7 @@ Fields for metrics related to containers:
 * `cpu_usage_container_sum`: The total CPU usage for the container.
 * `cpu_throttle_container_avg`: The average CPU throttle for the container.
 * `cpu_throttle_container_max`: The maximum CPU throttle for the container.
+* `cpu_throttle_container_min`: The minimum CPU throttle for the container.
 * `cpu_throttle_container_sum`: The total CPU throttle for the container.
 * `memory_request_container_avg`: The average memory request for the container.
 * `memory_request_container_sum`: The total memory request for the container.
