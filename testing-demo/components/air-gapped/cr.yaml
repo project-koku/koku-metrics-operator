@@ -1,0 +1,15 @@
+- op: replace
+  path: /metadata/name
+  value: air-gapped-cr
+- op: replace
+  path: /spec/authentication
+  value: {}
+- op: replace
+  path: /spec/prometheus_config
+  value: {}
+- op: replace
+  path: /spec/source
+  value: {}
+- op: replace
+  path: /spec/upload/upload_toggle
+  value: false
