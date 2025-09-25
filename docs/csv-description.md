@@ -21,7 +21,7 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 
 ## New in v4.2.0:
 * Enabled gathering and reporting NVIDIA GPU metrics for resource optimization.
-* Enhanced the operator's handling of the custom CA certificates.
+* (Bugfix) Fixed custom CA certificate validation and configuration issues.
 * (Bugfix) Fixed issue where ROS queries were missing workload metadata for namespaces labeled only with the legacy `insights_cost_management_optimizations` label.
 
 ## New in v4.1.0:
