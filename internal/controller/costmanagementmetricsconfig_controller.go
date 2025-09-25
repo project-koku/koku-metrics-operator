@@ -707,7 +707,20 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 		return nil
 	}
 
-	// attempt upload
+	// Check if source is defined before attempting upload
+	sourceExists := cr.Status.Source.SourceDefined != nil && *cr.Status.Source.SourceDefined
+
+	if !sourceExists {
+		log.Info("valid integration does not exist in console.redhat.com, storing reports until integration is configured")
+		if cr.Status.Source.SourceError != "" {
+			cr.Status.Upload.UploadError = fmt.Sprintf("Reports are being stored - integration validation error: %s", cr.Status.Source.SourceError)
+		} else {
+			cr.Status.Upload.UploadError = "Reports are being stored until a valid integration is configured in console.redhat.com"
+		}
+		return nil
+	}
+
+	// attempt upload only if an integration exists
 	if err := r.uploadFiles(authConfig, cr, dirCfg, packager, uploadFiles); err != nil {
 		log.Info("failed to upload files", "error", err)
 		return err
