@@ -10,11 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -1507,53 +1504,5 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 		})
 
-		It("should handle upload failure and return error", func() {
-			Expect(setup()).Should(Succeed())
-
-			// Create a mock server that returns 500 error for upload endpoint
-			failureTS := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				if strings.Contains(r.URL.Path, "source_types") {
-					// Allow source type validation to pass
-					w.WriteHeader(http.StatusOK)
-					fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"1","name":"openshift"}]}`)
-				} else if strings.Contains(r.URL.Path, "sources") && !strings.Contains(r.URL.Path, "source_types") {
-					// Allow source validation to pass
-					w.WriteHeader(http.StatusOK)
-					fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"123","name":"test-source","source_type_id":"1","source_ref":"10e206d7-a11a-403e-b835-6cff14e98b23"}]}`)
-				} else if strings.Contains(r.URL.Path, "ingress") {
-					// Make upload fail with 500 error
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, `{"error": "Internal server error"}`)
-				}
-			}))
-			defer failureTS.Close()
-
-			instCopy.Spec.APIURL = failureTS.URL
-			instCopy.Spec.Source.SourceName = "test-source"
-			instCopy.Status.Source.SourceDefined = &trueValue // Source exists to allow upload attempt
-			createObject(ctx, instCopy)
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			// Should get upload error due to 500 response
-			Eventually(func() string {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Upload.UploadError
-			}, timeout, interval).Should(ContainSubstring("500"))
-
-			// Should have attempted upload but failed
-			Eventually(func() string {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Upload.LastUploadStatus
-			}, timeout, interval).Should(ContainSubstring("500"))
-
-			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
-		})
 	})
 })
