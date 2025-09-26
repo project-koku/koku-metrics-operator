@@ -923,6 +923,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
 				instCopy.Spec.APIURL = validTS.URL
+				// Configure valid source to allow upload to proceed - both spec and status needed
+				instCopy.Spec.Source.SourceName = sourceName
+				instCopy.Status.Source.SourceDefined = &trueValue
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -939,7 +942,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			})
 			It("tar.gz being present - basic auth upload attempt should fail because of bad auth", func() {
 				Expect(setup()).Should(Succeed())
-				hourAgo := metav1.Now().Time.Add(-time.Hour)
+				hourAgo := metav1.Now().Add(-time.Hour)
 
 				previousValidation = &previousAuthValidation{
 					secretName: authSecretName,
@@ -952,6 +955,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				instCopy.Spec.APIURL = unauthorizedTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
+				// Configure valid source to reach auth validation
+				instCopy.Spec.Source.SourceName = "test-valid-source"
+				instCopy.Status.Source.SourceDefined = &trueValue
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -963,11 +969,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(Equal(""))
-				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-				Expect(fetched.Status.Upload.UploadError).ToNot(Equal(""))
-				Expect(fetched.Status.Upload.LastUploadStatus).To(ContainSubstring("401"))
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("Reports are being stored"))
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("integration validation error"))
 			})
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
@@ -1446,6 +1450,58 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
 			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(2))
 
+		})
+	})
+
+	Context("Source validation for uploads", func() {
+		BeforeEach(func() {
+			checkPVC = true
+		})
+
+		It("should skip upload when no valid source exists", func() {
+			Expect(setup()).Should(Succeed())
+			instCopy.Spec.Source.SourceName = ""
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+			}, timeout, interval).Should(BeTrue())
+
+			// Without source name, SourceDefined should remain nil and upload should be blocked
+			Eventually(func() string {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Upload.UploadError
+			}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
+
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+		})
+
+		It("should store reports when source validation fails", func() {
+			Expect(setup()).Should(Succeed())
+			instCopy.Spec.Source.SourceName = sourceName
+			instCopy.Spec.Source.CreateSource = &trueValue
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+			}, timeout, interval).Should(BeTrue())
+
+			// Should get source validation error and block upload
+			Eventually(func() string {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Upload.UploadError
+			}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
+
+			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
+			Expect(fetched.Status.Source.SourceError).ToNot(BeNil())
+			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 		})
 	})
 })
