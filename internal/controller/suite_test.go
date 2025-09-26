@@ -166,9 +166,23 @@ func TestController(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		if strings.Contains(r.URL.Path, "ingress") {
 			w.WriteHeader(http.StatusAccepted)
 			fmt.Fprintln(w, "Upload Accepted")
+		} else if strings.Contains(r.URL.Path, "sources") && strings.Contains(r.URL.Path, "source_types") {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"1","name":"openshift"}]}`)
+		} else if strings.Contains(r.URL.Path, "sources") && !strings.Contains(r.URL.Path, "source_types") {
+			if strings.Contains(r.URL.Query().Get("filter[name]"), "cluster-test") ||
+				(r.URL.Query().Get("filter[name]") != "" && r.URL.Query().Get("filter[name]") != "10e206d7-a11a-403e-b835-6cff14e98b23") {
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"123","name":"cluster-test","source_type_id":"1","source_ref":"10e206d7-a11a-403e-b835-6cff14e98b23"}]}`)
+			} else {
+				// Return empty source list for tests without explicit source name (like default CR test)
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, `{"meta":{"count":0},"data":[]}`)
+			}
 		} else {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintln(w, "Hello, client")
