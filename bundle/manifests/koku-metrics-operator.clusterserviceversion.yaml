@@ -39,8 +39,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
-    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:e9f2145ab2a54e9a491c6e9082490fe3296a22a992e23f86bb8130a8bf70ca36
-    createdAt: "2025-08-05T20:59:49Z"
+    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:693db9c90b286c9cc4e12810fda5b0a318a9c53c4d6d4d12f7291d5234229d36
+    createdAt: "2025-09-25T19:04:35Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -103,7 +103,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: koku-metrics-operator.v4.1.0
+  name: koku-metrics-operator.v4.2.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -135,6 +135,11 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.2.0:
+    * Enabled gathering and reporting NVIDIA GPU metrics for resource optimization.
+    * (Bugfix) Fixed custom CA certificate validation and configuration issues.
+    * (Bugfix) Fixed issue where ROS queries were missing workload metadata for namespaces labeled only with the legacy `insights_cost_management_optimizations` label.
 
     ## New in v4.1.0:
     * Enabled gathering and reporting namespace metrics to provide more granular data for resource optimization.
@@ -553,7 +558,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: quay.io/project-koku/koku-metrics-operator@sha256:e9f2145ab2a54e9a491c6e9082490fe3296a22a992e23f86bb8130a8bf70ca36
+                    image: quay.io/project-koku/koku-metrics-operator@sha256:693db9c90b286c9cc4e12810fda5b0a318a9c53c4d6d4d12f7291d5234229d36
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -717,8 +722,8 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.1.0
+  version: 4.2.0
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:e9f2145ab2a54e9a491c6e9082490fe3296a22a992e23f86bb8130a8bf70ca36
-  replaces: koku-metrics-operator.v4.0.0
+      image: quay.io/project-koku/koku-metrics-operator@sha256:693db9c90b286c9cc4e12810fda5b0a318a9c53c4d6d4d12f7291d5234229d36
+  replaces: koku-metrics-operator.v4.1.0
