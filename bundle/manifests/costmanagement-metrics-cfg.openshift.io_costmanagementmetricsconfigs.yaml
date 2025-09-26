@@ -5,7 +5,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.16.5
   creationTimestamp: null
   labels:
-    app: koku-metrics-operator
+    app: costmanagement-metrics-operator
   name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
 spec:
   group: costmanagement-metrics-cfg.openshift.io
