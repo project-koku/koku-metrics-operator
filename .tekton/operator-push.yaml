@@ -1,0 +1,59 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/project-koku/koku-metrics-operator?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "downstream" &&
+      (
+        ".tekton/operator-build-pipeline.yaml".pathChanged() ||
+        ".tekton/operator-push.yaml".pathChanged() ||
+        "Dockerfile".pathChanged() ||
+        "go.mod".pathChanged() ||
+        "go.sum".pathChanged() ||
+        "redhat.repo".pathChanged() ||
+        "rpms.in.yaml".pathChanged() ||
+        "rpms.lock.yaml".pathChanged()
+      )
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: costmanagement-metrics-operator
+    appstudio.openshift.io/component: costmanagement-metrics-operator
+    pipelines.appstudio.openshift.io/type: build
+  name: downstream-operator-push
+  namespace: cost-mgmt-dev-tenant
+spec:
+  params:
+    - name: git-url
+      value: '{{source_url}}'
+    - name: revision
+      value: '{{revision}}'
+    - name: output-image
+      value: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/costmanagement-metrics-operator/costmanagement-metrics-operator:{{revision}}
+    - name: dockerfile
+      value: Dockerfile
+    - name: hermetic
+      value: "true"
+    - name: build-source-image
+      value: "true"
+    - name: prefetch-input
+      value: '{"type": "rpm", "path": "."}'
+    - name: prefetch-dev-package-managers-enabled
+      value: "true"
+    - name: build-platforms
+      value:
+        - linux/x86_64
+        - linux/arm64
+        - linux/ppc64le
+        - linux/s390x
+  pipelineRef:
+    name: operator-build-pipeline
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-costmanagement-metrics-operator
+  workspaces:
+    - name: git-auth
+      secret:
+        secretName: '{{ git_auth_secret }}'
+

@@ -14,7 +14,7 @@ metadata:
     features.operators.openshift.io/cni: "false"
     features.operators.openshift.io/csi: "false"
     features.operators.openshift.io/disconnected: "true"
-    features.operators.openshift.io/fips-compliant: "false"
+    features.operators.openshift.io/fips-compliant: "true"
     features.operators.openshift.io/proxy-aware: "true"
     features.operators.openshift.io/tls-profiles: "false"
     features.operators.openshift.io/token-auth-aws: "false"
@@ -108,7 +108,7 @@ spec:
   - monitor
   links:
   - name: CostManagement Metrics Operator source code repository
-    url: https://github.com/project-costmanagement/costmanagement-metrics-operator
+    url: https://github.com/project-koku/koku-metrics-operator
   maintainers:
   - email: costmanagement@redhat.com
     name: costmanagement

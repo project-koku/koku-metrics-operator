@@ -1,8 +1,23 @@
 {
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "extends": [
-        "github>konflux-ci/mintmaker//config/renovate/renovate.json"
+        "github>konflux-ci/mintmaker-presets:group-python-poetry"
     ],
-    "schedule": [
-        "on Tuesday after 3am and before 10am"
-    ]
+    "tekton": {
+        "includePaths": [
+            ".tekton/**"
+        ]
+    },
+    "enabledManagers": ["tekton", "docker"],
+    "ignorePaths": [
+        "go.mod",
+        "go.sum",
+        "vendor/**"
+    ],
+    "golang": {
+        "enabled": false
+    },
+    "gomod": {
+        "enabled": false
+    }
 }
