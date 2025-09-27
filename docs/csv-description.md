@@ -19,6 +19,11 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.2.0:
+* Enabled gathering and reporting NVIDIA GPU metrics for resource optimization.
+* (Bugfix) Fixed custom CA certificate validation and configuration issues.
+* (Bugfix) Fixed issue where ROS queries were missing workload metadata for namespaces labeled only with the legacy `insights_cost_management_optimizations` label.
+
 ## New in v4.1.0:
 * Enabled gathering and reporting namespace metrics to provide more granular data for resource optimization.
 * Updated CSV report filenames to be more descriptive, replacing the previous generic UID-based names with content-reflective names.

@@ -145,6 +145,7 @@ Fields for metrics related to containers:
 * `cpu_usage_container_sum`: The total CPU usage for the container.
 * `cpu_throttle_container_avg`: The average CPU throttle for the container.
 * `cpu_throttle_container_max`: The maximum CPU throttle for the container.
+* `cpu_throttle_container_min`: The minimum CPU throttle for the container.
 * `cpu_throttle_container_sum`: The total CPU throttle for the container.
 * `memory_request_container_avg`: The average memory request for the container.
 * `memory_request_container_sum`: The total memory request for the container.
@@ -158,6 +159,18 @@ Fields for metrics related to containers:
 * `memory_rss_usage_container_min`: The minimum RSS memory usage for the container.
 * `memory_rss_usage_container_max`: The maximum RSS memory usage for the container.
 * `memory_rss_usage_container_sum`: The total RSS memory usage for the container.
+* `accelerator_model_name`: The GPU Model which the workload is utilising.
+* `accelerator_profile_name`: The GPU partition which the workload is utilising.
+* `accelerator_core_usage_percentage_min`: The minimum GPU core utilization percentage for a container.
+* `accelerator_core_usage_percentage_max`: The maximum GPU core utilization percentage for a container.
+* `accelerator_core_usage_percentage_avg`: The average GPU core utilization percentage for a container.
+* `accelerator_memory_copy_percentage_min`: The minimum GPU memory bandwidth utilization percentage for a container.
+* `accelerator_memory_copy_percentage_max`: The maximum GPU memory bandwidth utilization percentage for a container.
+* `accelerator_memory_copy_percentage_avg`: The average GPU memory bandwidth utilization percentage for a container.
+* `accelerator_frame_buffer_usage_min`: The minimum GPU frame buffer usage in bytes for a container.
+* `accelerator_frame_buffer_usage_max`: The maximum GPU frame buffer usage in bytes for a container.
+* `accelerator_frame_buffer_usage_avg`: The average GPU frame buffer usage in bytes for a container.
+
 
 
 ### 2. Namespace Metrics

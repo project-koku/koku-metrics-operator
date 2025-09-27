@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 4.0.0
-VERSION ?= 4.1.0
+PREVIOUS_VERSION ?= 4.1.0
+VERSION ?= 4.2.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -82,8 +82,8 @@ help: ## Display this help.
 .PHONY: setup-auth
 setup-auth:
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSB1c2VybmFtZQ==/$(shell printf "$(shell echo $(or $(USER),console.redhat.com username))" | base64)/g' testing/authentication_secret.yaml
-	@sed -i "" 's/Y2xvdWQucmVkaGF0LmNvbSBwYXNzd29yZA==/$(shell printf "$(shell echo $(or $(PASS),console.redhat.com password))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/eW91ci1jbGllbnQtaWQK/$(shell printf "$(shell echo $(or $(CLIENT_ID),console.redhat.com client_id))" | base64)/g' testing/authentication_secret.yaml
+	@sed -i "" 's/eW91ci1jbGllbnQtc2VjcmV0Cg==/$(shell printf "$(shell echo $(or $(CLIENT_SECRET),console.redhat.com client_secret))" | base64)/g' testing/authentication_secret.yaml
 
 .PHONY: add-prom-route
 add-prom-route:
@@ -96,7 +96,7 @@ add-prom-route:
 add-auth:
 	@sed -i "" '/authentication/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '  authentication:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
-	@echo '    type: basic'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@echo '    type: service-account'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: local-validate-cert
@@ -227,8 +227,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 deploy-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running in K8s cluster.
 	@cp testing/costmanagementmetricsconfig-template.yaml testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 ifeq ($(AUTH), service-account)
-	$(MAKE) setup-sa-auth
-	$(MAKE) add-sa-auth
+	$(MAKE) setup-auth
+	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -244,8 +244,8 @@ deploy-local-cr:  ## Deploy a CostManagementMetricsConfig CR for controller runn
 	$(MAKE) add-prom-route
 	$(MAKE) local-validate-cert
 ifeq ($(AUTH), service-account)
-	$(MAKE) setup-sa-auth
-	$(MAKE) add-sa-auth
+	$(MAKE) setup-auth
+	$(MAKE) add-auth
 	oc apply -f testing/authentication_secret.yaml
 else
 	@echo "Using default token auth"
@@ -323,8 +323,6 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 
 	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-	# fix the cert
-	- sed -i '' 's/ca-certificates.crt/ca-bundle.crt/g' internal/crhchttp/http_cloud_dot_redhat.go
 	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
 	# clean up the other files
 	# - git clean -fx

@@ -170,10 +170,10 @@ Create the CR with the default token authentication:
 $ make deploy-cr
 ```
 
-Create the CR with basic authentication specifying a username and password:
+Create the CR with service-account authentication specifying a client_id and client_secret:
 
 ```sh
-$ make deploy-cr USER=$YOUR_USERNAME PASS=$YOUR_PASSWORD AUTH=basic
+make deploy-cr CLIENT_ID=$YOUR_CLIENT_ID CLIENT_SECRET=$YOUR_CLIENT_SECRET AUTH=service-account
 ```
 
 Review the logs for the Koku Metrics operator.

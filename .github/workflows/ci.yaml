@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: golangci-lint
@@ -30,13 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Display build environment
         run: printenv
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Run tests
@@ -55,11 +55,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Install QEMU
@@ -78,11 +78,11 @@ jobs:
       - name: Checkout
         # this checkout is required for the coverage report. If we don't do this, then
         # the uploaded report is invalid and codecov doesn't know how to process it.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: coverage
       - name: Upload coverage
