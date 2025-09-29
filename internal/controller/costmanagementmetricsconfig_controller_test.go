@@ -1508,9 +1508,9 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		It("should set generic upload error message when SourceError is empty", func() {
 			testInstance := instCopy.DeepCopy()
 			testInstance.Name = "test-generic-message"
-			testInstance.Spec.Source.SourceName = ""           // Empty source name to ensure false validation
-			testInstance.Spec.Upload.UploadToggle = &trueValue // Ensure upload is enabled
-			testInstance.Spec.APIURL = validTS.URL             // Use valid mock server
+			testInstance.Spec.Source.SourceName = ""
+			testInstance.Spec.Upload.UploadToggle = &trueValue
+			testInstance.Spec.APIURL = validTS.URL
 
 			Expect(k8sClient.Create(ctx, testInstance)).Should(Succeed())
 			defer func() { _ = k8sClient.Delete(ctx, testInstance) }()
@@ -1527,8 +1527,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				return fetched.Status.Source.SourceDefined != nil && !*fetched.Status.Source.SourceDefined
 			}, timeout, interval).Should(BeTrue())
 
-			fetched.Status.Source.SourceError = ""                                // Empty error to force line 718
-			fetched.Status.Packaging.PackagedFiles = []string{"test-file.tar.gz"} // Add files to trigger upload
+			fetched.Status.Source.SourceError = ""
+			fetched.Status.Packaging.PackagedFiles = []string{"test-file.tar.gz"}
 			Expect(k8sClient.Status().Update(ctx, fetched)).Should(Succeed())
 
 			Eventually(func() string {
