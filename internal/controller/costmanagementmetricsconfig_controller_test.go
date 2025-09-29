@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -268,6 +270,16 @@ func setup() error {
 func shutdown() {
 	previousValidation = nil
 	os.RemoveAll(testingDir)
+
+	// Reset mock servers
+	if validTS != nil {
+		validTS.Close()
+		validTS = nil
+	}
+	if unauthorizedTS != nil {
+		unauthorizedTS.Close()
+		unauthorizedTS = nil
+	}
 }
 
 var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
@@ -299,6 +311,16 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 		setupRequired(ctx)
 		retentionPeriod = time.Duration(0)
+
+		// Recreate mock servers
+		if validTS == nil {
+			validTS = httptest.NewServer(http.HandlerFunc(routeRequest))
+		}
+		if unauthorizedTS == nil {
+			unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			}))
+		}
 
 		promConnTester = func(promcoll *collector.PrometheusCollector) error { return nil }
 		promConnSetter = func(promcoll *collector.PrometheusCollector) error {

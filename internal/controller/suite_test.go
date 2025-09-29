@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -164,30 +165,68 @@ func TestController(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func() {
-	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if strings.Contains(r.URL.Path, "ingress") {
-			w.WriteHeader(http.StatusAccepted)
-			fmt.Fprintln(w, "Upload Accepted")
-		} else if strings.Contains(r.URL.Path, "sources") && strings.Contains(r.URL.Path, "source_types") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"1","name":"openshift"}]}`)
-		} else if strings.Contains(r.URL.Path, "sources") && !strings.Contains(r.URL.Path, "source_types") {
-			if strings.Contains(r.URL.Query().Get("filter[name]"), "cluster-test") ||
-				(r.URL.Query().Get("filter[name]") != "" && r.URL.Query().Get("filter[name]") != "10e206d7-a11a-403e-b835-6cff14e98b23") {
-				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"123","name":"cluster-test","source_type_id":"1","source_ref":"10e206d7-a11a-403e-b835-6cff14e98b23"}]}`)
-			} else {
-				// Return empty source list for tests without explicit source name (like default CR test)
-				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, `{"meta":{"count":0},"data":[]}`)
-			}
-		} else {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, "Hello, client")
+// MockEndpoint defines a route handler for the mock server
+type MockEndpoint struct {
+	Method  string
+	Pattern *regexp.Regexp
+	Handler func(http.ResponseWriter, *http.Request)
+}
+
+func handleIngress(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusAccepted)
+	fmt.Fprintln(w, "Upload Accepted")
+}
+
+func handleSourceTypes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"1","name":"openshift"}]}`)
+}
+
+func handleSources(w http.ResponseWriter, r *http.Request) {
+	filterName := r.URL.Query().Get("filter[name]")
+
+	// Logic: Return valid source if cluster-test OR any non-empty name != default clusterID
+	if strings.Contains(filterName, "cluster-test") ||
+		(filterName != "" && filterName != "10e206d7-a11a-403e-b835-6cff14e98b23") {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"123","name":"cluster-test","source_type_id":"1","source_ref":"10e206d7-a11a-403e-b835-6cff14e98b23"}]}`)
+	} else {
+		// Return empty source list for tests without explicit source name (like default CR test)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `{"meta":{"count":0},"data":[]}`)
+	}
+}
+
+func handleDefault(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "Hello, client")
+}
+
+// Router for mock server endpoints
+func routeRequest(w http.ResponseWriter, r *http.Request) {
+	// Define mock endpoints with regex patterns (most specific first)
+	endpoints := []MockEndpoint{
+		{"POST", regexp.MustCompile(`/api/ingress/`), handleIngress},
+		{"GET", regexp.MustCompile(`/api/sources/.*/source_types`), handleSourceTypes},
+		{"GET", regexp.MustCompile(`/api/sources/`), handleSources},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Route to appropriate handler
+	for _, endpoint := range endpoints {
+		if r.Method == endpoint.Method && endpoint.Pattern.MatchString(r.URL.Path) {
+			endpoint.Handler(w, r)
+			return
 		}
-	}))
+	}
+
+	// Default handler if no match
+	handleDefault(w, r)
+}
+
+var _ = BeforeSuite(func() {
+	validTS = httptest.NewServer(http.HandlerFunc(routeRequest))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
@@ -443,6 +482,10 @@ var _ = AfterSuite(func() {
 	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
 	os.RemoveAll(filepath.Join(secretsPath, "tmp"))
 
-	validTS.Close()
-	unauthorizedTS.Close()
+	if validTS != nil {
+		validTS.Close()
+	}
+	if unauthorizedTS != nil {
+		unauthorizedTS.Close()
+	}
 })
