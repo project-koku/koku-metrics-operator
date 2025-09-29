@@ -19,23 +19,25 @@ VERSION ?= <release-version>
 After creating the github release and tag, a Quay hook should automatically pull and tag the new image. Verify this by checking for the new tag in the [Quay.io repository](https://quay.io/repository/project-koku/koku-metrics-operator?tab=tags). If the tag doesn't appear, you'll need to manually build and push the image:
 
 ```bash
-make docker-build
+make docker-buildx
 make docker-push
 ```
-
 
 
 ## Generate the release bundle
 
 **Note:** Ensure the operator image is available locally or pulled to your system so that the `operator-sdk` can correctly embed its reference within the bundle's manifests.
 
-Run the following command to generate the OLM bundle for the new operator version:
+1. Pull the operator image to your local machine using the following command:
+    ```bash
+    docker pull quay.io/project-koku/koku-metrics-operator:v$VERSION
+    ```
 
-```bash
-make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta
-```
-
-This command generates a new bundle inside the `bundle/` directory within your repository.
+2. Run the following command to generate the OLM bundle for the new operator version:
+    ```bash
+    make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta
+    ```
+    This command generates a new bundle inside the `bundle/` directory within your repository.
 
 
 ## Submit the Generated bundle to `community-operators-prod`

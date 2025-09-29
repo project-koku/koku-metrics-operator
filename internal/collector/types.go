@@ -51,8 +51,8 @@ func newNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{dateTimes: 
 func newPodRow(ts *promv1.Range) podRow             { return podRow{dateTimes: newDates(ts)} }
 func newStorageRow(ts *promv1.Range) storageRow     { return storageRow{dateTimes: newDates(ts)} }
 func newVMRow(ts *promv1.Range) vmRow               { return vmRow{dateTimes: newDates(ts)} }
-func newROSRow(ts *promv1.Range) resourceOptimizationRow {
-	return resourceOptimizationRow{dateTimes: newDates(ts)}
+func newROSContainerRow(ts *promv1.Range) rosContainerRow {
+	return rosContainerRow{dateTimes: newDates(ts)}
 }
 func newROSNamespaceRow(ts *promv1.Range) rosNamespaceRow {
 	return rosNamespaceRow{dateTimes: newDates(ts)}
@@ -375,43 +375,55 @@ func (row vmRow) csvRow() []string {
 
 func (row vmRow) string() string { return strings.Join(row.csvRow(), ",") }
 
-type resourceOptimizationRow struct {
+type rosContainerRow struct {
 	*dateTimes
 	nodeRow
-	ContainerName              string `mapstructure:"container_name"`
-	Pod                        string `mapstructure:"pod"`
-	OwnerName                  string `mapstructure:"owner_name"`
-	OwnerKind                  string `mapstructure:"owner_kind"`
-	Workload                   string `mapstructure:"workload"`
-	WorkloadType               string `mapstructure:"workload_type"`
-	Namespace                  string `mapstructure:"namespace"`
-	ImageName                  string `mapstructure:"image_name"`
-	CPURequestContainerAvg     string `mapstructure:"cpu-request-container-avg"`
-	CPURequestContainerSum     string `mapstructure:"cpu-request-container-sum"`
-	CPULimitContainerAvg       string `mapstructure:"cpu-limit-container-avg"`
-	CPULimitContainerSum       string `mapstructure:"cpu-limit-container-sum"`
-	CPUUsageContainerAvg       string `mapstructure:"cpu-usage-container-avg"`
-	CPUUsageContainerMin       string `mapstructure:"cpu-usage-container-min"`
-	CPUUsageContainerMax       string `mapstructure:"cpu-usage-container-max"`
-	CPUUsageContainerSum       string `mapstructure:"cpu-usage-container-sum"`
-	CPUThrottleContainerAvg    string `mapstructure:"cpu-throttle-container-avg"`
-	CPUThrottleContainerMax    string `mapstructure:"cpu-throttle-container-max"`
-	CPUThrottleContainerSum    string `mapstructure:"cpu-throttle-container-sum"`
-	MemoryRequestContainerAvg  string `mapstructure:"memory-request-container-avg"`
-	MemoryRequestContainerSum  string `mapstructure:"memory-request-container-sum"`
-	MemoryLimitContainerAvg    string `mapstructure:"memory-limit-container-avg"`
-	MemoryLimitContainerSum    string `mapstructure:"memory-limit-container-sum"`
-	MemoryUsageContainerAvg    string `mapstructure:"memory-usage-container-avg"`
-	MemoryUsageContainerMin    string `mapstructure:"memory-usage-container-min"`
-	MemoryUsageContainerMax    string `mapstructure:"memory-usage-container-max"`
-	MemoryUsageContainerSum    string `mapstructure:"memory-usage-container-sum"`
-	MemoryRSSUsageContainerAvg string `mapstructure:"memory-rss-usage-container-avg"`
-	MemoryRSSUsageContainerMin string `mapstructure:"memory-rss-usage-container-min"`
-	MemoryRSSUsageContainerMax string `mapstructure:"memory-rss-usage-container-max"`
-	MemoryRSSUsageContainerSum string `mapstructure:"memory-rss-usage-container-sum"`
+	ContainerName                      string `mapstructure:"container_name"`
+	Pod                                string `mapstructure:"pod"`
+	OwnerName                          string `mapstructure:"owner_name"`
+	OwnerKind                          string `mapstructure:"owner_kind"`
+	Workload                           string `mapstructure:"workload"`
+	WorkloadType                       string `mapstructure:"workload_type"`
+	Namespace                          string `mapstructure:"namespace"`
+	ImageName                          string `mapstructure:"image_name"`
+	CPURequestContainerAvg             string `mapstructure:"cpu-request-container-avg"`
+	CPURequestContainerSum             string `mapstructure:"cpu-request-container-sum"`
+	CPULimitContainerAvg               string `mapstructure:"cpu-limit-container-avg"`
+	CPULimitContainerSum               string `mapstructure:"cpu-limit-container-sum"`
+	CPUUsageContainerAvg               string `mapstructure:"cpu-usage-container-avg"`
+	CPUUsageContainerMin               string `mapstructure:"cpu-usage-container-min"`
+	CPUUsageContainerMax               string `mapstructure:"cpu-usage-container-max"`
+	CPUUsageContainerSum               string `mapstructure:"cpu-usage-container-sum"`
+	CPUThrottleContainerAvg            string `mapstructure:"cpu-throttle-container-avg"`
+	CPUThrottleContainerMax            string `mapstructure:"cpu-throttle-container-max"`
+	CPUThrottleContainerMin            string `mapstructure:"cpu-throttle-container-min"`
+	CPUThrottleContainerSum            string `mapstructure:"cpu-throttle-container-sum"`
+	MemoryRequestContainerAvg          string `mapstructure:"memory-request-container-avg"`
+	MemoryRequestContainerSum          string `mapstructure:"memory-request-container-sum"`
+	MemoryLimitContainerAvg            string `mapstructure:"memory-limit-container-avg"`
+	MemoryLimitContainerSum            string `mapstructure:"memory-limit-container-sum"`
+	MemoryUsageContainerAvg            string `mapstructure:"memory-usage-container-avg"`
+	MemoryUsageContainerMin            string `mapstructure:"memory-usage-container-min"`
+	MemoryUsageContainerMax            string `mapstructure:"memory-usage-container-max"`
+	MemoryUsageContainerSum            string `mapstructure:"memory-usage-container-sum"`
+	MemoryRSSUsageContainerAvg         string `mapstructure:"memory-rss-usage-container-avg"`
+	MemoryRSSUsageContainerMin         string `mapstructure:"memory-rss-usage-container-min"`
+	MemoryRSSUsageContainerMax         string `mapstructure:"memory-rss-usage-container-max"`
+	MemoryRSSUsageContainerSum         string `mapstructure:"memory-rss-usage-container-sum"`
+	AcceleratorModelName               string `mapstructure:"accelerator_model_name"`
+	AcceleratorProfileName             string `mapstructure:"accelerator_profile_name"`
+	AcceleratorCoreUsagePercentageMin  string `mapstructure:"accelerator-core-usage-percentage-min"`
+	AcceleratorCoreUsagePercentageMax  string `mapstructure:"accelerator-core-usage-percentage-max"`
+	AcceleratorCoreUsagePercentageAvg  string `mapstructure:"accelerator-core-usage-percentage-avg"`
+	AcceleratorMemoryCopyPercentageMin string `mapstructure:"accelerator-memory-copy-percentage-min"`
+	AcceleratorMemoryCopyPercentageMax string `mapstructure:"accelerator-memory-copy-percentage-max"`
+	AcceleratorMemoryCopyPercentageAvg string `mapstructure:"accelerator-memory-copy-percentage-avg"`
+	AcceleratorFrameBufferUsageMin     string `mapstructure:"accelerator-frame-buffer-usage-min"`
+	AcceleratorFrameBufferUsageMax     string `mapstructure:"accelerator-frame-buffer-usage-max"`
+	AcceleratorFrameBufferUsageAvg     string `mapstructure:"accelerator-frame-buffer-usage-avg"`
 }
 
-func (resourceOptimizationRow) csvHeader() []string {
+func (rosContainerRow) csvHeader() []string {
 	return []string{
 		"report_period_start",
 		"report_period_end",
@@ -437,6 +449,7 @@ func (resourceOptimizationRow) csvHeader() []string {
 		"cpu_usage_container_sum",
 		"cpu_throttle_container_avg",
 		"cpu_throttle_container_max",
+		"cpu_throttle_container_min",
 		"cpu_throttle_container_sum",
 		"memory_request_container_avg",
 		"memory_request_container_sum",
@@ -450,10 +463,21 @@ func (resourceOptimizationRow) csvHeader() []string {
 		"memory_rss_usage_container_min",
 		"memory_rss_usage_container_max",
 		"memory_rss_usage_container_sum",
+		"accelerator_model_name",
+		"accelerator_profile_name",
+		"accelerator_core_usage_percentage_min",
+		"accelerator_core_usage_percentage_max",
+		"accelerator_core_usage_percentage_avg",
+		"accelerator_memory_copy_percentage_min",
+		"accelerator_memory_copy_percentage_max",
+		"accelerator_memory_copy_percentage_avg",
+		"accelerator_frame_buffer_usage_min",
+		"accelerator_frame_buffer_usage_max",
+		"accelerator_frame_buffer_usage_avg",
 	}
 }
 
-func (row resourceOptimizationRow) csvRow() []string {
+func (row rosContainerRow) csvRow() []string {
 	return []string{
 		row.ReportPeriodStart,
 		row.ReportPeriodEnd,
@@ -479,6 +503,7 @@ func (row resourceOptimizationRow) csvRow() []string {
 		row.CPUUsageContainerSum,
 		row.CPUThrottleContainerAvg,
 		row.CPUThrottleContainerMax,
+		row.CPUThrottleContainerMin,
 		row.CPUThrottleContainerSum,
 		row.MemoryRequestContainerAvg,
 		row.MemoryRequestContainerSum,
@@ -492,10 +517,21 @@ func (row resourceOptimizationRow) csvRow() []string {
 		row.MemoryRSSUsageContainerMin,
 		row.MemoryRSSUsageContainerMax,
 		row.MemoryRSSUsageContainerSum,
+		row.AcceleratorModelName,
+		row.AcceleratorProfileName,
+		row.AcceleratorCoreUsagePercentageMin,
+		row.AcceleratorCoreUsagePercentageMax,
+		row.AcceleratorCoreUsagePercentageAvg,
+		row.AcceleratorMemoryCopyPercentageMin,
+		row.AcceleratorMemoryCopyPercentageMax,
+		row.AcceleratorMemoryCopyPercentageAvg,
+		row.AcceleratorFrameBufferUsageMin,
+		row.AcceleratorFrameBufferUsageMax,
+		row.AcceleratorFrameBufferUsageAvg,
 	}
 }
 
-func (row resourceOptimizationRow) string() string { return strings.Join(row.csvRow(), ",") }
+func (row rosContainerRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type rosNamespaceRow struct {
 	*dateTimes

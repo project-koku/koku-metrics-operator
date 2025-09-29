@@ -468,7 +468,7 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 	}
 
 	log.Info("validating credentials")
-	client := crhchttp.GetClient(handler.Auth)
+	client := crhchttp.GetClient(handler.Auth.ValidateCert)
 	_, err := sources.GetSources(handler, client)
 
 	previousValidation.username = handler.Auth.BasicAuthUser
@@ -514,7 +514,7 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	sourceSpec = cr.Spec.Source.DeepCopy()
 
 	if handler.Spec.SourceName != "" && (updated || checkCycle(log, *handler.Spec.CheckCycle, handler.Spec.LastSourceCheckTime, "source check")) {
-		client := crhchttp.GetClient(handler.Auth)
+		client := crhchttp.GetClient(handler.Auth.ValidateCert)
 		cr.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(handler, client)
 		if err != nil {

@@ -144,7 +144,7 @@ func TestGenerateReports(t *testing.T) {
 		}
 	}
 
-	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
+	qs := append(*rosContainerQueries, rosNamespaceFilter)
 	for _, query := range qs {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
@@ -205,7 +205,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 		}
 	}
 
-	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
+	qs := append(*rosContainerQueries, rosNamespaceFilter)
 	for _, query := range qs {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
@@ -301,7 +301,7 @@ func TestGenerateReportsNoCost(t *testing.T) {
 		}
 	}
 
-	qs := append(*resourceOptimizationQueries, rosNamespaceFilter)
+	qs := append(*rosContainerQueries, rosNamespaceFilter)
 	for _, query := range qs {
 		res := &model.Vector{}
 		Load(filepath.Join("test_files", "test_data", query.Name), res, t)
@@ -369,7 +369,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
 
 	resourceOptimizationError := "resourceOptimization error"
-	for _, q := range *resourceOptimizationQueries {
+	for _, q := range *rosContainerQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(resourceOptimizationError)}
 	}
 	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
