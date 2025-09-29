@@ -482,10 +482,6 @@ var _ = AfterSuite(func() {
 	os.Remove(filepath.Join(secretsPath, "service-ca.crt"))
 	os.RemoveAll(filepath.Join(secretsPath, "tmp"))
 
-	if validTS != nil {
-		validTS.Close()
-	}
-	if unauthorizedTS != nil {
-		unauthorizedTS.Close()
-	}
+	validTS.Close()
+	unauthorizedTS.Close()
 })
