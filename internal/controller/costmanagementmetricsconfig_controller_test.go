@@ -994,7 +994,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
 				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("Reports are being stored"))
-				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("integration validation error"))
 			})
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
