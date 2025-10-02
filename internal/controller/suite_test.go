@@ -185,11 +185,16 @@ func handleSourceTypes(w http.ResponseWriter, r *http.Request) {
 func handleSources(w http.ResponseWriter, r *http.Request) {
 	filterName := r.URL.Query().Get("filter[name]")
 
-	// Logic: Return valid source if cluster-test OR any non-empty name != default clusterID
-	if strings.Contains(filterName, "cluster-test") ||
-		(filterName != "" && filterName != "10e206d7-a11a-403e-b835-6cff14e98b23") {
+	// Logic: Return valid source if sourceName OR any non-empty name != default clusterID
+	// But return empty for "non-existent-source" to simulate source validation failure
+	if strings.Contains(filterName, "non-existent-source") {
+		// Return empty source list to simulate source not found
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"123","name":"cluster-test","source_type_id":"1","source_ref":"10e206d7-a11a-403e-b835-6cff14e98b23"}]}`)
+		fmt.Fprintln(w, `{"meta":{"count":0},"data":[]}`)
+	} else if strings.Contains(filterName, sourceName) ||
+		(filterName != "" && filterName != clusterID) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"meta":{"count":1},"data":[{"id":"123","name":"%s","source_type_id":"1","source_ref":"%s"}]}`, sourceName, clusterID)
 	} else {
 		// Return empty source list for tests without explicit source name (like default CR test)
 		w.WriteHeader(http.StatusOK)

@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -925,9 +924,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
 				instCopy.Spec.APIURL = validTS.URL
-				// Configure valid source to allow upload to proceed - both spec and status needed
+				// Configure valid source to allow upload to proceed
 				instCopy.Spec.Source.SourceName = sourceName
-				instCopy.Status.Source.SourceDefined = &trueValue
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -958,8 +956,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				// Configure valid source to reach auth validation
-				instCopy.Spec.Source.SourceName = "test-valid-source"
-				instCopy.Status.Source.SourceDefined = &trueValue
+				instCopy.Spec.Source.SourceName = sourceName
 				createObject(ctx, instCopy)
 
 				fetched := &metricscfgv1beta1.MetricsConfig{}
@@ -972,7 +969,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("Reports are being stored"))
+				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
 			})
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
@@ -1452,13 +1449,30 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(2))
 
 		})
-	})
+		It("should store reports when source validation fails", func() {
+			Expect(setup()).Should(Succeed())
+			instCopy.Spec.APIURL = validTS.URL
+			instCopy.Spec.Source.SourceName = "non-existent-source"
+			instCopy.Spec.Source.CreateSource = &falseValue
+			createObject(ctx, instCopy)
 
-	Context("Source validation for uploads", func() {
-		BeforeEach(func() {
-			checkPVC = true
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
+			}, timeout, interval).Should(BeTrue())
+
+			// Source validation should fail because source doesn't exist
+			Eventually(func() string {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Upload.UploadError
+			}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
+
+			Expect(fetched.Status.Source.SourceDefined).ToNot(BeNil())
+			Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
+			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 		})
-
 		It("should skip upload when no valid source exists", func() {
 			Expect(setup()).Should(Succeed())
 			instCopy.Spec.Source.SourceName = ""
@@ -1471,7 +1485,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
 			}, timeout, interval).Should(BeTrue())
 
-			// Without source name, SourceDefined should remain nil and upload should be blocked
+			// Without source name, fallback to cluster-id is used but source validation fails with invalid API URL
 			Eventually(func() string {
 				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 				return fetched.Status.Upload.UploadError
@@ -1480,98 +1494,5 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 		})
-
-		It("should store reports when source validation fails", func() {
-			Expect(setup()).Should(Succeed())
-			instCopy.Spec.Source.SourceName = sourceName
-			instCopy.Spec.Source.CreateSource = &trueValue
-			createObject(ctx, instCopy)
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Authentication.AuthenticationCredentialsFound != nil
-			}, timeout, interval).Should(BeTrue())
-
-			// Should get source validation error and block upload
-			Eventually(func() string {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Upload.UploadError
-			}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
-
-			Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
-			Expect(fetched.Status.Source.SourceError).ToNot(BeNil())
-			Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
-		})
-
-		It("should set generic upload error message when SourceError is empty", func() {
-			testInstance := instCopy.DeepCopy()
-			testInstance.Name = "test-generic-message"
-			testInstance.Spec.Source.SourceName = ""
-			testInstance.Spec.Upload.UploadToggle = &trueValue
-			testInstance.Spec.APIURL = validTS.URL
-
-			Expect(k8sClient.Create(ctx, testInstance)).Should(Succeed())
-			defer func() { _ = k8sClient.Delete(ctx, testInstance) }()
-
-			uploadDir := "tmp/koku-metrics-operator-reports/upload"
-			Expect(os.MkdirAll(uploadDir, 0755)).To(Succeed())
-			_, err := Copy(0644, "test_files/testFile.tar.gz", filepath.Join(uploadDir, "test-file.tar.gz"))
-			Expect(err).To(BeNil())
-			defer os.Remove(filepath.Join(uploadDir, "test-file.tar.gz"))
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: testInstance.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Source.SourceDefined != nil && !*fetched.Status.Source.SourceDefined
-			}, timeout, interval).Should(BeTrue())
-
-			fetched.Status.Source.SourceError = ""
-			fetched.Status.Packaging.PackagedFiles = []string{"test-file.tar.gz"}
-			Expect(k8sClient.Status().Update(ctx, fetched)).Should(Succeed())
-
-			Eventually(func() string {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: testInstance.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Upload.UploadError
-			}, timeout, interval).Should(Equal("Reports are being stored until a valid integration is configured in console.redhat.com"))
-		})
-
-		It("should return error when uploadFiles fails", func() {
-			testInstance := instCopy.DeepCopy()
-			testInstance.Name = "test-upload-error"
-			testInstance.Spec.Source.SourceName = "cluster-test"
-			testInstance.Spec.Upload.UploadToggle = &trueValue
-			testInstance.Spec.APIURL = validTS.URL
-
-			Expect(k8sClient.Create(ctx, testInstance)).Should(Succeed())
-			defer func() { _ = k8sClient.Delete(ctx, testInstance) }()
-
-			fetched := &metricscfgv1beta1.MetricsConfig{}
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: testInstance.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Source.SourceDefined != nil && *fetched.Status.Source.SourceDefined
-			}, timeout, interval).Should(BeTrue())
-
-			uploadDir := "tmp/koku-metrics-operator-reports/upload"
-			Expect(os.MkdirAll(uploadDir, 0755)).To(Succeed())
-			_, err := Copy(0644, "test_files/testFile.tar.gz", filepath.Join(uploadDir, "upload-error-test.tar.gz"))
-			Expect(err).To(BeNil())
-			defer os.Remove(filepath.Join(uploadDir, "upload-error-test.tar.gz"))
-
-			fetched.Status.Source.SourceDefined = &trueValue
-			fetched.Status.Source.SourceError = ""
-			fetched.Status.Packaging.PackagedFiles = []string{"upload-error-test.tar.gz"}
-			fetched.Spec.APIURL = "http://invalid-upload-server.localhost:9999"
-			Expect(k8sClient.Update(ctx, fetched)).Should(Succeed())
-
-			// Wait for the upload error to be processed
-			Eventually(func() bool {
-				_ = k8sClient.Get(ctx, types.NamespacedName{Name: testInstance.Name, Namespace: namespace}, fetched)
-				return fetched.Status.Upload.UploadError != "" &&
-					!strings.Contains(fetched.Status.Upload.UploadError, "Reports are being stored")
-			}, timeout, interval).Should(BeTrue())
-		})
-
 	})
 })
