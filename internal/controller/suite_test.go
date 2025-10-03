@@ -155,6 +155,7 @@ var (
 
 	validTS        *httptest.Server
 	unauthorizedTS *httptest.Server
+	expiredCredsTS *httptest.Server
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -175,6 +176,11 @@ type MockEndpoint struct {
 func handleIngress(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	fmt.Fprintln(w, "Upload Accepted")
+}
+
+func handleIngressUnauthorized(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusUnauthorized)
+	fmt.Fprintln(w, "Upload Unauthorized - Credentials Expired")
 }
 
 func handleSourceTypes(w http.ResponseWriter, r *http.Request) {
@@ -230,11 +236,35 @@ func routeRequest(w http.ResponseWriter, r *http.Request) {
 	handleDefault(w, r)
 }
 
+// Router for expired credentials scenario - allows sources but fails uploads
+func routeRequestExpiredCreds(w http.ResponseWriter, r *http.Request) {
+	// Define mock endpoints with regex patterns (most specific first)
+	endpoints := []MockEndpoint{
+		{"POST", regexp.MustCompile(`/api/ingress/`), handleIngressUnauthorized},
+		{"GET", regexp.MustCompile(`/api/sources/.*/source_types`), handleSourceTypes},
+		{"GET", regexp.MustCompile(`/api/sources/`), handleSources},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Route to appropriate handler
+	for _, endpoint := range endpoints {
+		if r.Method == endpoint.Method && endpoint.Pattern.MatchString(r.URL.Path) {
+			endpoint.Handler(w, r)
+			return
+		}
+	}
+
+	// Default handler if no match
+	handleDefault(w, r)
+}
+
 var _ = BeforeSuite(func() {
 	validTS = httptest.NewServer(http.HandlerFunc(routeRequest))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
+	expiredCredsTS = httptest.NewServer(http.HandlerFunc(routeRequestExpiredCreds))
 
 	logf.SetLogger(testutils.ZapLogger(true))
 	ctx, cancel = context.WithCancel(context.Background())
@@ -489,4 +519,5 @@ var _ = AfterSuite(func() {
 
 	validTS.Close()
 	unauthorizedTS.Close()
+	expiredCredsTS.Close()
 })

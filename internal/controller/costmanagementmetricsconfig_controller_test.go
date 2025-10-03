@@ -946,7 +946,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				// Reset previous validation to force credential validation
 				previousValidation = nil
 
-				instCopy.Spec.APIURL = unauthorizedTS.URL
+				instCopy.Spec.APIURL = expiredCredsTS.URL
 				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.Basic
 				instCopy.Spec.Authentication.AuthenticationSecretName = authSecretName
 				// Configure valid source to reach auth validation
@@ -962,15 +962,23 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Basic))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
-				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+				Expect(fetched.Status.APIURL).To(Equal(expiredCredsTS.URL))
 
-				// Wait for ValidBasicAuth to be set after credential validation
+				// Source should be valid
 				Eventually(func() bool {
 					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-					return fetched.Status.Authentication.ValidBasicAuth != nil
+					return fetched.Status.Source.SourceDefined != nil
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(*fetched.Status.Authentication.ValidBasicAuth).To(BeFalse())
+				Expect(*fetched.Status.Source.SourceDefined).To(BeTrue()) // Source is valid
+
+				// Upload should fail due to expired credentials at upload endpoint
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Upload.UploadError != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("401"))
 			})
 			It("should store reports when source validation fails", func() {
 				Expect(setup()).Should(Succeed())
