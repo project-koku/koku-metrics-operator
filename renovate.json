@@ -19,5 +19,8 @@
       "matchFileNames": ["go.mod", "go.sum", "vendor/**"],
       "enabled": false
     }
-  ]
+  ],
+  "dockerfile": {
+    "versioning": "redhat"
+  }
 }
