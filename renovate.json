@@ -18,9 +18,11 @@
       "matchUpdateTypes": ["*"],
       "matchFileNames": ["go.mod", "go.sum", "vendor/**"],
       "enabled": false
+    },
+    {
+        "matchDatasources": ["docker"],
+        "matchPackageNames": ["registry.redhat.io/ubi9/ubi-micro"],
+        "versioning": "redhat"
     }
-  ],
-  "dockerfile": {
-    "versioning": "redhat"
-  }
+  ]
 }
