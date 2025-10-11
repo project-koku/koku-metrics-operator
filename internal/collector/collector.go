@@ -30,6 +30,7 @@ var (
 	vmFilePrefix           = "cm-openshift-vm-usage-"
 	nodeFilePrefix         = "cm-openshift-node-usage-"
 	namespaceFilePrefix    = "cm-openshift-namespace-usage-"
+	nvidiaGpuFilePrefix    = "cm-openshift-nvidia-gpu-usage-"
 	rosContainerFilePrefix = "ros-openshift-container-"
 	rosNamespaceFilePrefix = "ros-openshift-namespace-"
 
@@ -391,6 +392,37 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 	log.WithName("writeResults").Info("writing virtual machine results to file", "filename", vmReport.file.getName())
 	if err := vmReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write virtual machine report: %v", err)
+	}
+
+	//cost nvidia gpu metrics
+	log.Info("querying for cost nvidia gpu metrics")
+	nvidiaGpuResults := mappedResults{}
+	if err := c.getQueryRangeResults(costNvidiaGpuQueries, &nvidiaGpuResults, MaxRetries); err != nil {
+		return err
+	}
+
+	nvidiaGpuRows := make(mappedCSVStruct)
+	for nvidiaGpu, val := range nvidiaGpuResults {
+		usage := newNvidiaGpuRow(c.TimeSeries)
+		if err := getStruct(val, &usage, nvidiaGpuRows, nvidiaGpu); err != nil {
+			return err
+		}
+	}
+	emptyNvidiaGpuRow := newNvidiaGpuRow(c.TimeSeries)
+	nvidiaGpuReport := report{
+		file: &file{
+			name: nvidiaGpuFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: nvidiaGpuRows,
+			headers:   emptyNvidiaGpuRow.csvHeader(),
+			prefix:    emptyNvidiaGpuRow.dateTimes.string(),
+		},
+	}
+	log.WithName("writeResults").Info("writing cost nvidia gpu results to file", "filename", nvidiaGpuReport.file.getName())
+	if err := nvidiaGpuReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write cost nvidia gpu report: %v", err)
 	}
 
 	//################################################################################################################
