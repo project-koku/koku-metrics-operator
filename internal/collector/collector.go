@@ -402,9 +402,38 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 	}
 
 	nvidiaGpuRows := make(mappedCSVStruct)
-	for nvidiaGpu, val := range nvidiaGpuResults {
+	gpuUtilizationResults := make(map[string]mappedValues)
+	gpuResourceResults := make(map[string]mappedValues)
+
+	// Separate the results
+	for key, val := range nvidiaGpuResults {
+		if _, ok := val["gpu_uuid"]; ok {
+			gpuUtilizationResults[key] = val
+		} else {
+			gpuResourceResults[key] = val
+		}
+	}
+
+	// For each gpu utilization result, find the matching memory & resource data and merge it
+	for key, gpuVal := range gpuUtilizationResults {
+		pod, _ := gpuVal["pod"].(string)
+		namespace, _ := gpuVal["namespace"].(string)
+		node, _ := gpuVal["node"].(string)
+
+		// key generation to match `generateKey`
+		resourceKeyParts := []string{pod, namespace, node}
+		sort.Strings(resourceKeyParts)
+		resourceKey := strings.Join(resourceKeyParts, ",")
+
+		if resourceData, ok := gpuResourceResults[resourceKey]; ok {
+			log.Info("found matching gpu resource data", "key", resourceKey)
+			for dataKey, dataVal := range resourceData {
+				gpuVal[dataKey] = dataVal
+			}
+		}
+
 		usage := newNvidiaGpuRow(c.TimeSeries)
-		if err := getStruct(val, &usage, nvidiaGpuRows, nvidiaGpu); err != nil {
+		if err := getStruct(gpuVal, &usage, nvidiaGpuRows, key); err != nil {
 			return err
 		}
 	}

@@ -42,9 +42,9 @@ var (
 		"cost:vm_disk_allocated_size_bytes": "sum by (name, namespace, device, persistentvolumeclaim, volume_mode) (kubevirt_vm_disk_allocated_size_bytes{name!='', namespace!=''}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_labels":                    "kubevirt_vm_labels{name!='', namespace!=''}",
 
-		// cost nvidia GPU metrics queries
-		"cost:nvidia_gpu_memory":      "sum by (pod, namespace, node, resource, label_nvidia_com_gpu_memory) ((kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='nvidia_com_gpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})) * on(node) group_left(label_nvidia_com_gpu_memory) (max by (node, label_nvidia_com_gpu_memory) (kube_node_labels)))",
-		"cost:nvidia_gpu_utilization": "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName) (DCGM_FI_DEV_GPU_UTIL) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
+		// cost NVIDIA GPU metrics queries
+		"cost:nvidia_gpu_capacity_memory_bytes": "sum by (pod, namespace, node, resource, label_nvidia_com_gpu_memory) ((kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='nvidia_com_gpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})) * on(node) group_left(label_nvidia_com_gpu_memory) (max by (node, label_nvidia_com_gpu_memory) (kube_node_labels)))",
+		"cost:nvidia_gpu_utilization":           "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName) (DCGM_FI_PROF_GR_ENGINE_ACTIVE) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
 
 		// resource optimization container metrics queries
 		"ros:namespace_filter":               "kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}",
@@ -475,13 +475,13 @@ var (
 	costNvidiaGpuQueries = &querys{
 		query{
 			Name:        "nvidia-gpu-request-memory",
-			QueryString: QueryMap["cost:nvidia_gpu_memory"],
+			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_bytes"],
 			MetricKey: staticFields{
-				"pod":         "pod",
-				"namespace":   "namespace",
-				"node":        "node",
-				"vendor_name": "resource",
-				"gpu_memory":  "label_nvidia_com_gpu_memory",
+				"pod":                 "pod",
+				"namespace":           "namespace",
+				"node":                "node",
+				"vendor_name":         "resource",
+				"gpu_memory_capacity": "label_nvidia_com_gpu_memory",
 			},
 			RowKey: []model.LabelName{"pod", "namespace", "node"},
 		},
@@ -499,7 +499,7 @@ var (
 				Method:          "sum",
 				TransformedName: "nvidia-gpu-pod-uptime-seconds",
 			},
-			RowKey: []model.LabelName{"exported_pod", "exported_namespace", "Hostname"},
+			RowKey: []model.LabelName{"exported_pod", "exported_namespace", "Hostname", "UUID"},
 		},
 	}
 	rosContainerQueries = &querys{

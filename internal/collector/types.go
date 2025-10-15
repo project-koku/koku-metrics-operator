@@ -384,7 +384,7 @@ type nvidiaGpuRow struct {
 	GpuUuiD        string `mapstructure:"gpu_uuid"`
 	ModelName      string `mapstructure:"model_name"`
 	VendorName     string `mapstructure:"vendor_name"`
-	MemoryCapacity string `mapstructure:"gpu_memory"`
+	MemoryCapacity string `mapstructure:"gpu_memory_capacity"`
 	PodUptime      string `mapstructure:"nvidia-gpu-pod-uptime-seconds"`
 }
 
@@ -400,7 +400,7 @@ func (nvidiaGpuRow) csvHeader() []string {
 		"gpu_uuid",
 		"gpu_model_name",
 		"gpu_vendor_name",
-		"gpu_memory",
+		"gpu_memory_capacity",
 		"gpu_pod_uptime",
 	}
 }
