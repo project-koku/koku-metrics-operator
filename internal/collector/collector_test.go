@@ -452,6 +452,62 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 	}
 }
 
+func TestGenerateReportsWriteErrors(t *testing.T) {
+	// use valid test data
+	mapResults := make(mappedMockPromResult)
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+
+	// directory config with an invalid path
+	badDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: "/nonexistent/path/that/should/fail"},
+	}
+
+	// should fail when trying to write reports
+	err := GenerateReports(fakeCR, badDirCfg, fakeCollector)
+	if err == nil {
+		t.Error("expected write error but got none")
+	}
+
+	// expected error messages
+	validErrors := []string{
+		"failed to write node report",
+		"failed to write cost namespace report",
+		"failed to write pod report",
+		"failed to write storage report",
+		"failed to write cost vm report",
+		"failed to write cost nvidia gpu report",
+	}
+
+	foundValidError := false
+	for _, validErr := range validErrors {
+		if strings.Contains(err.Error(), validErr) {
+			foundValidError = true
+			break
+		}
+	}
+
+	if !foundValidError {
+		t.Errorf("expected a write error message, got: %v", err)
+	}
+}
+
 func TestGetResourceID(t *testing.T) {
 	getResourceIDTests := []struct {
 		name  string
