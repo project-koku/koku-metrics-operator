@@ -268,6 +268,43 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 }
 
 func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
+
+	// cost node metrics
+	if err := generateCostNodeMetricsReport(log, c, dirCfg, nodeRows, yearMonth); err != nil {
+		return err
+	}
+
+	// cost pod metrics
+	if err := generateCostPodMetricsReport(log, c, dirCfg, nodeRows, yearMonth); err != nil {
+		return err
+	}
+
+	// cost storage metrics
+	if err := generateCostStorageMetricsReport(log, c, dirCfg, yearMonth); err != nil {
+		return err
+	}
+
+	// cost vm metrics
+	if err := generateCostVMMetricsReport(log, c, dirCfg, yearMonth); err != nil {
+		return err
+	}
+
+	// cost namespace metric
+	if err := generateCostNamespaceMetricsReport(log, c, dirCfg, yearMonth); err != nil {
+		return err
+	}
+
+	//cost nvidia gpu metrics
+	if err := generateCostNvidiaGpuMetricsReport(log, c, dirCfg, yearMonth); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// generateCostNodeMetricsReport generates the report for node metrics.
+func generateCostNodeMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
+	log.Info("querying for node metrics")
 	emptyNodeRow := newNodeRow(c.TimeSeries)
 	nodeReport := report{
 		file: &file{
@@ -285,9 +322,48 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 		return fmt.Errorf("failed to write node report: %v", err)
 	}
 
-	//################################################################################################################
+	return nil
+}
 
-	log.Info("querying for pod metrics")
+// generateCostNamespaceMetricsReport generates the report for namespace metrics.
+func generateCostNamespaceMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string) error {
+	log.Info("querying for cost namespace metrics")
+	namespaceResults := mappedResults{}
+	if err := c.getQueryRangeResults(namespaceQueries, &namespaceResults, MaxRetries); err != nil {
+		return err
+	}
+
+	namespaceRows := make(mappedCSVStruct)
+	for ns, val := range namespaceResults {
+		usage := newNamespaceRow(c.TimeSeries)
+		if err := getStruct(val, &usage, namespaceRows, ns); err != nil {
+			return err
+		}
+	}
+
+	emptyNamespaceRow := newNamespaceRow(c.TimeSeries)
+	namespaceReport := report{
+		file: &file{
+			name: namespaceFilePrefix + yearMonth + ".csv",
+			path: dirCfg.Reports.Path,
+		},
+		data: &data{
+			queryData: namespaceRows,
+			headers:   emptyNamespaceRow.csvHeader(),
+			prefix:    emptyNamespaceRow.dateTimes.string(),
+		},
+	}
+
+	log.WithName("writeResults").Info("writing cost namespace results to file", "filename", namespaceReport.file.getName())
+	if err := namespaceReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write cost namespace report: %v", err)
+	}
+	return nil
+}
+
+// generateCostPodMetricsReport generates the report for pod metrics.
+func generateCostPodMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
+	log.Info("querying for cost pod metrics")
 	podResults := mappedResults{}
 	if err := c.getQueryRangeResults(podQueries, &podResults, MaxRetries); err != nil {
 		return err
@@ -308,6 +384,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 			}
 		}
 	}
+
 	emptyPodRow := newPodRow(c.TimeSeries)
 	podReport := report{
 		file: &file{
@@ -320,14 +397,18 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 			prefix:    emptyPodRow.dateTimes.string(),
 		},
 	}
+
 	log.WithName("writeResults").Info("writing pod results to file", "filename", podReport.file.getName())
 	if err := podReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write pod report: %v", err)
 	}
 
-	//################################################################################################################
+	return nil
+}
 
-	log.Info("querying for storage metrics")
+// generateCostStorageMetricsReport generates the report for storage metrics.
+func generateCostStorageMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string) error {
+	log.Info("querying for cost storage metrics")
 	volResults := mappedResults{}
 	if err := c.getQueryRangeResults(volQueries, &volResults, MaxRetries); err != nil {
 		return err
@@ -340,6 +421,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 			return err
 		}
 	}
+
 	emptyVolRow := newStorageRow(c.TimeSeries)
 	volReport := report{
 		file: &file{
@@ -352,49 +434,54 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 			prefix:    emptyVolRow.dateTimes.string(),
 		},
 	}
-	log.WithName("writeResults").Info("writing volume results to file", "filename", volReport.file.getName())
+
+	log.WithName("writeResults").Info("writing storage results to file", "filename", volReport.file.getName())
 	if err := volReport.writeReport(); err != nil {
-		return fmt.Errorf("failed to write volume report: %v", err)
+		return fmt.Errorf("failed to write storage report: %v", err)
 	}
 
-	//################################################################################################################
+	return nil
+}
 
-	log.Info("querying for virtual machine metrics")
-	vmResults := mappedResults{}
-	if err := c.getQueryRangeResults(vmQueries, &vmResults, MaxRetries); err != nil {
+// generateCostVMMetricsReport generates the report for VM metrics.
+func generateCostVMMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string) error {
+	log.Info("querying for cost vm metrics")
+	virtualMachineResults := mappedResults{}
+	if err := c.getQueryRangeResults(vmQueries, &virtualMachineResults, MaxRetries); err != nil {
 		return err
 	}
 
-	for vm, val := range vmResults {
-		resourceID := getResourceID(val["provider_id"])
-		vmResults[vm]["resource_id"] = resourceID
-	}
-
-	vmRows := make(mappedCSVStruct)
-	for vm, val := range vmResults {
+	virtualMachineRows := make(mappedCSVStruct)
+	for vm, val := range virtualMachineResults {
 		usage := newVMRow(c.TimeSeries)
-		if err := getStruct(val, &usage, vmRows, vm); err != nil {
+		if err := getStruct(val, &usage, virtualMachineRows, vm); err != nil {
 			return err
 		}
 	}
+
 	emptyVmRow := newVMRow(c.TimeSeries)
-	vmReport := report{
+	virtualMachineReport := report{
 		file: &file{
 			name: vmFilePrefix + yearMonth + ".csv",
 			path: dirCfg.Reports.Path,
 		},
 		data: &data{
-			queryData: vmRows,
+			queryData: virtualMachineRows,
 			headers:   emptyVmRow.csvHeader(),
 			prefix:    emptyVmRow.dateTimes.string(),
 		},
 	}
-	log.WithName("writeResults").Info("writing virtual machine results to file", "filename", vmReport.file.getName())
-	if err := vmReport.writeReport(); err != nil {
-		return fmt.Errorf("failed to write virtual machine report: %v", err)
+
+	log.WithName("writeResults").Info("writing cost vm results to file", "filename", virtualMachineReport.file.getName())
+	if err := virtualMachineReport.writeReport(); err != nil {
+		return fmt.Errorf("failed to write cost vm report: %v", err)
 	}
 
-	//cost nvidia gpu metrics
+	return nil
+}
+
+// generateCostNvidiaGpuMetricsReport generates the report for NVIDIA GPU metrics.
+func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string) error {
 	log.Info("querying for cost nvidia gpu metrics")
 	nvidiaGpuResults := mappedResults{}
 	if err := c.getQueryRangeResults(costNvidiaGpuQueries, &nvidiaGpuResults, MaxRetries); err != nil {
@@ -449,43 +536,11 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 			prefix:    emptyNvidiaGpuRow.dateTimes.string(),
 		},
 	}
+
 	log.WithName("writeResults").Info("writing cost nvidia gpu results to file", "filename", nvidiaGpuReport.file.getName())
 	if err := nvidiaGpuReport.writeReport(); err != nil {
 		return fmt.Errorf("failed to write cost nvidia gpu report: %v", err)
 	}
-
-	//################################################################################################################
-
-	log.Info("querying for namespaces")
-	namespaceResults := mappedResults{}
-	if err := c.getQueryRangeResults(namespaceQueries, &namespaceResults, MaxRetries); err != nil {
-		return err
-	}
-
-	namespaceRows := make(mappedCSVStruct)
-	for namespace, val := range namespaceResults {
-		usage := newNamespaceRow(c.TimeSeries)
-		if err := getStruct(val, &usage, namespaceRows, namespace); err != nil {
-			return err
-		}
-	}
-	emptyNameRow := newNamespaceRow(c.TimeSeries)
-	namespaceReport := report{
-		file: &file{
-			name: namespaceFilePrefix + yearMonth + ".csv",
-			path: dirCfg.Reports.Path,
-		},
-		data: &data{
-			queryData: namespaceRows,
-			headers:   emptyNameRow.csvHeader(),
-			prefix:    emptyNameRow.dateTimes.string(),
-		},
-	}
-	log.WithName("writeResults").Info("writing namespace results to file", "filename", namespaceReport.file.getName())
-	if err := namespaceReport.writeReport(); err != nil {
-		return fmt.Errorf("failed to write namespace report: %v", err)
-	}
-
 	return nil
 }
 
