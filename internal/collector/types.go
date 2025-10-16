@@ -378,14 +378,14 @@ func (row vmRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type nvidiaGpuRow struct {
 	*dateTimes
-	Node           string `mapstructure:"node"`
-	Namespace      string `mapstructure:"namespace"`
-	Pod            string `mapstructure:"pod"`
-	GpuUuiD        string `mapstructure:"gpu_uuid"`
-	ModelName      string `mapstructure:"model_name"`
-	VendorName     string `mapstructure:"vendor_name"`
-	MemoryCapacity string `mapstructure:"gpu_memory_capacity"`
-	PodUptime      string `mapstructure:"nvidia-gpu-pod-uptime-seconds"`
+	Node                 string `mapstructure:"node"`
+	Namespace            string `mapstructure:"namespace"`
+	Pod                  string `mapstructure:"pod"`
+	GpuUUID              string `mapstructure:"gpu_uuid"`
+	GpuModelName         string `mapstructure:"model_name"`
+	GpuVendorName        string `mapstructure:"vendor_name"`
+	GpuMemoryCapacityMiB string `mapstructure:"gpu_memory_capacity_mib"`
+	GpuPodUptime         string `mapstructure:"nvidia-gpu-pod-uptime-seconds"`
 }
 
 func (nvidiaGpuRow) csvHeader() []string {
@@ -400,7 +400,7 @@ func (nvidiaGpuRow) csvHeader() []string {
 		"gpu_uuid",
 		"gpu_model_name",
 		"gpu_vendor_name",
-		"gpu_memory_capacity",
+		"gpu_memory_capacity_mib",
 		"gpu_pod_uptime",
 	}
 }
@@ -414,11 +414,11 @@ func (row nvidiaGpuRow) csvRow() []string {
 		row.Node,
 		row.Namespace,
 		row.Pod,
-		row.GpuUuiD,
-		row.ModelName,
-		row.VendorName,
-		row.MemoryCapacity,
-		row.PodUptime,
+		row.GpuUUID,
+		row.GpuModelName,
+		row.GpuVendorName,
+		row.GpuMemoryCapacityMiB,
+		row.GpuPodUptime,
 	}
 }
 
