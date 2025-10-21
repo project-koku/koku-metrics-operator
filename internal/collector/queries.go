@@ -472,7 +472,7 @@ var (
 			RowKey:         []model.LabelName{"namespace"},
 		},
 	}
-	costNvidiaGpuQueries = &querys{
+	costNvidiaGpuMemoryCapacityQueries = &querys{
 		query{
 			Name:        "nvidia-gpu-memory-capacity-mib",
 			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_mib"],
@@ -485,6 +485,8 @@ var (
 			},
 			RowKey: []model.LabelName{"pod", "namespace", "node"},
 		},
+	}
+	costNvidiaGpuUtilizationQueries = &querys{
 		query{
 			Name:        "nvidia-gpu-utilization",
 			QueryString: QueryMap["cost:nvidia_gpu_utilization"],

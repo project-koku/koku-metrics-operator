@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -196,7 +196,7 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -248,7 +248,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -292,7 +292,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -354,7 +354,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		TimeSeries: &copyfakeTimeRange,
 	}
 
-	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuQueries}
+	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -455,7 +455,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 func TestGenerateReportsWriteErrors(t *testing.T) {
 	// use valid test data
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -485,26 +485,11 @@ func TestGenerateReportsWriteErrors(t *testing.T) {
 		t.Error("expected write error but got none")
 	}
 
-	// expected error messages
-	validErrors := []string{
-		"failed to write node report",
-		"failed to write cost namespace report",
-		"failed to write pod report",
-		"failed to write storage report",
-		"failed to write cost vm report",
-		"failed to write cost nvidia gpu report",
-	}
-
-	foundValidError := false
-	for _, validErr := range validErrors {
-		if strings.Contains(err.Error(), validErr) {
-			foundValidError = true
-			break
-		}
-	}
-
-	if !foundValidError {
-		t.Errorf("expected a write error message, got: %v", err)
+	// Due to the sequential nature of report generation, we expect to see
+	// the error from the first report that fails (node report)
+	expectedError := "failed to write node report"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("expected error containing %q, got: %v", expectedError, err)
 	}
 }
 

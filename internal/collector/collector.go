@@ -486,23 +486,21 @@ func generateCostVMMetricsReport(log gologr.Logger, c *PrometheusCollector, dirC
 // generateCostNvidiaGpuMetricsReport generates the report for NVIDIA GPU metrics.
 func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string) error {
 	log.Info("querying for cost nvidia gpu metrics")
-	nvidiaGpuResults := mappedResults{}
-	if err := c.getQueryRangeResults(costNvidiaGpuQueries, &nvidiaGpuResults, MaxRetries); err != nil {
+
+	// Query capacity and utilization separately for better efficiency
+	gpuCapacityResults := mappedResults{}
+	log.Info("querying for nvidia gpu memory capacity metrics")
+	if err := c.getQueryRangeResults(costNvidiaGpuMemoryCapacityQueries, &gpuCapacityResults, MaxRetries); err != nil {
+		return err
+	}
+
+	gpuUtilizationResults := mappedResults{}
+	log.Info("querying for nvidia gpu utilization metrics")
+	if err := c.getQueryRangeResults(costNvidiaGpuUtilizationQueries, &gpuUtilizationResults, MaxRetries); err != nil {
 		return err
 	}
 
 	nvidiaGpuRows := make(mappedCSVStruct)
-	gpuUtilizationResults := make(map[string]mappedValues)
-	gpuResourceResults := make(map[string]mappedValues)
-
-	// Separate the results
-	for key, val := range nvidiaGpuResults {
-		if _, ok := val["gpu_uuid"]; ok {
-			gpuUtilizationResults[key] = val
-		} else {
-			gpuResourceResults[key] = val
-		}
-	}
 
 	// For each gpu utilization result, find the matching memory & resource data and merge it
 	for key, gpuVal := range gpuUtilizationResults {
@@ -510,14 +508,15 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 		namespace, _ := gpuVal["namespace"].(string)
 		node, _ := gpuVal["node"].(string)
 
-		// key generation to match `generateKey`
+		// key generation to match `generateKey` for memory resource data
 		resourceKeyParts := []string{pod, namespace, node}
 		sort.Strings(resourceKeyParts)
 		resourceKey := strings.Join(resourceKeyParts, ",")
 
-		if resourceData, ok := gpuResourceResults[resourceKey]; ok {
-			log.Info("found matching gpu resource data", "key", resourceKey)
-			for dataKey, dataVal := range resourceData {
+		// merge query results
+		if memoryResourceData, ok := gpuCapacityResults[resourceKey]; ok {
+			log.Info("found matching gpu memory resource data", "key", resourceKey)
+			for dataKey, dataVal := range memoryResourceData {
 				gpuVal[dataKey] = dataVal
 			}
 		}
