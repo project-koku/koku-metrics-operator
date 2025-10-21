@@ -117,7 +117,17 @@ Fields for metrics related to Persistent Volumes (PVs):
 * `persistentvolume_labels`: The labels associated with the persistent volume.
 * `persistentvolumeclaim_labels`: The labels associated with the persistent volume claim.
 
+### 6. NVIDIA GPU Metrics
 
+Fields for metrics related to NVIDIA GPUs:
+
+* `node`: The name of the node where the pod is running.
+* `namespace`: The namespace where the pod is running.
+* `pod`: The name of the pod that is consuming GPU resources.
+* `gpu_uuid`: The unique identifier for the physical NVIDIA GPU card.
+* `gpu_model_name`: The model name of the GPU (e.g., "Tesla T4").
+* `gpu_memory_capacity_mib`: The total memory capacity of the GPU in Mebibytes (MiB).
+* `gpu_pod_uptime`: The cumulative number of seconds the pod has been running on the specific GPU during the report period.
 
 ## Resource Optimization (ROS) Reports:
 
