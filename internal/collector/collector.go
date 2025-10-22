@@ -454,7 +454,7 @@ func generateCostVMMetricsReport(log gologr.Logger, c *PrometheusCollector, dirC
 	virtualMachineRows := make(mappedCSVStruct)
 	for vm, val := range virtualMachineResults {
 		resourceID := getResourceID(val["provider_id"])
-		virtualMachineResults[vm]["resource_id"] = resourceID
+		val["resource_id"] = resourceID
 
 		usage := newVMRow(c.TimeSeries)
 		if err := getStruct(val, &usage, virtualMachineRows, vm); err != nil {
