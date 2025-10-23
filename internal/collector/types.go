@@ -51,6 +51,7 @@ func newNodeRow(ts *promv1.Range) nodeRow           { return nodeRow{dateTimes: 
 func newPodRow(ts *promv1.Range) podRow             { return podRow{dateTimes: newDates(ts)} }
 func newStorageRow(ts *promv1.Range) storageRow     { return storageRow{dateTimes: newDates(ts)} }
 func newVMRow(ts *promv1.Range) vmRow               { return vmRow{dateTimes: newDates(ts)} }
+func newNvidiaGpuRow(ts *promv1.Range) nvidiaGpuRow { return nvidiaGpuRow{dateTimes: newDates(ts)} }
 func newROSContainerRow(ts *promv1.Range) rosContainerRow {
 	return rosContainerRow{dateTimes: newDates(ts)}
 }
@@ -374,6 +375,54 @@ func (row vmRow) csvRow() []string {
 }
 
 func (row vmRow) string() string { return strings.Join(row.csvRow(), ",") }
+
+type nvidiaGpuRow struct {
+	*dateTimes
+	Node                 string `mapstructure:"node"`
+	Namespace            string `mapstructure:"namespace"`
+	Pod                  string `mapstructure:"pod"`
+	GpuUUID              string `mapstructure:"gpu_uuid"`
+	GpuModelName         string `mapstructure:"model_name"`
+	GpuVendorName        string `mapstructure:"vendor_name"`
+	GpuMemoryCapacityMiB string `mapstructure:"gpu_memory_capacity_mib"`
+	GpuPodUptime         string `mapstructure:"nvidia-gpu-pod-uptime-seconds"`
+}
+
+func (nvidiaGpuRow) csvHeader() []string {
+	return []string{
+		"report_period_start",
+		"report_period_end",
+		"interval_start",
+		"interval_end",
+		"node",
+		"namespace",
+		"pod",
+		"gpu_uuid",
+		"gpu_model_name",
+		"gpu_vendor_name",
+		"gpu_memory_capacity_mib",
+		"gpu_pod_uptime",
+	}
+}
+
+func (row nvidiaGpuRow) csvRow() []string {
+	return []string{
+		row.ReportPeriodStart,
+		row.ReportPeriodEnd,
+		row.IntervalStart,
+		row.IntervalEnd,
+		row.Node,
+		row.Namespace,
+		row.Pod,
+		row.GpuUUID,
+		row.GpuModelName,
+		row.GpuVendorName,
+		row.GpuMemoryCapacityMiB,
+		row.GpuPodUptime,
+	}
+}
+
+func (row nvidiaGpuRow) string() string { return strings.Join(row.csvRow(), ",") }
 
 type rosContainerRow struct {
 	*dateTimes
