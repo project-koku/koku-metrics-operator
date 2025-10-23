@@ -125,7 +125,8 @@ Fields for metrics related to NVIDIA GPUs:
 * `namespace`: The namespace where the pod is running.
 * `pod`: The name of the pod that is consuming GPU resources.
 * `gpu_uuid`: The unique identifier for the physical NVIDIA GPU card.
-* `gpu_model_name`: The model name of the GPU (e.g., "Tesla T4").
+* `gpu_model_name`: The model name of the GPU (e.g., Tesla T4).
+* `gpu_vendor_name`: The vendor of the GPU resource (e.g., nvidia_com_gpu).
 * `gpu_memory_capacity_mib`: The total memory capacity of the GPU in Mebibytes (MiB).
 * `gpu_pod_uptime`: The cumulative number of seconds the pod has been running on the specific GPU during the report period.
 
