@@ -1,0 +1,17 @@
+[
+    {
+        "metric": {
+            "namespace": "gpu-testing",
+            "node": "ip-10-0-139-206.us-east-2.compute.internal",
+            "pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
+            "resource": "nvidia_com_gpu",
+            "label_nvidia_com_gpu_memory": "15360"
+        },
+        "values": [
+            [
+                1604691780,
+                "1"
+            ]
+        ]
+    }
+]
