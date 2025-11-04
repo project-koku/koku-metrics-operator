@@ -320,20 +320,26 @@ UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
+# Files to exclude from downstream transformations
+EXCLUDE_DOCS = generate-downstream.md report-fields-description.md local-development.md
+EXCLUDE_FIND_EXPR = $(foreach file,$(EXCLUDE_DOCS),-not -name '$(file)')
+# Directories to exclude from downstream transformations (relative paths from docs/)
+EXCLUDE_DIRS = upstream-release
+EXCLUDE_DIRS_EXPR = $(foreach dir,$(EXCLUDE_DIRS),-path '*/$(dir)/*' -prune -o)
 .PHONY: downstream
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
-	# sed replace everything but the Makefile
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# sed replace everything but the Makefile and excluded docs/dirs
+	- LC_ALL=C find api/v1beta1 config/* docs/* $(EXCLUDE_DIRS_EXPR) -type f $(EXCLUDE_FIND_EXPR) -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* $(EXCLUDE_DIRS_EXPR) -type f $(EXCLUDE_FIND_EXPR) -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 
 	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
 	# clean up the other files
 	# - git clean -fx
-	# mv the sample to the correctly named file
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# mv the sample to the correctly named file (exclude specific docs/dirs)
+	- LC_ALL=C find api/v1beta1 config/* docs/* $(EXCLUDE_DIRS_EXPR) -type f $(EXCLUDE_FIND_EXPR) -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
+	- LC_ALL=C find api/v1beta1 config/* docs/* $(EXCLUDE_DIRS_EXPR) -type f $(EXCLUDE_FIND_EXPR) -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 
 	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
 	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
@@ -368,7 +374,6 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
 
