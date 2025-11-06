@@ -4,10 +4,9 @@ This document outlines the process for generating the downstream version of the 
 
 ## Prerequisites
 
-* **rename** - Perl-based file rename utility ([install with Homebrew on OSX](https://formulae.brew.sh/formula/rename#default))
 * **yq** - YAML processor ([installation guide](https://github.com/mikefarah/yq))
 * **operator-sdk** - Operator SDK CLI tool
-* **git** - Version control
+
 
 ## What the Downstream Target Does
 
