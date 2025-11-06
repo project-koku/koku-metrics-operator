@@ -22,8 +22,6 @@ The `make downstream` command performs the following transformations:
 - Appends OpenShift-specific labels to `bundle.Dockerfile`
 - Sets `isCertified` flag to `true` for Red Hat certification
 
-**Note:** Only the files listed above are transformed. All other documentation files remain unchanged.
-
 ## Steps
 
 ### 1. Create a Feature Branch
