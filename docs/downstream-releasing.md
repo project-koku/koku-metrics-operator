@@ -12,17 +12,17 @@ This document outlines the process for generating the downstream version of the 
 ## What the Downstream Target Does
 
 The `make downstream` command performs the following transformations:
-- Renames `koku` → `costmanagement` and `Koku` → `CostManagement` across the codebase
+- Renames `koku` → `costmanagement` and `Koku` → `CostManagement` in:
+  - `api/v1beta1/` - API type definitions
+  - `config/` - Kubernetes manifests and kustomize configurations
+  - `docs/csv-description.md` - ClusterServiceVersion description
+  - `internal/` - RBAC kubebuilder annotations only
 - Updates API group names, kinds, and project configuration
 - Regenerates bundle manifests with downstream-specific metadata
 - Appends OpenShift-specific labels to `bundle.Dockerfile`
 - Sets `isCertified` flag to `true` for Red Hat certification
 
-**Note:** The following files are excluded from transformations:
-- `docs/downstream-releasing.md`
-- `docs/report-fields-description.md`
-- `docs/local-development.md`
-- `docs/upstream-*.md`
+**Note:** Only the files listed above are transformed. All other documentation files remain unchanged.
 
 ## Steps
 
@@ -57,10 +57,10 @@ git diff
 ```
 
 Key things to check:
-- API references changed from `koku` to `costmanagement`
-- `bundle.Dockerfile` contains `COPY bundle/manifests` (not `COPY manifests`)
+- References changed from `koku` to `costmanagement` in `api/v1beta1/` and `config/`
+- `docs/csv-description.md` contains `costmanagement` references
+- `bundle.Dockerfile` contains `COPY bundle/manifests`
 - Bundle CSV has correct downstream metadata
-- Excluded documentation files remain unchanged
 
 ### 4. Stage and Commit the Generated Changes
 
@@ -100,6 +100,5 @@ git push origin downstream-updates-vX.Y.Z
 
 ### 7. Open Pull Request
 
-Open a PR against the `downstream` branch to merge the downstream code changes.
+Open a PR against the **`downstream`** branch to merge the downstream code changes.
 
-**Important:** Ensure the PR base branch is set to `downstream`, not `main`.
