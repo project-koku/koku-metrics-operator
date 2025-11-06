@@ -2,7 +2,7 @@
 
 This guide outlines the steps for releasing a new version of the Koku Metrics Operator, from creating a github release to submitting the bundle to the `community-operators-prod` repository for File-Based Catalog (FBC) auto-release.
 
-Before proceeding, ensure all necessary testing has been performed as described in the [release-testing.md](release-testing.md) documentation.
+Before proceeding, ensure all necessary testing has been performed as described in the [upstream-release-testing.md](upstream-release-testing.md) documentation.
 
 
 ## Create a github release and push the operator image
