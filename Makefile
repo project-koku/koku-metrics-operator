@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 4.1.0
-VERSION ?= 4.2.0
+PREVIOUS_VERSION ?= 4.2.0
+VERSION ?= 4.3.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -150,6 +150,11 @@ ENVTEST_K8S_VERSION = 1.29.x
 .PHONY: test
 test: envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+
+# clean test cache
+.PHONY: clean-test-cache
+clean-test-cache: ## Clean test cache.
+	go clean -testcache
 
 .PHONY: test-qemu
 test-qemu: envtest-not-local ## Run tests - specific for multiarch in github action
@@ -319,16 +324,11 @@ DOWNSTREAM_UPPERCASE = CostManagement
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-
+	- LC_ALL=C find api/v1beta1 config/* docs/csv-description.md -type f -exec sed -i '' -e 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' -e 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
-	# clean up the other files
-	# - git clean -fx
-	# mv the sample to the correctly named file
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# rename the base CSV file
+	mv config/manifests/bases/$(UPSTREAM_LOWERCASE)-metrics-operator.clusterserviceversion.yaml config/manifests/bases/$(DOWNSTREAM_LOWERCASE)-metrics-operator.clusterserviceversion.yaml
 
 	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
 	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
@@ -363,7 +363,6 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
 

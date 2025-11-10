@@ -1,0 +1,32 @@
+[
+    {
+        "metric": {
+            "Hostname": "ip-10-0-139-206.us-east-2.compute.internal",
+            "UUID": "GPU-6f2d3b04-5a01-d1fb-6b5d-538bb6a81d40",
+            "exported_namespace": "gpu-testing",
+            "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
+            "modelName": "Tesla T4"
+        },
+        "values": [
+            [
+                1604691780,
+                "8.943608"
+            ]
+        ]
+    },
+    {
+        "metric": {
+            "Hostname": "ip-10-0-139-206.us-east-2.compute.internal",
+            "UUID": "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "exported_namespace": "gpu-testing",
+            "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
+            "modelName": "Tesla T4"
+        },
+        "values": [
+            [
+                1604691780,
+                "8.835391"
+            ]
+        ]
+    }
+]
