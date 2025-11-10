@@ -1,0 +1,122 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Seamless Upgrades
+    categories: Monitoring
+    certified: "false"
+    containerImage: placeholder
+    createdAt: "0001-01-01T00:00:00Z"
+    description: A Golang-based OpenShift Operator that generates and uploads OpenShift
+      usage metrics to cost management.
+    features.operators.openshift.io/cnf: "false"
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/csi: "false"
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "true"
+    features.operators.openshift.io/proxy-aware: "true"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
+    operatorframework.io/initialization-resource: |-
+      {
+        "apiVersion": "costmanagement-metrics-cfg.openshift.io/v1beta1",
+        "kind": "CostManagementMetricsConfig",
+        "metadata": {
+          "name": "costmanagementmetricscfg-sample-v1beta1"
+        },
+        "spec": {
+          "authentication": {
+            "token_url": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
+            "type": "token"
+          },
+          "api_url": "https://console.redhat.com/",
+          "packaging": {
+            "max_reports_to_store": 30,
+            "max_size_MB": 100
+          },
+          "upload": {
+            "ingress_path": "/api/ingress/v1/upload",
+            "upload_cycle": 360,
+            "upload_toggle": true,
+            "validate_cert": true
+          },
+          "prometheus_config": {
+            "collect_previous_data": true,
+            "context_timeout": 120,
+            "disable_metrics_collection_cost_management": false,
+            "disable_metrics_collection_resource_optimization": false,
+            "service_address": "https://thanos-querier.openshift-monitoring.svc:9091",
+            "skip_tls_verification": false
+          },
+          "source": {
+            "check_cycle": 1440,
+            "create_source": false,
+            "name": "",
+            "sources_path": "/api/sources/v1.0/"
+          }
+        }
+      }
+    operatorframework.io/suggested-namespace: costmanagement-metrics-operator
+    operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
+    operators.operatorframework.io/builder: operator-sdk-v1.33.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
+    repository: https://github.com/project-costmanagement/costmanagement-metrics-operator
+    support: Cost Management
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/os.linux: supported
+  name: costmanagement-metrics-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig
+        API
+      displayName: Cost Management Metrics Config
+      kind: CostManagementMetricsConfig
+      name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
+      version: v1beta1
+  description: placeholder
+  displayName: CostManagement Metrics Operator
+  icon:
+  - base64data: PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDIyLjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAzMDAgMzAwIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAzMDAgMzAwOyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+CjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+Cgkuc3Qwe2ZpbGw6I0VFMDAwMDt9Cjwvc3R5bGU+Cjx0aXRsZT5Db3N0LWljb248L3RpdGxlPgo8ZGVzYz5DcmVhdGVkIHdpdGggU2tldGNoLjwvZGVzYz4KPGc+Cgk8Zz4KCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjM5LjAzNzAzMzEsMTE3LjI3NTE3N2MtMy4yNjU4MDgxLTQxLjk4OTA1MTgtMzguMjU2NjgzMy03NC42NDcyMDE1LTgxLjE3ODgzMy03NC42NDcyMDE1CgkJCWMtMjcuNTI2MTUzNiwwLTUzLjE4NjEyNjcsMTMuOTk2MzQ5My02OC4xMTU1NzAxLDM3LjMyMzYwMDhjLTEuODY2MTgwNCwwLTMuNzMyMzUzMi0wLjQ2NjU0NTEtNi4wNjUwNzg3LTAuNDY2NTQ1MQoJCQljLTM0LjUyNDMzMDEsMC02Mi45ODM1Nzc3LDI3Ljk5MjY5ODctNjIuOTgzNTc3Nyw2Mi45ODM1NjYzczI3Ljk5MjY5ODcsNjIuOTgzNTY2Myw2Mi45ODM1Nzc3LDYyLjk4MzU2NjNoMTYuMzI5MDcxCgkJCWMzLjczMjM2MDgsMCw2Ljk5ODE3NjYtMy4yNjU4MDgxLDYuOTk4MTc2Ni02Ljk5ODE2ODlzLTMuMjY1ODE1Ny02Ljk5ODE2ODktNi45OTgxNzY2LTYuOTk4MTY4OWgtMTYuMzI5MDcxCgkJCWMtMjcuMDU5NjEyMywwLTQ4LjUyMDY3OTUtMjEuOTI3NjI3Ni00OC41MjA2Nzk1LTQ4LjUyMDY3NTdzMjEuOTI3NjEyMy00OC41MjA2ODMzLDQ4LjUyMDY3OTUtNDguNTIwNjgzMwoJCQljMi43OTkyNzA2LDAsNS41OTg1NDEzLDAuNDY2NTQ1MSw4LjM5NzgwNDMsMC45MzMwOTAyYzIuNzk5MjcwNiwwLjQ2NjU0NTEsNi4wNjUwNzg3LTAuOTMzMDkwMiw3LjQ2NDcyMTctMy43MzIzNjA4CgkJCWMxMi4xMzAxNzI3LTIwLjk5NDUyOTcsMzQuNTI0MzMwMS0zNC4wNTc3ODg4LDU4LjMxODEyMjktMzQuMDU3Nzg4OGMzNi44NTcwNzA5LDAsNjcuMTgyNDk1MSwzMC4zMjU0MjA0LDY3LjE4MjQ5NTEsNjcuMTgyNDc5OQoJCQljMCwzLjczMjM1MzIsMy4yNjU4MDgxLDYuOTk4MTc2Niw2Ljk5ODE2ODksNi45OTgxNzY2YzE2LjMyOTA3MSwwLDI5Ljg1ODkwMiwxMy41Mjk4MDA0LDI5Ljg1ODkwMiwyOS44NTg4NzE1CgkJCXMtMTMuNTI5ODMwOSwyOS44NTg4ODY3LTI5Ljg1ODkwMiwyOS44NTg4ODY3Yy0zLjczMjM2MDgsMC02Ljk5ODE2ODksMy4yNjU4MDgxLTYuOTk4MTY4OSw2Ljk5ODE2ODkKCQkJczMuMjY1ODA4MSw2Ljk5ODE2ODksNi45OTgxNjg5LDYuOTk4MTY4OWMyNC4yNjAzMzAyLDAsNDQuMzIxNzYyMS0yMC4wNjE0MTY2LDQ0LjMyMTc2MjEtNDQuMzIxNzYyMQoJCQlDMjc2LjM2MDYyNjIsMTM5LjIwMjc4OTMsMjYwLjAzMTU1NTIsMTIwLjU0MDk5MjcsMjM5LjAzNzAzMzEsMTE3LjI3NTE3N3oiLz4KCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjA2Ljg0NTQyODUsMjIwLjg0ODE3NWM3LjQ2NDcwNjQtOC44NjQzNjQ2LDExLjY2MzYyLTIwLjUyNzk4NDYsMTEuNjYzNjItMzIuNjU4MTU3MwoJCQljMC0yOC45MjU3OTY1LTIzLjMyNzI0LTUyLjI1MzAzNjUtNTIuMjUzMDM2NS01Mi4yNTMwMzY1cy01Mi4yNTMwNDQxLDIzLjMyNzI0LTUyLjI1MzA0NDEsNTIuMjUzMDM2NQoJCQlzMjMuMzI3MjQ3Niw1Mi4yNTMwNTE4LDUyLjI1MzA0NDEsNTIuMjUzMDUxOGMxMS4xOTcwODI1LDAsMjEuOTI3NjEyMy0zLjczMjM2MDgsMzAuMzI1NDI0Mi05Ljc5NzQzOTZsMzEuNzI1MDUxOSwzMC43OTE5NjE3CgkJCWMxLjM5OTYyNzcsMS4zOTk2Mjc3LDMuMjY1ODIzNCwxLjg2NjE4MDQsNS4xMzE5ODg1LDEuODY2MTgwNGMxLjg2NjE5NTcsMCwzLjczMjM2MDgtMC45MzMwNzUsNS4xMzE5ODg1LTIuMzMyNzMzMgoJCQljMi43OTkyNzA2LTIuNzk5MjU1NCwyLjc5OTI3MDYtNy40NjQ3MDY0LDAtMTAuMjYzOTc3MUwyMDYuODQ1NDI4NSwyMjAuODQ4MTc1eiBNMTI4LjQ2NTg2NjEsMTg4LjE5MDAxNzcKCQkJYzAtMjAuOTk0NTIyMSwxNy4yNjIxNzY1LTM4LjI1NjY5ODYsMzguMjU2Njk4Ni0zOC4yNTY2OTg2czM4LjI1NjY5ODYsMTcuMjYyMTc2NSwzOC4yNTY2OTg2LDM4LjI1NjY5ODYKCQkJcy0xNy4yNjIxNzY1LDM4LjI1NjY5ODYtMzguMjU2Njk4NiwzOC4yNTY2OTg2UzEyOC40NjU4NjYxLDIwOS4xODQ1Mzk4LDEyOC40NjU4NjYxLDE4OC4xOTAwMTc3eiIvPgoJPC9nPgoJPGc+CgkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE3NC4yODA2Mzk2LDE4NS44NzM2MTE1YzIuMjE2Mjc4MSwwLjY4NjUzODcsNC4xMTAwMzExLDEuODcwNzEyMyw1LjY3NjYzNTcsMy41NTI1MDU1CgkJCWMxLjU2NjYwNDYsMS42ODE4MDg1LDIuNTk4NzA5MSwzLjY0OTI2MTUsMy4wOTE3MzU4LDUuOTAyNDA0OGMwLjQ5NzYxOTYsMi4yNTMxNDMzLDAuMzYzOTk4NCw0LjUyOTMyNzQtMC40MDA4Nzg5LDYuODE5MzM1OQoJCQljLTAuOTE2OTE1OSwyLjUyMDM4NTctMi40ODM1MjA1LDQuNTI5MzEyMS00LjY5OTc5ODYsNi4wMTc1OTM0Yy0yLjIxNjI2MjgsMS40ODgyODEyLTQuNjk1MjA1NywyLjI3MTU3NTktNy40NTA1NzY4LDIuMzQ5ODk5MwoJCQl2NS41MDE1NTY0YzAsMC41MzQ0ODQ5LTAuMTcwNDcxMiwwLjk3MjIxMzctMC41MTE0NTk0LDEuMzE3Nzc5NWMtMC4zNDU1NjU4LDAuMzQ1NTgxMS0wLjc4MzI5NDcsMC41MTYwNjc1LTEuMzIyMzg3NywwLjUxNjA2NzUKCQkJaC0zLjY2NzY5NDFjLTAuNTM0NTAwMSwwLTAuOTcyMjEzNy0wLjE3MDQ4NjUtMS4zMTc3Nzk1LTAuNTE2MDY3NWMtMC4zNDA5NzI5LTAuMzQ1NTY1OC0wLjUxNjA2NzUtMC43ODMyOTQ3LTAuNTE2MDY3NS0xLjMxNzc3OTUKCQkJdi01LjUwMTU1NjRjLTMuNjY3Njk0MSwwLTYuOTg5ODIyNC0xLjE0NzI5MzEtOS45Njg2NTg0LTMuNDM3MzAxNmMtMC4zODI0NDYzLTAuMzgyNDMxLTAuNjEyODIzNS0wLjg0MzIwMDctMC42ODg4NDI4LTEuMzc3NzAwOAoJCQljLTAuMDc2MDM0NS0wLjUzNDQ4NDksMC4xMTUxODg2LTEuMDMyMTA0NSwwLjU3MzYzODktMS40ODgyNTA3bDMuODk1NzgyNS0zLjg5ODA4NjUKCQkJYzAuMzA4NzAwNi0wLjIzMDM5MjUsMC42NjgxMDYxLTAuMzgyNDMxLDEuMDkyMDEwNS0wLjQ1NjE2MTVjMC40MTkyOTYzLTAuMDc4MzIzNCwwLjgyMDE1OTksMC4wMzY4NSwxLjIwMjYwNjIsMC4zNDA5NzI5CgkJCWMxLjE0NzI5MzEsMC43NjQ4NzczLDIuNDQyMDQ3MSwxLjE0NzMwODMsMy44OTM0NjMxLDEuMTQ3MzA4M2g3LjY4MDk1NGMwLjkxNjk0NjQsMCwxLjcwMDI0MTEtMC4zMjI1NDAzLDIuMzQ5ODk5My0wLjk3MjIxMzcKCQkJYzAuNjQ5Njg4Ny0wLjY0OTY4ODcsMC45NzIyMjktMS40NzQ0NTY4LDAuOTcyMjI5LTIuNDY1MTAzMWMwLTAuNjg2NTU0LTAuMjI1NzY5LTEuMzM2MjI3NC0wLjY4NjUzODctMS45NDkwMzU2CgkJCWMtMC40NTYxNjE1LTAuNjEyODIzNS0xLjAzMjExOTgtMS4wMzIxMTk4LTEuNzE4NjQzMi0xLjI2MjQ5NjlsLTExLjgwNDg0MDEtMy40MzczMTY5CgkJCWMtMi41OTg2OTM4LTAuNzY0ODc3My00Ljc3MzUyOTEtMi4xMzc5NTQ3LTYuNTMzNjQ1Ni00LjEyODQ0ODVjLTEuNzU3ODEyNS0xLjk4NTkwMDktMi43ODc2NDM0LTQuMjc1OTI0Ny0zLjA5NDAzOTktNi44NzQ2MzM4CgkJCWMtMC4xNTIwNTM4LTIuNDQ2NjU1MywwLjMwNjM5NjUtNC43MTgyMzEyLDEuMzc1Mzk2Ny02LjgxOTMzNTljMS4wNjg5Njk3LTIuMTAxMDg5NSwyLjU5ODcwOTEtMy43ODI4ODI3LDQuNTg0NjEtNS4wNDUzNzk2CgkJCWMxLjk4NTkwMDktMS4yNTc4ODg4LDQuMjAyMTc5LTEuODg5MTI5Niw2LjY0ODg0OTUtMS44ODkxMjk2aDAuMjI1NzY5di01LjUwMTU0MTEKCQkJYzAtMC41MzQ1MDAxLDAuMTc1MDk0Ni0wLjk3MjIyOSwwLjUxNjA2NzUtMS4zMTc3OTQ4YzAuMzQ1NTY1OC0wLjM0NTU4MTEsMC43ODMyNzk0LTAuNTE2MDUyMiwxLjMxNzc3OTUtMC41MTYwNTIyaDMuNjY3Njk0MQoJCQljMC41MzkwOTMsMCwwLjk3NjgyMTksMC4xNzA0NzEyLDEuMzIyMzg3NywwLjUxNjA1MjJjMC4zNDA5ODgyLDAuMzQ1NTY1OCwwLjUxMTQ1OTQsMC43ODMyOTQ3LDAuNTExNDU5NCwxLjMxNzc5NDh2NS41MDE1NDExCgkJCWMzLjY2NzY5NDEsMCw2Ljk1NzU2NTMsMS4xNDcyOTMxLDkuODYwMzgyMSwzLjQzNzMwMTZjMC40NTYxNzY4LDAuMzgyNDQ2MywwLjcyMzQxOTIsMC44NDMyMDA3LDAuODAxNzQyNiwxLjM3NzY4NTUKCQkJYzAuMDczNzE1MiwwLjUzNDUwMDEtMC4xMTUyMDM5LDAuOTkwNjQ2NC0wLjU3MTM1MDEsMS4zNzMwNzc0bC0zLjg5ODA4NjUsNC4wMTMyNzUxCgkJCWMtMC4zMDg3MTU4LDAuMjMwMzkyNS0wLjY2ODEwNjEsMC4zODI0MzEtMS4wOTIwMTA1LDAuNDU2MTYxNWMtMC40MTkyOTYzLDAuMDc4MzIzNC0wLjgyMDE1OTksMC0xLjIwMjU5MDktMC4yMjU3NjkKCQkJYy0xLjE0MjcxNTUtMC44NDMyMDA3LTIuNDQyMDc3Ni0xLjI2MjQ5NjktMy44OTgwODY1LTEuMjYyNDk2OWgtNy42NzYzNjExYy0wLjkxNjkxNTksMC0xLjcwMDIyNTgsMC4zMjI1MjUtMi4zNDk4OTkzLDAuOTcyMjEzNwoJCQljLTAuNjQ5Njg4NywwLjY0OTY3MzUtMC45NzY4MjE5LDEuNDc0NDQxNS0wLjk3NjgyMTksMi40NjUwODc5YzAsMC42ODY1NTQsMC4yMzAzOTI1LDEuMzM2MjEyMiwwLjY5MTE0NjksMS45NDkwMzU2CgkJCWMwLjQ1NjE2MTUsMC42MTI4MjM1LDEuMDMyMTE5OCwxLjAzMjExOTgsMS43MTg2NTg0LDEuMjYyNDk2OUwxNzQuMjgwNjM5NiwxODUuODczNjExNXoiLz4KCTwvZz4KPC9nPgo8L3N2Zz4K
+    mediatype: image/svg+xml
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: false
+    type: AllNamespaces
+  keywords:
+  - cost
+  - management
+  - usage
+  - monitor
+  links:
+  - name: CostManagement Metrics Operator source code repository
+    url: https://github.com/project-koku/koku-metrics-operator
+  maintainers:
+  - email: costmanagement@redhat.com
+    name: costmanagement
+  maturity: alpha
+  minKubeVersion: 1.24.0
+  provider:
+    name: Red Hat
+  relatedImages:
+  - image: ""
+    name: costmanagement-metrics-operator
+  version: 0.0.0
