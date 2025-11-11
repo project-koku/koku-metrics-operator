@@ -1,8 +1,28 @@
 {
-    "extends": [
-        "github>konflux-ci/mintmaker//config/renovate/renovate.json"
-    ],
-    "schedule": [
-        "on Tuesday after 3am and before 10am"
-    ]
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  "tekton": {
+    "includePaths": [".tekton/**"]
+  },
+  "enabledManagers": ["tekton", "dockerfile"],
+  "gomod": {
+    "enabled": false
+  },
+  "ignorePaths": ["go.mod", "go.sum", "vendor/**"],
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["*"],
+      "matchFileNames": ["go.mod", "go.sum", "vendor/**"],
+      "enabled": false
+    },
+    {
+        "matchDatasources": ["docker"],
+        "matchPackageNames": ["registry.redhat.io/ubi9/ubi-micro"],
+        "versioning": "redhat"
+    }
+  ]
 }

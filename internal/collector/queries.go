@@ -42,6 +42,10 @@ var (
 		"cost:vm_disk_allocated_size_bytes": "sum by (name, namespace, device, persistentvolumeclaim, volume_mode) (kubevirt_vm_disk_allocated_size_bytes{name!='', namespace!=''}) * on (name, namespace) group_left max by (name, namespace) (kubevirt_vmi_info{phase='running'})",
 		"cost:vm_labels":                    "kubevirt_vm_labels{name!='', namespace!=''}",
 
+		// cost NVIDIA GPU metrics queries
+		"cost:nvidia_gpu_capacity_memory_mib": "sum by (pod, namespace, node, resource, label_nvidia_com_gpu_memory) ((kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='nvidia_com_gpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})) * on(node) group_left(label_nvidia_com_gpu_memory) (max by (node, label_nvidia_com_gpu_memory) (kube_node_labels)))",
+		"cost:nvidia_gpu_utilization":         "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName) (DCGM_FI_PROF_GR_ENGINE_ACTIVE) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
+
 		// resource optimization container metrics queries
 		"ros:namespace_filter":               "kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}",
 		"ros:image_owners":                   "((max_over_time(kube_pod_container_info{container!='', container!='POD'}[15m]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}) or (max_over_time(kube_pod_container_info{container!='', container!='POD'}[15m]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})) * on(pod, namespace) group_left(owner_kind, owner_name) max by(pod, namespace, owner_kind, owner_name) (max_over_time(kube_pod_owner{container!='', container!='POD', pod!=''}[15m]))",
@@ -71,7 +75,7 @@ var (
 		"ros:memory_rss_usage_container_max": "(max by(container, pod, namespace, node) (max_over_time(container_memory_rss{container!='', container!='POD', pod!=''}[15m]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})) or (max by(container, pod, namespace, node) (max_over_time(container_memory_rss{container!='', container!='POD', pod!=''}[15m]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}))",
 		"ros:memory_rss_usage_container_sum": "(sum by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!=''}[15m]) * on(namespace) group_left kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'})) or (sum by(container, pod, namespace, node) (avg_over_time(container_memory_rss{container!='', container!='POD', pod!=''}[15m]) * on(namespace) group_left kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}))",
 
-		// resource optimization GPU container level metrics queries
+		// resource optimization NVIDIA GPU container level metrics queries
 		"ros:accelerator_core_usage_percentage_min":  "(min by (modelName, exported_container, exported_namespace, exported_pod, Hostname) (min_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace != '', exported_container != '', exported_pod != ''}[15m])) * on(exported_namespace) group_left(namespace) label_replace(kube_namespace_labels{label_insights_cost_management_optimizations='true'}, 'exported_namespace', '$1', 'namespace', '(.*)') or min by (modelName,exported_container, exported_namespace,exported_pod, Hostname) (min_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace != '', exported_container != '', exported_pod != ''}[15m])) * on(exported_namespace) group_left(namespace) label_replace(kube_namespace_labels{label_cost_management_optimizations='true'}, 'exported_namespace', '$1', 'namespace', '(.*)'))",
 		"ros:accelerator_core_usage_percentage_max":  "(max by (modelName, exported_container, exported_namespace, exported_pod, Hostname) (max_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace != '', exported_container != '', exported_pod != ''}[15m])) * on(exported_namespace) group_left(namespace) label_replace(kube_namespace_labels{label_insights_cost_management_optimizations='true'}, 'exported_namespace', '$1', 'namespace', '(.*)') or max by (modelName,exported_container,exported_namespace,exported_pod, Hostname) (max_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace != '', exported_container != '', exported_pod != ''}[15m])) * on(exported_namespace) group_left(namespace) label_replace(kube_namespace_labels{label_cost_management_optimizations='true'}, 'exported_namespace', '$1', 'namespace', '(.*)'))",
 		"ros:accelerator_core_usage_percentage_avg":  "(avg by (modelName, exported_container, exported_namespace, exported_pod, Hostname) (avg_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace != '', exported_container != '', exported_pod != ''}[15m])) * on(exported_namespace) group_left(namespace) label_replace(kube_namespace_labels{label_insights_cost_management_optimizations='true'}, 'exported_namespace', '$1', 'namespace', '(.*)') or avg by (modelName, exported_container, exported_namespace, exported_pod, Hostname) (avg_over_time(DCGM_FI_DEV_GPU_UTIL{exported_namespace != '', exported_container != '', exported_pod != ''}[15m])) * on(exported_namespace) group_left(namespace) label_replace(kube_namespace_labels{label_cost_management_optimizations='true'}, 'exported_namespace', '$1', 'namespace', '(.*)'))",
@@ -466,6 +470,38 @@ var (
 			MetricKey:      staticFields{"namespace": "namespace"},
 			MetricKeyRegex: regexFields{"namespace_labels": "label_*"},
 			RowKey:         []model.LabelName{"namespace"},
+		},
+	}
+	costNvidiaGpuMemoryCapacityQueries = &querys{
+		query{
+			Name:        "nvidia-gpu-memory-capacity-mib",
+			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_mib"],
+			MetricKey: staticFields{
+				"pod":                     "pod",
+				"namespace":               "namespace",
+				"node":                    "node",
+				"vendor_name":             "resource",
+				"gpu_memory_capacity_mib": "label_nvidia_com_gpu_memory",
+			},
+			RowKey: []model.LabelName{"pod", "namespace", "node"},
+		},
+	}
+	costNvidiaGpuUtilizationQueries = &querys{
+		query{
+			Name:        "nvidia-gpu-utilization",
+			QueryString: QueryMap["cost:nvidia_gpu_utilization"],
+			MetricKey: staticFields{
+				"node":       "Hostname",
+				"namespace":  "exported_namespace",
+				"pod":        "exported_pod",
+				"gpu_uuid":   "UUID",
+				"model_name": "modelName",
+			},
+			QueryValue: &saveQueryValue{
+				Method:          "sum",
+				TransformedName: "nvidia-gpu-pod-uptime-seconds",
+			},
+			RowKey: []model.LabelName{"exported_pod", "exported_namespace", "Hostname", "UUID"},
 		},
 	}
 	rosContainerQueries = &querys{
