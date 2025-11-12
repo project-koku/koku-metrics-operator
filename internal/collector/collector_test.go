@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -196,7 +196,7 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -248,7 +248,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -292,7 +292,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -332,7 +332,7 @@ func TestGenerateReportsNoCost(t *testing.T) {
 	// ####### everything below compares the generated reports to the expected reports #######
 	expectedMap := getFiles("expected_reports", t)
 	generatedMap := getFiles("test_reports", t)
-	expectedDiff := 5 // The expected diff is equal to the number of Cost reports we generate. If we add or remove reports, this number should change
+	expectedDiff := 6 // The expected diff is equal to the number of Cost reports we generate. If we add or remove reports, this number should change
 
 	if len(expectedMap)-len(generatedMap) != expectedDiff {
 		t.Errorf("incorrect number of reports generated")
@@ -344,7 +344,44 @@ func TestGenerateReportsNoCost(t *testing.T) {
 
 func TestGenerateReportsQueryErrors(t *testing.T) {
 	MaxRetries = 1
-	mapResults := make(mappedMockPromResult)
+
+	// Helper function to set up fresh test data
+	setupTestData := func() mappedMockPromResult {
+		mapResults := make(mappedMockPromResult)
+		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+		for _, q := range queryList {
+			for _, query := range *q {
+				res := &model.Matrix{}
+				Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+				mapResults[query.QueryString] = &mockPromResult{value: *res}
+			}
+		}
+
+		// add the namespace specific query
+		res := &model.Vector{}
+		Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
+		mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
+
+		// Add ros namespace queries
+		for _, query := range *rosNamespaceQueries {
+			res := &model.Vector{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+
+		// Add ros container queries
+		qs := append(*rosContainerQueries, rosNamespaceFilter)
+		for _, query := range qs {
+			res := &model.Vector{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+
+		return mapResults
+	}
+
+	// Test namespace error
+	mapResults := setupTestData()
 	copyfakeTimeRange := fakeTimeRange
 	fakeCollector := &PrometheusCollector{
 		PromConn: mockPrometheusConnection{
@@ -354,36 +391,20 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		TimeSeries: &copyfakeTimeRange,
 	}
 
-	queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries}
-	for _, q := range queryList {
-		for _, query := range *q {
-			res := &model.Matrix{}
-			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
-			mapResults[query.QueryString] = &mockPromResult{value: *res}
-		}
-	}
-
-	// add the namespace specific query
-	res := &model.Vector{}
-	Load(filepath.Join("test_files", "test_data", rosNamespaceFilter.Name), res, t)
-	mapResults[rosNamespaceFilter.QueryString] = &mockPromResult{value: *res}
-
-	resourceOptimizationError := "resourceOptimization error"
-	for _, q := range *rosContainerQueries {
-		mapResults[q.QueryString] = &mockPromResult{err: errors.New(resourceOptimizationError)}
-	}
-	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
-	if !strings.Contains(err.Error(), resourceOptimizationError) {
-		t.Errorf("GenerateReports %s was expected, got %v", resourceOptimizationError, err)
-	}
-
 	namespaceError := "namespace error"
 	for _, q := range *namespaceQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(namespaceError)}
 	}
-	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	err := GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), namespaceError) {
 		t.Errorf("GenerateReports %s was expected, got %v", namespaceError, err)
+	}
+
+	// Test storage error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
 	}
 	storageError := "storage error"
 	for _, q := range *volQueries {
@@ -393,6 +414,13 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	if !strings.Contains(err.Error(), storageError) {
 		t.Errorf("GenerateReports %s was expected, got %v", storageError, err)
 	}
+
+	// Test pod error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
 	podError := "pod error"
 	for _, q := range *podQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(podError)}
@@ -401,13 +429,57 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	if !strings.Contains(err.Error(), podError) {
 		t.Errorf("GenerateReports %s was expected, got %v", podError, err)
 	}
+
+	// Test VM error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
 	vmError := "vm error"
 	for _, q := range *vmQueries {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(vmError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
-	if !strings.Contains(err.Error(), podError) {
+	if !strings.Contains(err.Error(), vmError) {
 		t.Errorf("GenerateReports %s was expected, got %v", vmError, err)
+	}
+
+	// Test GPU capacity error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
+	gpuCapacityError := "gpu capacity error"
+	for _, q := range *costNvidiaGpuMemoryCapacityQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(gpuCapacityError)}
+	}
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), gpuCapacityError) {
+		t.Errorf("GenerateReports %s was expected, got %v", gpuCapacityError, err)
+	}
+
+	// Test GPU utilization error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
+	gpuUtilizationError := "gpu utilization error"
+	for _, q := range *costNvidiaGpuUtilizationQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(gpuUtilizationError)}
+	}
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), gpuUtilizationError) {
+		t.Errorf("GenerateReports %s was expected, got %v", gpuUtilizationError, err)
+	}
+
+	// Test node error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
 	}
 	nodeError := "node error"
 	for _, q := range *nodeQueries {
@@ -417,6 +489,22 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	if !strings.Contains(err.Error(), nodeError) {
 		t.Errorf("GenerateReports %s was expected, got %v", nodeError, err)
 	}
+
+	// Test resource optimization error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
+	resourceOptimizationError := "resourceOptimization error"
+	for _, q := range *rosContainerQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(resourceOptimizationError)}
+	}
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), resourceOptimizationError) {
+		t.Errorf("GenerateReports %s was expected, got %v", resourceOptimizationError, err)
+	}
+
 	if err := fakeDirCfg.Reports.RemoveContents(); err != nil {
 		t.Fatal("failed to cleanup reports directory")
 	}
@@ -449,6 +537,47 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 	}
 	if len(filelist) != 0 {
 		t.Errorf("unexpected report(s) generated: %#v", filelist)
+	}
+}
+
+func TestGenerateReportsWriteErrors(t *testing.T) {
+	// use valid test data
+	mapResults := make(mappedMockPromResult)
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	for _, q := range queryList {
+		for _, query := range *q {
+			res := &model.Matrix{}
+			Load(filepath.Join("test_files", "test_data", query.Name), res, t)
+			mapResults[query.QueryString] = &mockPromResult{value: *res}
+		}
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+
+	// directory config with an invalid path
+	badDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: "/nonexistent/path/that/should/fail"},
+	}
+
+	// should fail when trying to write reports
+	err := GenerateReports(fakeCR, badDirCfg, fakeCollector)
+	if err == nil {
+		t.Error("expected write error but got none")
+	}
+
+	// Due to the sequential nature of report generation, we expect to see
+	// the error from the first report that fails (node report)
+	expectedError := "failed to write node report"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("expected error containing %q, got: %v", expectedError, err)
 	}
 }
 

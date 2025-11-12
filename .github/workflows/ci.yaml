@@ -42,7 +42,7 @@ jobs:
       - name: Run tests
         run: make test
       - name: Upload test coverage file
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage
           path: cover.out
@@ -82,7 +82,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: coverage
       - name: Upload coverage

@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "true"
     containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:9fd693b52c8927d8f2afbe6d8bb0580d425ed96ab7ae56a7b4251b9ab3e1113a
-    createdAt: "2025-09-26T15:42:10Z"
+    createdAt: "2025-11-11T14:26:15Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -104,7 +104,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.4.2.0
+  name: costmanagement-metrics-operator.4.3.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -686,5 +686,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.2.0
-  replaces: costmanagement-metrics-operator.4.1.0
+  version: 4.3.0
+  replaces: costmanagement-metrics-operator.4.2.0

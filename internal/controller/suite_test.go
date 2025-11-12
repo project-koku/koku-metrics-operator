@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -154,6 +155,7 @@ var (
 
 	validTS        *httptest.Server
 	unauthorizedTS *httptest.Server
+	expiredCredsTS *httptest.Server
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -164,19 +166,105 @@ func TestController(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func() {
-	validTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "ingress") {
-			w.WriteHeader(http.StatusAccepted)
-			fmt.Fprintln(w, "Upload Accepted")
-		} else {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, "Hello, client")
+// MockEndpoint defines a route handler for the mock server
+type MockEndpoint struct {
+	Method  string
+	Pattern *regexp.Regexp
+	Handler func(http.ResponseWriter, *http.Request)
+}
+
+func handleIngress(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusAccepted)
+	fmt.Fprintln(w, "Upload Accepted")
+}
+
+func handleIngressUnauthorized(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusUnauthorized)
+	fmt.Fprintln(w, "Upload Unauthorized - Credentials Expired")
+}
+
+func handleSourceTypes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, `{"meta":{"count":1},"data":[{"id":"1","name":"openshift"}]}`)
+}
+
+func handleSources(w http.ResponseWriter, r *http.Request) {
+	filterName := r.URL.Query().Get("filter[name]")
+
+	// Logic: Return valid source if sourceName OR any non-empty name != default clusterID
+	// But return empty for "non-existent-source" to simulate source validation failure
+	if strings.Contains(filterName, "non-existent-source") {
+		// Return empty source list to simulate source not found
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `{"meta":{"count":0},"data":[]}`)
+	} else if strings.Contains(filterName, sourceName) ||
+		(filterName != "" && filterName != clusterID) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"meta":{"count":1},"data":[{"id":"123","name":"%s","source_type_id":"1","source_ref":"%s"}]}`, sourceName, clusterID)
+	} else {
+		// Return empty source list for tests without explicit source name (like default CR test)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, `{"meta":{"count":0},"data":[]}`)
+	}
+}
+
+func handleDefault(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "Hello, client")
+}
+
+// Router for mock server endpoints
+func routeRequest(w http.ResponseWriter, r *http.Request) {
+	// Define mock endpoints with regex patterns (most specific first)
+	endpoints := []MockEndpoint{
+		{"POST", regexp.MustCompile(`/api/ingress/`), handleIngress},
+		{"GET", regexp.MustCompile(`/api/sources/.*/source_types`), handleSourceTypes},
+		{"GET", regexp.MustCompile(`/api/sources/`), handleSources},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Route to appropriate handler
+	for _, endpoint := range endpoints {
+		if r.Method == endpoint.Method && endpoint.Pattern.MatchString(r.URL.Path) {
+			endpoint.Handler(w, r)
+			return
 		}
-	}))
+	}
+
+	// Default handler if no match
+	handleDefault(w, r)
+}
+
+// Router for expired credentials scenario - allows sources but fails uploads
+func routeRequestExpiredCreds(w http.ResponseWriter, r *http.Request) {
+	// Define mock endpoints with regex patterns (most specific first)
+	endpoints := []MockEndpoint{
+		{"POST", regexp.MustCompile(`/api/ingress/`), handleIngressUnauthorized},
+		{"GET", regexp.MustCompile(`/api/sources/.*/source_types`), handleSourceTypes},
+		{"GET", regexp.MustCompile(`/api/sources/`), handleSources},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Route to appropriate handler
+	for _, endpoint := range endpoints {
+		if r.Method == endpoint.Method && endpoint.Pattern.MatchString(r.URL.Path) {
+			endpoint.Handler(w, r)
+			return
+		}
+	}
+
+	// Default handler if no match
+	handleDefault(w, r)
+}
+
+var _ = BeforeSuite(func() {
+	validTS = httptest.NewServer(http.HandlerFunc(routeRequest))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
+	expiredCredsTS = httptest.NewServer(http.HandlerFunc(routeRequestExpiredCreds))
 
 	logf.SetLogger(testutils.ZapLogger(true))
 	ctx, cancel = context.WithCancel(context.Background())
@@ -431,4 +519,5 @@ var _ = AfterSuite(func() {
 
 	validTS.Close()
 	unauthorizedTS.Close()
+	expiredCredsTS.Close()
 })
