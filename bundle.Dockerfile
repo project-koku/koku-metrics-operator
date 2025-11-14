@@ -22,9 +22,9 @@ ARG GIT_URL
 # Openshift specific labels
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
 LABEL io.k8s.description="Component required to gather metrics from Prometheus, package and upload them to the cost management service in the cloud. The operator can work in clusters connected to the Internet and air-gapped (with additional configuration and steps)"
-LABEL io.openshift.build.commit.id="${FULL_COMMIT}"
-LABEL io.openshift.build.source-location="${GIT_URL}"
-LABEL io.openshift.build.commit.url="${GIT_URL}/commit/${FULL_COMMIT}"
+LABEL io.openshift.build.commit.id=${FULL_COMMIT}
+LABEL io.openshift.build.source-location=${GIT_URL}
+LABEL io.openshift.build.commit.url=${GIT_URL}/commit/${FULL_COMMIT}
 LABEL io.openshift.maintainer.component="Cost Management Metrics Operator"
 LABEL io.openshift.maintainer.product="OpenShift Container Platform"
 LABEL io.openshift.tags="openshift"
