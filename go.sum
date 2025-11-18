@@ -97,8 +97,8 @@ github.com/onsi/ginkgo/v2 v2.27.2 h1:LzwLj0b89qtIy6SSASkzlNvX6WktqurSHwkk2ipF/Ns
 github.com/onsi/ginkgo/v2 v2.27.2/go.mod h1:ArE1D/XhNXBXCBkKOLkbsb2c81dQHCRcF5zwn/ykDRo=
 github.com/onsi/gomega v1.38.2 h1:eZCjf2xjZAqe+LeWvKb5weQ+NcPwX84kqJ0cZNxok2A=
 github.com/onsi/gomega v1.38.2/go.mod h1:W2MJcYxRGV63b418Ai34Ud0hEdTVXq9NW9+Sx6uXf3k=
-github.com/openshift/api v0.0.0-20241210144725-fa836ae33dad h1:AehKFLGZosHv1+stPXervUQQkd6/D/TdTprv1CgMpmU=
-github.com/openshift/api v0.0.0-20241210144725-fa836ae33dad/go.mod h1:Shkl4HanLwDiiBzakv+con/aMGnVE2MAGvoKp5oyYUo=
+github.com/openshift/api v0.0.0-20251117165054-348370f055bf h1:8VzLlQFneh4bnHA3SS+Bb9VWdVaR7WugtSeqIngMC3s=
+github.com/openshift/api v0.0.0-20251117165054-348370f055bf/go.mod h1:d5uzF0YN2nQQFA0jIEWzzOZ+edmo6wzlGLvx5Fhz4uY=
 github.com/operator-framework/api v0.35.0 h1:xKrffuGEagk3CWy6zqdK5YmIErlBtWUblNNK+q7ld7c=
 github.com/operator-framework/api v0.35.0/go.mod h1:A9UNu/pdcO1RauMHvV54unp4DNm/Y5fMVbGDpnIIF+M=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
