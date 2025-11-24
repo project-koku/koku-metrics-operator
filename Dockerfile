@@ -58,7 +58,9 @@ LABEL \
     maintainer="Cost Management <cost-mgmt@redhat.com>"  \
     name="costmanagement-metrics-operator"  \
     summary="Red Hat Cost Management Metrics Operator"  \
+    url="https://github.com/project-koku/koku-metrics-operator" \
     version="4.3.0" \
+    release="4.3.0" \
     vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]
