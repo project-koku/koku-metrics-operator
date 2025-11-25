@@ -13,7 +13,7 @@ require (
 	github.com/openshift/api v0.0.0-20251028133551-455c405a361c
 	github.com/operator-framework/api v0.36.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.67.2
+	github.com/prometheus/common v0.67.4
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.34.2
@@ -49,6 +49,7 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
