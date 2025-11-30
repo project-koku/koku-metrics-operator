@@ -25,6 +25,7 @@ bin
 
 # Ignore this file to avoid checking in image and branch
 config/manager/kustomization.yaml
+testing-demo/components/service-account/sa.env
 
 # Ignore files for envtest
 testbin/*
