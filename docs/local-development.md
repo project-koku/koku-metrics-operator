@@ -3,11 +3,11 @@
 ## Pre-reqs
 
 * Access to a supported version of an Openshift cluster
-  * [Red Hat OpenShift Local](https://access.redhat.com/documentation/en-us/red_hat_openshift_local/2.31/html/getting_started_guide/installing) can be used if the monitoring stack is enabled.
+  * [Red Hat OpenShift Local](https://crc.dev/docs/installing/) can be used if the monitoring stack is enabled.
   * A cluster can also be provisioned [here](https://demo.redhat.com/catalog)
 * A clone of [koku-metrics-operator](https://github.com/project-koku/koku-metrics-operator)
 * [Go 1.13 or greater](https://golang.org/doc/install)
-* [Openshift-CLI](https://docs.openshift.com/container-platform/4.5/cli_reference/openshift_cli/getting-started-cli.html) (preferably a version that matches your Openshift cluster version)
+* [Openshift-CLI](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/cli_tools/openshift-cli-oc#cli-about-cli_cli-developer-commands) (preferably a version that matches your Openshift cluster version)
 * [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/) (before installing this separately, check that it was not already installed along with kubectl)
