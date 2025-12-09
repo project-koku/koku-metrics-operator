@@ -16,7 +16,7 @@ require (
 	github.com/operator-framework/api v0.35.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.2
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
