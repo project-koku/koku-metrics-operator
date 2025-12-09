@@ -1,8 +1,6 @@
 module github.com/project-koku/koku-metrics-operator
 
-go 1.24.4
-
-toolchain go1.24.5
+go 1.24.6
 
 require (
 	github.com/go-logr/logr v1.4.3
@@ -13,7 +11,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/openshift/api v0.0.0-20241210144725-fa836ae33dad
-	github.com/operator-framework/api v0.35.0
+	github.com/operator-framework/api v0.36.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.2
 	go.uber.org/zap v1.27.0
