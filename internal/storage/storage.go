@@ -147,15 +147,20 @@ func (s *Storage) ConvertVolume() (bool, error) {
 	var csv *operatorsv1alpha1.ClusterServiceVersion
 	if len(deployCp.OwnerReferences) > 0 {
 		owner := deployCp.OwnerReferences[0]
-		log.Info(fmt.Sprintf("deployment is owned by: %s", owner.Name))
-		csv = &operatorsv1alpha1.ClusterServiceVersion{}
-		namespace := types.NamespacedName{
-			Namespace: s.Namespace,
-			Name:      owner.Name}
-		if err := s.Client.Get(ctx, namespace, csv); err != nil {
-			return false, fmt.Errorf("unable to get ClusterServiceVersion: %v", err)
+		log.Info(fmt.Sprintf("deployment is owned by: %s (%s)", owner.Name, owner.Kind))
+
+		// Only try to get CSV if owner is actually a CSV (OLMv0)
+		if owner.Kind == "ClusterServiceVersion" {
+			csv = &operatorsv1alpha1.ClusterServiceVersion{}
+			namespace := types.NamespacedName{
+				Namespace: s.Namespace,
+				Name:      owner.Name}
+			if err := s.Client.Get(ctx, namespace, csv); err != nil {
+				return false, fmt.Errorf("unable to get ClusterServiceVersion: %v", err)
+			}
+			depSpec = csv.Spec.InstallStrategy.StrategySpec.DeploymentSpecs[0].Spec.DeepCopy()
 		}
-		depSpec = csv.Spec.InstallStrategy.StrategySpec.DeploymentSpecs[0].Spec.DeepCopy()
+		// for OLMv1 owner is a ClusterExtension
 	}
 
 	log.Info("getting deployment volumes")
