@@ -308,7 +308,7 @@ spec:
       - name: name
         value: clair-scan
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-clair-scan:0.3@sha256:654b989d7cdc03d082e56f216a29de04847215ee379a8d9ca315e453ad2b15c2
+        value: quay.io/konflux-ci/tekton-catalog/task-clair-scan:0.3@sha256:dadfea7633d82e4303ba73d5e9c7e2bc16834bde0fd7688880453b26452067eb
       - name: kind
         value: task
       resolver: bundles
@@ -496,7 +496,7 @@ spec:
       - name: name
         value: rpms-signature-scan
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:f2df541f49b5310f343b55f58b0881a46a2b46c5df39a9c34563c5042b106f6f
+        value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:2f3015ac7a642ea7f104d2194a8cb45921570f9539c6604ddcb5f62796f22a53
       - name: kind
         value: task
       resolver: bundles
