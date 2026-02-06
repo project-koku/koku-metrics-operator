@@ -57,6 +57,7 @@ LABEL \
     io.openshift.tags="cost,cost-management,prometheus,servicetelemetry,operators"  \
     maintainer="Cost Management <cost-mgmt@redhat.com>"  \
     name="costmanagement/costmanagement-metrics-rhel9-operator"  \
+    cpe="cpe:/a:redhat:cost_management:4::el9"  \
     summary="Red Hat Cost Management Metrics Operator"  \
     version="4.3.0" \
     vendor="Red Hat, Inc."
