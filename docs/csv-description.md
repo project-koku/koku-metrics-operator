@@ -19,6 +19,11 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The KokuMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.3.1:
+* Updated Go to 1.25.7.
+* Updated Kubernetes, Prometheus, and Operator Framework dependencies.
+* Added toolchain directive to go.mod for deterministic builds.
+
 ## New in v4.3.0:
 * Enabled gathering and reporting NVIDIA GPU metrics for cost management.
 
