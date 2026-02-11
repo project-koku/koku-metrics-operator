@@ -14,7 +14,7 @@ IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 PREVIOUS_BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(PREVIOUS_VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
-DOWNSTREAM_IMAGE_TAG ?= registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:$(VERSION)
+DOWNSTREAM_IMAGE_TAG ?= registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator:$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
