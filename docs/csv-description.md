@@ -1,8 +1,8 @@
 # Cost Management Metrics Operator
 ## Introduction
-The `costmanagement-metrics-operator` is a component of the [cost managment](https://access.redhat.com/documentation/en-us/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
+The `costmanagement-metrics-operator` is a component of the [cost managment](https://docs.redhat.com/en/documentation/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
-This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to Cost Management. Documentation for installing an operator within a restricted network can be found [here](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html).
+This operator is capable of functioning within a disconnected/restricted network (aka air-gapped mode). In this mode, the operator will store the packaged reports for manual retrieval instead of being uploaded to Cost Management. Documentation for installing an operator within a restricted network can be found [here](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/operators/administrator-tasks#olm-restricted-networks).
 
 ## Features and Capabilities
 #### Metrics collection:
@@ -18,6 +18,10 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+## New in v4.3.1:
+* Updated Go to 1.25.3.
+* Updated Kubernetes, Prometheus, and Operator Framework dependencies.
 
 ## New in v4.3.0:
 * Enabled gathering and reporting NVIDIA GPU metrics for cost management.
@@ -65,7 +69,7 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
   ```
     oc label namespace NAMESPACE insights_cost_management_optimizations="true" --overwrite=true
   ```
-* __DEPRECATION NOTICE__: Basic authentication is deprecated and will not be supported beyond December 31, 2024. If the default token authentication method cannot be used, you must switch to [service account](https://console.redhat.com/iam/service-accounts) authentication ([more on creating a service account](https://access.redhat.com/articles/7036194)). Once you have created your service account, follow [this documentation](https://access.redhat.com/documentation/en-us/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#service-account-authentication_adding-an-ocp-int) on how to configure your operator to use service account authentication. Service-accounts must also be used if manually uploading payloads to console.redhat.com.
+* __DEPRECATION NOTICE__: Basic authentication is deprecated and will not be supported beyond December 31, 2024. If the default token authentication method cannot be used, you must switch to [service account](https://console.redhat.com/iam/service-accounts) authentication ([more on creating a service account](https://access.redhat.com/articles/7036194)). Once you have created your service account, follow [this documentation](https://docs.redhat.com/en/documentation/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#service-account-authentication_adding-an-ocp-int) on how to configure your operator to use service account authentication. Service-accounts must also be used if manually uploading payloads to console.redhat.com.
 
 ## New in v3.2.1:
 * The minimum supported configuration for `upload_cycle` is now 60 (minutes).
@@ -201,7 +205,7 @@ Configure the costmanagement-metrics-operator by creating a `CostManagementMetri
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.openshift.com/container-platform/latest/operators/admin/olm-restricted-networks.html). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
+To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/disconnected_environments/olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
