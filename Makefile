@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 4.1.0
-VERSION ?= 4.2.0
+PREVIOUS_VERSION ?= 4.3.0
+VERSION ?= 4.3.1
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -14,7 +14,7 @@ IMAGE_TAG_BASE ?= quay.io/project-koku/koku-metrics-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 PREVIOUS_BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(PREVIOUS_VERSION)
 CATALOG_IMG ?= quay.io/project-koku/kmc-test-catalog:v$(VERSION)
-DOWNSTREAM_IMAGE_TAG ?= registry-proxy.engineering.redhat.com/rh-osbs/costmanagement-metrics-operator:$(VERSION)
+DOWNSTREAM_IMAGE_TAG ?= registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator:$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/project-koku/koku-metrics-operator:v$(VERSION)
@@ -324,16 +324,11 @@ DOWNSTREAM_UPPERCASE = CostManagement
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec sed -i '' 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-
+	- LC_ALL=C find api/v1beta1 config/* docs/csv-description.md -type f -exec sed -i '' -e 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' -e 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
 	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
-	# clean up the other files
-	# - git clean -fx
-	# mv the sample to the correctly named file
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' {} +
-	- LC_ALL=C find api/v1beta1 config/* docs/* -type f -exec rename -f -- 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	# rename the base CSV file
+	mv config/manifests/bases/$(UPSTREAM_LOWERCASE)-metrics-operator.clusterserviceversion.yaml config/manifests/bases/$(DOWNSTREAM_LOWERCASE)-metrics-operator.clusterserviceversion.yaml
 
 	$(YQ) -i '.projectName = "costmanagement-metrics-operator"' PROJECT
 	$(YQ) -i '.resources.[0].group = "costmanagement-metrics-cfg"' PROJECT
@@ -368,7 +363,6 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
-	sed -i '' '/^COPY / s/bundle\///g' bundle.Dockerfile
 	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
 	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
 

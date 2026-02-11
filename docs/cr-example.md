@@ -10,8 +10,8 @@ spec:
   clusterID: string # The cluster ID -> the reconciler finds this value if not supplied
   validate_cert: bool # default=true, represent if the Ingress endpoint must be certificate validated
   authentication:
-    type: choice (basic, token) # default=token
-    secret_name: string # secret which contains user/password for basic auth
+    type: choice (service-account, token) # default=token
+    secret_name: string # secret which contains client_id/client_secret for service-account auth
   packaging:
     max_size: int # default=100, max size in Megabytes for packaged files
   prometheus_config:
