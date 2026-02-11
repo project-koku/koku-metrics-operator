@@ -1378,9 +1378,13 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
 			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(1))
 
-			files, err := os.ReadDir(filepath.Join(".", "tmp", volumeMountName, "data"))
-			Expect(err).To(BeNil())
-			Expect(len(files)).To(Equal(0))
+			Eventually(func() int {
+				files, err := os.ReadDir(filepath.Join(".", "tmp", volumeMountName, "data"))
+				if err != nil {
+					return -1
+				}
+				return len(files)
+			}, timeout, interval).Should(Equal(0))
 		})
 		It("query failed due to error", func() {
 			resetReconciler(WithSecretOverride(true))

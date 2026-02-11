@@ -146,7 +146,7 @@ verify-manifests: ## Verify manifests are up to date.
 	./hack/verify-manifests.sh
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.29.x
+ENVTEST_K8S_VERSION = 1.34.x
 .PHONY: test
 test: envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
@@ -381,10 +381,10 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go env GOARCH)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.3.0
-CONTROLLER_TOOLS_VERSION ?= v0.16.5
-SETUP_ENVTEST_VERSION ?= v0.0.0-20240318095156-c7e1dc9b5302
-YQ_VERSION ?= v4.2.0
+KUSTOMIZE_VERSION ?= v5.8.1
+CONTROLLER_TOOLS_VERSION ?= v0.20.0
+SETUP_ENVTEST_VERSION ?= release-0.22
+YQ_VERSION ?= v4.52.2
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
