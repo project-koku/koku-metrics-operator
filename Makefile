@@ -80,7 +80,7 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 .PHONY: setup-auth
-setup-auth:
+setup-auth: ## Populate authentication secret with client_id and client_secret.
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
 	@sed -i "" 's/eW91ci1jbGllbnQtaWQK/$(shell printf "$(shell echo $(or $(CLIENT_ID),console.redhat.com client_id))" | base64)/g' testing/authentication_secret.yaml
 	@sed -i "" 's/eW91ci1jbGllbnQtc2VjcmV0Cg==/$(shell printf "$(shell echo $(or $(CLIENT_SECRET),console.redhat.com client_secret))" | base64)/g' testing/authentication_secret.yaml
@@ -227,6 +227,16 @@ deploy-to-file: manifests kustomize ## Create a deployment file
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: create-air-gapped-cr
+create-air-gapped-cr: ## Create a CostManagementMetricsConfig CR for air-gapped environment.
+	$(KUSTOMIZE) build testing-demo/components/air-gapped > testing/air-gapped-cr.yaml
+
+.PHONY: create-service-account-cr
+create-service-account-cr: ## Create a CostManagementMetricsConfig CR for service account environment.
+	CLIENT_ID=$(CLIENT_ID) CLIENT_SECRET=$(CLIENT_SECRET) 
+	printf "client_id=$(CLIENT_ID)\nclient_secret=$(CLIENT_SECRET)" > testing-demo/components/service-account/sa.env
+	$(KUSTOMIZE) build testing-demo/components/service-account > testing/service-account-cr.yaml
 
 .PHONY: deploy-cr
 deploy-cr:  ## Deploy a CostManagementMetricsConfig CR for controller running in K8s cluster.
@@ -384,7 +394,7 @@ ENVTEST_NOT_LOCAL ?= $(shell go env GOPATH)/bin/$(shell go env GOOS)_$(shell go 
 KUSTOMIZE_VERSION ?= v5.3.0
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 SETUP_ENVTEST_VERSION ?= v0.0.0-20240318095156-c7e1dc9b5302
-YQ_VERSION ?= v4.2.0
+YQ_VERSION ?= v4.47.1
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
@@ -399,7 +409,8 @@ ifeq (, $(shell which yq 2>/dev/null))
 	set -e ;\
 	mkdir -p $(dir $(YQ)) ;\
 	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_${{ARCH}} && chmod +x $(YQ)
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_$${ARCH} ;\
+	chmod +x $(YQ) ;\
 	}
 else
 YQ = $(shell which yq)
