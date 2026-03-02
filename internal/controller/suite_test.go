@@ -490,12 +490,26 @@ func tearDownRequired(ctx context.Context) {
 	deleteServiceAccountSecret(ctx)
 }
 
+func createAPIServer(ctx context.Context) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileIntermediateType,
+			},
+		},
+	}
+	createObject(ctx, apiServer)
+}
+
 func clusterPrep(ctx context.Context) {
 	if !useCluster {
 		// Create operator namespace
 		createNamespace(ctx, namespace)
 		createNamespace(ctx, "openshift-monitoring")
 		createNamespace(ctx, openShiftConfigNamespace)
+
+		createAPIServer(ctx)
 
 		cwd, err := os.Getwd()
 		Expect(err).ToNot(HaveOccurred())

@@ -106,16 +106,28 @@ func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body 
 	return req, nil
 }
 
-// GetClient Return client with certificate handling based on configuration
-func GetClient(validateCert bool) HTTPClient {
+// GetClient returns an HTTP client with TLS settings derived from the cluster's
+// TLS security profile. If tlsCfg is nil, Go's default TLS configuration is used.
+func GetClient(validateCert bool, tlsCfg *tls.Config) HTTPClient {
 	log := log.WithName("GetClient")
 
-	// copy of http.DefaultTransport
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if tlsCfg != nil {
+		transport.TLSClientConfig = tlsCfg.Clone()
+		log.Info("using cluster TLS profile for HTTP client",
+			"minVersion", tlsCfg.MinVersion,
+			"cipherSuiteCount", len(tlsCfg.CipherSuites))
+	} else {
+		log.Info("no cluster TLS profile provided, using Go defaults")
+	}
 
 	if !validateCert {
 		log.Info("disabling certificate validation")
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{}
+		}
+		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	return &http.Client{Timeout: 30 * time.Second, Transport: transport}
@@ -161,7 +173,7 @@ func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes
 		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
 
-	client := GetClient(authConfig.ValidateCert)
+	client := GetClient(authConfig.ValidateCert, authConfig.TLSConfig)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", currentTime, "", fmt.Errorf("could not send the request: %v", err)

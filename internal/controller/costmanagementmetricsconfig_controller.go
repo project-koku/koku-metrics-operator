@@ -7,6 +7,7 @@ package controller
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/project-koku/koku-metrics-operator/internal/tlsprofile"
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	cv "github.com/project-koku/koku-metrics-operator/internal/clusterversion"
@@ -468,7 +471,7 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 	}
 
 	log.Info("validating credentials")
-	client := crhchttp.GetClient(handler.Auth.ValidateCert)
+	client := crhchttp.GetClient(handler.Auth.ValidateCert, handler.Auth.TLSConfig)
 	_, err := sources.GetSources(handler, client)
 
 	previousValidation.username = handler.Auth.BasicAuthUser
@@ -514,7 +517,7 @@ func checkSource(r *MetricsConfigReconciler, handler *sources.SourceHandler, cr 
 	sourceSpec = cr.Spec.Source.DeepCopy()
 
 	if handler.Spec.SourceName != "" && (updated || checkCycle(log, *handler.Spec.CheckCycle, handler.Spec.LastSourceCheckTime, "source check")) {
-		client := crhchttp.GetClient(handler.Auth.ValidateCert)
+		client := crhchttp.GetClient(handler.Auth.ValidateCert, handler.Auth.TLSConfig)
 		cr.Status.Source.SourceError = ""
 		defined, lastCheck, err := sources.SourceGetOrCreate(handler, client)
 		if err != nil {
@@ -652,7 +655,7 @@ func configurePVC(r *MetricsConfigReconciler, req ctrl.Request, cr *metricscfgv1
 	return nil, nil
 }
 
-func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metricscfgv1beta1.MetricsConfig, packager *packaging.FilePackager, req ctrl.Request) error {
+func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metricscfgv1beta1.MetricsConfig, packager *packaging.FilePackager, req ctrl.Request, tlsCfg *tls.Config) error {
 
 	log.Info("configuration is for connected cluster")
 	// `authConfig` carries state between reconciliations. The only time we should reset the AuthConfig
@@ -666,6 +669,7 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 		}
 	}
 	authConfig.ValidateCert = *cr.Status.Upload.ValidateCert
+	authConfig.TLSConfig = tlsCfg
 
 	// obtain credentials token/basic & return if there are authentication credential errors
 	if err := r.setAuthentication(ctx, authConfig, cr, req.NamespacedName); err != nil {
@@ -734,6 +738,7 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 // +kubebuilder:rbac:groups=costmanagement-metrics-cfg.openshift.io,namespace=koku-metrics-operator,resources=costmanagementmetricsconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operators.coreos.com,namespace=koku-metrics-operator,resources=clusterserviceversions,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=config.openshift.io,resources=clusterversions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
@@ -782,6 +787,9 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		cr.Status.Source.SourceName = cr.Status.ClusterID
 	}
 
+	// fetch the cluster TLS security profile from the APIServer config
+	clusterTLSConfig := tlsprofile.FetchAPIServerTLSConfig(ctx, r.Client)
+
 	log.Info("using the following inputs", "MetricsConfigConfig", cr.Status)
 
 	// set the Operator git commit and reflect it in the upload status
@@ -828,7 +836,11 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// attempt to collect prometheus stats and create reports
-	if err := getPromCollector(r, cr); err != nil {
+	var tlsMinVersion uint16
+	if clusterTLSConfig != nil {
+		tlsMinVersion = clusterTLSConfig.MinVersion
+	}
+	if err := getPromCollector(r, cr, tlsMinVersion); err != nil {
 		log.Info("failed to get prometheus connection", "error", err)
 		r.updateStatusAndLogError(ctx, cr)
 		return ctrl.Result{}, err
@@ -885,7 +897,7 @@ func (r *MetricsConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	var errorSlice []error
 
 	if cr.Spec.Upload.UploadToggle != nil && *cr.Spec.Upload.UploadToggle {
-		if err := r.setAuthAndUpload(ctx, cr, packager, req); err != nil {
+		if err := r.setAuthAndUpload(ctx, cr, packager, req, clusterTLSConfig); err != nil {
 			result = ctrl.Result{}
 			errorSlice = append(errorSlice, err)
 		}

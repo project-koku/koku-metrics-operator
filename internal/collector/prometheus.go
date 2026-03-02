@@ -56,6 +56,8 @@ type PrometheusConfig struct {
 	CAFile string
 	// SkipTLS skips cert verification
 	SkipTLS bool
+	// TLSMinVersion is the minimum TLS version from the cluster's TLS security profile.
+	TLSMinVersion uint16
 }
 
 func getBearerToken(tokenFile string) (config.Secret, error) {
@@ -92,9 +94,10 @@ type PrometheusConfigurationSetter func(ps *metricscfgv1beta1.PrometheusSpec, c 
 func SetPrometheusConfig(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
 
 	pCfg := &PrometheusConfig{
-		Address: ps.SvcAddress,
-		CAFile:  filepath.Join(c.serviceaccountPath, certKey),
-		SkipTLS: *ps.SkipTLSVerification,
+		Address:       ps.SvcAddress,
+		CAFile:        filepath.Join(c.serviceaccountPath, certKey),
+		SkipTLS:       *ps.SkipTLSVerification,
+		TLSMinVersion: c.TLSMinVersion,
 	}
 
 	tokenFile := filepath.Join(c.serviceaccountPath, tokenKey)
@@ -111,10 +114,18 @@ func SetPrometheusConfig(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusColl
 type PrometheusConnectionSetter func(c *PrometheusCollector) error
 
 func SetPrometheusConnection(c *PrometheusCollector) error {
+	log := log.WithName("SetPrometheusConnection")
 	cfg := c.PromCfg
+	log.Info("configuring prometheus TLS",
+		"tlsMinVersion", cfg.TLSMinVersion,
+		"skipTLS", cfg.SkipTLS)
 	promconf := config.HTTPClientConfig{
 		BearerToken: cfg.BearerToken,
-		TLSConfig:   config.TLSConfig{CAFile: cfg.CAFile, InsecureSkipVerify: cfg.SkipTLS},
+		TLSConfig: config.TLSConfig{
+			CAFile:             cfg.CAFile,
+			InsecureSkipVerify: cfg.SkipTLS,
+			MinVersion:         config.TLSVersion(cfg.TLSMinVersion),
+		},
 	}
 	roundTripper, err := config.NewRoundTripperFromConfig(promconf, "promconf")
 	if err != nil {
@@ -151,6 +162,7 @@ type PrometheusCollector struct {
 	PromCfg        *PrometheusConfig
 	TimeSeries     *promv1.Range
 	ContextTimeout time.Duration
+	TLSMinVersion  uint16
 
 	serviceaccountPath string
 }

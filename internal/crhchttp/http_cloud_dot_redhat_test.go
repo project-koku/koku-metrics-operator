@@ -6,6 +6,7 @@
 package crhchttp
 
 import (
+	"crypto/tls"
 	"net/http"
 	"strings"
 	"testing"
@@ -14,25 +15,41 @@ import (
 func TestGetClient(t *testing.T) {
 	getClientTests := []struct {
 		name               string
-		config             AuthConfig
-		conErr             error
+		validateCert       bool
+		tlsCfg             *tls.Config
 		insecureSkipVerify bool
+		expectedMinVersion uint16
 	}{
 		{
-			name:               "no validate cert returns insecureSkipVerify false",
-			config:             AuthConfig{ValidateCert: false},
+			name:               "no validate cert without TLS profile",
+			validateCert:       false,
+			tlsCfg:             nil,
 			insecureSkipVerify: true,
 		},
 		{
-			name:               "validate cert returns insecureSkipVerify true",
-			config:             AuthConfig{ValidateCert: true},
+			name:               "validate cert without TLS profile",
+			validateCert:       true,
+			tlsCfg:             nil,
 			insecureSkipVerify: false,
+		},
+		{
+			name:               "with TLS profile sets min version",
+			validateCert:       true,
+			tlsCfg:             &tls.Config{MinVersion: tls.VersionTLS13},
+			insecureSkipVerify: false,
+			expectedMinVersion: tls.VersionTLS13,
+		},
+		{
+			name:               "TLS profile with insecure skip verify",
+			validateCert:       false,
+			tlsCfg:             &tls.Config{MinVersion: tls.VersionTLS12},
+			insecureSkipVerify: true,
+			expectedMinVersion: tls.VersionTLS12,
 		},
 	}
 	for _, tt := range getClientTests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			result := GetClient(tt.config.ValidateCert)
+			result := GetClient(tt.validateCert, tt.tlsCfg)
 			client, ok := result.(*http.Client)
 			if !ok {
 				t.Errorf("'%s' expected client to be http.Client type, got %T", tt.name, result)
@@ -43,6 +60,9 @@ func TestGetClient(t *testing.T) {
 			}
 			if tt.insecureSkipVerify != transport.TLSClientConfig.InsecureSkipVerify {
 				t.Errorf("'%s' expected insecureSkipVerify to be %v, got %v", tt.name, tt.insecureSkipVerify, transport.TLSClientConfig.InsecureSkipVerify)
+			}
+			if tt.expectedMinVersion != 0 && transport.TLSClientConfig.MinVersion != tt.expectedMinVersion {
+				t.Errorf("'%s' expected MinVersion to be %v, got %v", tt.name, tt.expectedMinVersion, transport.TLSClientConfig.MinVersion)
 			}
 		})
 	}

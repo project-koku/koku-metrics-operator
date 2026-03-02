@@ -8,6 +8,7 @@ package crhchttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,6 +32,7 @@ type AuthConfig struct {
 	OperatorCommit      string
 	ServiceAccountData  ServiceAccountData
 	ServiceAccountToken ServiceAccountToken
+	TLSConfig           *tls.Config
 }
 
 // ServiceAccountData provides the data for acquiring the service acount token
@@ -87,7 +89,7 @@ func (ac *AuthConfig) GetAccessToken(cxt context.Context, tokenURL string) error
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	log.Info("requesting service-account access token")
-	client := GetClient(ac.ValidateCert)
+	client := GetClient(ac.ValidateCert, ac.TLSConfig)
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to make HTTP request to acquire token: %w", err)

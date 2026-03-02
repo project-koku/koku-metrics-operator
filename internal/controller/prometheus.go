@@ -119,7 +119,7 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 	return start, end
 }
 
-func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) error {
+func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig, tlsMinVersion uint16) error {
 	if r.promCollector == nil {
 		var serviceaccountPath string
 		if r.overrideSecretPath {
@@ -131,6 +131,7 @@ func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsC
 		r.promCollector = collector.NewPromCollector(serviceaccountPath)
 	}
 	r.promCollector.TimeSeries = nil
+	r.promCollector.TLSMinVersion = tlsMinVersion
 	if cr.Spec.PrometheusConfig.ContextTimeout == nil {
 		timeout := metricscfgv1beta1.DefaultPrometheusContextTimeout
 		cr.Spec.PrometheusConfig.ContextTimeout = &timeout
