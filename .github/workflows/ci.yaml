@@ -42,7 +42,7 @@ jobs:
       - name: Run tests
         run: make test
       - name: Upload test coverage file
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: cover.out
@@ -63,7 +63,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: Run tests via qemu/binfmt
         run: |
           go env
@@ -82,7 +82,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download coverage result from unit-tests
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage
       - name: Upload coverage
