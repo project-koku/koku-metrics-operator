@@ -617,6 +617,151 @@ func TestGetResourceID(t *testing.T) {
 	}
 }
 
+func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
+	originalRowKey := (*costNvidiaGpuMemoryCapacityQueries)[0].RowKey
+	(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = []model.LabelName{"pod", "namespace", "node", "UUID"}
+	defer func() {
+		(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = originalRowKey
+	}()
+
+	utilization := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-a",
+				"exported_namespace": "ns-a",
+				"exported_pod":       "pod-a",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(2.0)}},
+		},
+	}
+	capacity := model.Matrix{
+		{
+			Metric: model.Metric{
+				"pod":                           "pod-a",
+				"namespace":                     "ns-a",
+				"node":                          "node-a",
+				"UUID":                          "GPU-uuid-a",
+				"resource":                      "nvidia_com_gpu",
+				"label_nvidia_com_gpu_memory":   "20480",
+				"label_nvidia_com_mig_strategy": "none",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
+		},
+	}
+	maxSlices := model.Matrix{}
+
+	mapResults := mappedMockPromResult{
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:    {value: utilization},
+		(*costNvidiaGpuMemoryCapacityQueries)[0].QueryString: {value: capacity},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:      {value: maxSlices},
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+	tempReportsDir := t.TempDir()
+	testDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: tempReportsDir},
+	}
+
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011"); err != nil {
+		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
+	}
+
+	reportPath := filepath.Join(tempReportsDir, nvidiaGpuFilePrefix+"202011.csv")
+	content, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("failed to read generated nvidia report: %v", err)
+	}
+	row := string(content)
+	if !strings.Contains(row, "pod-a") || !strings.Contains(row, ",20480,") {
+		t.Fatalf("expected UUID fallback row to include merged capacity, got:\n%s", row)
+	}
+}
+
+func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *testing.T) {
+	originalRowKey := (*costNvidiaGpuMemoryCapacityQueries)[0].RowKey
+	(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = []model.LabelName{"pod", "namespace", "node"}
+	defer func() {
+		(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = originalRowKey
+	}()
+
+	utilization := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-b",
+				"UUID":               "GPU-uuid-b",
+				"exported_namespace": "ns-b",
+				"exported_pod":       "pod-b",
+				"modelName":          "Tesla V100",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(3.0)}},
+		},
+	}
+	capacity := model.Matrix{
+		{
+			Metric: model.Metric{
+				"pod":                           "pod-b",
+				"namespace":                     "ns-b",
+				"node":                          "node-b",
+				"resource":                      "nvidia_com_gpu",
+				"label_nvidia_com_gpu_memory":   "10240",
+				"label_nvidia_com_mig_strategy": "none",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
+		},
+	}
+	maxSlices := model.Matrix{}
+
+	mapResults := mappedMockPromResult{
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:    {value: utilization},
+		(*costNvidiaGpuMemoryCapacityQueries)[0].QueryString: {value: capacity},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:      {value: maxSlices},
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+	tempReportsDir := t.TempDir()
+	testDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: tempReportsDir},
+	}
+
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011"); err != nil {
+		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
+	}
+
+	reportPath := filepath.Join(tempReportsDir, nvidiaGpuFilePrefix+"202011.csv")
+	content, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("failed to read generated nvidia report: %v", err)
+	}
+	row := string(content)
+	if !strings.Contains(row, "pod-b") || !strings.Contains(row, ",10240,") {
+		t.Fatalf("expected pod/namespace/node fallback row to include merged capacity, got:\n%s", row)
+	}
+}
+
 func TestGetValue(t *testing.T) {
 	getValueTests := []struct {
 		name  string
