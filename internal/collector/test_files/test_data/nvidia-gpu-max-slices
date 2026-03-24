@@ -15,5 +15,22 @@
                 "7"
             ]
         ]
+    },
+    {
+        "metric": {
+            "Hostname": "ip-10-0-150-100.us-east-2.compute.internal",
+            "UUID": "GPU-77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+            "exported_namespace": "gpu-testing-2",
+            "exported_pod": "single-mig-pod",
+            "modelName": "Tesla A100",
+            "GPU_I_ID": "1",
+            "GPU_I_PROFILE": "3g.20gb"
+        },
+        "values": [
+            [
+                1604691780,
+                "7"
+            ]
+        ]
     }
 ]

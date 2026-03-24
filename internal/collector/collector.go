@@ -525,9 +525,9 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 			pod, _ := gpuVal["pod"].(string)
 			namespace, _ := gpuVal["namespace"].(string)
 			node, _ := gpuVal["node"].(string)
-			gpu_uud, _ := gpuVal["gpu_uuid"].(string)
+			gpu_uuid, _ := gpuVal["gpu_uuid"].(string)
 
-			resourceKeyWithUUIDParts := []string{pod, namespace, node, gpu_uud}
+			resourceKeyWithUUIDParts := []string{pod, namespace, node, gpu_uuid}
 			sort.Strings(resourceKeyWithUUIDParts)
 			resourceKeyWithUUID := strings.Join(resourceKeyWithUUIDParts, ",")
 			if memoryResourceData, ok := gpuCapacityResults[resourceKeyWithUUID]; ok {
