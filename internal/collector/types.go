@@ -386,6 +386,10 @@ type nvidiaGpuRow struct {
 	GpuVendorName        string `mapstructure:"vendor_name"`
 	GpuMemoryCapacityMiB string `mapstructure:"gpu_memory_capacity_mib"`
 	GpuPodUptime         string `mapstructure:"nvidia-gpu-pod-uptime-seconds"`
+	GpuMaxSlices         string `mapstructure:"nvidia-gpu-max-slices"`
+	MiGInstanceID        string `mapstructure:"mig_instance_id"`
+	MiGProfile           string `mapstructure:"mig_profile"`
+	MiGStrategy          string `mapstructure:"mig_strategy"`
 }
 
 func (nvidiaGpuRow) csvHeader() []string {
@@ -402,6 +406,10 @@ func (nvidiaGpuRow) csvHeader() []string {
 		"gpu_vendor_name",
 		"gpu_memory_capacity_mib",
 		"gpu_pod_uptime",
+		"gpu_max_slices",
+		"mig_instance_id",
+		"mig_profile",
+		"mig_strategy",
 	}
 }
 
@@ -419,6 +427,10 @@ func (row nvidiaGpuRow) csvRow() []string {
 		row.GpuVendorName,
 		row.GpuMemoryCapacityMiB,
 		row.GpuPodUptime,
+		row.GpuMaxSlices,
+		row.MiGInstanceID,
+		row.MiGProfile,
+		row.MiGStrategy,
 	}
 }
 

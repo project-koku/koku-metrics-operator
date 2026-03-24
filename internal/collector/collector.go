@@ -500,25 +500,51 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 		return err
 	}
 
+	gpuMaxSlicesResults := mappedResults{}
+	log.Info("querying for nvidia gpu max slices metrics")
+	if err := c.getQueryRangeResults(costNvidiaGpuMaxSlicesQueries, &gpuMaxSlicesResults, MaxRetries); err != nil {
+		return err
+	}
+
 	nvidiaGpuRows := make(mappedCSVStruct)
 
-	// For each gpu utilization result, find the matching memory & resource data and merge it
+	mergeMappedValues := func(target mappedValues, source mappedValues) {
+		for dataKey, dataVal := range source {
+			target[dataKey] = dataVal
+		}
+	}
+
+	// For each gpu utilization result, find and merge matching capacity and max-slices data.
 	for key, gpuVal := range gpuUtilizationResults {
-		pod, _ := gpuVal["pod"].(string)
-		namespace, _ := gpuVal["namespace"].(string)
-		node, _ := gpuVal["node"].(string)
+		// Respect query row keys for MIG granularity: prefer exact (pod, namespace, node, UUID, GPU_I_ID) key match.
+		migInstanceID, _ := gpuVal["mig_instance_id"].(string)
+		if memoryResourceData, ok := gpuCapacityResults[key]; ok {
+			mergeMappedValues(gpuVal, memoryResourceData)
+		} else if strings.TrimSpace(migInstanceID) == "" {
+			// Non-MIG fallback: prefer pod/namespace/node/UUID before falling back to pod/namespace/node.
+			pod, _ := gpuVal["pod"].(string)
+			namespace, _ := gpuVal["namespace"].(string)
+			node, _ := gpuVal["node"].(string)
+			gpu_uud, _ := gpuVal["gpu_uuid"].(string)
 
-		// key generation to match `generateKey` for memory resource data
-		resourceKeyParts := []string{pod, namespace, node}
-		sort.Strings(resourceKeyParts)
-		resourceKey := strings.Join(resourceKeyParts, ",")
-
-		// merge query results
-		if memoryResourceData, ok := gpuCapacityResults[resourceKey]; ok {
-			log.Info("found matching gpu memory resource data", "key", resourceKey)
-			for dataKey, dataVal := range memoryResourceData {
-				gpuVal[dataKey] = dataVal
+			resourceKeyWithUUIDParts := []string{pod, namespace, node, gpu_uud}
+			sort.Strings(resourceKeyWithUUIDParts)
+			resourceKeyWithUUID := strings.Join(resourceKeyWithUUIDParts, ",")
+			if memoryResourceData, ok := gpuCapacityResults[resourceKeyWithUUID]; ok {
+				mergeMappedValues(gpuVal, memoryResourceData)
+			} else {
+				resourceKeyParts := []string{pod, namespace, node}
+				sort.Strings(resourceKeyParts)
+				resourceKey := strings.Join(resourceKeyParts, ",")
+				if memoryResourceData, ok := gpuCapacityResults[resourceKey]; ok {
+					mergeMappedValues(gpuVal, memoryResourceData)
+				}
 			}
+		}
+
+		// Max slices should match on the same row key as utilization.
+		if maxSlicesData, ok := gpuMaxSlicesResults[key]; ok {
+			mergeMappedValues(gpuVal, maxSlicesData)
 		}
 
 		usage := newNvidiaGpuRow(c.TimeSeries)
