@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -196,7 +196,7 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -248,7 +248,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -292,7 +292,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -348,7 +348,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	// Helper function to set up fresh test data
 	setupTestData := func() mappedMockPromResult {
 		mapResults := make(mappedMockPromResult)
-		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 		for _, q := range queryList {
 			for _, query := range *q {
 				res := &model.Matrix{}
@@ -475,6 +475,21 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		t.Errorf("GenerateReports %s was expected, got %v", gpuUtilizationError, err)
 	}
 
+	// Test GPU max slices error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
+	gpuMaxSlicesError := "gpu max slices error"
+	for _, q := range *costNvidiaGpuMaxSlicesQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(gpuMaxSlicesError)}
+	}
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), gpuMaxSlicesError) {
+		t.Errorf("GenerateReports %s was expected, got %v", gpuMaxSlicesError, err)
+	}
+
 	// Test node error
 	mapResults = setupTestData()
 	fakeCollector.PromConn = mockPrometheusConnection{
@@ -543,7 +558,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 func TestGenerateReportsWriteErrors(t *testing.T) {
 	// use valid test data
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}

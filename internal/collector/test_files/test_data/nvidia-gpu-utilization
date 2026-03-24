@@ -5,7 +5,10 @@
             "UUID": "GPU-6f2d3b04-5a01-d1fb-6b5d-538bb6a81d40",
             "exported_namespace": "gpu-testing",
             "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
-            "modelName": "Tesla T4"
+            "modelName": "Tesla T4",
+            "GPU_I_ID": "0",
+            "GPU_I_PROFILE": "1g.5gb",
+            "device": "nvidia0"
         },
         "values": [
             [
@@ -20,7 +23,10 @@
             "UUID": "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "exported_namespace": "gpu-testing",
             "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
-            "modelName": "Tesla T4"
+            "modelName": "Tesla T4",
+            "GPU_I_ID": "",
+            "GPU_I_PROFILE": "",
+            "device": "nvidia1"
         },
         "values": [
             [
