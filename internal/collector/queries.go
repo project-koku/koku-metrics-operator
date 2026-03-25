@@ -43,9 +43,10 @@ var (
 		"cost:vm_labels":                    "kubevirt_vm_labels{name!='', namespace!=''}",
 
 		// cost NVIDIA GPU metrics queries, including MIG
-		"cost:nvidia_gpu_capacity_memory_mib": "(DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!=''} * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)')) * on(Hostname) group_left(label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) label_replace(kube_node_labels{label_nvidia_com_gpu_memory!=''}, 'Hostname', '$1', 'node', '(.+)')) OR (sum by (pod, namespace, node, resource, label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) ((kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='nvidia_com_gpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})) * on(node) group_left(label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) (max by (node, label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) (kube_node_labels{label_nvidia_com_mig_capable='false'}))))",
-		"cost:nvidia_gpu_utilization":         "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE, device) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!=''}) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
-		"cost:nvidia_gpu_max_slices":          "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE) (DCGM_FI_DEV_MIG_MAX_SLICES{UUID!=''}) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
+		"cost:nvidia_gpu_capacity_memory_mib_mig":     "DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!=''} * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)')) * on(Hostname) group_left(label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) label_replace(kube_node_labels{label_nvidia_com_gpu_memory!=''}, 'Hostname', '$1', 'node', '(.+)')",
+		"cost:nvidia_gpu_capacity_memory_mib_non_mig": "sum by (pod, namespace, node, resource, label_nvidia_com_gpu_memory) ((kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='nvidia_com_gpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})) * on(node) group_left(label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) (max by (node, label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) (kube_node_labels{label_nvidia_com_mig_capable='false'})))",
+		"cost:nvidia_gpu_utilization":                 "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE, device) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!=''}) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
+		"cost:nvidia_gpu_max_slices":                  "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE) (DCGM_FI_DEV_MIG_MAX_SLICES{UUID!=''}) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace, pod, namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
 
 		// resource optimization container metrics queries
 		"ros:namespace_filter":               "kube_namespace_labels{label_insights_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'} or kube_namespace_labels{label_cost_management_optimizations='true', namespace!~'kube-.*|openshift|openshift-.*'}",
@@ -473,10 +474,10 @@ var (
 			RowKey:         []model.LabelName{"namespace"},
 		},
 	}
-	costNvidiaGpuMemoryCapacityQueries = &querys{
+	costNvidiaGpuMemoryCapacityMIGQueries = &querys{
 		query{
-			Name:        "nvidia-gpu-memory-capacity-mib",
-			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_mib"],
+			Name:        "nvidia-gpu-memory-capacity-mib-mig",
+			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_mib_mig"],
 			MetricKey: staticFields{
 				"pod":                     "pod",
 				"namespace":               "namespace",
@@ -485,6 +486,19 @@ var (
 				"mig_strategy":            "label_nvidia_com_mig_strategy",
 			},
 			RowKey: []model.LabelName{"pod", "namespace", "node", "UUID", "GPU_I_ID"},
+		},
+	}
+	costNvidiaGpuMemoryCapacityNonMIGQueries = &querys{
+		query{
+			Name:        "nvidia-gpu-memory-capacity-mib-non-mig",
+			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_mib_non_mig"],
+			MetricKey: staticFields{
+				"pod":                     "pod",
+				"namespace":               "namespace",
+				"node":                    "node",
+				"gpu_memory_capacity_mib": "label_nvidia_com_gpu_memory",
+			},
+			RowKey: []model.LabelName{"pod", "namespace", "node"},
 		},
 	}
 	costNvidiaGpuUtilizationQueries = &querys{

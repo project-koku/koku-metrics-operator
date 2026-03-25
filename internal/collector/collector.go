@@ -488,9 +488,15 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 	log.Info("querying for cost nvidia gpu metrics")
 
 	// Query capacity and utilization separately for better efficiency
-	gpuCapacityResults := mappedResults{}
-	log.Info("querying for nvidia gpu memory capacity metrics")
-	if err := c.getQueryRangeResults(costNvidiaGpuMemoryCapacityQueries, &gpuCapacityResults, MaxRetries); err != nil {
+	gpuMIGCapacityResults := mappedResults{}
+	log.Info("querying for nvidia gpu MIG memory capacity metrics")
+	if err := c.getQueryRangeResults(costNvidiaGpuMemoryCapacityMIGQueries, &gpuMIGCapacityResults, MaxRetries); err != nil {
+		return err
+	}
+
+	gpuNonMIGCapacityResults := mappedResults{}
+	log.Info("querying for nvidia gpu non-MIG memory capacity metrics")
+	if err := c.getQueryRangeResults(costNvidiaGpuMemoryCapacityNonMIGQueries, &gpuNonMIGCapacityResults, MaxRetries); err != nil {
 		return err
 	}
 
@@ -516,35 +522,29 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 
 	// For each gpu utilization result, find and merge matching capacity and max-slices data.
 	for key, gpuVal := range gpuUtilizationResults {
-		// Respect query row keys for MIG granularity: prefer exact (pod, namespace, node, UUID, GPU_I_ID) key match.
+		// Respect query row keys
 		migInstanceID, _ := gpuVal["mig_instance_id"].(string)
-		if memoryResourceData, ok := gpuCapacityResults[key]; ok {
-			mergeMappedValues(gpuVal, memoryResourceData)
-		} else if strings.TrimSpace(migInstanceID) == "" {
-			// Non-MIG fallback: prefer pod/namespace/node/UUID before falling back to pod/namespace/node.
+		if strings.TrimSpace(migInstanceID) != "" {
+			// MIG-specific should match on the same row key as utilization.
+
+			if migMemoryResourceData, ok := gpuMIGCapacityResults[key]; ok {
+				mergeMappedValues(gpuVal, migMemoryResourceData)
+			}
+
+			if maxSlicesData, ok := gpuMaxSlicesResults[key]; ok {
+				mergeMappedValues(gpuVal, maxSlicesData)
+			}
+		} else {
+			// Non-MIG capacity data is keyed by pod/namespace/node.
 			pod, _ := gpuVal["pod"].(string)
 			namespace, _ := gpuVal["namespace"].(string)
 			node, _ := gpuVal["node"].(string)
-			gpu_uuid, _ := gpuVal["gpu_uuid"].(string)
-
-			resourceKeyWithUUIDParts := []string{pod, namespace, node, gpu_uuid}
-			sort.Strings(resourceKeyWithUUIDParts)
-			resourceKeyWithUUID := strings.Join(resourceKeyWithUUIDParts, ",")
-			if memoryResourceData, ok := gpuCapacityResults[resourceKeyWithUUID]; ok {
-				mergeMappedValues(gpuVal, memoryResourceData)
-			} else {
-				resourceKeyParts := []string{pod, namespace, node}
-				sort.Strings(resourceKeyParts)
-				resourceKey := strings.Join(resourceKeyParts, ",")
-				if memoryResourceData, ok := gpuCapacityResults[resourceKey]; ok {
-					mergeMappedValues(gpuVal, memoryResourceData)
-				}
+			resourceKeyParts := []string{pod, namespace, node}
+			sort.Strings(resourceKeyParts)
+			resourceKey := strings.Join(resourceKeyParts, ",")
+			if nonMIGMemoryResourceData, ok := gpuNonMIGCapacityResults[resourceKey]; ok {
+				mergeMappedValues(gpuVal, nonMIGMemoryResourceData)
 			}
-		}
-
-		// Max slices should match on the same row key as utilization.
-		if maxSlicesData, ok := gpuMaxSlicesResults[key]; ok {
-			mergeMappedValues(gpuVal, maxSlicesData)
 		}
 
 		usage := newNvidiaGpuRow(c.TimeSeries)

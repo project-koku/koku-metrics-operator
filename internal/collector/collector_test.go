@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -196,7 +196,7 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -248,7 +248,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -292,7 +292,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -348,7 +348,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	// Helper function to set up fresh test data
 	setupTestData := func() mappedMockPromResult {
 		mapResults := make(mappedMockPromResult)
-		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
+		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 		for _, q := range queryList {
 			for _, query := range *q {
 				res := &model.Matrix{}
@@ -452,7 +452,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		t:             t,
 	}
 	gpuCapacityError := "gpu capacity error"
-	for _, q := range *costNvidiaGpuMemoryCapacityQueries {
+	for _, q := range append(*costNvidiaGpuMemoryCapacityMIGQueries, *costNvidiaGpuMemoryCapacityNonMIGQueries...) {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(gpuCapacityError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -558,7 +558,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 func TestGenerateReportsWriteErrors(t *testing.T) {
 	// use valid test data
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -618,12 +618,6 @@ func TestGetResourceID(t *testing.T) {
 }
 
 func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
-	originalRowKey := (*costNvidiaGpuMemoryCapacityQueries)[0].RowKey
-	(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = []model.LabelName{"pod", "namespace", "node", "UUID"}
-	defer func() {
-		(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = originalRowKey
-	}()
-
 	utilization := model.Matrix{
 		{
 			Metric: model.Metric{
@@ -639,7 +633,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(2.0)}},
 		},
 	}
-	capacity := model.Matrix{
+	nonMIGCapacity := model.Matrix{
 		{
 			Metric: model.Metric{
 				"pod":                           "pod-a",
@@ -656,9 +650,10 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 	maxSlices := model.Matrix{}
 
 	mapResults := mappedMockPromResult{
-		(*costNvidiaGpuUtilizationQueries)[0].QueryString:    {value: utilization},
-		(*costNvidiaGpuMemoryCapacityQueries)[0].QueryString: {value: capacity},
-		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:      {value: maxSlices},
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: model.Matrix{}},
+		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: nonMIGCapacity},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: maxSlices},
 	}
 
 	copyfakeTimeRange := fakeTimeRange
@@ -686,17 +681,11 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 	}
 	row := string(content)
 	if !strings.Contains(row, "pod-a") || !strings.Contains(row, ",20480,") {
-		t.Fatalf("expected UUID fallback row to include merged capacity, got:\n%s", row)
+		t.Fatalf("expected non-MIG capacity merge to include memory, got:\n%s", row)
 	}
 }
 
 func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *testing.T) {
-	originalRowKey := (*costNvidiaGpuMemoryCapacityQueries)[0].RowKey
-	(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = []model.LabelName{"pod", "namespace", "node"}
-	defer func() {
-		(*costNvidiaGpuMemoryCapacityQueries)[0].RowKey = originalRowKey
-	}()
-
 	utilization := model.Matrix{
 		{
 			Metric: model.Metric{
@@ -705,19 +694,21 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *te
 				"exported_namespace": "ns-b",
 				"exported_pod":       "pod-b",
 				"modelName":          "Tesla V100",
-				"GPU_I_ID":           "",
+				"GPU_I_ID":           "3",
 				"GPU_I_PROFILE":      "",
 				"device":             "nvidia0",
 			},
 			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(3.0)}},
 		},
 	}
-	capacity := model.Matrix{
+	migCapacity := model.Matrix{
 		{
 			Metric: model.Metric{
 				"pod":                           "pod-b",
 				"namespace":                     "ns-b",
 				"node":                          "node-b",
+				"UUID":                          "GPU-uuid-b",
+				"GPU_I_ID":                      "3",
 				"resource":                      "nvidia_com_gpu",
 				"label_nvidia_com_gpu_memory":   "10240",
 				"label_nvidia_com_mig_strategy": "none",
@@ -728,9 +719,10 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *te
 	maxSlices := model.Matrix{}
 
 	mapResults := mappedMockPromResult{
-		(*costNvidiaGpuUtilizationQueries)[0].QueryString:    {value: utilization},
-		(*costNvidiaGpuMemoryCapacityQueries)[0].QueryString: {value: capacity},
-		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:      {value: maxSlices},
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: migCapacity},
+		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: model.Matrix{}},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: maxSlices},
 	}
 
 	copyfakeTimeRange := fakeTimeRange
@@ -758,7 +750,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *te
 	}
 	row := string(content)
 	if !strings.Contains(row, "pod-b") || !strings.Contains(row, ",10240,") {
-		t.Fatalf("expected pod/namespace/node fallback row to include merged capacity, got:\n%s", row)
+		t.Fatalf("expected exact MIG-key merge to include memory, got:\n%s", row)
 	}
 }
 
