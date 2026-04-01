@@ -685,7 +685,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 	}
 }
 
-func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *testing.T) {
+func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
 	utilization := model.Matrix{
 		{
 			Metric: model.Metric{
@@ -704,9 +704,9 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *te
 	migCapacity := model.Matrix{
 		{
 			Metric: model.Metric{
-				"pod":                           "pod-b",
-				"namespace":                     "ns-b",
-				"node":                          "node-b",
+				"exported_pod":                  "pod-b",
+				"exported_namespace":            "ns-b",
+				"Hostname":                      "node-b",
 				"UUID":                          "GPU-uuid-b",
 				"GPU_I_ID":                      "3",
 				"resource":                      "nvidia_com_gpu",
@@ -750,7 +750,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGPodNamespaceNodeFallback(t *te
 	}
 	row := string(content)
 	if !strings.Contains(row, "pod-b") || !strings.Contains(row, ",10240,") {
-		t.Fatalf("expected exact MIG-key merge to include memory, got:\n%s", row)
+		t.Fatalf("expected MIG exact-key merge to include memory, got:\n%s", row)
 	}
 }
 
