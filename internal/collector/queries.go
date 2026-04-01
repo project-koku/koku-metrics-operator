@@ -479,13 +479,13 @@ var (
 			Name:        "nvidia-gpu-memory-capacity-mib-mig",
 			QueryString: QueryMap["cost:nvidia_gpu_capacity_memory_mib_mig"],
 			MetricKey: staticFields{
-				"pod":                     "pod",
-				"namespace":               "namespace",
-				"node":                    "node",
+				"pod":                     "exported_pod",
+				"namespace":               "exported_namespace",
+				"node":                    "Hostname",
 				"gpu_memory_capacity_mib": "label_nvidia_com_gpu_memory",
 				"mig_strategy":            "label_nvidia_com_mig_strategy",
 			},
-			RowKey: []model.LabelName{"pod", "namespace", "node", "UUID", "GPU_I_ID"},
+			RowKey: []model.LabelName{"exported_pod", "exported_namespace", "Hostname", "UUID", "GPU_I_ID"},
 		},
 	}
 	costNvidiaGpuMemoryCapacityNonMIGQueries = &querys{
