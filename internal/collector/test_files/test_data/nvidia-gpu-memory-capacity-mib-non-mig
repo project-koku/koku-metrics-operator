@@ -6,7 +6,6 @@
             "pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "15360",
-            "label_nvidia_com_mig_strategy": "mixed",
             "UUID": "GPU-6f2d3b04-5a01-d1fb-6b5d-538bb6a81d40",
             "GPU_I_ID": "0"
         },
@@ -24,7 +23,6 @@
             "pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "15360",
-            "label_nvidia_com_mig_strategy": "mixed",
             "UUID": "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "GPU_I_ID": ""
         },
@@ -42,7 +40,6 @@
             "pod": "single-mig-pod",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "40960",
-            "label_nvidia_com_mig_strategy": "single",
             "UUID": "GPU-77777777-8888-9999-aaaa-bbbbbbbbbbbb",
             "GPU_I_ID": "1"
         },
@@ -60,7 +57,6 @@
             "pod": "non-mig-fallback-uuid",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "16384",
-            "label_nvidia_com_mig_strategy": "none",
             "UUID": "GPU-cccccccc-dddd-eeee-ffff-000000000000",
             "GPU_I_ID": ""
         },
@@ -78,7 +74,6 @@
             "pod": "non-mig-fallback-pod",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "12288",
-            "label_nvidia_com_mig_strategy": "none",
             "UUID": "GPU-11111111-2222-3333-4444-555555555555",
             "GPU_I_ID": ""
         },
@@ -96,7 +91,6 @@
             "pod": "test-fallback-uuid-path",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "11264",
-            "label_nvidia_com_mig_strategy": "none",
             "UUID": "GPU-99999999-aaaa-bbbb-cccc-dddddddddddd",
             "GPU_I_ID": ""
         },

@@ -1,9 +1,9 @@
 [
     {
         "metric": {
-            "namespace": "gpu-testing",
-            "node": "ip-10-0-139-206.us-east-2.compute.internal",
-            "pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
+            "exported_namespace": "gpu-testing",
+            "Hostname": "ip-10-0-139-206.us-east-2.compute.internal",
+            "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "15360",
             "label_nvidia_com_mig_strategy": "mixed",
@@ -19,9 +19,9 @@
     },
     {
         "metric": {
-            "namespace": "gpu-testing",
-            "node": "ip-10-0-139-206.us-east-2.compute.internal",
-            "pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
+            "exported_namespace": "gpu-testing",
+            "Hostname": "ip-10-0-139-206.us-east-2.compute.internal",
+            "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "15360",
             "label_nvidia_com_mig_strategy": "mixed",
@@ -37,9 +37,9 @@
     },
     {
         "metric": {
-            "namespace": "gpu-testing-2",
-            "node": "ip-10-0-150-100.us-east-2.compute.internal",
-            "pod": "single-mig-pod",
+            "exported_namespace": "gpu-testing-2",
+            "Hostname": "ip-10-0-150-100.us-east-2.compute.internal",
+            "exported_pod": "single-mig-pod",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "40960",
             "label_nvidia_com_mig_strategy": "single",
@@ -55,9 +55,9 @@
     },
     {
         "metric": {
-            "namespace": "gpu-testing-3",
-            "node": "ip-10-0-160-100.us-east-2.compute.internal",
-            "pod": "non-mig-fallback-uuid",
+            "exported_namespace": "gpu-testing-3",
+            "Hostname": "ip-10-0-160-100.us-east-2.compute.internal",
+            "exported_pod": "non-mig-fallback-uuid",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "16384",
             "label_nvidia_com_mig_strategy": "none",
@@ -73,9 +73,9 @@
     },
     {
         "metric": {
-            "namespace": "gpu-testing-4",
-            "node": "ip-10-0-170-100.us-east-2.compute.internal",
-            "pod": "non-mig-fallback-pod",
+            "exported_namespace": "gpu-testing-4",
+            "Hostname": "ip-10-0-170-100.us-east-2.compute.internal",
+            "exported_pod": "non-mig-fallback-pod",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "12288",
             "label_nvidia_com_mig_strategy": "none",
@@ -91,9 +91,9 @@
     },
     {
         "metric": {
-            "namespace": "gpu-testing-5",
-            "node": "ip-10-0-180-100.us-east-2.compute.internal",
-            "pod": "test-fallback-uuid-path",
+            "exported_namespace": "gpu-testing-5",
+            "Hostname": "ip-10-0-180-100.us-east-2.compute.internal",
+            "exported_pod": "test-fallback-uuid-path",
             "resource": "nvidia_com_gpu",
             "label_nvidia_com_gpu_memory": "11264",
             "label_nvidia_com_mig_strategy": "none",
