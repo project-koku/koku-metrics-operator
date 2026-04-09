@@ -77,7 +77,8 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig API
+    - description: CostManagementMetricsConfig is the Schema for the costmanagementmetricsconfig
+        API
       displayName: Cost Management Metrics Config
       kind: CostManagementMetricsConfig
       name: costmanagementmetricsconfigs.costmanagement-metrics-cfg.openshift.io
