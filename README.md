@@ -15,7 +15,10 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 
 ## Development
 
-More specific documentation for local development can be found [here](docs/local-development.md).
+**Quick Links:**
+- **[Contributing Guide](docs/contributing.md)** - How to contribute (traditional and AI-assisted workflows)
+- **[Local Development](docs/local-development.md)** - Setup and testing locally
+- **[Architecture](docs/architecture.md)** - System design and component relationships
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
@@ -57,6 +60,22 @@ Linting can be performed with the following make commands:
 make fmt
 make lint
 ```
+
+## AI-Assisted Development
+
+This project includes configuration files for AI-assisted development tools:
+
+- **[.claude/CLAUDE.md](.claude/CLAUDE.md)** - Context for Claude Code and other AI agents. Includes project conventions, common workflows, and upstream/downstream guidance.
+- **[.cursor/.cursorrules](.cursor/.cursorrules)** - Quick reference rules for Cursor IDE.
+
+These files help AI agents understand:
+- Project structure and conventions
+- Upstream → downstream development flow
+- Common debugging patterns
+- Testing requirements
+- Release processes
+
+For traditional development workflows, see [docs/local-development.md](docs/local-development.md).
 
 ## Testing
 

@@ -1,5 +1,7 @@
 # Generate Downstream Release
 
+> **Note**: For AI context on upstream/downstream differences, see [../.claude/CLAUDE.md](../.claude/CLAUDE.md#development-flow-context). This guide provides detailed downstream generation instructions.
+
 This document outlines the process for generating the downstream version of the operator. The downstream version transforms all `koku` references to `costmanagement` for Red Hat's internal distribution.
 
 ## Prerequisites

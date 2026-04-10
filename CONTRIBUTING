@@ -1,3 +1,11 @@
+Contributing to koku-metrics-operator
+======================================
+
+For comprehensive contribution guidelines including development workflows,
+testing requirements, and AI-assisted development, see:
+
+📖 [docs/contributing.md](docs/contributing.md)
+
 Certificate of Origin
 =====================
 

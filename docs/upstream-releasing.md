@@ -1,5 +1,7 @@
 # Releasing a new version of the Koku Metrics Operator
 
+> **Note**: For AI-assisted development context, see [../.claude/CLAUDE.md](../.claude/CLAUDE.md#release-workflow). This guide provides detailed step-by-step release instructions.
+
 This guide outlines the steps for releasing a new version of the Koku Metrics Operator, from creating a github release to submitting the bundle to the `community-operators-prod` repository for File-Based Catalog (FBC) auto-release.
 
 Before proceeding, ensure all necessary testing has been performed as described in the [upstream-release-testing.md](upstream-release-testing.md) documentation.

@@ -1,5 +1,7 @@
 # Local Development
 
+> **Note**: For AI-assisted development context (conventions, workflows, common patterns), see [../.claude/CLAUDE.md](../.claude/CLAUDE.md). This guide provides step-by-step human-readable setup instructions.
+
 ## Pre-reqs
 
 * Access to a supported version of an Openshift cluster
