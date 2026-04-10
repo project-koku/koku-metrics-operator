@@ -210,7 +210,7 @@ Configure the costmanagement-metrics-operator by creating a `CostManagementMetri
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
+To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
