@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 
 func TestGenerateReports(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -196,7 +196,7 @@ func TestGenerateReports(t *testing.T) {
 
 func TestGenerateReportsNoROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -248,7 +248,7 @@ func TestGenerateReportsNoROS(t *testing.T) {
 
 func TestGenerateReportsNoEnabledROS(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -292,7 +292,7 @@ func TestGenerateReportsNoEnabledROS(t *testing.T) {
 
 func TestGenerateReportsNoCost(t *testing.T) {
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -348,7 +348,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	// Helper function to set up fresh test data
 	setupTestData := func() mappedMockPromResult {
 		mapResults := make(mappedMockPromResult)
-		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+		queryList := []*querys{nodeQueries, podQueries, volQueries, namespaceQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 		for _, q := range queryList {
 			for _, query := range *q {
 				res := &model.Matrix{}
@@ -452,7 +452,7 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 		t:             t,
 	}
 	gpuCapacityError := "gpu capacity error"
-	for _, q := range *costNvidiaGpuMemoryCapacityQueries {
+	for _, q := range append(*costNvidiaGpuMemoryCapacityMIGQueries, *costNvidiaGpuMemoryCapacityNonMIGQueries...) {
 		mapResults[q.QueryString] = &mockPromResult{err: errors.New(gpuCapacityError)}
 	}
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
@@ -473,6 +473,21 @@ func TestGenerateReportsQueryErrors(t *testing.T) {
 	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
 	if !strings.Contains(err.Error(), gpuUtilizationError) {
 		t.Errorf("GenerateReports %s was expected, got %v", gpuUtilizationError, err)
+	}
+
+	// Test GPU max slices error
+	mapResults = setupTestData()
+	fakeCollector.PromConn = mockPrometheusConnection{
+		mappedResults: &mapResults,
+		t:             t,
+	}
+	gpuMaxSlicesError := "gpu max slices error"
+	for _, q := range *costNvidiaGpuMaxSlicesQueries {
+		mapResults[q.QueryString] = &mockPromResult{err: errors.New(gpuMaxSlicesError)}
+	}
+	err = GenerateReports(fakeCR, fakeDirCfg, fakeCollector)
+	if !strings.Contains(err.Error(), gpuMaxSlicesError) {
+		t.Errorf("GenerateReports %s was expected, got %v", gpuMaxSlicesError, err)
 	}
 
 	// Test node error
@@ -543,7 +558,7 @@ func TestGenerateReportsNoNodeData(t *testing.T) {
 func TestGenerateReportsWriteErrors(t *testing.T) {
 	// use valid test data
 	mapResults := make(mappedMockPromResult)
-	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityQueries, costNvidiaGpuUtilizationQueries}
+	queryList := []*querys{nodeQueries, namespaceQueries, podQueries, volQueries, vmQueries, costNvidiaGpuMemoryCapacityMIGQueries, costNvidiaGpuMemoryCapacityNonMIGQueries, costNvidiaGpuUtilizationQueries, costNvidiaGpuMaxSlicesQueries}
 	for _, q := range queryList {
 		for _, query := range *q {
 			res := &model.Matrix{}
@@ -599,6 +614,143 @@ func TestGetResourceID(t *testing.T) {
 				t.Errorf("%s got %s want %s", tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
+	utilization := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-a",
+				"exported_namespace": "ns-a",
+				"exported_pod":       "pod-a",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(2.0)}},
+		},
+	}
+	nonMIGCapacity := model.Matrix{
+		{
+			Metric: model.Metric{
+				"pod":                           "pod-a",
+				"namespace":                     "ns-a",
+				"node":                          "node-a",
+				"UUID":                          "GPU-uuid-a",
+				"resource":                      "nvidia_com_gpu",
+				"label_nvidia_com_gpu_memory":   "20480",
+				"label_nvidia_com_mig_strategy": "none",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
+		},
+	}
+	maxSlices := model.Matrix{}
+
+	mapResults := mappedMockPromResult{
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: model.Matrix{}},
+		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: nonMIGCapacity},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: maxSlices},
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+	tempReportsDir := t.TempDir()
+	testDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: tempReportsDir},
+	}
+
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011"); err != nil {
+		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
+	}
+
+	reportPath := filepath.Join(tempReportsDir, nvidiaGpuFilePrefix+"202011.csv")
+	content, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("failed to read generated nvidia report: %v", err)
+	}
+	row := string(content)
+	if !strings.Contains(row, "pod-a") || !strings.Contains(row, ",20480,") {
+		t.Fatalf("expected non-MIG capacity merge to include memory, got:\n%s", row)
+	}
+}
+
+func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
+	utilization := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-b",
+				"UUID":               "GPU-uuid-b",
+				"exported_namespace": "ns-b",
+				"exported_pod":       "pod-b",
+				"modelName":          "Tesla V100",
+				"GPU_I_ID":           "3",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(3.0)}},
+		},
+	}
+	migCapacity := model.Matrix{
+		{
+			Metric: model.Metric{
+				"exported_pod":                  "pod-b",
+				"exported_namespace":            "ns-b",
+				"Hostname":                      "node-b",
+				"UUID":                          "GPU-uuid-b",
+				"GPU_I_ID":                      "3",
+				"resource":                      "nvidia_com_gpu",
+				"label_nvidia_com_gpu_memory":   "10240",
+				"label_nvidia_com_mig_strategy": "none",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
+		},
+	}
+	maxSlices := model.Matrix{}
+
+	mapResults := mappedMockPromResult{
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: migCapacity},
+		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: model.Matrix{}},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: maxSlices},
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+	tempReportsDir := t.TempDir()
+	testDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: tempReportsDir},
+	}
+
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011"); err != nil {
+		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
+	}
+
+	reportPath := filepath.Join(tempReportsDir, nvidiaGpuFilePrefix+"202011.csv")
+	content, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("failed to read generated nvidia report: %v", err)
+	}
+	row := string(content)
+	if !strings.Contains(row, "pod-b") || !strings.Contains(row, ",10240,") {
+		t.Fatalf("expected MIG exact-key merge to include memory, got:\n%s", row)
 	}
 }
 

@@ -5,7 +5,10 @@
             "UUID": "GPU-6f2d3b04-5a01-d1fb-6b5d-538bb6a81d40",
             "exported_namespace": "gpu-testing",
             "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
-            "modelName": "Tesla T4"
+            "modelName": "Tesla T4",
+            "GPU_I_ID": "0",
+            "GPU_I_PROFILE": "1g.5gb",
+            "device": "nvidia0"
         },
         "values": [
             [
@@ -20,12 +23,87 @@
             "UUID": "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "exported_namespace": "gpu-testing",
             "exported_pod": "cuda-n-body-test-58c6c74d4f-7j5n8",
-            "modelName": "Tesla T4"
+            "modelName": "Tesla T4",
+            "GPU_I_ID": "",
+            "GPU_I_PROFILE": "",
+            "device": "nvidia1"
         },
         "values": [
             [
                 1604691780,
                 "8.835391"
+            ]
+        ]
+    },
+    {
+        "metric": {
+            "Hostname": "ip-10-0-150-100.us-east-2.compute.internal",
+            "UUID": "GPU-77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+            "exported_namespace": "gpu-testing-2",
+            "exported_pod": "single-mig-pod",
+            "modelName": "Tesla A100",
+            "GPU_I_ID": "1",
+            "GPU_I_PROFILE": "3g.20gb",
+            "device": "nvidia0"
+        },
+        "values": [
+            [
+                1604691780,
+                "12.5"
+            ]
+        ]
+    },
+    {
+        "metric": {
+            "Hostname": "ip-10-0-160-100.us-east-2.compute.internal",
+            "UUID": "GPU-cccccccc-dddd-eeee-ffff-000000000000",
+            "exported_namespace": "gpu-testing-3",
+            "exported_pod": "non-mig-fallback-uuid",
+            "modelName": "Tesla V100",
+            "GPU_I_ID": "",
+            "GPU_I_PROFILE": "",
+            "device": "nvidia0"
+        },
+        "values": [
+            [
+                1604691780,
+                "7.2"
+            ]
+        ]
+    },
+    {
+        "metric": {
+            "Hostname": "ip-10-0-170-100.us-east-2.compute.internal",
+            "UUID": "GPU-11111111-2222-3333-4444-555555555555",
+            "exported_namespace": "gpu-testing-4",
+            "exported_pod": "non-mig-fallback-pod",
+            "modelName": "Tesla P100",
+            "GPU_I_ID": "",
+            "GPU_I_PROFILE": "",
+            "device": "nvidia0"
+        },
+        "values": [
+            [
+                1604691780,
+                "5.8"
+            ]
+        ]
+    },
+    {
+        "metric": {
+            "Hostname": "ip-10-0-180-100.us-east-2.compute.internal",
+            "UUID": "GPU-99999999-aaaa-bbbb-cccc-dddddddddddd",
+            "exported_namespace": "gpu-testing-5",
+            "exported_pod": "test-fallback-uuid-path",
+            "modelName": "Tesla K80",
+            "GPU_I_ID": "",
+            "GPU_I_PROFILE": "",
+            "device": "nvidia0"
+        },
+        "values": [
+            [
+                1604691780,
+                "3.5"
             ]
         ]
     }

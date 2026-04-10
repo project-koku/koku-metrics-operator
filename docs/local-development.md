@@ -42,7 +42,21 @@
     ```
 
 
-5.  Retrieve ServiceAccount Token and CA Certificate:
+5. Grant monitoring read access to the ServiceAccount:
+
+    The local operator uses the `koku-metrics-controller-manager` ServiceAccount token to query the Prometheus/Thanos endpoint.
+    Grant the ServiceAccount `cluster-monitoring-view` permissions:
+
+    ```bash
+    oc adm policy add-cluster-role-to-user \
+      cluster-monitoring-view \
+      system:serviceaccount:koku-metrics-operator:koku-metrics-controller-manager
+    ```
+
+    If this permission is missing, reconciliation can fail with:
+    `prometheus test query failed: client_error: client error: 403`
+
+6.  Retrieve ServiceAccount Token and CA Certificate:
 
     The operator's local environment needs a serviceAccount token and the cluster's service CA certificate to authenticate with the Kubernetes API. The `get-token-and-cert` Make command handles this retrieval:
 
@@ -58,7 +72,7 @@
     SECRET_ABSPATH=/absolute/path/to/local/secrets make get-token-and-cert
     ```
 
-6. Deploy the operator
+7. Deploy the operator
 
     ```
     make run ENABLE_WEBHOOKS=false SECRET_ABSPATH=/absolute/path/to/local/secrets
@@ -70,15 +84,15 @@
     ```
     The operator is running but is not doing any work. We need to create a CR.
 
-7. Deploy a CR. For local development, use basic authentication. The following creates the appropriate authentication spec within the CR. `username` and `password` correspond to the username (not email address) and password for the account you want to use at console.redhat.com:
+8. Deploy a CR. For local development, uses default token auth. However service-account authentication can be used with the following, which creates the appropriate authentication spec within the CR. This is the `client_id` and `client_secret` for your Red Hat Hybrid Cloud Console:
 
     ```
-    $ make deploy-local-cr AUTH=basic USER=<username> PASS=<password>
+    $ make deploy-local-cr AUTH=service-account CLIENT_ID=<client_id> CLIENT_SECRET=<client_secret>
     ```
-    This command uses the CR defined in `config/samples/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, adds the authentication spec, and creates a CR in `testing/koku-metrics-cfg_v1beta1_kokumetricsconfig.yaml`. The command then deploys this CR to the cluster.
+    This command copies `testing/costmanagementmetricsconfig-template.yaml` to `testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml`, adds an external prometheus route, disables TLS verification for the prometheus route, and (when `AUTH=service-account`) adds the authentication spec and applies `testing/authentication_secret.yaml`. The command then applies `testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml` to the cluster.
 
     After this CR has been created in the cluster, reconciliation will begin.
 
     Running `make deploy-local-cr` as-is will create the external prometheus route, disable TLS verification for prometheus, and use token authentication for console.redhat.com.
 
-8. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.
+9. To continue development, make code changes. To apply those changes, stop the operator, and redeploy it. If changes are made to the api, the CRD needs to be re-registered, and the operator re-deployed.

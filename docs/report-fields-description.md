@@ -126,9 +126,13 @@ Fields for metrics related to NVIDIA GPUs:
 * `pod`: The name of the pod that is consuming GPU resources.
 * `gpu_uuid`: The unique identifier for the physical NVIDIA GPU card.
 * `gpu_model_name`: The model name of the GPU (e.g., Tesla T4).
-* `gpu_vendor_name`: The vendor of the GPU resource (e.g., nvidia_com_gpu).
+* `gpu_vendor_name`: The vendor of the GPU reported by telemetry (for example, `nvidia0`).
 * `gpu_memory_capacity_mib`: The total memory capacity of the GPU in Mebibytes (MiB).
 * `gpu_pod_uptime`: The cumulative number of seconds the pod has been running on the specific GPU during the report period.
+* `gpu_max_slices`: The raw maximum number of MIG slices available for the GPU profile. This field is optional and may be empty if the metric is not exposed by DCGM exporter configuration.
+* `mig_instance_id`: The MIG instance ID used by the workload. Empty for non-MIG workloads.
+* `mig_profile`: The MIG profile (for example, `1g.5gb`) associated with the workload. Empty for non-MIG workloads.
+* `mig_strategy`: The node MIG strategy label (for example, `single`, `mixed`, or `none`) when available.
 
 ## Resource Optimization (ROS) Reports:
 

@@ -19,9 +19,14 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.4.0:
+* Enabled gathering and reporting NVIDIA MIG (Multi-Instance GPU) metrics for cost management.
+* Updated dependencies.
+
 ## New in v4.3.1:
-* Updated Go to 1.25.3.
+* Updated Go to 1.25.7.
 * Updated Kubernetes, Prometheus, and Operator Framework dependencies.
+* Added toolchain directive to go.mod for deterministic builds.
 
 ## New in v4.3.0:
 * Enabled gathering and reporting NVIDIA GPU metrics for cost management.
@@ -205,7 +210,7 @@ Configure the costmanagement-metrics-operator by creating a `CostManagementMetri
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/disconnected_environments/olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
+To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
@@ -317,4 +322,4 @@ Uploading reports to cost managment is done through curl:
 
     $ curl -vvvv -F "file=@FILE_NAME.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" https://console.redhat.com/api/ingress/v1/upload -H "Authorization: Bearer ${ACCESS_TOKEN}"
 
-where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a service account. See documentation on [creating and managing a service account](https://docs.redhat.com/en/documentation/red_hat_customer_portal/1/html/creating_and_managing_service_accounts).
+where `FILE_NAME` is the name of the report to upload. The `ACCESS_TOKEN` is acquired using a service account. See documentation on [creating a service account](https://docs.redhat.com/en/documentation/cost_management_service/1-latest/html-single/integrating_openshift_container_platform_data_into_cost_management/index#creating_a_service_account).
