@@ -173,8 +173,8 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/openshift/api v0.0.0-20260208111522-dadbf81f35e9
-## explicit; go 1.24.0
+# github.com/openshift/api v0.0.0-20260408160412-464776f95207
+## explicit; go 1.25.0
 github.com/openshift/api/config/v1
 # github.com/operator-framework/api v0.39.0
 ## explicit; go 1.25.3
@@ -363,7 +363,7 @@ gopkg.in/inf.v0
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# k8s.io/api v0.35.0
+# k8s.io/api v0.35.1
 ## explicit; go 1.25.0
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
@@ -435,7 +435,7 @@ k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
-# k8s.io/apimachinery v0.35.0
+# k8s.io/apimachinery v0.35.1
 ## explicit; go 1.25.0
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
