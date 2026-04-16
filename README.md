@@ -64,7 +64,6 @@ make lint
 ## AI-Assisted Development
 
 This project includes an [AGENTS.md](AGENTS.md) file that provides AI coding agents (Cursor, Claude Code, GitHub Copilot, etc.) with project-specific context including conventions, upstream/downstream guidance, and architectural facts.
-- Release processes
 
 For traditional development workflows, see [docs/local-development.md](docs/local-development.md).
 
