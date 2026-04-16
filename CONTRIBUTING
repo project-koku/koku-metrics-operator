@@ -1,15 +1,34 @@
-Contributing to koku-metrics-operator
-======================================
+# Contributing to koku-metrics-operator
 
-For comprehensive contribution guidelines including development workflows,
-testing requirements, and AI-assisted development, see:
+Thank you for your interest in contributing to this project!
 
-📖 [docs/contributing.md](docs/contributing.md)
+## Reporting Bugs & Requesting Features
 
-Certificate of Origin
-=====================
+We track bugs and feature requests in [Red Hat Jira (COST project)](https://issues.redhat.com/projects/COST/).
 
-By contributing to this project you agree to the Developer Certificate of
-Origin (DCO). This document was created by the Linux Kernel community and is a
-simple statement that you, as a contributor, have the legal right to make the
-contribution. See the `DCO <DCO>` file for details.
+When submitting a bug report, please include:
+
+- Steps to reproduce the issue
+- Error messages and operator logs
+- CR status (`oc get costmanagementmetricsconfig -o yaml`)
+- Cluster and operator version
+
+For feature requests, please open an issue to discuss the use case before implementing.
+
+## Contributing Code
+
+All contributions come through pull requests. See [docs/local-development.md](docs/local-development.md) for the full workflow from setup to PR submission.
+
+### Upstream vs Downstream
+
+This repository maintains two branches: **main** (community/upstream) and **downstream** (Red Hat product). Always target **main** unless working on downstream-specific requirements.
+
+### Code Quality
+
+- Format and lint before submitting: `make fmt && make lint`
+- All pull requests must include passing tests: `make test`
+- Install [pre-commit](https://pre-commit.com/) hooks: `pre-commit install`
+
+### Certificate of Origin
+
+By contributing to this project you agree to the Developer Certificate of Origin (DCO). See the [DCO](DCO) file for details.

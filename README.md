@@ -16,8 +16,8 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 ## Development
 
 **Quick Links:**
-- **[Contributing Guide](docs/contributing.md)** - How to contribute (traditional and AI-assisted workflows)
-- **[Local Development](docs/local-development.md)** - Setup and testing locally
+- **[Contributing](CONTRIBUTING)** - How to contribute
+- **[Local Development](docs/local-development.md)** - Setup, development workflow, and PR process
 - **[Architecture](docs/architecture.md)** - System design and component relationships
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
@@ -45,7 +45,7 @@ Next, install the Operator SDK CLI using the following [documentation](https://s
 To build the manager binary you can execute the following make command:
 
 ```
-make manager
+make build
 ```
 
 To build the docker image you can execute the following make command:
@@ -63,16 +63,7 @@ make lint
 
 ## AI-Assisted Development
 
-This project includes configuration files for AI-assisted development tools:
-
-- **[.claude/CLAUDE.md](.claude/CLAUDE.md)** - Context for Claude Code and other AI agents. Includes project conventions, common workflows, and upstream/downstream guidance.
-- **[.cursor/.cursorrules](.cursor/.cursorrules)** - Quick reference rules for Cursor IDE.
-
-These files help AI agents understand:
-- Project structure and conventions
-- Upstream → downstream development flow
-- Common debugging patterns
-- Testing requirements
+This project includes an [AGENTS.md](AGENTS.md) file that provides AI coding agents (Cursor, Claude Code, GitHub Copilot, etc.) with project-specific context including conventions, upstream/downstream guidance, and architectural facts.
 - Release processes
 
 For traditional development workflows, see [docs/local-development.md](docs/local-development.md).

@@ -1,0 +1,10 @@
+---
+description: "Rules for working on Kubernetes controller reconciliation logic"
+globs: ["internal/controller/**/*.go"]
+---
+
+- The reconciler struct is `MetricsConfigReconciler`
+- `collectPromStats()` and `configurePVC()` are package-level functions, not reconciler methods
+- Handle `apierrors.IsNotFound(err)` gracefully -- return `ctrl.Result{}, nil` for deleted resources
+- Use `ctrl.LoggerFrom(ctx)` for structured logging
+- Prefer updating CR status via `updateStatusAndLogError()` after state changes; use direct `r.Status().Update(...)` only when the code path intentionally aggregates/returns update errors

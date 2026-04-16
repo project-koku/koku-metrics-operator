@@ -1,7 +1,5 @@
 # Architecture
 
-> **For AI-assisted development context**, see [CLAUDE.md](koku-metrics-operator/.claude/CLAUDE.md). This document describes the system architecture, component relationships, and data flow.
-
 ## Overview
 
 The **koku-metrics-operator** is a Kubernetes operator that collects OpenShift cluster usage metrics and uploads them to Red Hat's cost management service (Koku). It runs as a controller that periodically queries Prometheus, generates CSV reports, packages them, and uploads to console.redhat.com.
@@ -17,44 +15,55 @@ The **koku-metrics-operator** is a Kubernetes operator that collects OpenShift c
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    OpenShift Cluster                            │
-│                                                                 │
-│  ┌────────────────┐      ┌──────────────────┐                 │
-│  │  Prometheus/   │◄─────│  Cluster         │                 │
-│  │  Thanos        │      │  Resources       │                 │
-│  └────────┬───────┘      └──────────────────┘                 │
-│           │                                                     │
-│           │ Metrics Queries                                    │
-│           ▼                                                     │
-│  ┌──────────────────────────────────────────────────────────┐ │
-│  │         koku-metrics-operator                            │ │
-│  │                                                          │ │
-│  │  ┌─────────────┐   ┌──────────────┐   ┌─────────────┐  │ │
-│  │  │ Controller  │──►│  Collector   │──►│   Reports   │  │ │
-│  │  │ Reconciler  │   │ (Prometheus) │   │ (CSV files) │  │ │
-│  │  └─────────────┘   └──────────────┘   └──────┬──────┘  │ │
-│  │         │                                     │         │ │
-│  │         │                                     ▼         │ │
-│  │         │           ┌──────────────┐   ┌─────────────┐ │ │
-│  │         └──────────►│  Packaging   │──►│   Storage   │ │ │
-│  │                     │  (tar.gz)    │   │  (PVC/tmp)  │ │ │
-│  │                     └──────┬───────┘   └─────────────┘ │ │
-│  │                            │                           │ │
-│  └────────────────────────────┼───────────────────────────┘ │
-│                               │                             │
-└───────────────────────────────┼─────────────────────────────┘
-                                │ HTTPS Upload
-                                ▼
-                    ┌───────────────────────────┐
-                    │  console.redhat.com       │
-                    │  ┌─────────────────────┐  │
-                    │  │  Ingress API        │  │
-                    │  └─────────────────────┘  │
-                    │  ┌─────────────────────┐  │
-                    │  │  Sources API        │  │
-                    │  └─────────────────────┘  │
-                    └───────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           OpenShift Cluster                              │
+│                                                                          │
+│  ┌────────────────┐   ┌──────────────────┐   ┌───────────────────────┐  │
+│  │  Prometheus/   │   │  ClusterVersion  │   │  openshift-config/    │  │
+│  │  Thanos        │   │  API             │   │  pull-secret          │  │
+│  └───────┬────────┘   └────────┬─────────┘   └───────────┬───────────┘  │
+│          │                     │                          │              │
+│          │ Metrics Queries     │ Cluster ID/Version       │ Auth Token   │
+│          ▼                     ▼                          ▼              │
+│  ┌───────────────────────────────────────────────────────────────────┐   │
+│  │                    koku-metrics-operator                          │   │
+│  │                    (managed by OLM)                               │   │
+│  │                                                                   │   │
+│  │  ┌─────────────┐   ┌──────────────┐                              │   │
+│  │  │ Controller  │──►│  Collector   │                              │   │
+│  │  │ Reconciler  │   │ (Prometheus) │                              │   │
+│  │  │ (5 min loop)│   └──────┬───────┘                              │   │
+│  │  └──────┬──────┘          │                                      │   │
+│  │         │                 ▼                                      │   │
+│  │         │          ┌─────────────┐   ┌──────────────┐            │   │
+│  │         │          │  Storage    │   │  Packaging   │            │   │
+│  │         │          │  (PVC/tmp)  │   │  (tar.gz)    │            │   │
+│  │         │          │             │   └──────┬───────┘            │   │
+│  │         │          │  staging/ ──┼──►read──►│                    │   │
+│  │         │          │  upload/ ◄──┼──write───┘                    │   │
+│  │         │          │  data/      │                               │   │
+│  │         │          └─────────────┘                               │   │
+│  │         │                                                        │   │
+│  └─────────┼────────────────────────────────────────────────────────┘   │
+│            │                                                            │
+└────────────┼────────────────────────────────────────────────────────────┘
+             │ HTTPS
+             ▼
+┌───────────────────────────────┐
+│     console.redhat.com        │
+│                               │
+│  ┌─────────────────────────┐  │
+│  │  Ingress API            │◄─── Upload tar.gz reports
+│  │  /api/ingress/v1/upload │  │
+│  └─────────────────────────┘  │
+│  ┌─────────────────────────┐  │
+│  │  Sources API            │◄─── Credential validation,
+│  │  /api/sources/v1.0/     │     source registration
+│  └─────────────────────────┘  │
+│  ┌─────────────────────────┐  │
+│  │  SSO Token Exchange     │◄─── Service-account auth
+│  └─────────────────────────┘  │
+└───────────────────────────────┘
 ```
 
 ## Components
@@ -63,15 +72,15 @@ The **koku-metrics-operator** is a Kubernetes operator that collects OpenShift c
 
 **Location:** `api/v1beta1/metricsconfig_types.go`
 
-Defines the `MetricsConfig` (alias: `CostManagementMetricsConfig`) custom resource that configures the operator.
+Defines the `CostManagementMetricsConfig` custom resource that configures the operator.
 
 **Key Specs:**
-- **`authentication`**: How to authenticate (token, basic, service-account)
+- **`authentication`**: How to authenticate (token, service-account)
 - **`prometheus_config`**: Prometheus endpoint and connection settings
 - **`upload`**: Upload schedule, validation, and API path
 - **`packaging`**: Max file size and report retention
 - **`source`**: Sources API integration settings
-- **`volume`**: PersistentVolumeClaim configuration for storage
+- **`api_url`** (optional): Override console.redhat.com API URL (development use)
 
 **Status Fields:**
 - Last collection/upload timestamps
@@ -87,24 +96,24 @@ Defines the `MetricsConfig` (alias: `CostManagementMetricsConfig`) custom resour
 The main reconciliation loop that orchestrates all operations.
 
 **Responsibilities:**
-- Watch for MetricsConfig CR changes
+- Watch for CostManagementMetricsConfig CR changes
 - Validate and configure authentication
-- Schedule periodic metric collection (default: every 6 hours)
+- Reconcile every 5 minutes; packaging and upload are gated by `upload_cycle` (default: 360 minutes / 6 hours)
 - Trigger report generation and upload
 - Update CR status with results
 - Manage PVC lifecycle
 - Integrate with Sources API
 
 **Key Functions:**
-- `Reconcile()`: Main reconciliation loop
-- `setAuthentication()`: Configure auth (token/basic/service-account)
+- `Reconcile()`: Main reconciliation loop (requeues every 5 minutes)
+- `setAuthentication()`: Configure auth (token/service-account)
 - `validateCredentials()`: Check auth against Sources API
-- `collectPromStats()`: Trigger Prometheus collection
+- `collectPromStats()`: Trigger Prometheus collection (package-level function in `prometheus.go`)
 - `uploadFiles()`: Upload packaged reports
-- `configurePVC()`: Set up persistent storage
+- `configurePVC()`: Set up persistent storage (package-level function)
 
 **Reconciliation Triggers:**
-- MetricsConfig CR creation/update
+- CostManagementMetricsConfig CR creation/update
 - Scheduled intervals (upload schedule, source check)
 - Manual reconciliation requests
 
@@ -134,12 +143,13 @@ Queries Prometheus/Thanos for cluster metrics and generates reports.
 - Time ranges: UTC, truncated to hour boundaries
 - Aggregation: max, min, avg, sum (see `getValue()`)
 - Data windowing: Previous full hour by default
-- Retention period: Auto-detected from Prometheus config (default 14 days)
+- Query lookback window: Auto-detected from cluster monitoring config; defaults to 14 days if unavailable (this is the Prometheus query range, not on-disk report retention)
 
 **Report Generation:**
 ```go
 GenerateReports(cr *MetricsConfig, dirCfg *DirectoryConfig, collector *PrometheusCollector)
 ```
+> Note: `MetricsConfig` here is a type alias for `CostManagementMetricsConfig`, used throughout the codebase for brevity.
 1. Query Prometheus for each metric type
 2. Process and aggregate results
 3. Generate CSV files with prefixes:
@@ -191,7 +201,8 @@ Compresses reports into tar.gz archives for upload.
 
 **Package Format:**
 ```
-cost-mgmt-<cluster_id>-<timestamp>-<uuid>.tar.gz
+<timestamp>-cost-mgmt.tar.gz          # single archive
+<timestamp>-cost-mgmt-<index>.tar.gz  # split archives
 ├── manifest.json
 ├── cm-openshift-pod-usage-*.csv
 ├── cm-openshift-node-usage-*.csv
@@ -205,10 +216,11 @@ cost-mgmt-<cluster_id>-<timestamp>-<uuid>.tar.gz
 Handles authentication and upload to console.redhat.com.
 
 **AuthConfig:**
-Supports multiple authentication methods:
+Supports two authentication methods:
 - **Token** (default): Uses cluster pull secret token from `openshift-config/pull-secret`
 - **Service Account**: Client ID/secret from custom secret
-- **Basic** (deprecated): Username/password
+
+> Basic auth (username/password) exists in the codebase but is deprecated and should not be used.
 
 **Upload Process:**
 ```go
@@ -254,6 +266,30 @@ Queries OpenShift ClusterVersion resource.
 - Retrieve cluster ID
 - Include cluster metadata in reports
 
+### 9. OLM Integration
+
+The operator is installed and managed via the [Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io/).
+
+**ClusterServiceVersion (CSV):**
+- Base manifest: `config/manifests/bases/koku-metrics-operator.clusterserviceversion.yaml`
+- Generated bundle: `bundle/manifests/koku-metrics-operator.clusterserviceversion.yaml` (produced by `make bundle`, not committed)
+- Defines operator metadata, RBAC, deployment spec, and upgrade path (`spec.replaces`)
+
+**Bundle Generation:**
+```bash
+make bundle          # generate OLM bundle from config/manifests
+make bundle-build    # build bundle container image
+make bundle-push     # push bundle image to registry
+```
+
+**OLM in the Codebase:**
+- `internal/storage/storage.go` reads the owning `ClusterServiceVersion` to patch the operator Deployment's volume mounts when PVC storage is configured. This ensures the Deployment spec in the CSV stays consistent with runtime changes.
+- RBAC markers on the reconciler include permissions for `clusterserviceversions` under `operators.coreos.com`.
+
+**Distribution:**
+- Upstream: Submitted to [community-operators-prod](https://github.com/redhat-openshift-ecosystem/community-operators-prod) for OperatorHub
+- Downstream: Managed by Red Hat Konflux build system
+
 ## Data Flow
 
 ### High-Level Flow
@@ -261,23 +297,21 @@ Queries OpenShift ClusterVersion resource.
 ```
 1. CR Created/Updated
    ↓
-2. Controller Reconcile
+2. Controller Reconcile (every 5 minutes)
    ↓
-3. Authenticate (token/service-account/basic)
+3. Authenticate (token/service-account)
    ↓
-4. [Every 6 hours] Collect Metrics
+4. Collect Metrics (query Prometheus → generate CSV reports)
    ↓
-5. Query Prometheus → Generate CSV Reports
+5. [Gated by upload_cycle, default 6 hours]
+   Package Reports (tar.gz) → Upload to console.redhat.com
    ↓
-6. Package Reports (tar.gz)
+6. Clean up old reports
    ↓
-7. Upload to console.redhat.com
+7. [Gated by check_cycle, default 24 hours]
+   Check Sources API
    ↓
-8. Clean up old reports
-   ↓
-9. [Every 24 hours] Check Sources API
-   ↓
-10. Update CR Status
+8. Update CR Status
 ```
 
 ### Detailed Collection Flow
@@ -287,8 +321,7 @@ Reconcile()
   │
   ├─► setAuthentication()
   │   ├─► GetPullSecretToken() [token auth]
-  │   ├─► GetServiceAccountSecret() [service-account auth]
-  │   └─► GetAuthSecret() [basic auth]
+  │   └─► GetServiceAccountSecret() [service-account auth]
   │
   ├─► validateCredentials() [Sources API check]
   │
@@ -322,9 +355,11 @@ Reconcile()
 
 ### Time Schedules
 
+**Reconciliation Loop:** Every 5 minutes (`RequeueAfter: 5 * time.Minute`)
+
 **Upload Cycle** (default: 360 minutes / 6 hours)
-- Configured via `upload.upload_wait`
-- Triggers metric collection and upload
+- Configured via `upload.upload_cycle`
+- Gates when packaging and upload steps are allowed to run
 
 **Source Check Cycle** (default: 1440 minutes / 24 hours)
 - Configured via `source.check_cycle`
@@ -363,13 +398,9 @@ Reconcile()
 4. Refresh when expired (TTL check)
 ```
 
-### Basic Authentication (Deprecated)
+### Basic Authentication (Deprecated -- do not use)
 
-```
-1. Read custom secret (username + password)
-2. Use basic auth for API requests
-3. No token exchange
-```
+Basic auth is still supported in the codebase for backward compatibility but should not be used for new deployments. Use token or service-account auth instead.
 
 ## Error Handling and Retry
 
@@ -400,8 +431,11 @@ Reconcile()
 - Service account tokens: Refreshed automatically
 
 **RBAC Requirements:**
-- Access to Prometheus/Thanos (cluster-monitoring-view)
-- Read access to ClusterVersion
+- `cluster-monitoring-view` ClusterRole for Prometheus/Thanos access
+- Read access to `ClusterVersion` (`config.openshift.io`)
+- Read access to `openshift-config/pull-secret` (cross-namespace, for token auth)
+- Read access to cluster monitoring ConfigMap (for query lookback window detection)
+- Read/write access to `ClusterServiceVersions` (`operators.coreos.com`, for PVC volume mount patching)
 - PVC creation/management in operator namespace
 
 **Network:**
@@ -409,34 +443,17 @@ Reconcile()
 - Internal access to Prometheus/Thanos endpoint
 - TLS verification configurable (skip for development)
 
-## Performance and Scalability
+## Operational Characteristics
 
-**Resource Usage:**
-- Lightweight: Runs as single pod
-- CPU/Memory: Spikes during collection, low between cycles
-- Storage: Depends on cluster size and report count
-
-**Cluster Impact:**
-- Prometheus queries: Minimal impact (read-only, hourly data)
-- API calls: Periodic, not continuous
-- No impact on cluster workloads
-
-**Scalability:**
-- Handles clusters of any size
-- Report size grows with cluster resources
-- Automatic report splitting by size
+- Runs as a single pod managed by OLM
+- CPU/memory usage spikes during collection, low between cycles
+- Prometheus queries are read-only against hourly aggregated data
+- Report size scales with cluster resource count; archives are automatically split at 100MB
+- Storage footprint bounded by `max_reports_to_store` (default: 30)
 
 ## Development and Testing
 
-**Local Development:**
-- See [local-development.md](local-development.md)
-- Requires OpenShift cluster access
-- Can run outside cluster with proper credentials
-
-**Testing:**
-- Unit tests: Ginkgo/Gomega
-- Mocked Prometheus responses
-- Fake Kubernetes client for controller tests
+See [local-development.md](local-development.md) for setup, workflow, and troubleshooting.
 
 **CI/CD:**
 - Upstream: GitHub Actions (`.github/workflows/`)
@@ -444,8 +461,7 @@ Reconcile()
 
 ## Related Documentation
 
-- **[local-development.md](local-development.md)** - Setup and local testing
+- **[local-development.md](local-development.md)** - Setup, workflow, and PR process
 - **[upstream-releasing.md](upstream-releasing.md)** - Release process
 - **[downstream-releasing.md](downstream-releasing.md)** - Downstream porting
 - **[report-fields-description.md](report-fields-description.md)** - CSV field definitions
-- **[../.claude/CLAUDE.md](../.claude/CLAUDE.md)** - AI development context
