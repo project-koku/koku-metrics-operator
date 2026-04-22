@@ -26,11 +26,11 @@ jobs:
     env:
       ZVSI_SSH_KEY: koku-ci-ssh-key-${{ github.run_id }}-${{ github.run_number }}
       ZVSI_VPC_NAME: koku-ci-vpc-${{ github.run_id }}-${{ github.run_number }}
-      ZVSI_PROFILE_NAME: bz2-4x16
+      ZVSI_PROFILE_NAME: cz2-4x8
       ZVSI_SUBNET_NAME: koku-ci-subnet-${{ github.run_id }}-${{ github.run_number }}
       ZVSI_FIP_NAME: koku-ci-fip-${{ github.run_id }}-${{ github.run_number }}
       ZVSI_INS_NAME: koku-ci-zvsi-${{ github.run_id }}-${{ github.run_number }}
-      ZVSI_IMAGE_NAME: ibm-ubuntu-22-04-3-minimal-s390x-2
+      ZVSI_IMAGE_NAME: ibm-ubuntu-24-04-3-minimal-s390x-3
     steps:
       - name: install ibmcli and setup ibm login
         run: |
@@ -93,16 +93,20 @@ jobs:
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ env.ZVSI_FIP_ADD }}
-          username: root
+          username: ubuntu
           key: ${{ secrets.ZVSI_PRIVATE_KEY }}
           script: |
-            apt update -y && apt install -y make
+            sudo apt update -y
+            sudo apt install -y make git snapd
             git clone -b ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }} koku-zvsi-clone
-            cd koku-zvsi-clone && snap install go --classic --channel=$(grep -m 1 go go.mod | cut -d' ' -f2 | cut -d. -f1,2)/stable && cd ..
-            adduser --disabled-password --gecos "" runner
-            cp -r koku-zvsi-clone /home/runner/koku-zvsi-clone
-            chmod -R 777 /home/runner/koku-zvsi-clone
-            su runner -c "cd /home/runner/koku-zvsi-clone && make test"
+            cd koku-zvsi-clone
+            GO_VERSION=$(grep -m 1 '^go ' go.mod | awk '{print $2}' | cut -d. -f1,2)
+            sudo snap install go --classic --channel=${GO_VERSION}/stable
+            cd ..
+            sudo useradd -m runner || true
+            sudo cp -r koku-zvsi-clone /home/runner/
+            sudo chown -R runner:runner /home/runner/koku-zvsi-clone
+            sudo -u runner bash -c "cd /home/runner/koku-zvsi-clone && make test"
       - name: destroy zvsi instance
         if: always()
         run: |
