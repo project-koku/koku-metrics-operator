@@ -1,0 +1,9 @@
+---
+description: "Rules for writing and modifying tests"
+globs: ["**/*_test.go"]
+---
+
+- Use `Eventually()` and `Consistently()` for async assertions
+- Seed the fake client with required resources in `BeforeEach`
+- Default test namespace: `koku-metrics-operator`
+- Check for nil before dereferencing: `Expect(value).NotTo(BeNil())`

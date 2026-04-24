@@ -1,5 +1,7 @@
 # Releasing a new version of the Koku Metrics Operator
 
+> For AI agent context, see [AGENTS.md](../AGENTS.md).
+
 This guide outlines the steps for releasing a new version of the Koku Metrics Operator, from creating a github release to submitting the bundle to the `community-operators-prod` repository for File-Based Catalog (FBC) auto-release.
 
 Before proceeding, ensure all necessary testing has been performed as described in the [upstream-release-testing.md](upstream-release-testing.md) documentation.

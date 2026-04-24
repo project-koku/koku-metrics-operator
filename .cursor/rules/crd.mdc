@@ -1,0 +1,10 @@
+---
+description: "Rules for modifying CRD types and schema"
+globs: ["api/v1beta1/**/*.go"]
+---
+
+- The canonical type is `CostManagementMetricsConfig`; `MetricsConfig` is a type alias
+- Add kubebuilder validation markers for new fields
+- Default values use `+kubebuilder:default=` markers
+- Run `make manifests` after any changes to regenerate CRD YAML
+- Run `make verify-manifests` to confirm generated files are up to date
