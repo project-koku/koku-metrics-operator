@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "true"
     containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:ffd00b231de706b054325c24cb7a6e5b283c9f8cadfa76aebe120e553effb4d7
-    createdAt: "2026-04-10T17:16:48Z"
+    createdAt: "2026-05-03T15:17:07Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -453,17 +453,67 @@ spec:
                 - ""
               resources:
                 - configmaps
+                - endpoints
+                - events
+                - persistentvolumeclaims
+                - pods
+                - secrets
+                - serviceaccounts
+                - services
+                - services/finalizers
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - ""
+              resources:
                 - namespaces
               verbs:
                 - get
                 - list
                 - watch
             - apiGroups:
-                - ""
+                - apps
               resources:
-                - secrets
+                - deployments
               verbs:
                 - get
+                - list
+                - patch
+                - watch
+            - apiGroups:
+                - config.openshift.io
+              resources:
+                - clusterversions
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - costmanagement-metrics-cfg.openshift.io
+              resources:
+                - costmanagementmetricsconfigs
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - costmanagement-metrics-cfg.openshift.io
+              resources:
+                - costmanagementmetricsconfigs/status
+              verbs:
+                - get
+                - patch
+                - update
             - apiGroups:
                 - config.openshift.io
               resources:
@@ -480,6 +530,16 @@ spec:
                 - create
                 - get
                 - update
+            - apiGroups:
+                - operators.coreos.com
+              resources:
+                - clusterserviceversions
+              verbs:
+                - get
+                - list
+                - patch
+                - update
+                - watch
           serviceAccountName: costmanagement-metrics-controller-manager
       deployments:
         - label:
@@ -530,10 +590,6 @@ spec:
                         value: 5s
                       - name: IN_CLUSTER
                         value: "true"
-                      - name: WATCH_NAMESPACE
-                        valueFrom:
-                          fieldRef:
-                            fieldPath: metadata.annotations['olm.targetNamespaces']
                     image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:ffd00b231de706b054325c24cb7a6e5b283c9f8cadfa76aebe120e553effb4d7
                     livenessProbe:
                       httpGet:
@@ -613,65 +669,6 @@ spec:
                 - update
                 - patch
                 - delete
-            - apiGroups:
-                - ""
-              resources:
-                - configmaps
-                - endpoints
-                - events
-                - persistentvolumeclaims
-                - pods
-                - secrets
-                - serviceaccounts
-                - services
-                - services/finalizers
-              verbs:
-                - create
-                - delete
-                - get
-                - list
-                - patch
-                - update
-                - watch
-            - apiGroups:
-                - apps
-              resources:
-                - deployments
-              verbs:
-                - get
-                - list
-                - patch
-                - watch
-            - apiGroups:
-                - costmanagement-metrics-cfg.openshift.io
-              resources:
-                - costmanagementmetricsconfigs
-              verbs:
-                - create
-                - delete
-                - get
-                - list
-                - patch
-                - update
-                - watch
-            - apiGroups:
-                - costmanagement-metrics-cfg.openshift.io
-              resources:
-                - costmanagementmetricsconfigs/status
-              verbs:
-                - get
-                - patch
-                - update
-            - apiGroups:
-                - operators.coreos.com
-              resources:
-                - clusterserviceversions
-              verbs:
-                - get
-                - list
-                - patch
-                - update
-                - watch
           serviceAccountName: costmanagement-metrics-controller-manager
     strategy: deployment
   installModes:
@@ -681,7 +678,7 @@ spec:
       type: SingleNamespace
     - supported: false
       type: MultiNamespace
-    - supported: false
+    - supported: true
       type: AllNamespaces
   keywords:
     - cost
