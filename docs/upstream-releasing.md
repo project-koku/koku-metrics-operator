@@ -4,21 +4,27 @@
 
 This guide outlines the steps for releasing a new version of the Koku Metrics Operator, from creating a github release to submitting the bundle to the `community-operators-prod` repository for File-Based Catalog (FBC) auto-release.
 
-Before proceeding, ensure all necessary testing has been performed as described in the [upstream-release-testing.md](upstream-release-testing.md) documentation.
+### Release order
+
+1. Ensure all features and fixes are merged into `main`.
+2. Perform upgrade testing as described in [upstream-release-testing.md](upstream-release-testing.md).
+3. Create a GitHub Release (which creates the tag and triggers the image build).
+4. Generate the release bundle and commit it to `main`.
+5. Submit the bundle to `community-operators-prod`.
+
+
+## Perform upgrade testing
+
+Before creating the release, test the operator upgrade path using a personal Quay image as described in [upstream-release-testing.md](upstream-release-testing.md). This validates the OLM upgrade from the previous version to the new one.
 
 
 ## Create a github release and push the operator image
 
-First, create a github release that corresponds to the new operator version. You can use [previous releases](https://github.com/project-koku/koku-metrics-operator/releases) as a template.
+Create a github release that corresponds to the new operator version. You can use [previous releases](https://github.com/project-koku/koku-metrics-operator/releases) as a template.
 
-Make sure the `VERSION` variable at the top of your operator's `Makefile` matches the release version:
+When the release is published, the git tag (e.g. `v4.4.0`) triggers the [build-and-publish](./../.github/workflows/build-and-publish.yaml) workflow, which builds a multi-arch image and pushes it to Quay. The image is tagged using the git tag name, not the `VERSION` variable in the Makefile.
 
-```makefile
-# Current operator version
-VERSION ?= <release-version>
-```
-
-After creating the github release and tag, a Quay hook should automatically pull and tag the new image. Verify this by checking for the new tag in the [Quay.io repository](https://quay.io/repository/project-koku/koku-metrics-operator?tab=tags). If the tag doesn't appear, you'll need to manually build and push the image:
+Verify the new tag appears in the [Quay.io repository](https://quay.io/repository/project-koku/koku-metrics-operator?tab=tags). If it doesn't, manually build and push:
 
 ```bash
 make docker-buildx
@@ -26,20 +32,31 @@ make docker-push
 ```
 
 
-## Generate the release bundle
+## Generate the release bundle and commit to `main`
 
-**Note:** Ensure the operator image is available locally or pulled to your system so that the `operator-sdk` can correctly embed its reference within the bundle's manifests.
+Once the operator image is available on Quay, generate the bundle that references it.
 
-1. Pull the operator image to your local machine using the following command:
+1. Update the `VERSION` and `PREVIOUS_VERSION` variables at the top of the `Makefile`:
+
+    ```makefile
+    PREVIOUS_VERSION ?= <previous-release-version>
+    VERSION ?= <release-version>
+    ```
+
+    `PREVIOUS_VERSION` should be the last version published in the community OperatorHub. This populates the `replaces` field in the generated CSV.
+
+2. Pull the operator image to your local machine so that `operator-sdk` can correctly embed its reference within the bundle's manifests:
     ```bash
     docker pull quay.io/project-koku/koku-metrics-operator:v$VERSION
     ```
 
-2. Run the following command to generate the OLM bundle for the new operator version:
+3. Generate the OLM bundle:
     ```bash
     make bundle CHANNELS=alpha,beta DEFAULT_CHANNEL=beta
     ```
-    This command generates a new bundle inside the `bundle/` directory within your repository.
+    This updates the `bundle/` directory with the new version, channels, image reference, and `replaces` field.
+
+4. Commit the changes (`Makefile` and `bundle/`) and open a pull request against `main`.
 
 
 ## Submit the Generated bundle to `community-operators-prod`
