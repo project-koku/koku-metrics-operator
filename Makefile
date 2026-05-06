@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 4.3.0
-VERSION ?= 4.3.1
+PREVIOUS_VERSION ?= 4.3.1
+VERSION ?= 4.4.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -399,7 +399,7 @@ ifeq (, $(shell which yq 2>/dev/null))
 	set -e ;\
 	mkdir -p $(dir $(YQ)) ;\
 	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_${{ARCH}} && chmod +x $(YQ)
+	curl -sSLo $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$${OS}_$${ARCH} && chmod +x $(YQ)
 	}
 else
 YQ = $(shell which yq)
