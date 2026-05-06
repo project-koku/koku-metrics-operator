@@ -1,5 +1,7 @@
 # Generate Downstream Release
 
+> For AI agent context on upstream/downstream differences, see [AGENTS.md](../AGENTS.md).
+
 This document outlines the process for generating the downstream version of the operator. The downstream version transforms all `koku` references to `costmanagement` for Red Hat's internal distribution.
 
 ## Prerequisites
