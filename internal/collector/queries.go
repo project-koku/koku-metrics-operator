@@ -46,6 +46,7 @@ var (
 		"cost:nvidia_gpu_capacity_memory_mib_mig":     "DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!='', GPU_I_ID!=''} * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)')) * on(Hostname) group_left(label_nvidia_com_gpu_memory, label_nvidia_com_mig_strategy) label_replace(kube_node_labels{label_nvidia_com_gpu_memory!=''}, 'Hostname', '$1', 'node', '(.+)')",
 		"cost:nvidia_gpu_capacity_memory_mib_non_mig": "sum by (pod, namespace, node, label_nvidia_com_gpu_memory) ((kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='nvidia_com_gpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'})) * on(node) group_left(label_nvidia_com_gpu_memory) (max by (node, label_nvidia_com_gpu_memory) (kube_node_labels)))",
 		"cost:nvidia_gpu_utilization":                 "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE, device) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!=''}) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
+		"cost:nvidia_gpu_pod_uptime":                  "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE, device) (clamp_max(DCGM_FI_PROF_GR_ENGINE_ACTIVE{UUID!=''} + 1, 1)) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
 		"cost:nvidia_gpu_max_slices":                  "sum by (exported_pod, exported_namespace, Hostname, UUID, modelName, GPU_I_ID, GPU_I_PROFILE) (DCGM_FI_DEV_MIG_MAX_SLICES{UUID!=''}) * on(exported_pod, exported_namespace) group_left(pod, namespace) max by (exported_pod, exported_namespace) (label_replace(label_replace(kube_pod_status_phase{phase='Running'}, 'exported_pod', '$1', 'pod', '(.*)'), 'exported_namespace', '$1', 'namespace', '(.*)'))",
 
 		// resource optimization container metrics queries
@@ -505,6 +506,25 @@ var (
 		query{
 			Name:        "nvidia-gpu-utilization",
 			QueryString: QueryMap["cost:nvidia_gpu_utilization"],
+			MetricKey: staticFields{
+				"node":            "Hostname",
+				"namespace":       "exported_namespace",
+				"pod":             "exported_pod",
+				"gpu_uuid":        "UUID",
+				"model_name":      "modelName",
+				"mig_instance_id": "GPU_I_ID",
+				"mig_profile":     "GPU_I_PROFILE",
+				"vendor_name":     "device",
+			},
+			QueryValue: &saveQueryValue{
+				ValName: "nvidia-gpu-pod-utilization",
+				Method:  "sum",
+			},
+			RowKey: []model.LabelName{"exported_pod", "exported_namespace", "Hostname", "UUID", "GPU_I_ID"},
+		},
+		query{
+			Name:        "nvidia-gpu-pod-uptime",
+			QueryString: QueryMap["cost:nvidia_gpu_pod_uptime"],
 			MetricKey: staticFields{
 				"node":            "Hostname",
 				"namespace":       "exported_namespace",
