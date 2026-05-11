@@ -630,7 +630,22 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 				"GPU_I_PROFILE":      "",
 				"device":             "nvidia0",
 			},
-			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(2.0)}},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(0.5)}},
+		},
+	}
+	uptime := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-a",
+				"exported_namespace": "ns-a",
+				"exported_pod":       "pod-a",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
 		},
 	}
 	nonMIGCapacity := model.Matrix{
@@ -651,6 +666,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 
 	mapResults := mappedMockPromResult{
 		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuUtilizationQueries)[1].QueryString:          {value: uptime},
 		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: model.Matrix{}},
 		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: nonMIGCapacity},
 		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: maxSlices},
@@ -683,6 +699,12 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 	if !strings.Contains(row, "pod-a") || !strings.Contains(row, ",20480,") {
 		t.Fatalf("expected non-MIG capacity merge to include memory, got:\n%s", row)
 	}
+	if !strings.Contains(row, ",60.000000,") {
+		t.Fatalf("expected gpu_pod_uptime of 60 seconds (1 sample * 60), got:\n%s", row)
+	}
+	if !strings.Contains(row, ",0.500000,") {
+		t.Fatalf("expected gpu_pod_utilization of 0.5, got:\n%s", row)
+	}
 }
 
 func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
@@ -698,7 +720,22 @@ func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
 				"GPU_I_PROFILE":      "",
 				"device":             "nvidia0",
 			},
-			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(3.0)}},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(0.75)}},
+		},
+	}
+	uptime := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-b",
+				"UUID":               "GPU-uuid-b",
+				"exported_namespace": "ns-b",
+				"exported_pod":       "pod-b",
+				"modelName":          "Tesla V100",
+				"GPU_I_ID":           "3",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
 		},
 	}
 	migCapacity := model.Matrix{
@@ -720,6 +757,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
 
 	mapResults := mappedMockPromResult{
 		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuUtilizationQueries)[1].QueryString:          {value: uptime},
 		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: migCapacity},
 		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: model.Matrix{}},
 		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: maxSlices},
@@ -751,6 +789,12 @@ func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
 	row := string(content)
 	if !strings.Contains(row, "pod-b") || !strings.Contains(row, ",10240,") {
 		t.Fatalf("expected MIG exact-key merge to include memory, got:\n%s", row)
+	}
+	if !strings.Contains(row, ",60.000000,") {
+		t.Fatalf("expected gpu_pod_uptime of 60 seconds (1 sample * 60), got:\n%s", row)
+	}
+	if !strings.Contains(row, ",0.750000,") {
+		t.Fatalf("expected gpu_pod_utilization of 0.75, got:\n%s", row)
 	}
 }
 
