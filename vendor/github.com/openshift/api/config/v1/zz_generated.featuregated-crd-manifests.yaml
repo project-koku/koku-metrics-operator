@@ -206,8 +206,7 @@ dnses.config.openshift.io:
   CRDName: dnses.config.openshift.io
   Capability: ""
   Category: ""
-  FeatureGates:
-  - AWSEuropeanSovereignCloudInstall
+  FeatureGates: []
   FilenameOperatorName: config-operator
   FilenameOperatorOrdering: "01"
   FilenameRunLevel: "0000_10"
@@ -373,6 +372,9 @@ infrastructures.config.openshift.io:
   - AzureDualStackInstall
   - DualReplica
   - DyanmicServiceEndpointIBMCloud
+  - GCPClusterHostedDNSInstall
+  - HighlyAvailableArbiter
+  - HighlyAvailableArbiter+DualReplica
   - NutanixMultiSubnets
   - OnPremDNSRecords
   - VSphereHostVMGroupZonal
