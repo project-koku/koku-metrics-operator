@@ -5,7 +5,7 @@
     "includePaths": [".tekton/**"]
   },
   "enabledManagers": ["tekton", "dockerfile"],
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 4,
   "gomod": {
     "enabled": false
   },
