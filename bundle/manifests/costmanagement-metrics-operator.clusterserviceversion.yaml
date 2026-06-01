@@ -40,7 +40,7 @@ metadata:
     categories: Monitoring
     certified: "true"
     containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:3c7f9745e334680306e472fceb5a4cea80abb079f21094ceca608bb4c6c3eb33
-    createdAt: "2026-04-10T17:16:48Z"
+    createdAt: "2026-06-01T13:23:30Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -104,7 +104,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.4.4.0
+  name: costmanagement-metrics-operator.4.4.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -136,6 +136,13 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.4.1:
+    * (Bugfix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
+    * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
+    * (Bugfix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
+    * (Bugfix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
+    * Updated dependencies.
 
     ## New in v4.4.0:
     * Enabled gathering and reporting NVIDIA MIG (Multi-Instance GPU) metrics for cost management.
@@ -698,5 +705,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.4.0
-  replaces: costmanagement-metrics-operator.4.3.1
+  version: 4.4.1
+  replaces: costmanagement-metrics-operator.4.4.0
