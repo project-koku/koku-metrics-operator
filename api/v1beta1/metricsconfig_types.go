@@ -538,10 +538,6 @@ type CostManagementMetricsConfigList struct {
 	Items           []CostManagementMetricsConfig `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&CostManagementMetricsConfig{}, &CostManagementMetricsConfigList{})
-}
-
 // +kubebuilder:object:generate:=false
 type MetricsConfig = CostManagementMetricsConfig
 
