@@ -129,6 +129,7 @@ Fields for metrics related to NVIDIA GPUs:
 * `gpu_vendor_name`: The vendor of the GPU reported by telemetry (for example, `nvidia0`).
 * `gpu_memory_capacity_mib`: The total memory capacity of the GPU in Mebibytes (MiB).
 * `gpu_pod_uptime`: The cumulative number of seconds the pod has been running on the specific GPU during the report period.
+* `gpu_pod_utilization`: The sum of GPU compute engine utilization samples (from DCGM_FI_PROF_GR_ENGINE_ACTIVE) for the pod during the report period.
 * `gpu_max_slices`: The raw maximum number of MIG slices available for the GPU profile. This field is optional and may be empty if the metric is not exposed by DCGM exporter configuration.
 * `mig_instance_id`: The MIG instance ID used by the workload. Empty for non-MIG workloads.
 * `mig_profile`: The MIG profile (for example, `1g.5gb`) associated with the workload. Empty for non-MIG workloads.

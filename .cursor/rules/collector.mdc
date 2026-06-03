@@ -1,0 +1,10 @@
+---
+description: "Rules for working on Prometheus metrics collection"
+globs: ["internal/collector/**/*.go"]
+---
+
+- Aggregation methods via `getValue()`: max, min, avg, sum
+- CSV file prefix constants are defined at the top of `collector.go`
+- Report generation entry point: `GenerateReports(cr, dirCfg, collector)`
+- CSVs are written to the staging directory; packaging reads from staging and writes to upload
+- Mock Prometheus responses in tests using existing test utilities
