@@ -82,7 +82,7 @@ type MetricsConfigReconciler struct {
 	cvClientBuilder       cv.ClusterVersionBuilder
 	promCollector         *collector.PrometheusCollector
 	initialDataCollection bool
-	overrideSecretPath    bool
+	OverrideSecretPath    bool
 }
 
 type previousAuthValidation struct {

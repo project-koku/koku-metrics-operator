@@ -122,7 +122,7 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) error {
 	if r.promCollector == nil {
 		var serviceaccountPath string
-		if r.overrideSecretPath {
+		if r.OverrideSecretPath {
 			val, ok := os.LookupEnv("SECRET_ABSPATH")
 			if ok {
 				serviceaccountPath = val
