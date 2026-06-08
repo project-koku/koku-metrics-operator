@@ -16,7 +16,8 @@ metadata:
         "go.sum".pathChanged() ||
         "redhat.repo".pathChanged() ||
         "rpms.in.yaml".pathChanged() ||
-        "rpms.lock.yaml".pathChanged()
+        "rpms.lock.yaml".pathChanged() ||
+        "docs/csv-description.md".pathChanged()
       )
   creationTimestamp: null
   labels:

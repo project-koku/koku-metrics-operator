@@ -24,6 +24,7 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
 * (Bugfix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
 * (Bugfix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
+* (Bugfix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
 * Updated dependencies.
 
 ## New in v4.4.0:
