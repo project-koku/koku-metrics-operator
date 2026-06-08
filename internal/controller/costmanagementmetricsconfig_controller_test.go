@@ -976,6 +976,18 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				// Verify the expected values - source should be valid but upload should fail
 				Expect(*fetched.Status.Source.SourceDefined).To(BeTrue()) // Source is valid
 				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("401"))
+
+				// Re-fetch to get the latest status
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+
+				// Verify AuthErrorMessage contains the dynamic hostname if it was set
+				// (401 error can occur during credential validation OR during upload)
+				if fetched.Status.Authentication.AuthErrorMessage != "" {
+					parsedURL, err := url.Parse(expiredCredsTS.URL)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring(parsedURL.Host))
+					Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(ContainSubstring("console.redhat.com"))
+				}
 			})
 			It("should store reports when source validation fails", func() {
 				Expect(setup()).Should(Succeed())
@@ -998,12 +1010,11 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
 
 				// Verify the error message contains the actual API URL (hostname only, no https://)
-				parsedURL, _ := url.Parse(validTS.URL)
+				parsedURL, err := url.Parse(validTS.URL)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring(parsedURL.Host))
-				// Verify it doesn't contain the hardcoded console.redhat.com if using a different URL
-				if parsedURL.Host != "console.redhat.com" {
-					Expect(fetched.Status.Upload.UploadError).ToNot(ContainSubstring("console.redhat.com"))
-				}
+				// Verify it doesn't contain the hardcoded console.redhat.com (validTS.URL is always local)
+				Expect(fetched.Status.Upload.UploadError).ToNot(ContainSubstring("console.redhat.com"))
 
 				Expect(fetched.Status.Source.SourceDefined).ToNot(BeNil())
 				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
@@ -1028,7 +1039,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
 
 				// Verify it contains the actual API URL being used
-				parsedURL, _ := url.Parse(defaultAPIURL)
+				parsedURL, err := url.Parse(defaultAPIURL)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring(parsedURL.Host))
 
 				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
