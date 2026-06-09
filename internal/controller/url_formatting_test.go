@@ -23,6 +23,7 @@ var _ = Describe("formatURLForDisplay", func() {
 		Entry("HTTP URL with port", "http://localhost:8088", "localhost:8088"),
 		Entry("HTTP URL with port and trailing slash", "http://localhost:8088/", "localhost:8088"),
 		Entry("HTTPS URL with internal domain", "https://koku.internal.corp", "koku.internal.corp"),
+		Entry("URL without scheme", "console.redhat.com", "console.redhat.com"),
 		// Fallback path - malformed URLs that url.Parse cannot handle
 		// Note: url.Parse is quite permissive and succeeds on most strings,
 		// so the fallback err != nil branch is essentially dead code in practice.

@@ -106,10 +106,13 @@ type serializedAuth struct {
 // Returns just the host portion (e.g., "console.redhat.com" or "on-prem.example.com:8443").
 func formatURLForDisplay(apiURL string) string {
 	parsedURL, err := url.Parse(apiURL)
-	if err != nil {
-		// Should never happen - APIURL is validated during authentication and source checks
-		log.Error(err, "unexpected URL parse failure, using raw URL", "APIURL", apiURL)
+	if err != nil || parsedURL.Host == "" {
+		if err != nil {
+			// Should never happen - APIURL is validated during authentication and source checks
+			log.Error(err, "unexpected URL parse failure, using raw URL", "APIURL", apiURL)
+		}
 		// Fallback to string manipulation
+		// This also handles URLs without a scheme (e.g., "console.redhat.com" without "https://")
 		displayURL := strings.TrimPrefix(apiURL, "https://")
 		displayURL = strings.TrimPrefix(displayURL, "http://")
 		displayURL = strings.TrimSuffix(displayURL, "/")
