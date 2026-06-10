@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -975,6 +976,18 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				// Verify the expected values - source should be valid but upload should fail
 				Expect(*fetched.Status.Source.SourceDefined).To(BeTrue()) // Source is valid
 				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("401"))
+
+				// Re-fetch to get the latest status
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+
+				// Verify AuthErrorMessage contains the dynamic hostname if it was set
+				// (401 error can occur during credential validation OR during upload)
+				if fetched.Status.Authentication.AuthErrorMessage != "" {
+					parsedURL, err := url.Parse(expiredCredsTS.URL)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring(parsedURL.Host))
+					Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(ContainSubstring("console.redhat.com"))
+				}
 			})
 			It("should store reports when source validation fails", func() {
 				Expect(setup()).Should(Succeed())
@@ -995,6 +1008,13 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 					return fetched.Status.Upload.UploadError
 				}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
+
+				// Verify the error message contains the actual API URL (hostname only, no https://)
+				parsedURL, err := url.Parse(validTS.URL)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring(parsedURL.Host))
+				// Verify it doesn't contain the hardcoded console.redhat.com (validTS.URL is always local)
+				Expect(fetched.Status.Upload.UploadError).ToNot(ContainSubstring("console.redhat.com"))
 
 				Expect(fetched.Status.Source.SourceDefined).ToNot(BeNil())
 				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
@@ -1018,8 +1038,37 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					return fetched.Status.Upload.UploadError
 				}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
 
+				// Verify it contains the actual API URL being used
+				parsedURL, err := url.Parse(defaultAPIURL)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring(parsedURL.Host))
+
 				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+			})
+			It("should show on-premise URL in error message when source validation fails", func() {
+				Expect(setup()).Should(Succeed())
+				onPremURL := "https://on-prem-koku.example.com:8443"
+				instCopy.Spec.APIURL = onPremURL
+				instCopy.Spec.Source.SourceName = "test-source"
+				instCopy.Spec.Source.CreateSource = &falseValue
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Upload.UploadError != ""
+				}, timeout, interval).Should(BeTrue())
+
+				// Verify error message contains the on-premise hostname with port (without https://)
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("on-prem-koku.example.com:8443"))
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("Reports are being stored until a valid source is registered at"))
+				// Verify it does NOT contain the old hardcoded message
+				Expect(fetched.Status.Upload.UploadError).ToNot(ContainSubstring("console.redhat.com"))
+
+				Expect(fetched.Status.APIURL).To(Equal(onPremURL))
+				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
 			})
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
