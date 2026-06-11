@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -121,14 +120,7 @@ func getTimeRange(ctx context.Context, r *MetricsConfigReconciler, cr *metricscf
 
 func getPromCollector(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig) error {
 	if r.promCollector == nil {
-		var serviceaccountPath string
-		if r.OverrideSecretPath {
-			val, ok := os.LookupEnv("SECRET_ABSPATH")
-			if ok {
-				serviceaccountPath = val
-			}
-		}
-		r.promCollector = collector.NewPromCollector(serviceaccountPath)
+		r.promCollector = collector.NewPromCollector(r.SecretPath)
 	}
 	r.promCollector.TimeSeries = nil
 	if cr.Spec.PrometheusConfig.ContextTimeout == nil {

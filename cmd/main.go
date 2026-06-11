@@ -82,11 +82,6 @@ func main() {
 		inCluster = value == "true"
 	}
 
-	overrideSecretPath := false
-	if _, ok := os.LookupEnv("SECRET_ABSPATH"); ok {
-		overrideSecretPath = true
-	}
-
 	watchNamespace, err := getWatchNamespace()
 	if err != nil {
 		setupLog.Error(err, "unable to get WatchNamespace, "+
@@ -117,12 +112,12 @@ func main() {
 	}
 
 	if err = (&controller.MetricsConfigReconciler{
-		Client:             mgr.GetClient(),
-		Scheme:             mgr.GetScheme(),
-		Clientset:          clientset,
-		InCluster:          inCluster,
-		Namespace:          watchNamespace,
-		OverrideSecretPath: overrideSecretPath,
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Clientset:  clientset,
+		InCluster:  inCluster,
+		Namespace:  watchNamespace,
+		SecretPath: os.Getenv("SECRET_ABSPATH"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MetricsConfig")
 		os.Exit(1)

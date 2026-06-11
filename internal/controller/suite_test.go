@@ -321,7 +321,7 @@ var _ = BeforeSuite(func() {
 			Scheme:             scheme.Scheme,
 			Clientset:          clientset,
 			InCluster:          true,
-			OverrideSecretPath: true,
+			SecretPath: os.Getenv("SECRET_ABSPATH"),
 		}
 		err := (defaultReconciler).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
@@ -342,15 +342,15 @@ var _ = BeforeSuite(func() {
 
 type ReconcilerOption func(f *MetricsConfigReconciler)
 
-func WithSecretOverride(OverrideSecretPath bool) ReconcilerOption {
+func WithSecretOverride(secretPath string) ReconcilerOption {
 	return func(r *MetricsConfigReconciler) {
-		r.OverrideSecretPath = OverrideSecretPath
+		r.SecretPath = secretPath
 	}
 }
 
 func resetReconciler(opts ...ReconcilerOption) {
 	defaultReconciler.promCollector = nil
-	defaultReconciler.OverrideSecretPath = true
+	defaultReconciler.SecretPath = os.Getenv("SECRET_ABSPATH")
 	for _, opt := range opts {
 		opt(defaultReconciler)
 	}

@@ -1316,7 +1316,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			}
 		})
 		It("failed to get prometheus config because of missing token", func() {
-			resetReconciler(WithSecretOverride(false))
+			resetReconciler(WithSecretOverride(""))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1339,7 +1339,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("failed to get token"))
 		})
 		It("successfully queried but there was no data", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1364,7 +1364,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 		})
 		It("2day retention period - successfully queried but there was no data on first day, but data on second", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
 			createObject(ctx, testConfigMap)
@@ -1394,7 +1394,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
 		})
 		It("2day retention period - end of 24 hr test", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 			now = func() time.Time { return time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour) }
 
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
@@ -1432,7 +1432,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(len(files)).To(Equal(0))
 		})
 		It("query failed due to error", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1457,7 +1457,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 		})
 		It("query returns node data only", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1514,7 +1514,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		})
 		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
 			// slow test, always run this one last
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 8d"}
 			createObject(ctx, testConfigMap)
