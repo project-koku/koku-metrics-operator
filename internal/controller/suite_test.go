@@ -338,6 +338,10 @@ var _ = BeforeSuite(func() {
 
 	clusterPrep(ctx)
 
+	if !useCluster {
+		defaultReconciler.SecretPath = os.Getenv("SECRET_ABSPATH")
+	}
+
 })
 
 type ReconcilerOption func(f *MetricsConfigReconciler)
