@@ -11,14 +11,14 @@ require (
 	github.com/onsi/ginkgo/v2 v2.31.0
 	github.com/onsi/gomega v1.42.0
 	github.com/openshift/api v0.0.0-20260605005319-1194f4c62539
-	github.com/operator-framework/api v0.43.0
+	github.com/operator-framework/api v0.44.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.68.1
 	go.uber.org/zap v1.28.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.36.1
-	k8s.io/apimachinery v0.36.1
-	k8s.io/client-go v0.36.1
+	k8s.io/api v0.36.2
+	k8s.io/apimachinery v0.36.2
+	k8s.io/client-go v0.36.2
 	sigs.k8s.io/controller-runtime v0.24.1
 )
 
