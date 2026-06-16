@@ -11,6 +11,15 @@
     "enabled": true,
     "packageRules": [
       {
+        "matchManagers": ["gomod"],
+        "constraintsFiltering": "strict"
+      },
+      {
+        "matchDepNames": ["go"],
+        "matchDepTypes": ["golang", "toolchain"],
+        "enabled": false
+      },
+      {
         "matchPackageNames": ["*"],
         "matchUpdateTypes": ["digest", "patch", "minor"],
         "groupName": "all go deps (non-major)",
