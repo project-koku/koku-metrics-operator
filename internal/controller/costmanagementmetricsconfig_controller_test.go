@@ -271,6 +271,62 @@ func shutdown() {
 
 }
 
+func TestReflectSpecExcludeGpuNamespaces(t *testing.T) {
+	tests := []struct {
+		name           string
+		specNamespaces []string
+		wantSpec       []string
+		wantStatus     []string
+	}{
+		{
+			name:           "nil defaults to nvidia-gpu-operator",
+			specNamespaces: nil,
+			wantSpec:       []string{"nvidia-gpu-operator"},
+			wantStatus:     []string{"nvidia-gpu-operator"},
+		},
+		{
+			name:           "explicit value is preserved",
+			specNamespaces: []string{"custom-ns"},
+			wantSpec:       []string{"custom-ns"},
+			wantStatus:     []string{"custom-ns"},
+		},
+		{
+			name:           "empty slice is preserved",
+			specNamespaces: []string{},
+			wantSpec:       []string{},
+			wantStatus:     []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cr := &metricscfgv1beta1.MetricsConfig{
+				Spec: metricscfgv1beta1.MetricsConfigSpec{
+					Upload: metricscfgv1beta1.UploadSpec{
+						UploadCycle: &defaultUploadCycle,
+					},
+					PrometheusConfig: metricscfgv1beta1.PrometheusSpec{
+						ExcludeGpuNamespaces: tt.specNamespaces,
+					},
+				},
+			}
+			ReflectSpec(nil, cr)
+			if len(cr.Spec.PrometheusConfig.ExcludeGpuNamespaces) != len(tt.wantSpec) {
+				t.Errorf("spec ExcludeGpuNamespaces = %v, want %v", cr.Spec.PrometheusConfig.ExcludeGpuNamespaces, tt.wantSpec)
+			}
+			if len(cr.Status.Prometheus.ExcludeGpuNamespaces) != len(tt.wantStatus) {
+				t.Errorf("status ExcludeGpuNamespaces = %v, want %v", cr.Status.Prometheus.ExcludeGpuNamespaces, tt.wantStatus)
+			}
+			// verify deep copy: mutating status should not affect spec
+			if len(cr.Status.Prometheus.ExcludeGpuNamespaces) > 0 {
+				cr.Status.Prometheus.ExcludeGpuNamespaces[0] = "mutated"
+				if cr.Spec.PrometheusConfig.ExcludeGpuNamespaces[0] == "mutated" {
+					t.Error("status and spec share underlying slice - deep copy is broken")
+				}
+			}
+		})
+	}
+}
+
 var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 	const timeout = time.Second * 60
