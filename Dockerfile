@@ -1,4 +1,7 @@
 # Build the manager binary
+FROM docker.io/library/alpine:3.24.1 AS tools
+RUN apk add --no-cache busybox-static
+
 FROM --platform=${BUILDPLATFORM:-linux/amd64} docker.io/library/golang:1.26.4 AS builder
 
 ARG TARGETOS
@@ -51,6 +54,7 @@ LABEL \
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY --from=tools /bin/busybox.static /usr/bin/tar
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]
