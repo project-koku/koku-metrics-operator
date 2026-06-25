@@ -53,13 +53,13 @@ arches:
     name: libsigsegv
     evr: 2.13-4.el9
     sourcerpm: libsigsegv-2.13-4.el9.src.rpm
-  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/l/libtasn1-4.16.0-9.el9.aarch64.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/l/libtasn1-4.16.0-10.el9_8.aarch64.rpm
     repoid: ubi-9-for-aarch64-baseos-rpms
-    size: 77910
-    checksum: sha256:64fca0d49523ffb182e8bad1b8d52e2c2b7b722ceb54e4fb03e118d07fb59db1
+    size: 80446
+    checksum: sha256:322524934c9b1f0714d2299705dbd41ec93451078e8144babc88c51bd19f6e07
     name: libtasn1
-    evr: 4.16.0-9.el9
-    sourcerpm: libtasn1-4.16.0-9.el9.src.rpm
+    evr: 4.16.0-10.el9_8
+    sourcerpm: libtasn1-4.16.0-10.el9_8.src.rpm
   - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/aarch64/baseos/os/Packages/o/openssl-3.5.5-4.el9_8.aarch64.rpm
     repoid: ubi-9-for-aarch64-baseos-rpms
     size: 1540982
@@ -176,13 +176,13 @@ arches:
     name: libsigsegv
     evr: 2.13-4.el9
     sourcerpm: libsigsegv-2.13-4.el9.src.rpm
-  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/l/libtasn1-4.16.0-9.el9.ppc64le.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/l/libtasn1-4.16.0-10.el9_8.ppc64le.rpm
     repoid: ubi-9-for-ppc64le-baseos-rpms
-    size: 84469
-    checksum: sha256:05d77fc16cb5888d298a1d57d419da59894e60eed3220f674f74d50337db167f
+    size: 87068
+    checksum: sha256:cbd7e8b7236d395a591ab0e0c28b8a3d37944d451c008aad4fa4063b9c62e825
     name: libtasn1
-    evr: 4.16.0-9.el9
-    sourcerpm: libtasn1-4.16.0-9.el9.src.rpm
+    evr: 4.16.0-10.el9_8
+    sourcerpm: libtasn1-4.16.0-10.el9_8.src.rpm
   - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/ppc64le/baseos/os/Packages/o/openssl-3.5.5-4.el9_8.ppc64le.rpm
     repoid: ubi-9-for-ppc64le-baseos-rpms
     size: 1566170
@@ -299,13 +299,13 @@ arches:
     name: libsigsegv
     evr: 2.13-4.el9
     sourcerpm: libsigsegv-2.13-4.el9.src.rpm
-  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/l/libtasn1-4.16.0-9.el9.s390x.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/l/libtasn1-4.16.0-10.el9_8.s390x.rpm
     repoid: ubi-9-for-s390x-baseos-rpms
-    size: 78514
-    checksum: sha256:e074ad620eebba2c626d43762b9105f2cdb6b5cea5da3ae1d2751465be9377e7
+    size: 81089
+    checksum: sha256:af302cefa6d25b679f160d87f363b7fdf70756465e7ee8b8744fcef23a7d9da5
     name: libtasn1
-    evr: 4.16.0-9.el9
-    sourcerpm: libtasn1-4.16.0-9.el9.src.rpm
+    evr: 4.16.0-10.el9_8
+    sourcerpm: libtasn1-4.16.0-10.el9_8.src.rpm
   - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/s390x/baseos/os/Packages/o/openssl-3.5.5-4.el9_8.s390x.rpm
     repoid: ubi-9-for-s390x-baseos-rpms
     size: 1549244
@@ -422,13 +422,13 @@ arches:
     name: libsigsegv
     evr: 2.13-4.el9
     sourcerpm: libsigsegv-2.13-4.el9.src.rpm
-  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/l/libtasn1-4.16.0-9.el9.x86_64.rpm
+  - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/l/libtasn1-4.16.0-10.el9_8.x86_64.rpm
     repoid: ubi-9-for-x86_64-baseos-rpms
-    size: 78596
-    checksum: sha256:3c619506cf4283d4d30d9e681a3565f79c1009f5e4a47d71b0de78c5ee24c91d
+    size: 81418
+    checksum: sha256:f9473f322407f10205b0db98b89cf8f603e9c769e9977250734136df56cbb981
     name: libtasn1
-    evr: 4.16.0-9.el9
-    sourcerpm: libtasn1-4.16.0-9.el9.src.rpm
+    evr: 4.16.0-10.el9_8
+    sourcerpm: libtasn1-4.16.0-10.el9_8.src.rpm
   - url: https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/o/openssl-3.5.5-4.el9_8.x86_64.rpm
     repoid: ubi-9-for-x86_64-baseos-rpms
     size: 1564134
