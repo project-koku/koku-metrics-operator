@@ -30,7 +30,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 FROM registry.redhat.io/ubi9/ubi-micro:9.8@sha256:fdf68a4f5f88cca14ae906bbec6e0fbbffe92b5b91e73e0862c961234d63b986 AS target-base
 
 # Prepare a ubi micro base with openssl and its dependencies.
-FROM registry.redhat.io/ubi9/ubi:9.8@sha256:37a15896602263cb998cd3c21919efb433adf9dbd3a7c961da5d8e3083a0db82 AS ubi-micro-build
+FROM registry.access.redhat.com/ubi9/ub:9.8@sha256:37a15896602263cb998cd3c21919efb433adf9dbd3a7c961da5d8e3083a0db82 AS ubi-micro-build
 COPY --from=target-base / /mnt/rootfs
 RUN rpm --root /mnt/rootfs --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
 RUN yum install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --setopt reposdir=/etc/yum.repos.d --nodocs -y coreutils-single glibc-minimal-langpack openssl; yum clean all
