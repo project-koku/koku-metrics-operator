@@ -4,22 +4,37 @@
   "tekton": {
     "includePaths": [".tekton/**"]
   },
-  "enabledManagers": ["tekton", "dockerfile"],
-  "prConcurrentLimit": 5,
+  "enabledManagers": ["tekton", "dockerfile", "gomod"],
+  "prConcurrentLimit": 4,
+  "addLabels": ["dependencies"],
   "gomod": {
-    "enabled": false
+    "enabled": true,
+    "packageRules": [
+      {
+        "matchManagers": ["gomod"],
+        "constraintsFiltering": "strict"
+      },
+      {
+        "matchDepNames": ["go"],
+        "matchDepTypes": ["golang", "toolchain"],
+        "enabled": false
+      },
+      {
+        "matchPackageNames": ["*"],
+        "matchUpdateTypes": ["digest", "patch", "minor"],
+        "groupName": "all go deps (non-major)",
+        "groupSlug": "go-deps-non-major"
+      },
+      {
+        "matchPackageNames": ["*"],
+        "matchUpdateTypes": ["major"],
+        "groupName": "all go deps (major)",
+        "groupSlug": "go-deps-major"
+      }
+    ]
   },
-  "ignorePaths": ["go.mod", "go.sum", "vendor/**"],
+  "ignorePaths": ["vendor/**"],
   "packageRules": [
-    {
-      "matchManagers": ["gomod"],
-      "enabled": false
-    },
-    {
-      "matchUpdateTypes": ["*"],
-      "matchFileNames": ["go.mod", "go.sum", "vendor/**"],
-      "enabled": false
-    },
     {
         "matchDatasources": ["docker"],
         "matchPackageNames": ["registry.redhat.io/ubi9/ubi-micro"],

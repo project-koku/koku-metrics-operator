@@ -39,8 +39,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:ffd00b231de706b054325c24cb7a6e5b283c9f8cadfa76aebe120e553effb4d7
-    createdAt: "2026-05-03T15:17:07Z"
+    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:9371dc345d1722e12dd54f88a8597f85714bd7551bb302e16d9e3d335dbf4de3
+    createdAt: "2026-06-01T13:23:30Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -104,7 +104,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.4.4.0
+  name: costmanagement-metrics-operator.4.4.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -136,6 +136,14 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.4.1:
+    * (Bugfix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
+    * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
+    * (Bugfix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
+    * (Bugfix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
+    * (Bugfix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
+    * Updated dependencies.
 
     ## New in v4.4.0:
     * Enabled gathering and reporting NVIDIA MIG (Multi-Instance GPU) metrics for cost management.
@@ -590,7 +598,11 @@ spec:
                         value: 5s
                       - name: IN_CLUSTER
                         value: "true"
-                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:ffd00b231de706b054325c24cb7a6e5b283c9f8cadfa76aebe120e553effb4d7
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.annotations['olm.targetNamespaces']
+                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:9371dc345d1722e12dd54f88a8597f85714bd7551bb302e16d9e3d335dbf4de3
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -695,5 +707,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.4.0
-  replaces: costmanagement-metrics-operator.4.3.1
+  version: 4.4.1
+  replaces: costmanagement-metrics-operator.4.4.0

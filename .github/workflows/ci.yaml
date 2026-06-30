@@ -86,11 +86,10 @@ jobs:
         with:
           name: coverage
       - name: Upload coverage
-        uses: codecov/codecov-action@v4.2.0
+        uses: codecov/codecov-action@v7
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          file: ./cover.out
+          files: ./cover.out
           flags: unittests
           fail_ci_if_error: true
-          plugin: pycoverage  # Only run one plugin even though we don't want any to run.

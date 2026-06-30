@@ -15,7 +15,10 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 
 ## Development
 
-More specific documentation for local development can be found [here](docs/local-development.md).
+**Quick Links:**
+- **[Contributing](CONTRIBUTING)** - How to contribute
+- **[Local Development](docs/local-development.md)** - Setup, development workflow, and PR process
+- **[Architecture](docs/architecture.md)** - System design and component relationships
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
@@ -42,7 +45,7 @@ Next, install the Operator SDK CLI using the following [documentation](https://s
 To build the manager binary you can execute the following make command:
 
 ```
-make manager
+make build
 ```
 
 To build the docker image you can execute the following make command:
@@ -57,6 +60,12 @@ Linting can be performed with the following make commands:
 make fmt
 make lint
 ```
+
+## AI-Assisted Development
+
+This project includes an [AGENTS.md](AGENTS.md) file that provides AI coding agents (Cursor, Claude Code, GitHub Copilot, etc.) with project-specific context including conventions, upstream/downstream guidance, and architectural facts.
+
+For traditional development workflows, see [docs/local-development.md](docs/local-development.md).
 
 ## Testing
 
