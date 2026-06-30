@@ -420,6 +420,9 @@ func (t *Transport) closeIdleConnections() {
 }
 
 func (t *Transport) dialClientConn(ctx context.Context, addr string, singleUse bool) (*ClientConn, error) {
+	if t.transportTestHooks != nil {
+		return t.newClientConn(nil, singleUse, nil)
+	}
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
@@ -2485,9 +2488,6 @@ func (rl *clientConnReadLoop) processSettingsNoWrite(f *SettingsFrame) error {
 
 	var seenMaxConcurrentStreams bool
 	err := f.ForeachSetting(func(s Setting) error {
-		if err := s.Valid(); err != nil {
-			return err
-		}
 		switch s.ID {
 		case SettingMaxFrameSize:
 			cc.maxFrameSize = s.Val
@@ -2519,6 +2519,9 @@ func (rl *clientConnReadLoop) processSettingsNoWrite(f *SettingsFrame) error {
 			cc.henc.SetMaxDynamicTableSize(s.Val)
 			cc.peerMaxHeaderTableSize = s.Val
 		case SettingEnableConnectProtocol:
+			if err := s.Valid(); err != nil {
+				return err
+			}
 			// If the peer wants to send us SETTINGS_ENABLE_CONNECT_PROTOCOL,
 			// we require that it do so in the first SETTINGS frame.
 			//
