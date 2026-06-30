@@ -27,7 +27,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
-    FROM registry.redhat.io/ubi9/ubi-micro:9.8-1782363471@sha256:430a38ce0a7186b9b984c4c302c7001e0db8cb237c74b7b5853b7b83e1faf853 AS target-base
+    FROM registry.redhat.io/ubi9/ubi-micro@sha256:fdf68a4f5f88cca14ae906bbec6e0fbbffe92b5b91e73e0862c961234d63b986 AS target-base
 
 # Prepare a ubi micro base with openssl and its dependencies.
 FROM registry.access.redhat.com/ubi9/ubi AS ubi-micro-build
