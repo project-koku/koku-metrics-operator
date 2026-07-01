@@ -227,7 +227,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 
 	// ######## this actually generates the node report and the others for cost-management
 	if cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement != nil && !*cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement {
-		if err := generateCostManagementReports(log, c, dirCfg, nodeRows, yearMonth); err != nil {
+		if err := generateCostManagementReports(log, c, dirCfg, nodeRows, yearMonth, cr.Spec.PrometheusConfig.ExcludeGpuNamespaces); err != nil {
 			return err
 		}
 	}
@@ -267,7 +267,7 @@ func GenerateReports(cr *metricscfgv1beta1.MetricsConfig, dirCfg *dirconfig.Dire
 	return nil
 }
 
-func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string) error {
+func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, nodeRows mappedCSVStruct, yearMonth string, excludeGpuNamespaces []string) error {
 
 	// cost node metrics
 	if err := generateCostNodeMetricsReport(log, c, dirCfg, nodeRows, yearMonth); err != nil {
@@ -295,7 +295,7 @@ func generateCostManagementReports(log gologr.Logger, c *PrometheusCollector, di
 	}
 
 	//cost nvidia gpu metrics
-	if err := generateCostNvidiaGpuMetricsReport(log, c, dirCfg, yearMonth); err != nil {
+	if err := generateCostNvidiaGpuMetricsReport(log, c, dirCfg, yearMonth, excludeGpuNamespaces); err != nil {
 		return err
 	}
 
@@ -484,7 +484,7 @@ func generateCostVMMetricsReport(log gologr.Logger, c *PrometheusCollector, dirC
 }
 
 // generateCostNvidiaGpuMetricsReport generates the report for NVIDIA GPU metrics.
-func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string) error {
+func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollector, dirCfg *dirconfig.DirectoryConfig, yearMonth string, excludeGpuNamespaces []string) error {
 	log.Info("querying for cost nvidia gpu metrics")
 
 	// Query capacity and utilization separately for better efficiency
@@ -514,6 +514,11 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 
 	nvidiaGpuRows := make(mappedCSVStruct)
 
+	excludeSet := make(map[string]struct{}, len(excludeGpuNamespaces))
+	for _, ns := range excludeGpuNamespaces {
+		excludeSet[ns] = struct{}{}
+	}
+
 	mergeMappedValues := func(target mappedValues, source mappedValues) {
 		for dataKey, dataVal := range source {
 			target[dataKey] = dataVal
@@ -522,6 +527,11 @@ func generateCostNvidiaGpuMetricsReport(log gologr.Logger, c *PrometheusCollecto
 
 	// For each gpu utilization result, find and merge matching capacity and max-slices data.
 	for key, gpuVal := range gpuUtilizationResults {
+		if ns, _ := gpuVal["namespace"].(string); ns != "" {
+			if _, excluded := excludeSet[ns]; excluded {
+				continue
+			}
+		}
 		// Respect query row keys
 		migInstanceID, _ := gpuVal["mig_instance_id"].(string)
 		if strings.TrimSpace(migInstanceID) != "" {
