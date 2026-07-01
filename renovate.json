@@ -36,9 +36,12 @@
   "ignorePaths": ["vendor/**"],
   "packageRules": [
     {
-        "matchDatasources": ["docker"],
-        "matchPackageNames": ["registry.redhat.io/ubi9/ubi-micro"],
-        "versioning": "redhat"
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "registry.redhat.io/ubi9/ubi-micro",
+        "registry.redhat.io/ubi9/ubi"
+      ],
+      "versioning": "redhat"
     }
   ]
 }
