@@ -32,3 +32,4 @@ ignore:
   - "internal/testutils/**"
   - "internal/mocks/**"
   - "**/zz_generated.deepcopy.go"
+  - "cmd/main.go"
