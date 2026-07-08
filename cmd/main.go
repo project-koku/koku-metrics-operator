@@ -84,8 +84,12 @@ func main() {
 
 	watchNamespace, err := getWatchNamespace()
 	if err != nil {
-		setupLog.Error(err, "unable to get WatchNamespace, "+
-			"the manager will watch and manage resources in all namespaces")
+		setupLog.Info("WATCH_NAMESPACE not set, the manager will watch and manage resources in all namespaces")
+	}
+
+	var cacheOptions cache.Options
+	if watchNamespace != "" {
+		cacheOptions = cache.Options{DefaultNamespaces: map[string]cache.Config{watchNamespace: {}}}
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -98,7 +102,7 @@ func main() {
 		LeaseDuration:    &leaseDuration,
 		RenewDeadline:    &renewDeadline,
 		RetryPeriod:      &retryPeriod,
-		Cache:            cache.Options{DefaultNamespaces: map[string]cache.Config{watchNamespace: {}}},
+		Cache:            cacheOptions,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

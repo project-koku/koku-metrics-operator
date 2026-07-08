@@ -461,17 +461,67 @@ spec:
                 - ""
               resources:
                 - configmaps
+                - endpoints
+                - events
+                - persistentvolumeclaims
+                - pods
+                - secrets
+                - serviceaccounts
+                - services
+                - services/finalizers
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - ""
+              resources:
                 - namespaces
               verbs:
                 - get
                 - list
                 - watch
             - apiGroups:
-                - ""
+                - apps
               resources:
-                - secrets
+                - deployments
               verbs:
                 - get
+                - list
+                - patch
+                - watch
+            - apiGroups:
+                - config.openshift.io
+              resources:
+                - clusterversions
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - costmanagement-metrics-cfg.openshift.io
+              resources:
+                - costmanagementmetricsconfigs
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - costmanagement-metrics-cfg.openshift.io
+              resources:
+                - costmanagementmetricsconfigs/status
+              verbs:
+                - get
+                - patch
+                - update
             - apiGroups:
                 - config.openshift.io
               resources:
@@ -488,6 +538,16 @@ spec:
                 - create
                 - get
                 - update
+            - apiGroups:
+                - operators.coreos.com
+              resources:
+                - clusterserviceversions
+              verbs:
+                - get
+                - list
+                - patch
+                - update
+                - watch
           serviceAccountName: costmanagement-metrics-controller-manager
       deployments:
         - label:
@@ -621,65 +681,6 @@ spec:
                 - update
                 - patch
                 - delete
-            - apiGroups:
-                - ""
-              resources:
-                - configmaps
-                - endpoints
-                - events
-                - persistentvolumeclaims
-                - pods
-                - secrets
-                - serviceaccounts
-                - services
-                - services/finalizers
-              verbs:
-                - create
-                - delete
-                - get
-                - list
-                - patch
-                - update
-                - watch
-            - apiGroups:
-                - apps
-              resources:
-                - deployments
-              verbs:
-                - get
-                - list
-                - patch
-                - watch
-            - apiGroups:
-                - costmanagement-metrics-cfg.openshift.io
-              resources:
-                - costmanagementmetricsconfigs
-              verbs:
-                - create
-                - delete
-                - get
-                - list
-                - patch
-                - update
-                - watch
-            - apiGroups:
-                - costmanagement-metrics-cfg.openshift.io
-              resources:
-                - costmanagementmetricsconfigs/status
-              verbs:
-                - get
-                - patch
-                - update
-            - apiGroups:
-                - operators.coreos.com
-              resources:
-                - clusterserviceversions
-              verbs:
-                - get
-                - list
-                - patch
-                - update
-                - watch
           serviceAccountName: costmanagement-metrics-controller-manager
     strategy: deployment
   installModes:
@@ -689,7 +690,7 @@ spec:
       type: SingleNamespace
     - supported: false
       type: MultiNamespace
-    - supported: false
+    - supported: true
       type: AllNamespaces
   keywords:
     - cost
