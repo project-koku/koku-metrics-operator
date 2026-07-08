@@ -320,6 +320,42 @@ UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
+DOWNSTREAM_OPERATOR_NAME = $(DOWNSTREAM_LOWERCASE)-metrics-operator
+DOWNSTREAM_CSV_FILE = bundle/manifests/$(DOWNSTREAM_OPERATOR_NAME).clusterserviceversion.yaml
+
+.PHONY: downstream-bundle
+downstream-bundle: operator-sdk manifests kustomize yq ## Generate downstream bundle manifests and metadata, then validate generated files.
+	rm -rf ./bundle
+	$(OPERATOR_SDK) generate kustomize manifests
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) --default-channel=stable --channels=stable
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+
+	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.metadata.annotations.certified = "true"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.metadata.annotations.support = "Red Hat"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.metadata.name = "$(DOWNSTREAM_OPERATOR_NAME).$(VERSION)"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/$(DOWNSTREAM_OPERATOR_NAME)"]' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.spec.replaces = "$(DOWNSTREAM_OPERATOR_NAME).$(PREVIOUS_VERSION)"' $(DOWNSTREAM_CSV_FILE)
+	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' $(DOWNSTREAM_CSV_FILE)
+
+	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' $(DOWNSTREAM_CSV_FILE)
+
+	# update bundle.Dockerfile with downstream labels
+	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
+	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
+	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
+
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
+
 .PHONY: downstream
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
@@ -335,36 +371,7 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
 	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
 
-	$(MAKE) manifests
-
-	rm -rf ./bundle
-
-	$(OPERATOR_SDK) generate kustomize manifests
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) --default-channel=stable --channels=stable
-
-	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
-	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
-
-	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.metadata.annotations.certified = "true"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.metadata.annotations.support = "Red Hat"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.metadata.name = "costmanagement-metrics-operator.$(VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/costmanagement-metrics-operator"]' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-
-	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
-
-	# update bundle.dockerfile
-	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
-	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
-	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
+	$(MAKE) downstream-bundle
 
 ##@ Build Dependencies
 

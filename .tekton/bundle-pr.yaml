@@ -32,6 +32,9 @@ spec:
       value: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/costmanagement-metrics-operator/costmanagement-metrics-operator-bundle:on-pr-{{revision}}
     - name: image-expires-after
       value: 5d
+    - name: build-args
+      value:
+        - COMMIT_REF={{revision}}
     - name: dockerfile
       value: bundle.Dockerfile
     - name: hermetic
