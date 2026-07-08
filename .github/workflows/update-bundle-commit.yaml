@@ -1,0 +1,47 @@
+name: Update bundle commit ref from nudge PR
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [downstream]
+
+jobs:
+  update-commit-ref:
+    if: github.actor == 'red-hat-konflux[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 2
+
+      - name: Extract operator commit from PR description
+        id: extract
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          COMMIT_REF=$(echo "$PR_BODY" | grep -o 'rev=[a-f0-9]*' | head -1 | cut -d= -f2)
+          echo "commit_ref=${COMMIT_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Update bundle.Dockerfile
+        run: |
+          COMMIT_REF="${{ steps.extract.outputs.commit_ref }}"
+          if [ -z "$COMMIT_REF" ]; then
+            echo "No commit ref found in PR description"
+            exit 0
+          fi
+          if grep -q "COMMIT_REF=\"${COMMIT_REF}\"" bundle.Dockerfile; then
+            echo "Already up to date"
+            exit 0
+          fi
+          sed -i "s|ARG COMMIT_REF=\".*\"|ARG COMMIT_REF=\"${COMMIT_REF}\"|" bundle.Dockerfile
+
+      - name: Amend nudge commit and force-push
+        run: |
+          git diff --quiet bundle.Dockerfile && exit 0
+          git config user.name "red-hat-konflux[bot]"
+          git config user.email "126015336+red-hat-konflux[bot]@users.noreply.github.com"
+          git add bundle.Dockerfile
+          git commit --amend --no-edit
+          git push --force-with-lease
