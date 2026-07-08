@@ -39,8 +39,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "true"
-    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:9371dc345d1722e12dd54f88a8597f85714bd7551bb302e16d9e3d335dbf4de3
-    createdAt: "2026-06-01T13:23:30Z"
+    containerImage: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator:4.4.2
+    createdAt: "2026-07-08T13:55:51Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -104,7 +104,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: costmanagement-metrics-operator.4.4.1
+  name: costmanagement-metrics-operator.4.4.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -136,6 +136,9 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.4.2:
+    * Updated dependencies to address security vulnerabilities.
 
     ## New in v4.4.1:
     * (Bugfix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
@@ -336,7 +339,7 @@ spec:
 
     # Restricted Network Usage (disconnected/air-gapped mode)
     ## Installation
-    To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/disconnected_environments/olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
+    To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
     Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
@@ -542,7 +545,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator@sha256:9371dc345d1722e12dd54f88a8597f85714bd7551bb302e16d9e3d335dbf4de3
+                    image: registry.redhat.io/costmanagement/costmanagement-metrics-rhel9-operator:4.4.2
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -706,5 +709,5 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.4.1
-  replaces: costmanagement-metrics-operator.4.4.0
+  version: 4.4.2
+  replaces: costmanagement-metrics-operator.4.4.1
