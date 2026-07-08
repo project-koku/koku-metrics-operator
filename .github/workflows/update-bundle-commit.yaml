@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize]
     branches: [downstream]
+    paths:
+      - 'bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml'
 
 jobs:
   update-commit-ref:
