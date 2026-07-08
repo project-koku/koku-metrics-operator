@@ -28,11 +28,12 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
-func addKnownTypes(s *runtime.Scheme) error {
-	s.AddKnownTypes(GroupVersion,
+func addKnownTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(GroupVersion,
 		&CostManagementMetricsConfig{},
 		&CostManagementMetricsConfigList{},
 	)
-	metav1.AddToGroupVersion(s, GroupVersion)
+	metav1.AddToGroupVersion(scheme, GroupVersion)
+
 	return nil
 }

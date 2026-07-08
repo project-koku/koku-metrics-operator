@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -82,7 +83,7 @@ type MetricsConfigReconciler struct {
 	cvClientBuilder       cv.ClusterVersionBuilder
 	promCollector         *collector.PrometheusCollector
 	initialDataCollection bool
-	overrideSecretPath    bool
+	SecretPath            string
 }
 
 type previousAuthValidation struct {
@@ -98,6 +99,26 @@ type serializedAuthMap struct {
 }
 type serializedAuth struct {
 	Auth string `json:"auth"`
+}
+
+// formatURLForDisplay extracts the hostname from a URL for user-friendly display in error messages.
+// It removes the scheme (https://) and any trailing slashes to match the style of existing error messages.
+// Returns just the host portion (e.g., "console.redhat.com" or "on-prem.example.com:8443").
+func formatURLForDisplay(apiURL string) string {
+	parsedURL, err := url.Parse(apiURL)
+	if err != nil || parsedURL.Host == "" {
+		if err != nil {
+			// Should never happen - APIURL is validated during authentication and source checks
+			log.Error(err, "unexpected URL parse failure, using raw URL", "APIURL", apiURL)
+		}
+		// Fallback to string manipulation
+		// This also handles URLs without a scheme (e.g., "console.redhat.com" without "https://")
+		displayURL := strings.TrimPrefix(apiURL, "https://")
+		displayURL = strings.TrimPrefix(displayURL, "http://")
+		displayURL = strings.TrimSuffix(displayURL, "/")
+		return displayURL
+	}
+	return parsedURL.Host
 }
 
 // StringReflectSpec Determine if the string Status item reflects the Spec item if not empty, otherwise take the default value.
@@ -479,7 +500,8 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 	cr.Status.Authentication.LastVerificationTime = &previousValidation.timestamp
 
 	if err != nil && strings.Contains(err.Error(), "401") {
-		msg := fmt.Sprintf("console.redhat.com credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", cr.Spec.Authentication.AuthenticationSecretName)
+		displayURL := formatURLForDisplay(cr.Status.APIURL)
+		msg := fmt.Sprintf("%s credentials are invalid. Correct the username/password in `%s`. Updated credentials will be re-verified during the next reconciliation.", displayURL, cr.Spec.Authentication.AuthenticationSecretName)
 		log.Info(msg)
 		cr.Status.Authentication.AuthErrorMessage = msg
 		cr.Status.Authentication.ValidBasicAuth = &falseDef
@@ -711,8 +733,9 @@ func (r *MetricsConfigReconciler) setAuthAndUpload(ctx context.Context, cr *metr
 	sourceExists := cr.Status.Source.SourceDefined != nil && *cr.Status.Source.SourceDefined
 
 	if !sourceExists {
-		log.Info("valid integration does not exist in console.redhat.com, storing reports until integration is configured")
-		cr.Status.Upload.UploadError = "Reports are being stored until a valid integration is configured in console.redhat.com"
+		displayURL := formatURLForDisplay(cr.Status.APIURL)
+		log.Info("valid source does not exist, storing reports until source is configured", "apiURL", displayURL)
+		cr.Status.Upload.UploadError = fmt.Sprintf("Reports are being stored until a valid source is registered at %s", displayURL)
 		return nil
 	}
 
