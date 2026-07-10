@@ -290,7 +290,7 @@ endif
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	$(CONTAINER_TOOL) build --platform linux/x86_64 --build-arg COMMIT_REF=$(GIT_COMMIT) -t $(BUNDLE_IMG) -f bundle.Dockerfile .
+	$(CONTAINER_TOOL) build --platform linux/x86_64 -t $(BUNDLE_IMG) -f bundle.Dockerfile .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.

@@ -23,21 +23,21 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          COMMIT_REF=$(echo "$PR_BODY" | grep -o 'rev=[a-f0-9]*' | head -1 | cut -d= -f2)
-          echo "commit_ref=${COMMIT_REF}" >> "$GITHUB_OUTPUT"
+          OPERATOR_BUILDER_COMMIT=$(echo "$PR_BODY" | grep -o 'rev=[a-f0-9]*' | head -1 | cut -d= -f2)
+          echo "operator_build_commit=${OPERATOR_BUILDER_COMMIT}" >> "$GITHUB_OUTPUT"
 
       - name: Update bundle.Dockerfile
         run: |
-          COMMIT_REF="${{ steps.extract.outputs.commit_ref }}"
-          if [ -z "$COMMIT_REF" ]; then
+          OPERATOR_BUILDER_COMMIT="${{ steps.extract.outputs.operator_build_commit }}"
+          if [ -z "$OPERATOR_BUILDER_COMMIT" ]; then
             echo "No commit ref found in PR description"
             exit 0
           fi
-          if grep -q "COMMIT_REF=\"${COMMIT_REF}\"" bundle.Dockerfile; then
+          if grep -q "OPERATOR_BUILDER_COMMIT=\"${OPERATOR_BUILDER_COMMIT}\"" bundle.Dockerfile; then
             echo "Already up to date"
             exit 0
           fi
-          sed -i "s|ARG COMMIT_REF=\".*\"|ARG COMMIT_REF=\"${COMMIT_REF}\"|" bundle.Dockerfile
+          sed -i "s|ARG OPERATOR_BUILDER_COMMIT=\".*\"|ARG OPERATOR_BUILDER_COMMIT=\"${OPERATOR_BUILDER_COMMIT}\"|" bundle.Dockerfile
 
       - name: Amend nudge commit and force-push
         run: |
