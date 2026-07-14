@@ -8,6 +8,8 @@ package controller
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 )
 
 var _ = Describe("formatURLForDisplay", func() {
@@ -30,5 +32,21 @@ var _ = Describe("formatURLForDisplay", func() {
 		// These test cases verify the fallback string manipulation works correctly.
 		Entry("Invalid URL with colon in path - triggers fallback", "not a url ://", "not a url :/"),
 		Entry("Invalid URL with spaces - triggers fallback", "https://host with spaces", "host with spaces"),
+	)
+})
+
+var _ = Describe("isAllowedTokenAuthURL", func() {
+	DescribeTable("should identify allowed Red Hat endpoints",
+		func(url string, expected bool) {
+			Expect(isAllowedTokenAuthURL(url)).To(Equal(expected))
+		},
+		Entry("default API URL", metricscfgv1beta1.DefaultAPIURL, true),
+		Entry("old default API URL", metricscfgv1beta1.OldDefaultAPIURL, true),
+		Entry("stage API URL", metricscfgv1beta1.StageAPIURL, true),
+		Entry("on-prem URL", "https://on-prem-koku.example.com:8443", false),
+		Entry("localhost URL", "http://localhost:8088", false),
+		Entry("empty string", "", false),
+		Entry("similar but wrong URL", "https://console.redhat.com.evil.com", false),
+		Entry("URL with trailing slash", "https://console.redhat.com/", false),
 	)
 })
