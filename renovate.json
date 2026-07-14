@@ -38,6 +38,7 @@
     {
       "matchDatasources": ["docker"],
       "matchPackageNames": [
+        "brew.registry.redhat.io/rh-osbs/openshift-golang-builder",
         "registry.redhat.io/ubi9/ubi-micro",
         "registry.redhat.io/ubi9/ubi"
       ],
