@@ -1,4 +1,4 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.26@sha256:8bca01ace56d684c43f59d9c60c8e9516ee30c46e7d7357c2f9b526369d3fddf AS builder
+FROM registry.redhat.io/ubi9/go-toolset:1.26-1784032128@sha256:b471d69d4bf8a0aeac420f0e38777b1e38a59f7e805cba3e1c03d0066a1961af AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
