@@ -686,7 +686,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_NonMIGUUIDFallback(t *testing.T) {
 		Reports: dirconfig.Directory{Path: tempReportsDir},
 	}
 
-	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011"); err != nil {
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011", nil); err != nil {
 		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
 	}
 
@@ -777,7 +777,7 @@ func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
 		Reports: dirconfig.Directory{Path: tempReportsDir},
 	}
 
-	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011"); err != nil {
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011", nil); err != nil {
 		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
 	}
 
@@ -795,6 +795,104 @@ func TestGenerateCostNvidiaGpuMetricsReport_MIGExactKeyMerge(t *testing.T) {
 	}
 	if !strings.Contains(row, ",0.750000,") {
 		t.Fatalf("expected gpu_pod_utilization of 0.75, got:\n%s", row)
+	}
+}
+
+func TestGenerateCostNvidiaGpuMetricsReport_ExcludeNamespaces(t *testing.T) {
+	utilization := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-a",
+				"exported_namespace": "nvidia-gpu-operator",
+				"exported_pod":       "nvidia-dcgm-exporter-abc",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(0.0)}},
+		},
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-b",
+				"exported_namespace": "user-workload",
+				"exported_pod":       "ml-training-pod",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia1",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(0.8)}},
+		},
+	}
+	uptime := model.Matrix{
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-a",
+				"exported_namespace": "nvidia-gpu-operator",
+				"exported_pod":       "nvidia-dcgm-exporter-abc",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia0",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
+		},
+		{
+			Metric: model.Metric{
+				"Hostname":           "node-a",
+				"UUID":               "GPU-uuid-b",
+				"exported_namespace": "user-workload",
+				"exported_pod":       "ml-training-pod",
+				"modelName":          "Tesla T4",
+				"GPU_I_ID":           "",
+				"GPU_I_PROFILE":      "",
+				"device":             "nvidia1",
+			},
+			Values: []model.SamplePair{{Timestamp: model.Time(1604691780), Value: model.SampleValue(1.0)}},
+		},
+	}
+
+	mapResults := mappedMockPromResult{
+		(*costNvidiaGpuUtilizationQueries)[0].QueryString:          {value: utilization},
+		(*costNvidiaGpuUtilizationQueries)[1].QueryString:          {value: uptime},
+		(*costNvidiaGpuMemoryCapacityMIGQueries)[0].QueryString:    {value: model.Matrix{}},
+		(*costNvidiaGpuMemoryCapacityNonMIGQueries)[0].QueryString: {value: model.Matrix{}},
+		(*costNvidiaGpuMaxSlicesQueries)[0].QueryString:            {value: model.Matrix{}},
+	}
+
+	copyfakeTimeRange := fakeTimeRange
+	fakeCollector := &PrometheusCollector{
+		PromConn: mockPrometheusConnection{
+			mappedResults: &mapResults,
+			t:             t,
+		},
+		TimeSeries: &copyfakeTimeRange,
+	}
+	tempReportsDir := t.TempDir()
+	testDirCfg := &dirconfig.DirectoryConfig{
+		Parent:  dirconfig.Directory{Path: "."},
+		Reports: dirconfig.Directory{Path: tempReportsDir},
+	}
+
+	if err := generateCostNvidiaGpuMetricsReport(log, fakeCollector, testDirCfg, "202011", []string{"nvidia-gpu-operator"}); err != nil {
+		t.Fatalf("generateCostNvidiaGpuMetricsReport failed: %v", err)
+	}
+
+	reportPath := filepath.Join(tempReportsDir, nvidiaGpuFilePrefix+"202011.csv")
+	content, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("failed to read generated nvidia report: %v", err)
+	}
+	row := string(content)
+	if strings.Contains(row, "nvidia-gpu-operator") {
+		t.Fatalf("expected nvidia-gpu-operator namespace to be excluded, got:\n%s", row)
+	}
+	if !strings.Contains(row, "user-workload") {
+		t.Fatalf("expected user-workload namespace to be present, got:\n%s", row)
 	}
 }
 
