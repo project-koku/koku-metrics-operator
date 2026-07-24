@@ -8,6 +8,7 @@ Kubernetes operator (Go, Operator SDK) that collects OpenShift cluster metrics a
 
 - [Architecture](docs/architecture.md) - System design, components, data flow
 - [Local Development](docs/local-development.md) - Setup, workflow, PR process, troubleshooting
+- [Releasing](docs/releasing/start-here.md) - Upstream, Downstream, and CVE release runbooks
 - [Contributing](CONTRIBUTING) - Policies, bug reporting, DCO
 
 ## Critical: Upstream vs Downstream

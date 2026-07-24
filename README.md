@@ -19,6 +19,7 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 - **[Contributing](CONTRIBUTING)** - How to contribute
 - **[Local Development](docs/local-development.md)** - Setup, development workflow, and PR process
 - **[Architecture](docs/architecture.md)** - System design and component relationships
+- **[Releasing](docs/releasing/start-here.md)** - Upstream / Downstream / CVE release runbooks
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
