@@ -462,6 +462,5 @@ See [local-development.md](local-development.md) for setup, workflow, and troubl
 ## Related Documentation
 
 - **[local-development.md](local-development.md)** - Setup, workflow, and PR process
-- **[upstream-releasing.md](upstream-releasing.md)** - Release process
-- **[downstream-releasing.md](downstream-releasing.md)** - Downstream porting
+- **[releasing/start-here.md](releasing/start-here.md)** - Operator release hub (Upstream, Downstream, CVE)
 - **[report-fields-description.md](report-fields-description.md)** - CSV field definitions
