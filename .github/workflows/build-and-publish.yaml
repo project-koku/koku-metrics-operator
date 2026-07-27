@@ -38,7 +38,7 @@ jobs:
             type=ref,event=branch
 
       - name: Login to Quay.io
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@v2
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USER }}
