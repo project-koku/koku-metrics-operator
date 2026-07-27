@@ -29,6 +29,9 @@ spec:
       value: '{{revision}}'
     - name: output-image
       value: quay.io/redhat-user-workloads/cost-mgmt-dev-tenant/costmanagement-metrics-operator/costmanagement-metrics-operator-bundle:{{revision}}
+    - name: build-args
+      value:
+        - COMMIT_REF={{revision}}
     - name: dockerfile
       value: bundle.Dockerfile
     - name: hermetic
