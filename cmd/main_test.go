@@ -60,6 +60,13 @@ func TestGetWatchNamespace(t *testing.T) {
 			expectError:    false,
 		},
 		{
+			name:           "Env variable is set to empty string (AllNamespaces mode)",
+			envVarSet:      true,
+			envValue:       "",
+			expectedResult: "",
+			expectError:    false,
+		},
+		{
 			name:        "Env variable is not set",
 			envVarSet:   false,
 			expectError: true,
