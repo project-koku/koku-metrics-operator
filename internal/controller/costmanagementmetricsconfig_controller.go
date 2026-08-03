@@ -425,12 +425,9 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 		authConfig.BearerTokenString = ""
 		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		err := fmt.Errorf(
-			"token authentication is only permitted against Red Hat endpoints (%s, %s, %s); "+
-				"for custom api_url, set spec.authentication.type=service-account "+
+			"token authentication is only permitted against approved Red Hat Cost Management endpoints; " +
+				"for custom api_url, set spec.authentication.type=service-account " +
 				"and the appropriate token_url for your environment",
-			metricscfgv1beta1.DefaultAPIURL,
-			metricscfgv1beta1.OldDefaultAPIURL,
-			metricscfgv1beta1.StageAPIURL,
 		)
 		cr.Status.Authentication.AuthErrorMessage = err.Error()
 		return err
