@@ -101,7 +101,7 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-// isAllowedTokenAuthURL returns true if the given URL is a known Red Hat endpoint
+// isAllowedApiUrl returns true if the given URL is a known Red Hat endpoint
 // where token authentication (pull-secret) is valid.
 func isAllowedApiUrl(apiURL string) bool {
 	switch strings.TrimRight(apiURL, "/") {
@@ -421,7 +421,7 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 	cr.Status.Authentication.AuthenticationCredentialsFound = &trueDef
 
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token && !isAllowedApiUrl(cr.Status.APIURL) {
-		// do no attach the cluster pull-secret token for non-approved URLs.
+		// do not attach the cluster pull-secret token for non-approved URLs.
 		authConfig.BearerTokenString = ""
 		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
 		err := fmt.Errorf(
