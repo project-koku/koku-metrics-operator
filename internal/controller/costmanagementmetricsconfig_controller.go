@@ -105,7 +105,7 @@ type serializedAuth struct {
 // where token authentication (pull-secret) is valid.
 func isAllowedApiUrl(apiURL string) bool {
 	switch strings.TrimRight(apiURL, "/") {
-	case metricscfgv1beta1.DefaultAPIURL, metricscfgv1beta1.OldDefaultAPIURL, metricscfgv1beta1.StageAPIURL:
+	case metricscfgv1beta1.DefaultAPIURL, metricscfgv1beta1.OldDefaultAPIURL:
 		return true
 	default:
 		return false

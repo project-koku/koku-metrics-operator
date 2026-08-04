@@ -42,9 +42,6 @@ const (
 	// OldDefaultAPIURL The old default ingress path.
 	OldDefaultAPIURL string = "https://cloud.redhat.com"
 
-	// StageAPIURL The stage environment URL.
-	StageAPIURL string = "https://console.stage.redhat.com"
-
 	// DefaultTokenURL The default path to obtain a service account access token
 	DefaultTokenURL string = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
 )
