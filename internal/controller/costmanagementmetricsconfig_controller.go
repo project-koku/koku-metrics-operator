@@ -198,6 +198,10 @@ func ReflectSpec(r *MetricsConfigReconciler, cr *metricscfgv1beta1.MetricsConfig
 	cr.Status.Prometheus.ContextTimeout = cr.Spec.PrometheusConfig.ContextTimeout
 	cr.Status.Prometheus.DisabledMetricsCollectionCostManagement = cr.Spec.PrometheusConfig.DisableMetricsCollectionCostManagement
 	cr.Status.Prometheus.DisabledMetricsCollectionResourceOptimization = cr.Spec.PrometheusConfig.DisableMetricsCollectionResourceOptimization
+	if cr.Spec.PrometheusConfig.ExcludeGpuNamespaces == nil {
+		cr.Spec.PrometheusConfig.ExcludeGpuNamespaces = []string{"nvidia-gpu-operator"}
+	}
+	cr.Status.Prometheus.ExcludeGpuNamespaces = append([]string(nil), cr.Spec.PrometheusConfig.ExcludeGpuNamespaces...)
 }
 
 // GetClientset returns a clientset based on rest.config
