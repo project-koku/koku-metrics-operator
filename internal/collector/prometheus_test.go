@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 var trueDef = true
 var falseDef = false
 var defaultContextTimeout = 90 * time.Second
+var promSvcAddress = metricscfgv1beta1.DefaultPrometheusSvcAddress
 
 type mappedMockPromResult map[string]*mockPromResult
 type mockPromResult struct {
@@ -558,6 +560,7 @@ func TestGetPromConn(t *testing.T) {
 			statusHelper(cr, statusConfiguration, tt.cfgErr)
 			statusHelper(cr, statusConnection, tt.conErr)
 			cr.Spec.PrometheusConfig.SkipTLSVerification = &trueDef
+			cr.Spec.PrometheusConfig.SvcAddress = promSvcAddress
 			c := &PrometheusCollector{
 				PromConn: tt.con,
 				PromCfg:  tt.cfg,
@@ -575,10 +578,77 @@ func TestGetPromConn(t *testing.T) {
 	}
 }
 
+func TestIsAllowedPrometheusServiceAddress(t *testing.T) {
+	tests := []struct {
+		name    string
+		address string
+		want    bool
+	}{
+		{
+			name:    "default thanos-querier .svc address",
+			address: promSvcAddress,
+			want:    true,
+		},
+		{
+			name:    "thanos-querier with cluster.local suffix",
+			address: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091",
+			want:    true,
+		},
+		{
+			name:    "custom in-cluster prometheus service",
+			address: "https://prometheus.custom-monitoring.svc:9090",
+			want:    true,
+		},
+		{
+			name:    "address with trailing slash",
+			address: "https://thanos-querier.openshift-monitoring.svc:9091/",
+			want:    true,
+		},
+		{
+			name:    "CRC route address",
+			address: "https://thanos-querier-openshift-monitoring.apps-crc.testing",
+			want:    false,
+		},
+		{
+			name:    "external malicious URL",
+			address: "https://evil.example.com",
+			want:    false,
+		},
+		{
+			name:    "http scheme rejected",
+			address: "http://thanos-querier.openshift-monitoring.svc:9091",
+			want:    false,
+		},
+		{
+			name:    "empty address",
+			address: "",
+			want:    false,
+		},
+		{
+			name:    "hostname that contains svc but is not in-cluster DNS",
+			address: "https://evil.svc.attacker.com",
+			want:    false,
+		},
+		{
+			name:    "IP address rejected",
+			address: "https://192.168.1.10:9091",
+			want:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsAllowedPromSvcAddress(tt.address)
+			if got != tt.want {
+				t.Errorf("IsAllowedPromSvcAddress(%q) = %v, want %v", tt.address, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSetPrometheusConfig(t *testing.T) {
 	trueDef := true
 	ps := &metricscfgv1beta1.PrometheusSpec{
-		SvcAddress:          "svc-address",
+		SvcAddress:          promSvcAddress,
 		SkipTLSVerification: &trueDef,
 	}
 	secretsPath := "./test_files/test_secrets"
@@ -588,6 +658,7 @@ func TestSetPrometheusConfig(t *testing.T) {
 		basePath    string
 		certKey     bool
 		tokenKey    bool
+		address     string
 		want        *PrometheusConfig
 		wantedError error
 	}{
@@ -597,7 +668,7 @@ func TestSetPrometheusConfig(t *testing.T) {
 			certKey:  true,
 			tokenKey: true,
 			want: &PrometheusConfig{
-				Address:     "svc-address",
+				Address:     promSvcAddress,
 				SkipTLS:     true,
 				BearerToken: config.Secret([]byte("this-is-token-data")),
 				CAFile:      filepath.Join(secretsPath, certKey),
@@ -618,7 +689,7 @@ func TestSetPrometheusConfig(t *testing.T) {
 			certKey:  true,
 			tokenKey: true,
 			want: &PrometheusConfig{
-				Address:     "svc-address",
+				Address:     promSvcAddress,
 				SkipTLS:     true,
 				BearerToken: config.Secret([]byte("this-is-token-data")),
 				CAFile:      filepath.Join(secretsPath, certKey),
@@ -640,6 +711,14 @@ func TestSetPrometheusConfig(t *testing.T) {
 			want:        nil,
 			wantedError: errTest,
 		},
+		{
+			name:        "rejected external service_address does not require token",
+			basePath:    "",
+			tokenKey:    false,
+			address:     "https://evil.example.com",
+			want:        nil,
+			wantedError: errTest,
+		},
 	}
 	for _, tt := range setPrometheusConfigTests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -654,13 +733,20 @@ func TestSetPrometheusConfig(t *testing.T) {
 				os.Remove(filepath.Join(tt.basePath, tokenKey))
 				os.Remove(filepath.Join(tt.basePath, certKey))
 			}()
-			err := SetPrometheusConfig(ps, c)
+			spec := *ps
+			if tt.address != "" {
+				spec.SvcAddress = tt.address
+			}
+			err := SetPrometheusConfig(&spec, c)
 			got := c.PromCfg
 			if tt.wantedError == nil && err != nil {
 				t.Errorf("%s got unexpected error: %v", tt.name, err)
 			}
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s expected error, got %v", tt.name, err)
+			}
+			if tt.address != "" && err != nil && !strings.Contains(err.Error(), "in-cluster service URL") {
+				t.Errorf("%s expected in-cluster validation error, got %v", tt.name, err)
 			}
 			if got != nil && !reflect.DeepEqual(*got, *tt.want) {
 				t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)

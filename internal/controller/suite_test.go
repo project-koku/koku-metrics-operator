@@ -317,10 +317,10 @@ var _ = BeforeSuite(func() {
 
 	if !useCluster {
 		defaultReconciler = &MetricsConfigReconciler{
-			Client:             k8sManager.GetClient(),
-			Scheme:             scheme.Scheme,
-			Clientset:          clientset,
-			InCluster:          true,
+			Client:     k8sManager.GetClient(),
+			Scheme:     scheme.Scheme,
+			Clientset:  clientset,
+			InCluster:  true,
 			SecretPath: os.Getenv("SECRET_ABSPATH"),
 		}
 		err := (defaultReconciler).SetupWithManager(k8sManager)

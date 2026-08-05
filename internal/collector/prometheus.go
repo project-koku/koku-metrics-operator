@@ -9,9 +9,11 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	promapi "github.com/prometheus/client_golang/api"
@@ -89,7 +91,25 @@ func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status int, err error) {
 
 type PrometheusConfigurationSetter func(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error
 
+// IsAllowedPromSvcAddress reports whether address is an https URL whose
+// hostname is in-cluster Service DNS (.svc or .svc.cluster.local).
+func IsAllowedPromSvcAddress(address string) bool {
+	u, err := url.Parse(address)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, "https") {
+		return false
+	}
+	host := u.Hostname()
+	return strings.HasSuffix(host, ".svc") || strings.HasSuffix(host, ".svc.cluster.local")
+}
+
 func SetPrometheusConfig(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
+	// Validate before reading the SA token so a rejected address never loads credentials.
+	if !IsAllowedPromSvcAddress(ps.SvcAddress) {
+		return fmt.Errorf("service_address must be an in-cluster service URL (https with hostname ending in .svc or .svc.cluster.local); got %q", ps.SvcAddress)
+	}
 
 	pCfg := &PrometheusConfig{
 		Address: ps.SvcAddress,
