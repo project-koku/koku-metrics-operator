@@ -92,8 +92,7 @@ func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status int, err error) {
 type PrometheusConfigurationSetter func(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error
 
 // IsAllowedPromSvcAddress reports whether address is an https URL whose
-// hostname is in-cluster Service DNS (.svc or .svc.cluster.local). This prevents
-// sending the operator ServiceAccount token to arbitrary external endpoints.
+// hostname is in-cluster Service DNS (.svc or .svc.cluster.local).
 func IsAllowedPromSvcAddress(address string) bool {
 	u, err := url.Parse(address)
 	if err != nil || u.Host == "" {
