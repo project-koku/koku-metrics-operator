@@ -191,6 +191,11 @@ type PrometheusSpec struct {
 	// +kubebuilder:default=false
 	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
 
+	// ExcludeGpuNamespaces is a list of namespaces to exclude from GPU metrics reports.
+	// Pods in these namespaces (e.g. GPU operator infrastructure) will not appear in cost reports.
+	// +kubebuilder:default={"nvidia-gpu-operator"}
+	ExcludeGpuNamespaces []string `json:"exclude_gpu_namespaces,omitempty"`
+
 	// FOR DEVELOPMENT ONLY.
 	// SvcAddress is a field of CostManagementMetricsConfig to represent the thanos-querier address.
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
@@ -443,6 +448,9 @@ type PrometheusStatus struct {
 
 	// SkipTLSVerification is a field of CostManagementMetricsConfigStatus to represent if the thanos-querier endpoint must be certificate validated.
 	SkipTLSVerification *bool `json:"skip_tls_verification,omitempty"`
+
+	// ExcludeGpuNamespaces is the list of namespaces excluded from GPU metrics reports.
+	ExcludeGpuNamespaces []string `json:"exclude_gpu_namespaces,omitempty"`
 }
 
 // ReportsStatus defines the status for generating reports.

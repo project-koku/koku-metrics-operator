@@ -147,6 +147,15 @@ spec:
                       DisableMetricsCollectionResourceOptimization is a field of CostManagementMetricsConfig to represent whether or not the operator will generate
                       reports for resource-optimization metrics. The default is false.
                     type: boolean
+                  exclude_gpu_namespaces:
+                    default:
+                    - nvidia-gpu-operator
+                    description: |-
+                      ExcludeGpuNamespaces is a list of namespaces to exclude from GPU metrics reports.
+                      Pods in these namespaces (e.g. GPU operator infrastructure) will not appear in cost reports.
+                    items:
+                      type: string
+                    type: array
                   service_address:
                     default: https://thanos-querier.openshift-monitoring.svc:9091
                     description: |-
@@ -872,6 +881,12 @@ spec:
                       DisabledMetricsCollectionResourceOptimization is a field of CostManagementMetricsConfigStatus to represent whether or not collecting
                       resource-optimization metrics is disabled. The default is true.
                     type: boolean
+                  exclude_gpu_namespaces:
+                    description: ExcludeGpuNamespaces is the list of namespaces excluded
+                      from GPU metrics reports.
+                    items:
+                      type: string
+                    type: array
                   last_query_start_time:
                     description: LastQueryStartTime is a field of CostManagementMetricsConfigStatus
                       to represent the last time queries were started.
