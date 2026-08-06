@@ -103,6 +103,8 @@ var _ = Describe("validateTokenURL", func() {
 			metricscfgv1beta1.DefaultAPIURL, "http://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token", "https"),
 		Entry("custom api + custom HTTPS Keycloak",
 			"https://on-prem-koku.example.com:8443", "https://keycloak.corp.internal/auth/realms/cost/protocol/openid-connect/token", ""),
+		Entry("custom api + RH SSO token_url still allowed",
+			"https://on-prem-koku.example.com:8443", metricscfgv1beta1.DefaultTokenURL, ""),
 		Entry("custom api + http Keycloak",
 			"https://on-prem-koku.example.com:8443", "http://keycloak.corp.internal/auth/token", "https"),
 		Entry("empty token_url host",
