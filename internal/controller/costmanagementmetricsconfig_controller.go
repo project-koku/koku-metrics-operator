@@ -112,6 +112,24 @@ func isAllowedApiUrl(apiURL string) bool {
 	}
 }
 
+// validateTokenURL ensures service-account client credentials are only POSTed to an HTTPS endpoint.
+// When apiURL is a known Red Hat Cost Management endpoint, tokenURL must be Red Hat SSO token URL.
+func validateTokenURL(apiURL, tokenURL string) error {
+	parsed, err := url.Parse(tokenURL)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+		return fmt.Errorf("token_url must use https with a valid host")
+	}
+	if isAllowedApiUrl(apiURL) {
+		if strings.TrimRight(tokenURL, "/") != strings.TrimRight(metricscfgv1beta1.DefaultTokenURL, "/") {
+			return fmt.Errorf(
+				"when api_url is a Red Hat Cost Management endpoint, token_url must be %s",
+				metricscfgv1beta1.DefaultTokenURL,
+			)
+		}
+	}
+	return nil
+}
+
 // formatURLForDisplay extracts the hostname from a URL for user-friendly display in error messages.
 // It removes the scheme (https://) and any trailing slashes to match the style of existing error messages.
 // Returns just the host portion (e.g., "console.redhat.com" or "on-prem.example.com:8443").
@@ -493,7 +511,13 @@ func (r *MetricsConfigReconciler) validateCredentials(ctx context.Context, handl
 
 	// Service-account authentication check
 	if cr.Spec.Authentication.AuthType == metricscfgv1beta1.ServiceAccount {
-		if err := handler.Auth.GetAccessToken(ctx, cr.Spec.Authentication.TokenURL); err != nil {
+		tokenURL := cr.Status.Authentication.TokenURL
+		if err := validateTokenURL(cr.Status.APIURL, tokenURL); err != nil {
+			log.Info(err.Error())
+			cr.Status.Authentication.AuthErrorMessage = err.Error()
+			return err
+		}
+		if err := handler.Auth.GetAccessToken(ctx, tokenURL); err != nil {
 			errorMsg := fmt.Sprintf("failed to obtain service-account token: %v", err)
 			log.Info(errorMsg)
 			cr.Status.Authentication.AuthErrorMessage = errorMsg
