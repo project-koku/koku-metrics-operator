@@ -101,6 +101,17 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
+// isAllowedApiUrl returns true if the given URL is a known Red Hat endpoint
+// where token authentication (pull-secret) is valid.
+func isAllowedApiUrl(apiURL string) bool {
+	switch strings.TrimRight(apiURL, "/") {
+	case metricscfgv1beta1.DefaultAPIURL, metricscfgv1beta1.OldDefaultAPIURL:
+		return true
+	default:
+		return false
+	}
+}
+
 // formatURLForDisplay extracts the hostname from a URL for user-friendly display in error messages.
 // It removes the scheme (https://) and any trailing slashes to match the style of existing error messages.
 // Returns just the host portion (e.g., "console.redhat.com" or "on-prem.example.com:8443").
@@ -412,6 +423,20 @@ func (r *MetricsConfigReconciler) setAuthentication(ctx context.Context, authCon
 	log := log.WithName("setAuthentication")
 	cr.Status.Authentication.DeprecationNotice = ""
 	cr.Status.Authentication.AuthenticationCredentialsFound = &trueDef
+
+	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token && !isAllowedApiUrl(cr.Status.APIURL) {
+		// do not attach the cluster pull-secret token for non-approved URLs.
+		authConfig.BearerTokenString = ""
+		cr.Status.Authentication.AuthenticationCredentialsFound = &falseDef
+		err := fmt.Errorf(
+			"token authentication is only permitted against approved Red Hat Cost Management endpoints; " +
+				"for custom api_url, set spec.authentication.type=service-account " +
+				"and the appropriate token_url for your environment",
+		)
+		cr.Status.Authentication.AuthErrorMessage = err.Error()
+		return err
+	}
+
 	if cr.Status.Authentication.AuthType == metricscfgv1beta1.Token {
 		cr.Status.Authentication.ValidBasicAuth = nil
 		cr.Status.Authentication.AuthErrorMessage = ""

@@ -56,7 +56,7 @@ var (
 	defaultCheckCycle        int64 = 1440
 	defaultUploadWait        int64 = 0
 	defaultMaxReports        int64 = 1
-	defaultAPIURL                  = "https://not-the-real-console.redhat.com"
+	defaultAPIURL                  = "https://console.redhat.com"
 	testingDir                     = dirconfig.MountPath
 )
 
@@ -399,7 +399,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					SkipTLSVerification: &trueValue,
 					SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 				},
-				APIURL: "https://not-the-real-console.redhat.com",
+				APIURL: defaultAPIURL,
 			},
 		}
 		testConfigMap = &corev1.ConfigMap{
@@ -559,31 +559,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 				Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
 			})
-			It("token auth works fine", func() {
-				instCopy.Spec.APIURL = unauthorizedTS.URL
-				createObject(ctx, instCopy)
-
-				fetched := &metricscfgv1beta1.MetricsConfig{}
-
-				Eventually(func() bool {
-					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-					return fetched.Status.ClusterID != ""
-				}, timeout, interval).Should(BeTrue())
-
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-
-				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-
-				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
-
-				Expect(fetched.Status.Source.SourceDefined).To(BeNil())
-				Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
-				Expect(fetched.Status.Source.SourceError).To(Equal(""))
-
-				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
-				Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
-			})
 		})
 
 		When("cluster is connected", func() {
@@ -591,7 +566,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				checkPVC = true
 			})
 			It("default CR works fine", func() {
-				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Source.SourceName = ""
 				createObject(ctx, instCopy)
 
@@ -605,7 +579,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
-				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
@@ -614,6 +588,27 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})
+			It("token auth should be rejected against non-Red Hat URL", func() {
+				instCopy.Spec.APIURL = unauthorizedTS.URL
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthErrorMessage != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("token authentication is only permitted"))
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("service-account"))
+				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+				// Upload must not proceed with the cluster pull-secret against a custom URL.
+				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+				Expect(fetched.Status.Upload.LastUploadStatus).To(BeEmpty())
+			})
+
 			It("upload set to false case", func() {
 				instCopy.Spec.Upload.UploadToggle = &falseValue
 				createObject(ctx, instCopy)
@@ -980,7 +975,11 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			})
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
+				// Custom/mock API URLs cannot use token (pull-secret) auth; use service-account for local httptest.
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+				instCopy.Spec.Authentication.AuthenticationSecretName = serviceAccountSecretName
 				// Configure valid source to allow upload to proceed
 				instCopy.Spec.Source.SourceName = sourceName
 				createObject(ctx, instCopy)
@@ -1047,7 +1046,11 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			})
 			It("should store reports when source validation fails", func() {
 				Expect(setup()).Should(Succeed())
+				// Custom/mock API URLs cannot use token (pull-secret) auth; use service-account for local httptest.
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+				instCopy.Spec.Authentication.AuthenticationSecretName = serviceAccountSecretName
 				instCopy.Spec.Source.SourceName = "non-existent-source"
 				instCopy.Spec.Source.CreateSource = &falseValue
 				createObject(ctx, instCopy)
@@ -1102,7 +1105,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 			})
-			It("should show on-premise URL in error message when source validation fails", func() {
+			It("should reject token auth against on-premise URL without sending pull-secret", func() {
 				Expect(setup()).Should(Succeed())
 				onPremURL := "https://on-prem-koku.example.com:8443"
 				instCopy.Spec.APIURL = onPremURL
@@ -1114,17 +1117,14 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 				Eventually(func() bool {
 					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-					return fetched.Status.Upload.UploadError != ""
+					return fetched.Status.Authentication.AuthErrorMessage != ""
 				}, timeout, interval).Should(BeTrue())
 
-				// Verify error message contains the on-premise hostname with port (without https://)
-				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("on-prem-koku.example.com:8443"))
-				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("Reports are being stored until a valid source is registered at"))
-				// Verify it does NOT contain the old hardcoded message
-				Expect(fetched.Status.Upload.UploadError).ToNot(ContainSubstring("console.redhat.com"))
-
 				Expect(fetched.Status.APIURL).To(Equal(onPremURL))
-				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Token))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("token authentication is only permitted"))
+				Expect(fetched.Status.Upload.LastUploadStatus).To(BeEmpty())
 			})
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
