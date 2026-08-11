@@ -213,11 +213,18 @@ func handleDefault(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello, client")
 }
 
+func handleToken(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, `{"access_token":"mockAccessToken","expires_in":3600,"token_type":"Bearer"}`)
+}
+
 // Router for mock server endpoints
 func routeRequest(w http.ResponseWriter, r *http.Request) {
 	// Define mock endpoints with regex patterns (most specific first)
 	endpoints := []MockEndpoint{
 		{"POST", regexp.MustCompile(`/api/ingress/`), handleIngress},
+		// Service-account token exchange (TokenURL often points at the mock root or an SSO-like path)
+		{"POST", regexp.MustCompile(`^/$|/token|/auth/realms/`), handleToken},
 		{"GET", regexp.MustCompile(`/api/sources/.*/source_types`), handleSourceTypes},
 		{"GET", regexp.MustCompile(`/api/sources/`), handleSources},
 	}
