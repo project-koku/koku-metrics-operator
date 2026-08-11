@@ -1361,7 +1361,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(fetched.Status.Prometheus.PrometheusConfigured).To(BeFalse())
-			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("in-cluster service URL"))
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("thanos-querier"))
 			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("evil.example.com"))
 		})
 		It("successfully queried but there was no data", func() {

@@ -595,14 +595,39 @@ func TestIsAllowedPrometheusServiceAddress(t *testing.T) {
 			want:    true,
 		},
 		{
-			name:    "custom in-cluster prometheus service",
-			address: "https://prometheus.custom-monitoring.svc:9090",
+			name:    "thanos-querier without explicit port",
+			address: "https://thanos-querier.openshift-monitoring.svc",
 			want:    true,
 		},
 		{
 			name:    "address with trailing slash",
 			address: "https://thanos-querier.openshift-monitoring.svc:9091/",
 			want:    true,
+		},
+		{
+			name:    "uppercase scheme and hostname are allowed",
+			address: "HTTPS://THANOS-QUERIER.OPENSHIFT-MONITORING.SVC:9091",
+			want:    true,
+		},
+		{
+			name:    "mixed-case .svc.cluster.local hostname is allowed",
+			address: "https://Thanos-Querier.OpenShift-Monitoring.SVC.Cluster.Local:9091",
+			want:    true,
+		},
+		{
+			name:    "custom in-cluster prometheus service rejected",
+			address: "https://prometheus.custom-monitoring.svc:9090",
+			want:    false,
+		},
+		{
+			name:    "evil service in openshift-monitoring rejected",
+			address: "https://evil.openshift-monitoring.svc:9091",
+			want:    false,
+		},
+		{
+			name:    "other service in openshift-monitoring rejected",
+			address: "https://prometheus-k8s.openshift-monitoring.svc:9091",
+			want:    false,
 		},
 		{
 			name:    "CRC route address",
@@ -625,7 +650,7 @@ func TestIsAllowedPrometheusServiceAddress(t *testing.T) {
 			want:    false,
 		},
 		{
-			name:    "hostname that contains svc but is not in-cluster DNS",
+			name:    "hostname that contains svc but is not thanos-querier",
 			address: "https://evil.svc.attacker.com",
 			want:    false,
 		},
@@ -745,8 +770,8 @@ func TestSetPrometheusConfig(t *testing.T) {
 			if tt.wantedError != nil && err == nil {
 				t.Errorf("%s expected error, got %v", tt.name, err)
 			}
-			if tt.address != "" && err != nil && !strings.Contains(err.Error(), "in-cluster service URL") {
-				t.Errorf("%s expected in-cluster validation error, got %v", tt.name, err)
+			if tt.address != "" && err != nil && !strings.Contains(err.Error(), "thanos-querier") {
+				t.Errorf("%s expected thanos-querier validation error, got %v", tt.name, err)
 			}
 			if got != nil && !reflect.DeepEqual(*got, *tt.want) {
 				t.Errorf("%s got %+v want %+v", tt.name, got, tt.want)
