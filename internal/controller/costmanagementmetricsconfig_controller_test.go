@@ -1338,6 +1338,32 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("failed to get token"))
 		})
+		It("rejects external service_address before querying prometheus", func() {
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).Times(0)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			instCopy.Spec.PrometheusConfig.SvcAddress = "https://evil.example.com"
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Prometheus.ConfigError != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Prometheus.PrometheusConfigured).To(BeFalse())
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("thanos-querier"))
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("evil.example.com"))
+		})
 		It("successfully queried but there was no data", func() {
 			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
