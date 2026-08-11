@@ -267,7 +267,8 @@ func routeRequestExpiredCreds(w http.ResponseWriter, r *http.Request) {
 }
 
 var _ = BeforeSuite(func() {
-	validTS = httptest.NewServer(http.HandlerFunc(routeRequest))
+	// TLS so service-account token_url can satisfy the HTTPS requirement in tests.
+	validTS = httptest.NewTLSServer(http.HandlerFunc(routeRequest))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))

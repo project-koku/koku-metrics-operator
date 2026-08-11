@@ -14,6 +14,7 @@ import (
 
 	metricscfgv1beta1 "github.com/project-koku/koku-metrics-operator/api/v1beta1"
 	"github.com/project-koku/koku-metrics-operator/internal/crhchttp"
+	"github.com/project-koku/koku-metrics-operator/internal/sources"
 )
 
 var _ = Describe("formatURLForDisplay", func() {
@@ -74,5 +75,65 @@ var _ = Describe("setAuthentication token URL allowlist", func() {
 		Expect(cr.Status.Authentication.AuthenticationCredentialsFound).ToNot(BeNil())
 		Expect(*cr.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
 		Expect(cr.Status.Authentication.AuthErrorMessage).To(ContainSubstring("service-account"))
+	})
+})
+
+var _ = Describe("validateTokenURL", func() {
+	DescribeTable("validates token_url based on api_url context",
+		func(apiURL, tokenURL string, expectErrSubstring string) {
+			err := validateTokenURL(apiURL, tokenURL)
+			if expectErrSubstring == "" {
+				Expect(err).ToNot(HaveOccurred())
+				return
+			}
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(expectErrSubstring))
+		},
+		Entry("RH api + default SSO",
+			metricscfgv1beta1.DefaultAPIURL, metricscfgv1beta1.DefaultTokenURL, ""),
+		Entry("RH api + default SSO with trailing slash",
+			metricscfgv1beta1.DefaultAPIURL, metricscfgv1beta1.DefaultTokenURL+"/", ""),
+		Entry("old RH api + default SSO",
+			metricscfgv1beta1.OldDefaultAPIURL, metricscfgv1beta1.DefaultTokenURL, ""),
+		Entry("RH api + attacker HTTPS token_url",
+			metricscfgv1beta1.DefaultAPIURL, "https://evil.example.com/token", "Red Hat Cost Management endpoint"),
+		Entry("RH api + lookalike SSO host",
+			metricscfgv1beta1.DefaultAPIURL, "https://sso.redhat.com.evil.com/auth/realms/redhat-external/protocol/openid-connect/token", "Red Hat Cost Management endpoint"),
+		Entry("RH api + http SSO",
+			metricscfgv1beta1.DefaultAPIURL, "http://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token", "https"),
+		Entry("custom api + custom HTTPS Keycloak",
+			"https://on-prem-koku.example.com:8443", "https://keycloak.corp.internal/auth/realms/cost/protocol/openid-connect/token", ""),
+		Entry("custom api + RH SSO token_url still allowed",
+			"https://on-prem-koku.example.com:8443", metricscfgv1beta1.DefaultTokenURL, ""),
+		Entry("custom api + http Keycloak",
+			"https://on-prem-koku.example.com:8443", "http://keycloak.corp.internal/auth/token", "https"),
+		Entry("empty token_url host",
+			metricscfgv1beta1.DefaultAPIURL, "https://", "https"),
+		Entry("malformed token_url",
+			"https://on-prem-koku.example.com:8443", "://bad", "https"),
+	)
+
+	It("rejects RH api + invalid token_url in validateCredentials before token exchange", func() {
+		r := &MetricsConfigReconciler{}
+		handler := &sources.SourceHandler{
+			Auth: &crhchttp.AuthConfig{
+				Authentication: metricscfgv1beta1.ServiceAccount,
+				ServiceAccountData: crhchttp.ServiceAccountData{
+					ClientID:     "client",
+					ClientSecret: "secret",
+				},
+			},
+		}
+		cr := &metricscfgv1beta1.MetricsConfig{}
+		cr.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+		cr.Status.APIURL = metricscfgv1beta1.DefaultAPIURL
+		cr.Status.Authentication.TokenURL = "https://evil.example.com/token"
+
+		err := r.validateCredentials(context.Background(), handler, cr, 0)
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("Red Hat Cost Management endpoint"))
+		Expect(cr.Status.Authentication.AuthErrorMessage).To(ContainSubstring("Red Hat Cost Management endpoint"))
+		Expect(handler.Auth.BearerTokenString).To(BeEmpty())
 	})
 })

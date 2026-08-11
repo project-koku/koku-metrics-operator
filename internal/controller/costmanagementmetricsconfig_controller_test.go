@@ -330,7 +330,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					UploadToggle:   &trueValue,
 					UploadWait:     &defaultUploadWait,
 					IngressAPIPath: "/api/ingress/v1/upload",
-					ValidateCert:   &trueValue,
+					// false so local TLS mock servers (self-signed) are accepted
+					ValidateCert: &falseValue,
 				},
 				Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
 					CreateSource:   &falseValue,
