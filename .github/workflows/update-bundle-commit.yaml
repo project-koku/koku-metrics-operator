@@ -1,0 +1,49 @@
+name: Update bundle commit ref from nudge PR
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [downstream]
+    paths:
+      - 'bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml'
+
+jobs:
+  update-commit-ref:
+    if: github.actor == 'red-hat-konflux[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 2
+
+      - name: Extract operator commit from PR description
+        id: extract
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          OPERATOR_BUILDER_COMMIT=$(echo "$PR_BODY" | grep -o 'rev=[a-f0-9]*' | head -1 | cut -d= -f2)
+          echo "operator_build_commit=${OPERATOR_BUILDER_COMMIT}" >> "$GITHUB_OUTPUT"
+
+      - name: Update bundle.Dockerfile
+        run: |
+          OPERATOR_BUILDER_COMMIT="${{ steps.extract.outputs.operator_build_commit }}"
+          if [ -z "$OPERATOR_BUILDER_COMMIT" ]; then
+            echo "No commit ref found in PR description"
+            exit 0
+          fi
+          if grep -q "OPERATOR_BUILDER_COMMIT=\"${OPERATOR_BUILDER_COMMIT}\"" bundle.Dockerfile; then
+            echo "Already up to date"
+            exit 0
+          fi
+          sed -i "s|ARG OPERATOR_BUILDER_COMMIT=\".*\"|ARG OPERATOR_BUILDER_COMMIT=\"${OPERATOR_BUILDER_COMMIT}\"|" bundle.Dockerfile
+
+      - name: Amend nudge commit and force-push
+        run: |
+          git diff --quiet bundle.Dockerfile && exit 0
+          git config user.name "red-hat-konflux[bot]"
+          git config user.email "126015336+red-hat-konflux[bot]@users.noreply.github.com"
+          git add bundle.Dockerfile
+          git commit --amend --no-edit
+          git push --force-with-lease
