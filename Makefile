@@ -3,8 +3,8 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-PREVIOUS_VERSION ?= 4.4.1
-VERSION ?= 4.4.2
+PREVIOUS_VERSION ?= 4.4.2
+VERSION ?= 4.5.0
 
 MIN_KUBE_VERSION = 1.24.0
 MIN_OCP_VERSION = 4.12
@@ -48,6 +48,13 @@ IMAGE_SHA=$(shell docker inspect --format='{{index .RepoDigests 0}}' ${IMG})
 OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 
+# sed -i requires different syntax on macOS vs Linux
+ifeq ($(OS),darwin)
+	SEDI = sed -i ""
+else
+	SEDI = sed -i
+endif
+
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
 # scaffolded by default. However, you might want to replace it to use other
@@ -82,26 +89,26 @@ help: ## Display this help.
 .PHONY: setup-auth
 setup-auth:
 	@cp testing/auth-secret-template.yaml testing/authentication_secret.yaml
-	@sed -i "" 's/eW91ci1jbGllbnQtaWQK/$(shell printf "$(shell echo $(or $(CLIENT_ID),console.redhat.com client_id))" | base64)/g' testing/authentication_secret.yaml
-	@sed -i "" 's/eW91ci1jbGllbnQtc2VjcmV0Cg==/$(shell printf "$(shell echo $(or $(CLIENT_SECRET),console.redhat.com client_secret))" | base64)/g' testing/authentication_secret.yaml
+	@$(SEDI) 's/eW91ci1jbGllbnQtaWQK/$(shell printf "$(shell echo $(or $(CLIENT_ID),console.redhat.com client_id))" | base64)/g' testing/authentication_secret.yaml
+	@$(SEDI) 's/eW91ci1jbGllbnQtc2VjcmV0Cg==/$(shell printf "$(shell echo $(or $(CLIENT_SECRET),console.redhat.com client_secret))" | base64)/g' testing/authentication_secret.yaml
 
 .PHONY: add-prom-route
 add-prom-route:
-	@sed -i "" '/prometheus_config/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@$(SEDI) '/prometheus_config/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '  prometheus_config:' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    service_address: $(EXTERNAL_PROM_ROUTE)'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    skip_tls_verification: true' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: add-auth
 add-auth:
-	@sed -i "" '/authentication/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@$(SEDI) '/authentication/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '  authentication:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    type: service-account'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    secret_name: dev-auth-secret' >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
 .PHONY: local-validate-cert
 local-validate-cert:
-	@sed -i "" '/upload/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
+	@$(SEDI) '/upload/d' testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '  upload:'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 	@echo '    validate_cert: false'  >> testing/costmanagement-metrics-cfg_v1beta1_costmanagementmetricsconfig.yaml
 
@@ -171,7 +178,13 @@ WATCH_NAMESPACE ?= koku-metrics-operator
 # Run against the configured Kubernetes cluster in ~/.kube/config
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	kubectl apply -f testing/sa.yaml
+	$(KUBECTL) apply -f testing/sa.yaml
+	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run cmd/main.go
+
+# Run without regenerating manifests/code
+.PHONY: run-quick
+run-quick: ## Run a controller from your host without regenerating manifests/code.
+	$(KUBECTL) apply -f testing/sa.yaml
 	WATCH_NAMESPACE=$(WATCH_NAMESPACE) SECRET_ABSPATH=$(SECRET_ABSPATH) GIT_COMMIT=$(GIT_COMMIT) go run cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
@@ -320,49 +333,13 @@ UPSTREAM_LOWERCASE = koku
 UPSTREAM_UPPERCASE = Koku
 DOWNSTREAM_LOWERCASE = costmanagement
 DOWNSTREAM_UPPERCASE = CostManagement
-DOWNSTREAM_OPERATOR_NAME = $(DOWNSTREAM_LOWERCASE)-metrics-operator
-DOWNSTREAM_CSV_FILE = bundle/manifests/$(DOWNSTREAM_OPERATOR_NAME).clusterserviceversion.yaml
-
-.PHONY: downstream-bundle
-downstream-bundle: operator-sdk manifests kustomize yq ## Generate downstream bundle manifests and metadata, then validate generated files.
-	rm -rf ./bundle
-	$(OPERATOR_SDK) generate kustomize manifests
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) --default-channel=stable --channels=stable
-
-	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
-	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
-
-	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.metadata.annotations.certified = "true"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.metadata.annotations.support = "Red Hat"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.metadata.name = "$(DOWNSTREAM_OPERATOR_NAME).$(VERSION)"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/$(DOWNSTREAM_OPERATOR_NAME)"]' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.spec.replaces = "$(DOWNSTREAM_OPERATOR_NAME).$(PREVIOUS_VERSION)"' $(DOWNSTREAM_CSV_FILE)
-	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' $(DOWNSTREAM_CSV_FILE)
-
-	sed -i '' 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' $(DOWNSTREAM_CSV_FILE)
-
-	# update bundle.Dockerfile with downstream labels
-	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
-	sed -i '' 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
-	sed -i '' 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
-
-	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
-	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
-
 .PHONY: downstream
 downstream: operator-sdk ## Generate the code changes necessary for the downstream image.
 	rm -rf $(REMOVE_FILES)
 	# sed replace everything but the Makefile
-	- LC_ALL=C find api/v1beta1 config/* docs/csv-description.md -type f -exec sed -i '' -e 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' -e 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-	- LC_ALL=C find internal/* -type f -exec sed -i '' '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
-	- sed -i '' 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
+	- LC_ALL=C find api/v1beta1 config/* docs/csv-description.md -type f -exec $(SEDI) -e 's/$(UPSTREAM_UPPERCASE)/$(DOWNSTREAM_UPPERCASE)/g' -e 's/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	- LC_ALL=C find internal/* -type f -exec $(SEDI) '/^\/\/ +kubebuilder:rbac:groups/ s/$(UPSTREAM_LOWERCASE)/$(DOWNSTREAM_LOWERCASE)/g' {} +
+	- $(SEDI) 's/isCertified bool = false/isCertified bool = true/g' internal/packaging/packaging.go
 	# rename the base CSV file
 	mv config/manifests/bases/$(UPSTREAM_LOWERCASE)-metrics-operator.clusterserviceversion.yaml config/manifests/bases/$(DOWNSTREAM_LOWERCASE)-metrics-operator.clusterserviceversion.yaml
 
@@ -371,7 +348,36 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 	$(YQ) -i '.resources.[0].kind = "CostManagementMetricsConfig"' PROJECT
 	$(YQ) -i 'del(.resources[] | select(. == "../scorecard"))' config/manifests/kustomization.yaml
 
-	$(MAKE) downstream-bundle
+	$(MAKE) manifests
+
+	rm -rf ./bundle
+
+	$(OPERATOR_SDK) generate kustomize manifests
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(DOWNSTREAM_IMAGE_TAG)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle --overwrite --version $(VERSION) --default-channel=stable --channels=stable
+
+	$(YQ) -i '.annotations."com.redhat.openshift.versions" = "$(MIN_OCP_VERSION)"' bundle/metadata/annotations.yaml
+	$(YQ) -i '(.annotations."com.redhat.openshift.versions" | key) head_comment="OpenShift specific annotations."' bundle/metadata/annotations.yaml
+
+	$(YQ) -i '.metadata.annotations.repository = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.certified = "true"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.support = "Red Hat"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations."operators.openshift.io/valid-subscription" = "[\"OpenShift Kubernetes Engine\", \"OpenShift Container Platform\", \"OpenShift Platform Plus\"]"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.annotations.containerImage = "$(DOWNSTREAM_IMAGE_TAG)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.metadata.name = "costmanagement-metrics-operator.$(VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.install.spec.deployments.[0].spec.template.spec.containers.[0].command = ["/usr/bin/costmanagement-metrics-operator"]' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.description |= load_str("docs/csv-description.md")' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.displayName = "Cost Management Metrics Operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.minKubeVersion = "$(MIN_KUBE_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.replaces = "costmanagement-metrics-operator.$(PREVIOUS_VERSION)"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+	$(YQ) -i '.spec.links[0].url = "https://github.com/project-koku/koku-metrics-operator"' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	$(SEDI) 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
+
+	# update bundle.dockerfile
+	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
+	$(SEDI) 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
+	$(SEDI) 's/REPLACE_VERSION/$(VERSION)/g' bundle.Dockerfile
 
 ##@ Build Dependencies
 

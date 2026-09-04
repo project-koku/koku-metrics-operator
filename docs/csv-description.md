@@ -1,4 +1,4 @@
-# Cost Management Metrics Operator
+# CostManagement Metrics Operator
 ## Introduction
 The `costmanagement-metrics-operator` is a component of the [cost managment](https://docs.redhat.com/en/documentation/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
@@ -6,7 +6,7 @@ This operator is capable of functioning within a disconnected/restricted network
 
 ## Features and Capabilities
 #### Metrics collection:
-The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
+The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
 * Querying Prometheus to gather the necessary metrics for Cost Management.
 * Writing the results of Prometheus queries to CSV report files.
 * Packaging the CSV report files into tarballs.
@@ -19,6 +19,13 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.5.0:
+* (Security) Restricted `token_url` to approved Red Hat API endpoints for service-account authentication.
+* (Security) Restricted Prometheus `service_address` to in-cluster `.svc` URLs.
+* (Security) Restricted pull-secret token authentication to approved Red Hat API URLs.
+* (Bugfix) Use dynamic API URL in authentication error messages.
+* Updated dependencies and base images to address security vulnerabilities.
+
 ## New in v4.4.2:
 * Updated dependencies to address security vulnerabilities.
 
@@ -27,7 +34,6 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
 * (Bugfix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
 * (Bugfix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
-* (Bugfix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
 * Updated dependencies.
 
 ## New in v4.4.0:
@@ -54,7 +60,44 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 
 ## New in v4.0.0:
 * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
-* **FIPS Compliance:** Supports deployment in high-security environments when run on an OpenShift cluster with FIPS mode enabled.
+* **Progress towards FIPS 140 Compliance:** The operator is using the Go Cryptographic Module v1.0.0 to progress toward FIPS 140 compliance. Although this module is not validated at the time of this release, the operator aims to meet stricter security standards when the module does successfully achieve FIPS validation.
+* **API Name Change:** The Custom Resource Definition (CRD) for configuring the upstream `CostManagement Metrics Operator` was renamed from `CostManagementMetricsConfig` to `CostManagementMetricsConfig`.
+
+### NOTE:
+  * The API name change impacts only users of the upstream (community) CostManagement Metrics Operator.
+  * The downstream (Red Hat-supported) Cost Management Metrics Operator is not impacted by this change and users should continue using their existing configurations.
+
+**Important Upgrade Instructions:**
+
+  If you are upgrading the upstream CostManagement Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing `CostManagementMetricsConfig` resources.
+
+  To successfully upgrade and retain your operator's configuration, complete the following steps. You can use the provided `oc` commands replacing the angle brackets (`< >`) with your specific values:
+
+  1. Backup existing configuration (recommended):
+
+     Before you upgrade, retrieve the details of your current `CostManagementMetricsConfig` instance to help you recreate it with the new API name.
+
+     ```
+     oc get costmanagementmetricsconfig -n costmanagement-metrics-operator <your-config-name> -o yaml > costmanagement-metrics-config-backup.yaml
+     ```
+
+  2. Delete the previous `CostManagementMetricsConfig` instance (recommended):
+
+      After the operator is upgraded to `version 4.0.0`, delete any existing `CostManagementMetricsConfig` resources.
+
+      ```
+      oc delete costmanagementmetricsconfig -n costmanagement-metrics-operator <your-config-name>
+      ```
+
+  3. Create the new `CostManagementMetricsConfig` instance:
+
+      Using the information from your backup (or a new configuration), create a new `CostManagementMetricsConfig` instance. Adjust the spec section based on your specific needs. For more information about configurations, [refer to the configurable parameters](#configurable-parameters).
+
+  4. Apply your new configuration:
+
+      ```
+      oc apply -f <your-costmanagementmetricsconfig-file>.yaml -n costmanagement-metrics-operator
+      ```
 
 ## New in v3.3.2:
 * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
@@ -221,7 +264,7 @@ Configure the costmanagement-metrics-operator by creating a `CostManagementMetri
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
+To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 
