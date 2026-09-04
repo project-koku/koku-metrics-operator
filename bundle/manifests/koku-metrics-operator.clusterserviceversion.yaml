@@ -523,6 +523,15 @@ spec:
                 - create
                 - get
                 - update
+            - apiGroups:
+                - networking.k8s.io
+              resources:
+                - networkpolicies
+              verbs:
+                - create
+                - delete
+                - patch
+                - update
           serviceAccountName: koku-metrics-controller-manager
       deployments:
         - label:
