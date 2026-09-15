@@ -20,14 +20,27 @@ func TestStorageQueriesUseUniquePvcVolumenameJoin(t *testing.T) {
 
 	legacyRHS := `max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})`
 
-	if !strings.Contains(pvcVolumenameJoinRHS, "kube_persistentvolume_status_phase{phase='Bound'}") {
-		t.Fatal("pvcVolumenameJoinRHS must filter to Bound persistent volumes")
+	requiredJoinRHSClauses := []string{
+		"max by(namespace, persistentvolumeclaim, volumename)",
+		"kube_persistentvolumeclaim_info{volumename != ''}",
+		"* on(volumename) group_left()",
+		"label_replace(",
+		`kube_persistentvolume_status_phase{phase='Bound'}`,
+		`"persistentvolume", "(.+)"`,
+	}
+	for _, clause := range requiredJoinRHSClauses {
+		if !strings.Contains(pvcVolumenameJoinRHS, clause) {
+			t.Fatalf("pvcVolumenameJoinRHS missing required clause %q", clause)
+		}
 	}
 
 	for _, key := range storageQueryKeys {
 		query, ok := QueryMap[key]
 		if !ok {
 			t.Fatalf("missing QueryMap entry %q", key)
+		}
+		if !strings.Contains(query, "on(persistentvolumeclaim, namespace) group_left(volumename)") {
+			t.Errorf("query %q must join on (persistentvolumeclaim, namespace) with group_left(volumename)", key)
 		}
 		if !strings.Contains(query, pvcVolumenameJoinRHS) {
 			t.Errorf("query %q must use shared pvcVolumenameJoinRHS for a unique (namespace, persistentvolumeclaim) join", key)
