@@ -37,10 +37,14 @@ func TestCompareEVR(t *testing.T) {
 		{left: "3.5.8-1.el9_8", right: "1:3.5.8-1.el9_8", want: -1},
 		{left: "1:3.5.8-2.el9_8", right: "1:3.5.8-1.el9_8", want: 1},
 		{left: "1:3.5.8-1.el9_8", right: "1:3.5.8-2.el9_8", want: -1},
-		{left: "1:3.5-1", right: "1:3.5.0-1", want: 0},
+		// Lexicographic string order wrongly treats "9" > "10"; RPM numeric segments do not.
+		{left: "1:3.5.8-9.el9_8", right: "1:3.5.8-10.el9_8", want: -1},
+		{left: "1:3.5.8-10.el9_8", right: "1:3.5.8-9.el9_8", want: 1},
+		{left: "1:3.5-1", right: "1:3.5.0-1", want: -1}, // trailing .0 is a newer segment in rpmvercmp
 		{left: "1:3.5.0.1-1", right: "1:3.5.0-1", want: 1},
 		{left: "1:3.5-1", right: "1:3.5.1-1", want: -1},
 		{left: "1:3.5.8", right: "1:3.5.8-1", want: -1},
+		{left: "1:3.5.8~rc1-1", right: "1:3.5.8-1", want: -1},
 	}
 
 	for _, tc := range cases {
@@ -59,12 +63,42 @@ func TestCompareRelease(t *testing.T) {
 		{left: "1.el9_8", right: "1.el9_8", want: 0},
 		{left: "1.el9_8", right: "2.el9_8", want: -1},
 		{left: "2.el9_8", right: "1.el9_8", want: 1},
+		{left: "9.el9_8", right: "10.el9_8", want: -1},
+		{left: "10.el9_8", right: "9.el9_8", want: 1},
 	}
 
 	for _, tc := range cases {
 		got := compareRelease(tc.left, tc.right)
 		if got != tc.want {
 			t.Errorf("compareRelease(%q, %q) = %d, want %d", tc.left, tc.right, got, tc.want)
+		}
+	}
+}
+
+func TestRpmvercmp(t *testing.T) {
+	cases := []struct {
+		left, right string
+		want        int
+	}{
+		{left: "1.0", right: "1.0", want: 0},
+		{left: "1.0", right: "1.1", want: -1},
+		{left: "1.10", right: "1.9", want: 1},
+		{left: "1.0", right: "1.0.0", want: -1},
+		{left: "1.0~rc1", right: "1.0", want: -1},
+		{left: "1.0", right: "1.0~rc1", want: 1},
+		{left: "1.0~rc1", right: "1.0~rc2", want: -1},
+		{left: "1.0^1", right: "1.0", want: 1},
+		{left: "1.0", right: "1.0^1", want: -1},
+		{left: "1.0^1", right: "1.0^2", want: -1},
+		{left: "", right: "", want: 0},
+		{left: "abc", right: "abd", want: -1},
+		{left: "abd", right: "abc", want: 1},
+	}
+
+	for _, tc := range cases {
+		got := rpmvercmp(tc.left, tc.right)
+		if got != tc.want {
+			t.Errorf("rpmvercmp(%q, %q) = %d, want %d", tc.left, tc.right, got, tc.want)
 		}
 	}
 }

@@ -144,41 +144,112 @@ func compareEVR(left, right string) int {
 }
 
 func compareVersion(left, right string) int {
-	lParts := strings.Split(left, ".")
-	rParts := strings.Split(right, ".")
-	maxLen := len(lParts)
-	if len(rParts) > maxLen {
-		maxLen = len(rParts)
-	}
-
-	for i := 0; i < maxLen; i++ {
-		lVal := 0
-		rVal := 0
-
-		if i < len(lParts) {
-			lVal, _ = strconv.Atoi(lParts[i])
-		}
-		if i < len(rParts) {
-			rVal, _ = strconv.Atoi(rParts[i])
-		}
-
-		if lVal < rVal {
-			return -1
-		}
-		if lVal > rVal {
-			return 1
-		}
-	}
-
-	return 0
+	return rpmvercmp(left, right)
 }
 
 func compareRelease(left, right string) int {
-	if left == right {
-		return 0
+	return rpmvercmp(left, right)
+}
+
+// rpmvercmp compares RPM version/release strings using the same segment rules
+// as rpm's rpmvercmp: numeric segments compare numerically, non-numeric
+// lexicographically, '~' sorts before anything (including empty), '^' sorts
+// after anything when the other side ends.
+func rpmvercmp(left, right string) int {
+	i, j := 0, 0
+	for i < len(left) || j < len(right) {
+		for i < len(left) && !isAlnum(left[i]) && left[i] != '~' && left[i] != '^' {
+			i++
+		}
+		for j < len(right) && !isAlnum(right[j]) && right[j] != '~' && right[j] != '^' {
+			j++
+		}
+
+		if i < len(left) && left[i] == '~' || j < len(right) && right[j] == '~' {
+			if i >= len(left) || left[i] != '~' {
+				return 1
+			}
+			if j >= len(right) || right[j] != '~' {
+				return -1
+			}
+			i++
+			j++
+			continue
+		}
+
+		if i < len(left) && left[i] == '^' || j < len(right) && right[j] == '^' {
+			if i >= len(left) || left[i] != '^' {
+				return -1
+			}
+			if j >= len(right) || right[j] != '^' {
+				return 1
+			}
+			i++
+			j++
+			continue
+		}
+
+		if i >= len(left) && j >= len(right) {
+			return 0
+		}
+		if i >= len(left) {
+			return -1
+		}
+		if j >= len(right) {
+			return 1
+		}
+
+		startI, startJ := i, j
+		if isDigit(left[i]) {
+			for i < len(left) && isDigit(left[i]) {
+				i++
+			}
+			for j < len(right) && isDigit(right[j]) {
+				j++
+			}
+			lSeg := strings.TrimLeft(left[startI:i], "0")
+			rSeg := strings.TrimLeft(right[startJ:j], "0")
+			if len(lSeg) < len(rSeg) {
+				return -1
+			}
+			if len(lSeg) > len(rSeg) {
+				return 1
+			}
+			if lSeg < rSeg {
+				return -1
+			}
+			if lSeg > rSeg {
+				return 1
+			}
+			continue
+		}
+
+		for i < len(left) && isAlpha(left[i]) {
+			i++
+		}
+		for j < len(right) && isAlpha(right[j]) {
+			j++
+		}
+		lSeg := left[startI:i]
+		rSeg := right[startJ:j]
+		if lSeg < rSeg {
+			return -1
+		}
+		if lSeg > rSeg {
+			return 1
+		}
 	}
-	if left < right {
-		return -1
-	}
-	return 1
+	return 0
+}
+
+func isDigit(b byte) bool {
+	return b >= '0' && b <= '9'
+}
+
+func isAlpha(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+}
+
+func isAlnum(b byte) bool {
+	return isDigit(b) || isAlpha(b)
 }
