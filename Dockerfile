@@ -27,6 +27,13 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
     CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFLAGS=-mod=vendor \
     go build -ldflags "-w -s -X github.com/project-koku/koku-metrics-operator/internal/controller.GitCommit=$GIT_COMMIT" -a -o manager cmd/main.go
 
+# COST-8089 / OCPSTRAT-3113: DEFAULT:PQ so ML-KEM is available via OpenSSL.
+# On FIPS clusters the :PQ subpolicy is disabled by the OS (no special handling).
+FROM registry.redhat.io/ubi9/ubi:9.8-1788191706 AS pqc
+RUN dnf install -y --nodocs crypto-policies-scripts && \
+    update-crypto-policies --set DEFAULT:PQ && \
+    dnf clean all && rm -rf /var/cache/*
+
 FROM registry.redhat.io/ubi9/ubi-micro:9.8-1787778798 AS target-base
 
 # Prepare a ubi micro base with openssl and its dependencies.
@@ -38,6 +45,8 @@ RUN rm -rf /mnt/rootfs/var/cache/*
 
 FROM registry.redhat.io/ubi9/ubi-micro:9.8-1787778798 AS ubi9-micro
 COPY --from=ubi-micro-build /mnt/rootfs/ /
+COPY --from=pqc /etc/crypto-policies/ /etc/crypto-policies/
+RUN test "$(tr -d '\n' </etc/crypto-policies/state/current)" = "DEFAULT:PQ"
 
 WORKDIR /
 COPY --from=builder /workspace/manager /usr/bin/costmanagement-metrics-operator
