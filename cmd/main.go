@@ -112,11 +112,12 @@ func main() {
 	}
 
 	if err = (&controller.MetricsConfigReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		Clientset: clientset,
-		InCluster: inCluster,
-		Namespace: watchNamespace,
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Clientset:  clientset,
+		InCluster:  inCluster,
+		Namespace:  watchNamespace,
+		SecretPath: os.Getenv("SECRET_ABSPATH"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MetricsConfig")
 		os.Exit(1)

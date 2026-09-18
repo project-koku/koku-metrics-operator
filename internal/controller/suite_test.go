@@ -213,11 +213,18 @@ func handleDefault(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello, client")
 }
 
+func handleToken(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, `{"access_token":"mockAccessToken","expires_in":3600,"token_type":"Bearer"}`)
+}
+
 // Router for mock server endpoints
 func routeRequest(w http.ResponseWriter, r *http.Request) {
 	// Define mock endpoints with regex patterns (most specific first)
 	endpoints := []MockEndpoint{
 		{"POST", regexp.MustCompile(`/api/ingress/`), handleIngress},
+		// Service-account token exchange (TokenURL often points at the mock root or an SSO-like path)
+		{"POST", regexp.MustCompile(`^/$|/token|/auth/realms/`), handleToken},
 		{"GET", regexp.MustCompile(`/api/sources/.*/source_types`), handleSourceTypes},
 		{"GET", regexp.MustCompile(`/api/sources/`), handleSources},
 	}
@@ -260,7 +267,8 @@ func routeRequestExpiredCreds(w http.ResponseWriter, r *http.Request) {
 }
 
 var _ = BeforeSuite(func() {
-	validTS = httptest.NewServer(http.HandlerFunc(routeRequest))
+	// TLS so service-account token_url can satisfy the HTTPS requirement in tests.
+	validTS = httptest.NewTLSServer(http.HandlerFunc(routeRequest))
 	unauthorizedTS = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
@@ -317,11 +325,11 @@ var _ = BeforeSuite(func() {
 
 	if !useCluster {
 		defaultReconciler = &MetricsConfigReconciler{
-			Client:             k8sManager.GetClient(),
-			Scheme:             scheme.Scheme,
-			Clientset:          clientset,
-			InCluster:          true,
-			overrideSecretPath: true,
+			Client:     k8sManager.GetClient(),
+			Scheme:     scheme.Scheme,
+			Clientset:  clientset,
+			InCluster:  true,
+			SecretPath: os.Getenv("SECRET_ABSPATH"),
 		}
 		err := (defaultReconciler).SetupWithManager(k8sManager)
 		Expect(err).ToNot(HaveOccurred())
@@ -338,19 +346,23 @@ var _ = BeforeSuite(func() {
 
 	clusterPrep(ctx)
 
+	if !useCluster {
+		defaultReconciler.SecretPath = os.Getenv("SECRET_ABSPATH")
+	}
+
 })
 
 type ReconcilerOption func(f *MetricsConfigReconciler)
 
-func WithSecretOverride(overrideSecretPath bool) ReconcilerOption {
+func WithSecretOverride(secretPath string) ReconcilerOption {
 	return func(r *MetricsConfigReconciler) {
-		r.overrideSecretPath = overrideSecretPath
+		r.SecretPath = secretPath
 	}
 }
 
 func resetReconciler(opts ...ReconcilerOption) {
 	defaultReconciler.promCollector = nil
-	defaultReconciler.overrideSecretPath = true
+	defaultReconciler.SecretPath = os.Getenv("SECRET_ABSPATH")
 	for _, opt := range opts {
 		opt(defaultReconciler)
 	}
