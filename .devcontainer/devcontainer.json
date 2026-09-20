@@ -20,6 +20,7 @@
     "WATCH_NAMESPACE": "koku-metrics-operator",
     "SECRET_ABSPATH": "${containerWorkspaceFolder}/testing",
     "ENABLE_WEBHOOKS": "false",
+    "GOTOOLCHAIN": "auto",
     "KUBEBUILDER_ASSETS": "${containerWorkspaceFolder}/bin/k8s"
   },
   "customizations": {

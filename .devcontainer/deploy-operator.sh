@@ -19,8 +19,8 @@ echo "--- 2. Namespace + ServiceAccount ---"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f testing/sa.yaml
 
-echo "--- 3. Build manager binary ---"
-make build
+echo "--- 3. Build manager binary (vendored deps, no upgrades) ---"
+go build -mod=vendor -o bin/manager cmd/main.go
 
 echo "--- 4. Verify manifests ---"
 make verify-manifests
