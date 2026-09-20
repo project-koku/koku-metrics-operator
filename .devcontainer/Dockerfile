@@ -22,7 +22,7 @@ RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 # plain kubectl, so we install oc explicitly (operator docs require oc).
 ARG OC_VERSION=4.17
 RUN ARCH="$(uname -m)" && case "$ARCH" in x86_64) OC_ARCH=x86_64 ;; aarch64|arm64) OC_ARCH=arm64 ;; *) OC_ARCH=x86_64 ;; esac && \
-    curl -sL "https://mirror.openshift.com/pub/openshift-v4/${OC_ARCH}/clients/ocp/${OC_VERSION}/openshift-client-linux.tar.gz" \
+    curl -sL "https://mirror.openshift.com/pub/openshift-v4/${OC_ARCH}/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz" \
     | tar xz -C /usr/local/bin oc kubectl \
     && chmod +x /usr/local/bin/oc /usr/local/bin/kubectl
 
