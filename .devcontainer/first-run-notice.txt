@@ -1,0 +1,31 @@
+👋 Welcome to the koku-metrics-operator Codespace!
+
+A k3d cluster (koku-dev) is already running with k3s inside it.
+Run `kubectl get nodes` to verify.
+
+⚠️  k3d is k3s, NOT OpenShift. It covers smoke tests only
+   (CRD install, SA, build, manifest verify, basic reconcile).
+   Full e2e needs a real OCP cluster — see below.
+
+🧪 Quick checks (no cluster needed):
+
+    make fmt && make test
+    make verify-manifests
+
+🚀 Smoke test on k3d:
+
+    bash .devcontainer/deploy-operator.sh
+
+🔌 Full e2e against real OCP (from inside this codespace):
+
+    oc login --token=<token> --server=<server>
+    oc new-project koku-metrics-operator
+    make get-token-and-cert
+    make run ENABLE_WEBHOOKS=false
+    make deploy-local-cr   # add AUTH=service-account CLIENT_ID=.. CLIENT_SECRET=.. for SA auth
+
+🛠️  Available tools: go 1.26, oc, kubectl, kustomize, controller-gen,
+   setup-envtest, operator-sdk, yq, k3d, k9s, gh, docker, pre-commit
+
+   k9s                          # terminal UI for Kubernetes
+   kubectl get pods -A          # list all pods
