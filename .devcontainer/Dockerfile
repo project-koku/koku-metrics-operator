@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:1-1.26-bookworm
+FROM mcr.microsoft.com/devcontainers/go:1.26-bookworm
 
 # Remove the stale yarn repo that ships with the base image — its GPG key
 # is expired and breaks apt-get update in Codespaces.
