@@ -4,7 +4,7 @@ A k3d cluster (koku-dev) is already running with k3s inside it.
 Run `kubectl get nodes` to verify.
 
 ⚠️  k3d is k3s, NOT OpenShift. It covers smoke tests only
-   (CRD install, SA, build, manifest verify, basic reconcile).
+   (CRD install, SA, build, manifest verify).
    Full e2e needs a real OCP cluster — see below.
 
 🧪 Quick checks (no cluster needed):

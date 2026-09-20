@@ -17,7 +17,7 @@ make install
 
 echo "--- 2. Namespace + ServiceAccount ---"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -f testing/sa.yaml
+kubectl -n "$NAMESPACE" apply -f testing/sa.yaml
 
 echo "--- 3. Build manager binary (vendored deps, no upgrades) ---"
 go build -mod=vendor -o bin/manager cmd/main.go
