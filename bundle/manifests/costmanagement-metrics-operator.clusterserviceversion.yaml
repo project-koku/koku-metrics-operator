@@ -727,15 +727,6 @@ spec:
                 - patch
                 - update
                 - watch
-            - apiGroups:
-                - networking.k8s.io
-              resources:
-                - networkpolicies
-              verbs:
-                - create
-                - delete
-                - patch
-                - update
           serviceAccountName: costmanagement-metrics-controller-manager
     strategy: deployment
   installModes:
