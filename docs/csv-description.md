@@ -1,4 +1,4 @@
-# CostManagement Metrics Operator
+# Cost Management Metrics Operator
 ## Introduction
 The `costmanagement-metrics-operator` is a component of the [cost managment](https://docs.redhat.com/en/documentation/cost_management_service) service for Openshift. The operator runs on the latest supported versions of Openshift. This operator obtains OpenShift usage data by querying Prometheus every hour to create metric reports that it uploads to Cost Management at [console.redhat.com](https://console.redhat.com) to be processed. For more information, reach out to <costmanagement@redhat.com>.
 
@@ -6,7 +6,7 @@ This operator is capable of functioning within a disconnected/restricted network
 
 ## Features and Capabilities
 #### Metrics collection:
-The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
+The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collects the metrics required for Cost Management by:
 * Querying Prometheus to gather the necessary metrics for Cost Management.
 * Writing the results of Prometheus queries to CSV report files.
 * Packaging the CSV report files into tarballs.
@@ -24,6 +24,7 @@ The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects
 * (Security) Restricted Prometheus `service_address` to in-cluster `.svc` URLs.
 * (Security) Restricted pull-secret token authentication to approved Red Hat API URLs.
 * (Bugfix) Use dynamic API URL in authentication error messages.
+* (Bugfix) Filter storage PVC PromQL joins to Bound persistent volumes to avoid many-to-many join errors when a PVC is recreated with the same name.
 * Updated dependencies and base images to address security vulnerabilities.
 
 ## New in v4.4.2:
@@ -61,15 +62,15 @@ The CostManagement Metrics Operator (`costmanagement-metrics-operator`) collects
 ## New in v4.0.0:
 * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
 * **Progress towards FIPS 140 Compliance:** The operator is using the Go Cryptographic Module v1.0.0 to progress toward FIPS 140 compliance. Although this module is not validated at the time of this release, the operator aims to meet stricter security standards when the module does successfully achieve FIPS validation.
-* **API Name Change:** The Custom Resource Definition (CRD) for configuring the upstream `CostManagement Metrics Operator` was renamed from `CostManagementMetricsConfig` to `CostManagementMetricsConfig`.
+* **API Name Change:** The Custom Resource Definition (CRD) for configuring the upstream `Cost Management Metrics Operator` was renamed from `CostManagementMetricsConfig` to `CostManagementMetricsConfig`.
 
 ### NOTE:
-  * The API name change impacts only users of the upstream (community) CostManagement Metrics Operator.
+  * The API name change impacts only users of the upstream (community) Cost Management Metrics Operator.
   * The downstream (Red Hat-supported) Cost Management Metrics Operator is not impacted by this change and users should continue using their existing configurations.
 
 **Important Upgrade Instructions:**
 
-  If you are upgrading the upstream CostManagement Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing `CostManagementMetricsConfig` resources.
+  If you are upgrading the upstream Cost Management Metrics Operator to version 4.0.0 or higher, you must manually migrate your configuration. The operator will no longer recognize existing `CostManagementMetricsConfig` resources.
 
   To successfully upgrade and retain your operator's configuration, complete the following steps. You can use the provided `oc` commands replacing the angle brackets (`< >`) with your specific values:
 

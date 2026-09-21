@@ -142,6 +142,7 @@ spec:
     * (Security) Restricted Prometheus `service_address` to in-cluster `.svc` URLs.
     * (Security) Restricted pull-secret token authentication to approved Red Hat API URLs.
     * (Bugfix) Use dynamic API URL in authentication error messages.
+    * (Bugfix) Filter storage PVC PromQL joins to Bound persistent volumes to avoid many-to-many join errors when a PVC is recreated with the same name.
     * Updated dependencies and base images to address security vulnerabilities.
 
     ## New in v4.4.2:
@@ -726,6 +727,15 @@ spec:
                 - patch
                 - update
                 - watch
+            - apiGroups:
+                - networking.k8s.io
+              resources:
+                - networkpolicies
+              verbs:
+                - create
+                - delete
+                - patch
+                - update
           serviceAccountName: costmanagement-metrics-controller-manager
     strategy: deployment
   installModes:
