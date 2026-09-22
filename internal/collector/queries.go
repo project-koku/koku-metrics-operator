@@ -7,6 +7,14 @@ package collector
 
 import "github.com/prometheus/common/model"
 
+// pvcVolumenameJoinRHS is joined on (namespace, persistentvolumeclaim) with group_left(volumename).
+// It must be unique on those labels. We only keep volumenames whose PV is Bound so a delete/recreate
+// overlap (stale claim info + Released PV) cannot produce two volumenames for one PVC name.
+const pvcVolumenameJoinRHS = `max by(namespace, persistentvolumeclaim, volumename) (` +
+	`kube_persistentvolumeclaim_info{volumename != ''} * on(volumename) group_left() ` +
+	`label_replace(kube_persistentvolume_status_phase{phase='Bound'}, "volumename", "$1", "persistentvolume", "(.+)")` +
+	`)`
+
 var (
 	QueryMap = map[string]string{
 		"cost:node_allocatable_cpu_cores":    "kube_node_status_allocatable{resource='cpu'} * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info) ",
@@ -14,12 +22,12 @@ var (
 		"cost:node_capacity_cpu_cores":       "kube_node_status_capacity{resource='cpu'} * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info)",
 		"cost:node_capacity_memory_bytes":    "kube_node_status_capacity{resource='memory'} * on(node) group_left(provider_id) max by (node, provider_id) (kube_node_info)",
 
-		"cost:persistentvolume_pod_info":            "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolume_pod_info":            "kube_pod_spec_volumes_persistentvolumeclaims_info * on(persistentvolumeclaim, namespace) group_left(volumename) " + pvcVolumenameJoinRHS,
 		"cost:persistentvolumeclaim_capacity_bytes": "kube_persistentvolume_capacity_bytes{persistentvolume != ''}",
-		"cost:persistentvolumeclaim_request_bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
-		"cost:persistentvolumeclaim_usage_bytes":    "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolumeclaim_request_bytes":  "kube_persistentvolumeclaim_resource_requests_storage_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) " + pvcVolumenameJoinRHS,
+		"cost:persistentvolumeclaim_usage_bytes":    "kubelet_volume_stats_used_bytes * on(persistentvolumeclaim, namespace) group_left(volumename) " + pvcVolumenameJoinRHS,
 		"cost:persistentvolume_labels":              "kube_persistentvolume_labels * on(persistentvolume, namespace) group_left(storageclass, csi_driver, csi_volume_handle) max by(namespace, persistentvolume, storageclass, csi_driver, csi_volume_handle) (kube_persistentvolume_info)",
-		"cost:persistentvolumeclaim_labels":         "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) max by(namespace, persistentvolumeclaim, volumename) (kube_persistentvolumeclaim_info{volumename != ''})",
+		"cost:persistentvolumeclaim_labels":         "kube_persistentvolumeclaim_labels * on(persistentvolumeclaim, namespace) group_left(volumename) " + pvcVolumenameJoinRHS,
 
 		"cost:pod_limit_cpu_cores":      "sum by (pod, namespace, node) (kube_pod_container_resource_limits{pod!='', namespace!='', node!='', resource='cpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",
 		"cost:pod_request_cpu_cores":    "sum by (pod, namespace, node) (kube_pod_container_resource_requests{pod!='', namespace!='', node!='', resource='cpu'} * on(pod, namespace) group_left max by (pod, namespace) (kube_pod_status_phase{phase='Running'}))",

@@ -19,6 +19,14 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.5.0:
+* (Security) Restricted `token_url` to approved Red Hat API endpoints for service-account authentication.
+* (Security) Restricted Prometheus `service_address` to in-cluster `.svc` URLs.
+* (Security) Restricted pull-secret token authentication to approved Red Hat API URLs.
+* (Bugfix) Use dynamic API URL in authentication error messages.
+* (Bugfix) Filter storage PVC PromQL joins to Bound persistent volumes to avoid many-to-many join errors when a PVC is recreated with the same name.
+* Updated dependencies and base images to address security vulnerabilities.
+
 ## New in v4.4.2:
 * Updated dependencies to address security vulnerabilities.
 
@@ -27,7 +35,6 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
 * (Bugfix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
 * (Bugfix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
-* (Bugfix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
 * Updated dependencies.
 
 ## New in v4.4.0:
@@ -54,7 +61,7 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 
 ## New in v4.0.0:
 * **Virtual Machine Metrics:** Adds capabilities for collecting metrics and generating reports for running virtual machines within your OpenShift environment.
-* **FIPS Compliance:** Supports deployment in high-security environments when run on an OpenShift cluster with FIPS mode enabled.
+* **Progress towards FIPS 140 Compliance:** The operator is using the Go Cryptographic Module v1.0.0 to progress toward FIPS 140 compliance. Although this module is not validated at the time of this release, the operator aims to meet stricter security standards when the module does successfully achieve FIPS validation.
 
 ## New in v3.3.2:
 * Leader election settings are now configurable via environment variables. These variables can be modified in the operator [Subscription](https://github.com/operator-framework/operator-lifecycle-manager/blob/5a01f50258003e248bd5630df0837fe0bb0f1cb7/doc/design/subscription-config.md). The values should be specified as durations in seconds in the format `<number-of-seconds>s`. The default values for `LEADER_ELECTION_LEASE_DURATION`, `LEADER_ELECTION_RENEW_DEADLINE`, and `LEADER_ELECTION_RETRY_PERIOD` are '60s', '30s', and '5s', respectively.
@@ -221,7 +228,7 @@ Configure the costmanagement-metrics-operator by creating a `CostManagementMetri
 
 # Restricted Network Usage (disconnected/air-gapped mode)
 ## Installation
-To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
+To install the `costmanagement-metrics-operator` in a restricted network, follow the [olm documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/operators/administrator-tasks#olm-restricted-networks). The operator is found in the `community-operators` Catalog in the `registry.redhat.io/redhat/community-operator-index:latest` Index. If pruning the index before pushing to the mirrored registry, keep the `costmanagement-metrics-operator` package.
 
 Within a restricted network, the operator queries prometheus to gather the necessary usage metrics, writes the query results to CSV files, and packages the reports for storage in the PVC. These reports then need to be manually downloaded from the cluster and uploaded to [console.redhat.com](https://console.redhat.com).
 

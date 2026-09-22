@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,7 +56,7 @@ var (
 	defaultCheckCycle        int64 = 1440
 	defaultUploadWait        int64 = 0
 	defaultMaxReports        int64 = 1
-	defaultAPIURL                  = "https://not-the-real-console.redhat.com"
+	defaultAPIURL                  = "https://console.redhat.com"
 	testingDir                     = dirconfig.MountPath
 )
 
@@ -329,7 +330,8 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					UploadToggle:   &trueValue,
 					UploadWait:     &defaultUploadWait,
 					IngressAPIPath: "/api/ingress/v1/upload",
-					ValidateCert:   &trueValue,
+					// false so local TLS mock servers (self-signed) are accepted
+					ValidateCert: &falseValue,
 				},
 				Source: metricscfgv1beta1.CloudDotRedHatSourceSpec{
 					CreateSource:   &falseValue,
@@ -342,7 +344,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					SkipTLSVerification: &trueValue,
 					SvcAddress:          "https://thanos-querier.openshift-monitoring.svc:9091",
 				},
-				APIURL: "https://not-the-real-console.redhat.com",
+				APIURL: defaultAPIURL,
 			},
 		}
 		testConfigMap = &corev1.ConfigMap{
@@ -502,31 +504,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
 				Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
 			})
-			It("token auth works fine", func() {
-				instCopy.Spec.APIURL = unauthorizedTS.URL
-				createObject(ctx, instCopy)
-
-				fetched := &metricscfgv1beta1.MetricsConfig{}
-
-				Eventually(func() bool {
-					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
-					return fetched.Status.ClusterID != ""
-				}, timeout, interval).Should(BeTrue())
-
-				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
-				Expect(fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeNil())
-
-				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
-
-				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&diffContextTimeout))
-
-				Expect(fetched.Status.Source.SourceDefined).To(BeNil())
-				Expect(fetched.Status.Source.LastSourceCheckTime.IsZero()).To(BeTrue())
-				Expect(fetched.Status.Source.SourceError).To(Equal(""))
-
-				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
-				Expect(*fetched.Status.Upload.UploadToggle).To(BeFalse())
-			})
 		})
 
 		When("cluster is connected", func() {
@@ -534,7 +511,6 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				checkPVC = true
 			})
 			It("default CR works fine", func() {
-				instCopy.Spec.APIURL = validTS.URL
 				instCopy.Spec.Source.SourceName = ""
 				createObject(ctx, instCopy)
 
@@ -548,7 +524,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
 				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeTrue())
 				Expect(fetched.Status.Authentication.ValidBasicAuth).To(BeNil())
-				Expect(fetched.Status.APIURL).To(Equal(validTS.URL))
+				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.ClusterID).To(Equal(clusterID))
 				Expect(fetched.Status.OperatorCommit).To(Equal(GitCommit))
 				Expect(fetched.Status.Prometheus.ContextTimeout).To(Equal(&defaultContextTimeout))
@@ -557,6 +533,27 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				Expect(fetched.Status.Source.SourceError).ToNot(Equal(""))
 				Expect(fetched.Status.Upload.UploadWait).ToNot(BeNil())
 			})
+			It("token auth should be rejected against non-Red Hat URL", func() {
+				instCopy.Spec.APIURL = unauthorizedTS.URL
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthErrorMessage != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.DefaultAuthenticationType))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("token authentication is only permitted"))
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("service-account"))
+				Expect(fetched.Status.APIURL).To(Equal(unauthorizedTS.URL))
+				// Upload must not proceed with the cluster pull-secret against a custom URL.
+				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+				Expect(fetched.Status.Upload.LastUploadStatus).To(BeEmpty())
+			})
+
 			It("upload set to false case", func() {
 				instCopy.Spec.Upload.UploadToggle = &falseValue
 				createObject(ctx, instCopy)
@@ -923,7 +920,11 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			})
 			It("tar.gz being present - upload attempt should 'succeed'", func() {
 				Expect(setup()).Should(Succeed())
+				// Custom/mock API URLs cannot use token (pull-secret) auth; use service-account for local httptest.
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+				instCopy.Spec.Authentication.AuthenticationSecretName = serviceAccountSecretName
 				// Configure valid source to allow upload to proceed
 				instCopy.Spec.Source.SourceName = sourceName
 				createObject(ctx, instCopy)
@@ -975,10 +976,26 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 				// Verify the expected values - source should be valid but upload should fail
 				Expect(*fetched.Status.Source.SourceDefined).To(BeTrue()) // Source is valid
 				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring("401"))
+
+				// Re-fetch to get the latest status
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+
+				// Verify AuthErrorMessage contains the dynamic hostname if it was set
+				// (401 error can occur during credential validation OR during upload)
+				if fetched.Status.Authentication.AuthErrorMessage != "" {
+					parsedURL, err := url.Parse(expiredCredsTS.URL)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring(parsedURL.Host))
+					Expect(fetched.Status.Authentication.AuthErrorMessage).ToNot(ContainSubstring("console.redhat.com"))
+				}
 			})
 			It("should store reports when source validation fails", func() {
 				Expect(setup()).Should(Succeed())
+				// Custom/mock API URLs cannot use token (pull-secret) auth; use service-account for local httptest.
 				instCopy.Spec.APIURL = validTS.URL
+				instCopy.Spec.Authentication.TokenURL = validTS.URL
+				instCopy.Spec.Authentication.AuthType = metricscfgv1beta1.ServiceAccount
+				instCopy.Spec.Authentication.AuthenticationSecretName = serviceAccountSecretName
 				instCopy.Spec.Source.SourceName = "non-existent-source"
 				instCopy.Spec.Source.CreateSource = &falseValue
 				createObject(ctx, instCopy)
@@ -995,6 +1012,13 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
 					return fetched.Status.Upload.UploadError
 				}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
+
+				// Verify the error message contains the actual API URL (hostname only, no https://)
+				parsedURL, err := url.Parse(validTS.URL)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring(parsedURL.Host))
+				// Verify it doesn't contain the hardcoded console.redhat.com (validTS.URL is always local)
+				Expect(fetched.Status.Upload.UploadError).ToNot(ContainSubstring("console.redhat.com"))
 
 				Expect(fetched.Status.Source.SourceDefined).ToNot(BeNil())
 				Expect(*fetched.Status.Source.SourceDefined).To(BeFalse())
@@ -1018,8 +1042,34 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 					return fetched.Status.Upload.UploadError
 				}, timeout, interval).Should(ContainSubstring("Reports are being stored"))
 
+				// Verify it contains the actual API URL being used
+				parsedURL, err := url.Parse(defaultAPIURL)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(fetched.Status.Upload.UploadError).To(ContainSubstring(parsedURL.Host))
+
 				Expect(fetched.Status.APIURL).To(Equal(defaultAPIURL))
 				Expect(fetched.Status.Upload.LastSuccessfulUploadTime.IsZero()).To(BeTrue())
+			})
+			It("should reject token auth against on-premise URL without sending pull-secret", func() {
+				Expect(setup()).Should(Succeed())
+				onPremURL := "https://on-prem-koku.example.com:8443"
+				instCopy.Spec.APIURL = onPremURL
+				instCopy.Spec.Source.SourceName = "test-source"
+				instCopy.Spec.Source.CreateSource = &falseValue
+				createObject(ctx, instCopy)
+
+				fetched := &metricscfgv1beta1.MetricsConfig{}
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+					return fetched.Status.Authentication.AuthErrorMessage != ""
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fetched.Status.APIURL).To(Equal(onPremURL))
+				Expect(fetched.Status.Authentication.AuthType).To(Equal(metricscfgv1beta1.Token))
+				Expect(*fetched.Status.Authentication.AuthenticationCredentialsFound).To(BeFalse())
+				Expect(fetched.Status.Authentication.AuthErrorMessage).To(ContainSubstring("token authentication is only permitted"))
+				Expect(fetched.Status.Upload.LastUploadStatus).To(BeEmpty())
 			})
 			It("should check the last upload time in the upload status", func() {
 				Expect(setup()).Should(Succeed())
@@ -1267,7 +1317,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			}
 		})
 		It("failed to get prometheus config because of missing token", func() {
-			resetReconciler(WithSecretOverride(false))
+			resetReconciler(WithSecretOverride(""))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1289,8 +1339,34 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("failed to get token"))
 		})
+		It("rejects external service_address before querying prometheus", func() {
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
+
+			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
+			timeRange := promv1.Range{
+				Start: t,
+				End:   t.Add(59*time.Minute + 59*time.Second),
+				Step:  time.Minute,
+			}
+			mockpconn.EXPECT().QueryRange(gomock.Any(), gomock.Any(), timeRange, gomock.Any()).Return(model.Matrix{}, nil, nil).Times(0)
+
+			instCopy.Spec.Upload.UploadToggle = &falseValue
+			instCopy.Spec.PrometheusConfig.SvcAddress = "https://evil.example.com"
+			createObject(ctx, instCopy)
+
+			fetched := &metricscfgv1beta1.MetricsConfig{}
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(ctx, types.NamespacedName{Name: instCopy.Name, Namespace: namespace}, fetched)
+				return fetched.Status.Prometheus.ConfigError != ""
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(fetched.Status.Prometheus.PrometheusConfigured).To(BeFalse())
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("thanos-querier"))
+			Expect(fetched.Status.Prometheus.ConfigError).To(ContainSubstring("evil.example.com"))
+		})
 		It("successfully queried but there was no data", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1315,7 +1391,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 		})
 		It("2day retention period - successfully queried but there was no data on first day, but data on second", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
 			createObject(ctx, testConfigMap)
@@ -1345,7 +1421,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Reports.DataCollected).To(BeTrue())
 		})
 		It("2day retention period - end of 24 hr test", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 			now = func() time.Time { return time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour) }
 
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 2d"}
@@ -1378,16 +1454,12 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 			Expect(fetched.Status.Packaging.ReportCount).ToNot(BeNil())
 			Expect(*fetched.Status.Packaging.ReportCount).To(BeEquivalentTo(1))
 
-			Eventually(func() int {
-				files, err := os.ReadDir(filepath.Join(".", "tmp", volumeMountName, "data"))
-				if err != nil {
-					return -1
-				}
-				return len(files)
-			}, timeout, interval).Should(Equal(0))
+			files, err := os.ReadDir(filepath.Join(".", "tmp", volumeMountName, "data"))
+			Expect(err).To(BeNil())
+			Expect(len(files)).To(Equal(0))
 		})
 		It("query failed due to error", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1412,7 +1484,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 
 		})
 		It("query returns node data only", func() {
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			t := time.Now().UTC().Truncate(1 * time.Hour).Add(-1 * time.Hour)
 			timeRange := promv1.Range{
@@ -1469,7 +1541,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		})
 		It("8day retention period - successfully queried but there was no data on first day, but data on all remaining days", func() {
 			// slow test, always run this one last
-			resetReconciler(WithSecretOverride(true))
+			resetReconciler(WithSecretOverride(os.Getenv("SECRET_ABSPATH")))
 
 			testConfigMap.Data = map[string]string{"config.yaml": "prometheusK8s:\n  retention: 8d"}
 			createObject(ctx, testConfigMap)
