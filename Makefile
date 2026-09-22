@@ -374,6 +374,9 @@ downstream: operator-sdk ## Generate the code changes necessary for the downstre
 
 	$(SEDI) 's/CostManagement Metrics Operator/Cost Management Metrics Operator/g' bundle/manifests/costmanagement-metrics-operator.clusterserviceversion.yaml
 
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional name=multiarch
+	$(OPERATOR_SDK) bundle validate bundle/ --select-optional suite=operatorframework
+
 	# update bundle.dockerfile
 	cat downstream-assets/bundle.Dockerfile.txt >> bundle.Dockerfile
 	$(SEDI) 's/MIN_OCP_VERSION/$(MIN_OCP_VERSION)/g' bundle.Dockerfile
