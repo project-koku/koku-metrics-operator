@@ -653,13 +653,13 @@ func (r *MetricsConfigReconciler) uploadFiles(authConfig *crhchttp.AuthConfig, c
 
 		log.Info(fmt.Sprintf("uploading file: %s", file))
 		// grab the body and the multipart file header
-		body, contentType, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
+		body, contentType, contentLength, err := crhchttp.GetMultiPartBodyAndHeaders(filepath.Join(dirCfg.Upload.Path, file))
 		if err != nil {
 			log.Error(err, "failed to set multipart body and headers")
 			return err
 		}
 		ingressURL := cr.Status.APIURL + cr.Status.Upload.IngressAPIPath
-		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, manifestInfo, file)
+		uploadStatus, uploadTime, requestID, err := crhchttp.Upload(authConfig, contentType, "POST", ingressURL, body, contentLength, manifestInfo, file)
 		cr.Status.Upload.LastUploadStatus = uploadStatus
 		cr.Status.Upload.LastPayloadName = file
 		cr.Status.Upload.LastPayloadFiles = manifestInfo.Files
