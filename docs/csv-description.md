@@ -19,6 +19,15 @@ The Koku Metrics Operator (`koku-metrics-operator`) collects the metrics require
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.5.0:
+* Restricted token (pull-secret) authentication to approved Red Hat Cost Management API endpoints; custom `api_url` deployments must use `service-account` authentication.
+* Restricted Prometheus `service_address` to the in-cluster OpenShift `thanos-querier` service.
+* Validated `token_url` for service-account authentication (HTTPS required; Red Hat SSO required when using Red Hat Cost Management endpoints).
+* (Bug Fix) Fixed storage PVC PromQL joins to only use Bound persistent volumes, avoiding many-to-many match errors when a PVC is recreated.
+* (Bug Fix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
+* Improved authentication and source validation error messages to show the configured API hostname (helpful for on-premise deployments).
+* Updated dependencies.
+
 ## New in v4.4.1:
 * (Bugfix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
 * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
