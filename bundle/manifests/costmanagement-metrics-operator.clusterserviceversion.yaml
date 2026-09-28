@@ -141,6 +141,7 @@ spec:
     * (Security) Restricted `token_url` to approved Red Hat API endpoints for service-account authentication.
     * (Security) Restricted Prometheus `service_address` to in-cluster `.svc` URLs.
     * (Security) Restricted pull-secret token authentication to approved Red Hat API URLs.
+    * (Security) Updated UBI base images to address coreutils vulnerabilities (RHSA 172397).
     * (Bugfix) Use dynamic API URL in authentication error messages.
     * (Bugfix) Filter storage PVC PromQL joins to Bound persistent volumes to avoid many-to-many join errors when a PVC is recreated with the same name.
     * Updated dependencies and base images to address security vulnerabilities.
