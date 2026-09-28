@@ -39,8 +39,8 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Monitoring
     certified: "false"
-    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:3e9e9b07ba0c4228e2aa1751d6118f02521c2b71faf5542911ea5d1ab7f6560f
-    createdAt: "2026-05-26T07:49:23Z"
+    containerImage: quay.io/project-koku/koku-metrics-operator@sha256:ed8c8d034ae9bd6b790272912f9de30dcf417d5e3fe1857352598beaa3495d51
+    createdAt: "2026-09-28T11:15:23Z"
     description: A Golang-based OpenShift Operator that generates and uploads OpenShift usage metrics to cost management.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
@@ -93,7 +93,7 @@ metadata:
       }
     operatorframework.io/suggested-namespace: koku-metrics-operator
     operators.openshift.io/infrastructure-features: '["disconnected", "proxy-aware"]'
-    operators.operatorframework.io/builder: operator-sdk-v1.41.1
+    operators.operatorframework.io/builder: operator-sdk-v1.42.3
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/project-koku/koku-metrics-operator
     support: Cost Management
@@ -103,7 +103,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: koku-metrics-operator.v4.4.1
+  name: koku-metrics-operator.v4.5.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -135,6 +135,15 @@ spec:
     * The operator can create an integration in console.redhat.com. An integration is required for Cost Management to process the uploaded packages.
     * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
     * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
+
+    ## New in v4.5.0:
+    * Restricted token (pull-secret) authentication to approved Red Hat Cost Management API endpoints; custom `api_url` deployments must use `service-account` authentication.
+    * Restricted Prometheus `service_address` to the in-cluster OpenShift `thanos-querier` service.
+    * Validated `token_url` for service-account authentication (HTTPS required; Red Hat SSO required when using Red Hat Cost Management endpoints).
+    * (Bug Fix) Fixed storage PVC PromQL joins to only use Bound persistent volumes, avoiding many-to-many match errors when a PVC is recreated.
+    * (Bug Fix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
+    * Improved authentication and source validation error messages to show the configured API hostname (helpful for on-premise deployments).
+    * Updated dependencies.
 
     ## New in v4.4.1:
     * (Bugfix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
@@ -577,7 +586,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
-                    image: quay.io/project-koku/koku-metrics-operator@sha256:3e9e9b07ba0c4228e2aa1751d6118f02521c2b71faf5542911ea5d1ab7f6560f
+                    image: quay.io/project-koku/koku-metrics-operator@sha256:ed8c8d034ae9bd6b790272912f9de30dcf417d5e3fe1857352598beaa3495d51
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -741,8 +750,8 @@ spec:
   minKubeVersion: 1.24.0
   provider:
     name: Red Hat
-  version: 4.4.1
+  version: 4.5.0
   relatedImages:
     - name: koku-metrics-operator
-      image: quay.io/project-koku/koku-metrics-operator@sha256:3e9e9b07ba0c4228e2aa1751d6118f02521c2b71faf5542911ea5d1ab7f6560f
-  replaces: koku-metrics-operator.v4.4.0
+      image: quay.io/project-koku/koku-metrics-operator@sha256:ed8c8d034ae9bd6b790272912f9de30dcf417d5e3fe1857352598beaa3495d51
+  replaces: koku-metrics-operator.v4.4.1
