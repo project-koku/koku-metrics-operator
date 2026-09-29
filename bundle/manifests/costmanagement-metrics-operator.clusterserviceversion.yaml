@@ -144,6 +144,7 @@ spec:
     * (Security) Updated UBI base images to address coreutils vulnerabilities (RHSA 172397).
     * (Bugfix) Use dynamic API URL in authentication error messages.
     * (Bugfix) Filter storage PVC PromQL joins to Bound persistent volumes to avoid many-to-many join errors when a PVC is recreated with the same name.
+    * (Enhancement) Stream ingress upload payloads instead of buffering the full report in memory, reducing peak heap usage for large uploads.
     * Updated dependencies and base images to address security vulnerabilities.
 
     ## New in v4.4.2:
