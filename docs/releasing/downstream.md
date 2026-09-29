@@ -107,14 +107,14 @@ The table below is the **usual** choice for CMMO ports. It is **not** guaranteed
 | File path | Usual preference | Why |
 |-----------|------------------|-----|
 | `bundle.Dockerfile` | **ours** | Keep new version/release; leave build-commit REPLACE for nudge |
-| `Dockerfile` | **theirs**, then bump version | Upstream Dockerfile differs; set Downstream version manually |
+| `Dockerfile` | **theirs**, then bump version + builder | Upstream Dockerfile differs; set Downstream `LABEL version` and refresh `ubi9/go-toolset` (see checklist below) |
 | `internal/` | **ours** | Ported Upstream code |
 | `vendor/` | **theirs** after deps merge, or re-vendor | Prefer merging deps first to shrink conflicts |
 | `renovate.json` | **theirs** | Downstream does not use Renovate |
 | `Makefile` | **ours** | Downstream version bumps |
 | `go.mod` / `go.sum` | **theirs** | Downstream Go / toolchain |
 | `api/v1beta1/` | **theirs** (often) | Skip Upstream-only API churn not needed Downstream |
-| `docs/` | mostly **ours** | Keep ported Upstream docs content as appropriate |
+| `docs/` | mostly **ours**, then Downstream-only fixes | Keep ported Upstream docs, then restore Downstream CSV wording (FIPS / OLM `latest` link — see checklist below) |
 | CSV `containerImage` / `image` | **theirs** pinned `@sha256:…` | Never leave a floating tag — EC fails |
 | CSV date field | accept both, keep **new** release date | |
 | CSV `4.0.0 API` style sections | **theirs** when Upstream-only | Confirm with release owner if unsure |
@@ -124,6 +124,17 @@ Also:
 - Fix “Costmanagement” → “Cost Management” where display names require a space.
 - Ensure packaging stays `certified: true`.
 - After resolving vendor conflicts, if OpenShift API `zz_generated.*` files disagree with `go.mod`, force those files from `origin/downstream` (same generation as Downstream Go).
+
+#### Post-port checklist (every Downstream release)
+
+`make downstream` / accepting **ours** on docs and CSV description often re-applies **Upstream** wording. Before opening the PR, verify (docs + generated bundle CSV):
+
+- [ ] **FIPS (New in v4.0.0):** use Downstream wording — `**FIPS Compliance:** Supports deployment in high-security environments when run on an OpenShift cluster with FIPS mode enabled.` — **not** Upstream “Progress towards FIPS 140…”.
+- [ ] **Restricted-network OLM doc link:** `openshift_container_platform/latest/...` (not a pinned `4.xx`).
+- [ ] **`Dockerfile` `LABEL version="X.Y.Z"`** matches this release (easy to leave on the previous version after taking **theirs**).
+- [ ] **`ubi9/go-toolset`** is the newest non-`-source` tag on `registry.redhat.io` (same hygiene as UBI bumps; do not use a floating `:latest` tag in the Dockerfile).
+
+These apply to **Path 1 (port)** every time. For **Path 2 (bundle-only)**, still bump `LABEL version` and consider go-toolset/UBI when cutting the release.
 
 When conflicts are resolved:
 
@@ -542,6 +553,7 @@ IBM Z blockers are often **Vault/access**, not test failures. Escalation / proce
 ## End-to-end checklist
 
 - [ ] Code change vs CVE fix decided ([start-here.md](start-here.md)); QE mode decided
+- [ ] Phase A PR: post-port checklist done (FIPS wording, OLM `latest` link, Dockerfile `version`, go-toolset)
 - [ ] Phase A PR merged; operator built; nudge merged with build-commit LABELs
 - [ ] Bundle digest recorded (`REGISTRY_SHA`)
 - [ ] QE heads-up sent
@@ -558,6 +570,9 @@ IBM Z blockers are often **Vault/access**, not test failures. Escalation / proce
 | EC `olm.unpinned_references` | CSV still has `:X.Y.Z` — pin `@sha256:` from current Downstream |
 | Wrong tag commit | Tagged nudge SHA — use operator image `rev=` instead |
 | Vendor compile errors after port | `zz_generated.*` mismatched with Downstream `go.mod` |
+| CSV shows Upstream “Progress towards FIPS” | Port overwrote Downstream FIPS bullet — restore Downstream wording |
+| Restricted-network doc link pinned to `4.xx` | Prefer `openshift_container_platform/latest/...` |
+| Dockerfile `version=` still previous release | Bump `LABEL version` after taking Downstream Dockerfile |
 | Stage missing / wrong snapshots | Prefer builds from the **merged** FBC commit SHA; do not mix ad-hoc reruns |
 | Prod apply order wrong | Always operator, then FBC |
 | CVE PR merged, customers still flagged | Delivery only after Phase D |
