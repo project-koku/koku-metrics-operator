@@ -72,3 +72,4 @@ LABEL \
     vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]
+
