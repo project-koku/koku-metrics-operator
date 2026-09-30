@@ -9,9 +9,11 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	promapi "github.com/prometheus/client_golang/api"
@@ -89,7 +91,35 @@ func statusHelper(cr *metricscfgv1beta1.MetricsConfig, status int, err error) {
 
 type PrometheusConfigurationSetter func(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error
 
+const (
+	thanosQuerierSvcHost             = "thanos-querier.openshift-monitoring.svc"
+	thanosQuerierSvcClusterLocalHost = "thanos-querier.openshift-monitoring.svc.cluster.local"
+)
+
+// IsAllowedPromSvcAddress reports whether address is an https URL for the
+// OpenShift cluster-monitoring thanos-querier Service.
+func IsAllowedPromSvcAddress(address string) bool {
+	u, err := url.Parse(address)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, "https") {
+		return false
+	}
+	// DNS hostnames are case-insensitive; normalize before exact host checks.
+	switch strings.ToLower(u.Hostname()) {
+	case thanosQuerierSvcHost, thanosQuerierSvcClusterLocalHost:
+		return true
+	default:
+		return false
+	}
+}
+
 func SetPrometheusConfig(ps *metricscfgv1beta1.PrometheusSpec, c *PrometheusCollector) error {
+	// Validate before reading the SA token so a rejected address never loads credentials.
+	if !IsAllowedPromSvcAddress(ps.SvcAddress) {
+		return fmt.Errorf("service_address must be the OpenShift thanos-querier service (%s or %s); got %q", thanosQuerierSvcHost, thanosQuerierSvcClusterLocalHost, ps.SvcAddress)
+	}
 
 	pCfg := &PrometheusConfig{
 		Address: ps.SvcAddress,

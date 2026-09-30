@@ -19,15 +19,25 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.5.0:
+* (Security) Restricted token (pull-secret) authentication to approved Red Hat Cost Management API endpoints; custom `api_url` deployments must use `service-account` authentication.
+* (Security) Restricted Prometheus `service_address` to the in-cluster OpenShift `thanos-querier` service.
+* (Security) Validated `token_url` for service-account authentication (HTTPS required; Red Hat SSO required when using Red Hat Cost Management endpoints).
+* (Security) Updated UBI base images to address coreutils vulnerabilities (RHSA 172397).
+* (Bug Fix) Use dynamic API URL in authentication error messages.
+* (Bug Fix) Filter storage PVC PromQL joins to Bound persistent volumes to avoid many-to-many join errors when a PVC is recreated with the same name.
+* (Enhancement) Stream ingress upload payloads instead of buffering the full report in memory, reducing peak heap usage for large uploads.
+* Updated dependencies and base images to address security vulnerabilities.
+
 ## New in v4.4.2:
 * Updated dependencies to address security vulnerabilities.
 
 ## New in v4.4.1:
-* (Bugfix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
+* (Bug Fix) Fixed `nvidia-gpu-pod-uptime-seconds` metric to correctly report wall-clock pod uptime instead of GPU compute engine active time.
 * Added `nvidia-gpu-pod-utilization` metric to track per-pod GPU utilization over time.
-* (Bugfix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
-* (Bugfix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
-* (Bugfix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
+* (Bug Fix) Fixed DCGM PromQL queries for clusters configured with `honor_labels=true`.
+* (Bug Fix) Fixed NVIDIA MIG GPU memory capacity query to correctly scope metrics to MIG GPU instances only.
+* (Bug Fix) Fixed Resource Optimization workload reporting to exclude OpenShift DeploymentConfig workloads.
 * Updated dependencies.
 
 ## New in v4.4.0:

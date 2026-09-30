@@ -1,0 +1,4 @@
+docs_dir: docs/
+site_name: Koku Metrics Operator Documentation
+plugins:
+  - techdocs-core

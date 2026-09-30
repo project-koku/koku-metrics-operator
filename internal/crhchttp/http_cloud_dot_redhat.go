@@ -49,32 +49,71 @@ func scrubAuthorization(b []byte) string {
 	return strings.Join(str, "\r\n")
 }
 
-// GetMultiPartBodyAndHeaders Get multi-part body and headers for upload
-func GetMultiPartBodyAndHeaders(filename string) (*bytes.Buffer, string, error) {
-	// set the content and content type
-	buf := new(bytes.Buffer)
-	mw := multipart.NewWriter(buf)
-	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename))
-	h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
-	fw, err := mw.CreatePart(h)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create part: %v", err)
-	}
+// GetMultiPartBodyAndHeaders streams a multipart form body for upload.
+//
+// The payload file is opened synchronously so a missing file still returns an
+// error immediately. The multipart encoding runs in a goroutine writing to an
+// io.Pipe: payload bytes flow from disk to the HTTP connection in small chunks
+// instead of buffering the whole payload in heap memory. Writer-side failures
+// (part creation, copy, close) are propagated to the reader via
+// It also returns the exact on-wire length of the framed body so callers can
+// set req.ContentLength and preserve the Content-Length (non-chunked) wire
+// format. The unit test asserts the length against the drained stream, so any
+// framing drift fails loudly instead of silently corrupting uploads.
+func GetMultiPartBodyAndHeaders(filename string) (io.Reader, string, int64, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to open file: %v", err)
+		return nil, "", 0, fmt.Errorf("failed to open file: %v", err)
 	}
-	defer f.Close()
-	_, err = io.Copy(fw, f)
+	fi, err := f.Stat()
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to copy file: %v", err)
+		f.Close()
+		return nil, "", 0, fmt.Errorf("failed to stat file: %v", err)
 	}
-	return buf, mw.FormDataContentType(), mw.Close()
+	pr, pw := io.Pipe()
+	mw := multipart.NewWriter(pw)
+	disp := fmt.Sprintf(`form-data; name=%q; filename=%q`, "file", filename)
+	contentLength := int64(len("--"+mw.Boundary()+"\r\n")+
+		len("Content-Disposition: "+disp+"\r\n")+
+		len("Content-Type: application/vnd.redhat.hccm.tar+tgz\r\n")+
+		len("\r\n")) + fi.Size() + int64(len("\r\n--"+mw.Boundary()+"--\r\n"))
+	go func() {
+		defer f.Close()
+		h := make(textproto.MIMEHeader)
+		h.Set("Content-Disposition", disp)
+		h.Set("Content-Type", "application/vnd.redhat.hccm.tar+tgz")
+		fw, err := mw.CreatePart(h)
+		if err != nil {
+			pw.CloseWithError(fmt.Errorf("failed to create part: %v", err))
+			return
+		}
+		if _, err := io.Copy(fw, f); err != nil {
+			pw.CloseWithError(fmt.Errorf("failed to copy file: %v", err))
+			return
+		}
+		if err := mw.Close(); err != nil {
+			pw.CloseWithError(fmt.Errorf("failed to close multipart writer: %v", err))
+			return
+		}
+		pw.Close()
+	}()
+	return pr, mw.FormDataContentType(), contentLength, nil
+}
+
+// closeBody releases a streaming upload body that was never handed to the
+// http.Transport (e.g. request setup failed). Closing the pipe reader
+// unblocks the multipart writer goroutine so neither the goroutine nor the
+// open payload file leaks. Once client.Do has started, the Transport owns the
+// body: it may still be streaming it in the background after Do returns, so
+// it must NOT be closed here.
+func closeBody(body io.Reader) {
+	if c, ok := body.(io.Closer); ok {
+		_ = c.Close()
+	}
 }
 
 // SetupRequest creates a new request, adds headers to request object for communication to console.redhat.com, and returns the request
-func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer) (*http.Request, error) {
+func SetupRequest(authConfig *AuthConfig, contentType, method, uri string, body io.Reader) (*http.Request, error) {
 	log := log.WithName("SetupRequest")
 
 	req, err := http.NewRequestWithContext(context.Background(), method, uri, body)
@@ -153,13 +192,18 @@ func ProcessResponse(resp *http.Response) ([]byte, error) {
 }
 
 // Upload Send data to console.redhat.com
-func Upload(authConfig *AuthConfig, contentType, method, uri string, body *bytes.Buffer, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
+func Upload(authConfig *AuthConfig, contentType, method, uri string, body io.Reader, contentLength int64, fileInfo packaging.FileInfoManifest, file string) (string, metav1.Time, string, error) {
 	log := log.WithName("Upload")
 	currentTime := metav1.Now()
 	req, err := SetupRequest(authConfig, contentType, method, uri, body)
 	if err != nil {
+		closeBody(body)
 		return "", currentTime, "", fmt.Errorf("could not setup the request: %v", err)
 	}
+
+	// Preserve the Content-Length (non-chunked) wire format the buffered
+	// upload used; the body itself still streams from disk via io.Pipe.
+	req.ContentLength = contentLength
 
 	client := GetClient(authConfig.ValidateCert)
 	resp, err := client.Do(req)

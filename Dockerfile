@@ -1,4 +1,4 @@
-FROM registry.redhat.io/ubi9/go-toolset:1.26.7-1787774815 AS builder
+FROM registry.redhat.io/ubi9/go-toolset:1.26.7-1790174511 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -68,7 +68,7 @@ LABEL \
     name="costmanagement/costmanagement-metrics-rhel9-operator"  \
     cpe="cpe:/a:redhat:cost_management:4::el9"  \
     summary="Red Hat Cost Management Metrics Operator"  \
-    version="4.4.2" \
+    version="4.5.0" \
     vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]
