@@ -40,7 +40,8 @@ spec:
     - name: build-source-image
       value: "true"
     - name: prefetch-input
-      value: '{"type": "rpm", "path": "."}'
+      # EC hermeto_attribution_required needs gomod (rpm alone is not enough for Go SBOMs)
+      value: '[{"type": "rpm", "path": "."}, {"type": "gomod", "path": "."}]'
     - name: prefetch-dev-package-managers-enabled
       value: "true"
     - name: build-platforms
