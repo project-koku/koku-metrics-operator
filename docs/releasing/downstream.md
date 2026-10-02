@@ -152,6 +152,22 @@ git push --force-with-lease origin downstream-updates-vX.Y.Z
 
 Open a PR against `downstream` of `koku-metrics-operator` with the squashed Upstream → Downstream port, request review, wait for checks to pass, and merge. Done when the PR is merged (example: [#965](https://github.com/project-koku/koku-metrics-operator/pull/965)); continue at A2.
 
+**PaC / CI retest on `downstream`:** the repo default branch is `main`. If Konflux Pipelines-as-Code does not pick up a plain `/retest` on a Downstream PR, comment:
+
+```text
+/retest branch:downstream
+```
+
+#### Post-port Conforma / OLM checks (Path 1)
+
+Before merge, expect Enterprise Contract / OLM rules that often fail on ports:
+
+| Check | What to do |
+|-------|------------|
+| `olm.required_network_policy_rbac_for_operands` | Ensure RBAC can manage `networking.k8s.io` `networkpolicies` (see Downstream manifests/CSV). |
+| Display name | Use **Cost Management** (with a space), not `CostManagement`, in CSV / description text Conforma validates. |
+| `olm.unpinned_references` | CSV `containerImage` / deployment `image` must be `@sha256:…`, not a floating tag. |
+
 ### Path 2 — Bundle-only
 
 Use when the release is security/deps already merged on `downstream` and there is **no** Upstream port for this version.
@@ -198,13 +214,30 @@ oc get snapshot -l pac.test.appstudio.openshift.io/sha=<merge-commit-sha>
 
 UI: Snapshots → component `costmanagement-metrics-operator`.
 
+Also watch the **staging Release** for that snapshot (`oc get release` / Konflux UI). A green build alone is not enough: if staging Release fails Enterprise Contract, the nudge may never appear (see [A3 — If the nudge never appears](#if-the-nudge-never-appears)).
+
+#### Enterprise Contract / Hermeto on staging
+
+Staging Release runs Conforma (`verify-conforma`). Common CMMO failures:
+
+| Failure pattern | Likely cause | Fix |
+|-----------------|--------------|-----|
+| Many `sbom_spdx.hermeto_attribution_required` | Operator build prefetch is `rpm`-only | Prefetch **`rpm` and `gomod`** in `.tekton/operator-push.yaml` / `operator-pr.yaml` (Hermeto/cachi2). Example: [#1099](https://github.com/project-koku/koku-metrics-operator/pull/1099). Keep this if PaC regenerates Tekton from a template that drops `gomod`. |
+| `pkg:golang/stdlib…` hard-fail despite policy `effective_on` in the future | Managed **release** pipeline still pins an older Conforma digest | Platform bump (e.g. [release-service-catalog #2608](https://github.com/konflux-ci/release-service-catalog/pull/2608)), then trigger a **new** Release after the bump lands. |
+| `olm.unmapped_references` | CSV points at an operator digest not in the current snapshot/registry | Wait for / merge the nudge that pins the digest from the **Succeeded** snapshot. |
+| Structural EC failure | Missing prefetch, wrong CSV, or pinned old policy | **Do not** rely on “Rerun” of the same snapshot alone — need a new build, new nudge, and/or catalog bump. |
+
+Diagnose: Failed Release → task `verify-conforma` → download `detailed-report` / logs; separate Hermeto SBOM noise from OLM (`unmapped` / `unpinned`).
+
+If `oc` returns `Unauthorized`, re-login (`koku-ci-management` `make login` / `oc login --web`) before inspecting Releases.
+
 ### A3 — Nudge PR (bundle digest update)
 
 Konflux opens a PR on `downstream` (bot `red-hat-konflux`, label `konflux-nudge`) titled like:
 
 `chore(deps): update costmanagement-metrics-operator to <digest>`
 
-**Real examples:** [nudge #988](https://github.com/project-koku/koku-metrics-operator/pull/988) (4.4.2 era), [nudge #978](https://github.com/project-koku/koku-metrics-operator/pull/978) (4.4.1 era).
+**Real examples:** [nudge #1100](https://github.com/project-koku/koku-metrics-operator/pull/1100) (4.5.0), [nudge #988](https://github.com/project-koku/koku-metrics-operator/pull/988) (4.4.2), [nudge #978](https://github.com/project-koku/koku-metrics-operator/pull/978) (4.4.1).
 
 It updates the CSV image pins to the new operator digest. It does **not** reliably set the bundle build-commit labels.
 
@@ -220,6 +253,19 @@ LABEL io.openshift.build.commit.url="https://github.com/project-koku/koku-metric
 Use the merge commit that represents the Downstream content being released (typically the bundle/port PR merge on `downstream`). Confirm with `git log origin/downstream`.
 
 Commit and push that change onto the **existing** Konflux nudge PR branch (do not open a second PR).
+
+#### If the nudge never appears
+
+The nudge is created only after a snapshot is released in **staging**. If the operator PipelineRun looks fine but **no** `konflux-nudge` PR shows up, the usual cause is a failed (or never-created) staging Release / snapshot — not a missing Renovate schedule.
+
+**Recovery (retrigger a push build on `downstream`):**
+
+1. Confirm staging: `oc get release` / snapshot for the port merge SHA — look for Failed Conforma or missing Release.
+2. Fix the structural cause first when applicable (Hermeto `gomod`, CSV, etc.).
+3. Open a small PR against `downstream` that re-triggers the on-push pipeline. The CEL `pathChanged` filter often requires a real path touch under watched files (e.g. a no-op change to `Dockerfile`), optionally with a legitimate `go mod vendor` cleanup.
+4. After merge, wait for a new operator build → staging Succeeded → new nudge PR. Merge the nudge for the digest from that **Succeeded** snapshot (ignore or supersede intermediate nudges from failed attempts).
+
+**Real example (4.5.0):** after port [#1070](https://github.com/project-koku/koku-metrics-operator/pull/1070), the nudge did not appear until [#1097](https://github.com/project-koku/koku-metrics-operator/pull/1097) (`make vendor` + Dockerfile touch) retriggered the build; Hermeto fix [#1099](https://github.com/project-koku/koku-metrics-operator/pull/1099); final nudge [#1100](https://github.com/project-koku/koku-metrics-operator/pull/1100).
 
 ### A4 — Final snapshot and bundle digest
 
@@ -239,6 +285,8 @@ The FBC Makefile expects the full form `sha256:<hex>` (see existing `REGISTRY_SH
 
 Do **not** paste a value that already starts with `sha256:` into a placeholder that also adds `sha256:` (that produces `sha256:sha256:…`).
 
+**Keep the operator+bundle snapshot:** annotate `test.appstudio.openshift.io/keep-snapshot=true` on this snapshot as well as on the FBC snapshots (Phase B). Components often use `max-keep-runs=3` — a later push can prune the release candidate before Phase C prod YAMLs.
+
 ## Phase B — FBC (`cost-management-metrics-operator-fbc`)
 
 **Commands, Make targets, catalog layout, gathering CatalogSource images, and `configure_cluster.py`:** follow the **[FBC README](https://github.com/project-koku/cost-management-metrics-operator-fbc)** (SSOT for this repo’s tooling). This section only covers how FBC fits the Downstream release train.
@@ -247,9 +295,13 @@ Do **not** paste a value that already starts with `sha256:` into a placeholder t
 
 1. **B0 — Heads-up to QE** (before images) — notify IBM Power / IBM Z / ROS early (often when the Downstream PR is ready). IBM testing frequently takes ~1 week. Typical channels: `costmanagement-pz-collab` (Power/Z), `#finsights-dev` (ROS), `#forum-cost-mgmt` (announce later).
 2. **B1 — Generate catalogs** — in the FBC repo, set `VERSION` / `PREVIOUS_VERSION` / `REGISTRY_SHA` (`REGISTRY_SHA` = **bundle** digest from A4, form `sha256:<hex>` — do not double the prefix). Then follow the FBC README (**How to update**). VPN is required for `make catalog`. **Open a PR** against `main`, request review, merge.
-   - Examples: [4.4.2 #123](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/123), [4.4.1 #110](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/110) (rebuild [#111](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/111) when needed), [4.4.0 #99](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/99).
-3. **B2 — Stage success for every OCP** — after merge, Konflux builds **one Component per OCP major** (`OCP_VERSIONS` in the FBC Makefile — today ~11+). Phase B is done only when **all** of those stage Releases succeed for your merge SHA (not a single `v4-XX`). Use the FBC README (**Gather FBC for QE**) or the [Konflux UI](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/cost-mgmt-dev-tenant/) Applications `…-fbc-v4-XX`.
-4. **B3 — Keep snapshots and send images to QE** — annotate / list CatalogSource images per the FBC README, then send the list (see [start-here.md](start-here.md) QE question and [QE coordination](#qe-coordination)):
+   - Examples: [4.5.0 #144](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/144), [4.4.2 #123](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/123), [4.4.1 #110](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/110) (rebuild [#111](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/111) when needed), [4.4.0 #99](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/99).
+3. **B2 — Stage success for every OCP** — after merge, Konflux builds **one Component per OCP major** (`OCP_VERSIONS` in the FBC Makefile — today ~11+, and may include preview majors such as `v5.0`). Phase B for classic QE is done when **all** stage **Releases** for supported OCP lines are **Succeeded** for your merge SHA (e.g. 4.12–4.22).
+
+   **QE handoff criterion:** share only CatalogSource digests from snapshots that have a **Succeeded stage Release** (AutoReleased). A green on-push build and a Quay image alone are **not** enough — that was the 4.5.0 / OCP 5.0 gap (build OK, EC failed, no AutoRelease, no stage catalog).
+
+   Preview majors (e.g. `v5.0`) may build a snapshot without a stage Release. Treat them as **not ready for QE** until stage Release Succeeded (or omit them from the handoff). Use the FBC README (**Gather FBC for QE**) or the [Konflux UI](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/cost-mgmt-dev-tenant/) Applications `…-fbc-v4-XX` / `…-fbc-v5-0`.
+4. **B3 — Keep snapshots and send images to QE** — annotate / list CatalogSource images per the FBC README (`keep-snapshot` on **every** FBC snapshot for the merge SHA that you intend to hand off, and keep the Phase A operator+bundle snapshot too). Only include lines that passed B2 (stage Release Succeeded). Then send the list (see [start-here.md](start-here.md) QE question and [QE coordination](#qe-coordination)):
 
 | Mode | What to do with the list |
 |------|--------------------------|
@@ -266,9 +318,12 @@ FBC catalog PR merged for `VERSION` (using `REGISTRY_SHA` from A4). Examples: [#
 |---------|------------|
 | Looking at only one FBC Application / Component in the UI | Check **all** `…-fbc-v4-XX` apps / all CatalogSource lines for the merge SHA |
 | Reusing old snapshots | Always use snapshots labeled with **this** FBC merge SHA |
-| Skipping `keep-snapshot` | Images disappear; QE blocked (see FBC README) |
+| Sharing Quay digest / green build without stage Release | QE needs a **Succeeded stage Release** (AutoReleased snapshot). Build + Quay alone ≠ stage catalog (seen with OCP 5.0 when EC/`fbc-inject-lifecycle` blocked AutoRelease) |
+| Skipping `keep-snapshot` | Images disappear; QE blocked (see FBC README). Risk is often `max-keep-runs` pruning, not only Release `expirationTime` |
 | Wrong `REGISTRY_SHA` | Must be the **bundle** digest from A4, not a random operator tag |
 | Re-running pipelines ad hoc / duplicate snapshots | Prefer the builds from the **merged** FBC commit; do not mix SHAs when gathering images for QE |
+| `/retest` ignored on Downstream PR | Use `/retest branch:downstream` |
+| No nudge after port merge | Staging Release failed or never ran — fix EC, then retrigger push (see [If the nudge never appears](#if-the-nudge-never-appears)) |
 
 IQE pipeline runs on FBC apps are useful signal but are **not** always a hard gate for stage auto-release — confirm current policy with the release owner if a run fails.
 
@@ -509,6 +564,8 @@ Optionally confirm the demo cluster upgraded.
 | Functional changes | Request testing from COST QE (x86), IBM Power, IBM Z, ROS as required |
 | Security / deps only | Share CatalogSource images as **information only**; get team consensus before skipping deep QE |
 
+Before posting “images ready”, confirm each OCP line in the list has a **Succeeded stage Release** for the FBC merge SHA (Phase B step **B2**). Do not hand off a Quay digest from a snapshot that never AutoReleased.
+
 **Heads-up (before images):**
 
 ```text
@@ -545,7 +602,7 @@ IBM Z blockers are often **Vault/access**, not test failures. Escalation / proce
 - [ ] Phase A PR merged; operator built; nudge merged with build-commit LABELs
 - [ ] Bundle digest recorded (`REGISTRY_SHA`)
 - [ ] QE heads-up sent
-- [ ] FBC PR merged; stage all Succeeded; `keep-snapshot`; images shared
+- [ ] FBC PR merged; stage **Releases** Succeeded for every OCP you hand to QE (not just Quay/build); `keep-snapshot`; images shared
 - [ ] Prod YAMLs reviewed (advisory type, issues, CVEs); stage catalog Security checked
 - [ ] `oc apply` operator → Succeeded → apply FBCs → Succeeded
 - [ ] catalog.redhat.com shows `X.Y.Z`
@@ -556,9 +613,16 @@ IBM Z blockers are often **Vault/access**, not test failures. Escalation / proce
 | Symptom / risk | Cause / fix |
 |----------------|-------------|
 | EC `olm.unpinned_references` | CSV still has `:X.Y.Z` — pin `@sha256:` from current Downstream |
+| EC Hermeto mass failures | Add `gomod` to Hermeto prefetch alongside `rpm` ([#1099](https://github.com/project-koku/koku-metrics-operator/pull/1099)) |
+| EC `stdlib` hard-fail with future `effective_on` | Release pipeline Conforma digest stale — platform catalog bump; then new Release |
+| EC `olm.unmapped_references` | Nudge/CSV digest ≠ Succeeded snapshot operator digest |
+| Rerun does not clear structural EC | New build / nudge / wait for catalog bump — not the same snapshot alone |
+| No `konflux-nudge` PR | Staging never Succeeded — retrigger Downstream push ([#1097](https://github.com/project-koku/koku-metrics-operator/pull/1097) pattern) |
+| `/retest` no-op on Downstream | `/retest branch:downstream` |
 | Wrong tag commit | Tagged nudge SHA — use operator image `rev=` instead |
 | Vendor compile errors after port | `zz_generated.*` mismatched with Downstream `go.mod` |
 | Stage missing / wrong snapshots | Prefer builds from the **merged** FBC commit SHA; do not mix ad-hoc reruns |
+| Quay image exists but QE cannot install / no CatalogSource in stage | Stage Release never Succeeded (often EC) — do not treat build-only digests as QE-ready |
 | Prod apply order wrong | Always operator, then FBC |
 | CVE PR merged, customers still flagged | Delivery only after Phase D |
 

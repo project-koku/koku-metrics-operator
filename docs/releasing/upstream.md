@@ -16,10 +16,12 @@ This runbook ships a new community version to OperatorHub. It is independent of 
 6. Generate the OLM bundle and open a PR against `main`.
 7. Submit the bundle to `community-operators-prod`.
 8. After merge: auto FBC PR → community OperatorHub.
+9. Announce in Slack `#forum-cost-mgmt` (same hub the Cost team uses for Downstream).
 
 ```
 main (features) → CSV docs → upgrade test → GitHub Release (tag)
       → make bundle → PR main → community-operators-prod → OperatorHub
+      → Slack #forum-cost-mgmt
 ```
 
 ## Phase 1 — Scope and CSV description
@@ -213,10 +215,11 @@ git push origin koku-metrics-operator-v$VERSION
 
 1. An **automatic** follow-up PR updates FBCs for supported OCP versions (pattern like [#6825](https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/6825)). That bot PR also needs review/merge (you usually do not author it).
 2. When that FBC PR merges, the new version appears on community OperatorHub.
+3. **Announce on Slack** in `#forum-cost-mgmt` that Upstream `koku-metrics-operator` `X.Y.Z` is available (link the GitHub Release / OperatorHub). Do this even when a Downstream release will follow — the community and Cost team still need the heads-up.
 
 ### Phase 5 output
 
-Open a PR on `community-operators-prod` with `operators/koku-metrics-operator/X.Y.Z/` (+ `release-config.yaml`), using a DCO signed commit (`git commit -s`). After it merges, a second usually automatic FBC PR must also merge. Done when both PRs are merged and OperatorHub shows `koku-metrics-operator` at `X.Y.Z`.
+Open a PR on `community-operators-prod` with `operators/koku-metrics-operator/X.Y.Z/` (+ `release-config.yaml`), using a DCO signed commit (`git commit -s`). After it merges, a second usually automatic FBC PR must also merge. Done when both PRs are merged, OperatorHub shows `koku-metrics-operator` at `X.Y.Z`, and `#forum-cost-mgmt` has been notified.
 
 ## Pitfalls
 
@@ -228,6 +231,7 @@ Open a PR on `community-operators-prod` with `operators/koku-metrics-operator/X.
 | Expecting Upstream alone to clear Red Hat product CVEs | Remediating `catalog.redhat.com` / `registry.redhat.io` requires Downstream ([cve.md](cve.md)) |
 | Skipping upgrade testing | Always run Phase 2 before tagging when practical |
 | Unsigned community-operators commit | Use `git commit -s` (DCO) |
+| Shipping OperatorHub without Slack | Announce Upstream `X.Y.Z` in `#forum-cost-mgmt` |
 
 ## Checklist (copy/paste)
 
@@ -239,6 +243,7 @@ Open a PR on `community-operators-prod` with `operators/koku-metrics-operator/X.
 - [ ] Bundle PR merged on `main`
 - [ ] `community-operators-prod` PR merged (signed commit + checklist)
 - [ ] Auto FBC PR merged; OperatorHub shows the new version
+- [ ] Announced in Slack `#forum-cost-mgmt`
 - [ ] If Downstream will follow: hand off version + notes to [downstream.md](downstream.md)
 
 ## Related links
