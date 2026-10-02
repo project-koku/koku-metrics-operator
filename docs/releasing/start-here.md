@@ -52,6 +52,7 @@ See [versioning convention](#versioning-convention) for `X.Y.0` vs `X.Y.1+`.
 | Upstream **4.4.1** | Code (`X.Y.0`) | CSV [#957](https://github.com/project-koku/koku-metrics-operator/pull/957) → bundle [#960](https://github.com/project-koku/koku-metrics-operator/pull/960) → [`v4.4.1`](https://github.com/project-koku/koku-metrics-operator/releases/tag/v4.4.1) |
 | Downstream **4.4.1** (port) | Code (`X.Y.0`) | Port [#965](https://github.com/project-koku/koku-metrics-operator/pull/965) → nudge [#978](https://github.com/project-koku/koku-metrics-operator/pull/978) → FBC catalog [#110](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/110) → prod YAMLs [#119](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/119) → [`v4.4.1-downstream`](https://github.com/project-koku/koku-metrics-operator/releases/tag/v4.4.1-downstream) → `operator_versions` [koku#6129](https://github.com/project-koku/koku/pull/6129) |
 | Downstream **4.4.2** (bundle-only + CVEs) | CVE (`X.Y.1+`) | CVE [#1005](https://github.com/project-koku/koku-metrics-operator/pull/1005)/[#1008](https://github.com/project-koku/koku-metrics-operator/pull/1008) → bundle [#1017](https://github.com/project-koku/koku-metrics-operator/pull/1017) → nudge [#988](https://github.com/project-koku/koku-metrics-operator/pull/988) → FBC [#123](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/123) → prod YAMLs [#126](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/126) → retries [#128](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/128) → [`v4.4.2-downstream`](https://github.com/project-koku/koku-metrics-operator/releases/tag/v4.4.2-downstream) |
+| Downstream **4.5.0** (port, in progress) | Code (`X.Y.0`) | Port [#1070](https://github.com/project-koku/koku-metrics-operator/pull/1070) → retrigger [#1097](https://github.com/project-koku/koku-metrics-operator/pull/1097) → Hermeto gomod [#1099](https://github.com/project-koku/koku-metrics-operator/pull/1099) → nudge [#1100](https://github.com/project-koku/koku-metrics-operator/pull/1100) → FBC [#144](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/144) → QE (prod YAMLs TBD) |
 
 ## Mental model
 
@@ -62,7 +63,7 @@ GitHub Release + Quay image              Port or bundle-only → Konflux
      → make bundle → PR main                  → nudge → bundle digest
      → community-operators-prod               → FBC → stage → QE
      → OperatorHub                            → prod apply (operator, then FBC)
-                                              → tag + announce
+     → Slack #forum-cost-mgmt                 → tag + announce (#forum-cost-mgmt)
 ```
 
 | | Upstream (`main`) | Downstream (`downstream`) |
