@@ -296,8 +296,12 @@ Do **not** paste a value that already starts with `sha256:` into a placeholder t
 1. **B0 — Heads-up to QE** (before images) — notify IBM Power / IBM Z / ROS early (often when the Downstream PR is ready). IBM testing frequently takes ~1 week. Typical channels: `costmanagement-pz-collab` (Power/Z), `#finsights-dev` (ROS), `#forum-cost-mgmt` (announce later).
 2. **B1 — Generate catalogs** — in the FBC repo, set `VERSION` / `PREVIOUS_VERSION` / `REGISTRY_SHA` (`REGISTRY_SHA` = **bundle** digest from A4, form `sha256:<hex>` — do not double the prefix). Then follow the FBC README (**How to update**). VPN is required for `make catalog`. **Open a PR** against `main`, request review, merge.
    - Examples: [4.5.0 #144](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/144), [4.4.2 #123](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/123), [4.4.1 #110](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/110) (rebuild [#111](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/111) when needed), [4.4.0 #99](https://github.com/project-koku/cost-management-metrics-operator-fbc/pull/99).
-3. **B2 — Stage success for every OCP** — after merge, Konflux builds **one Component per OCP major** (`OCP_VERSIONS` in the FBC Makefile — today ~11+, and may include preview majors such as `v5.0`). Phase B for classic QE is done when **all** stage Releases for supported OCP lines succeed for your merge SHA (e.g. 4.12–4.22). A preview component may have a snapshot without a stage Release — share that CatalogSource only if QE asks. Use the FBC README (**Gather FBC for QE**) or the [Konflux UI](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/cost-mgmt-dev-tenant/) Applications `…-fbc-v4-XX`.
-4. **B3 — Keep snapshots and send images to QE** — annotate / list CatalogSource images per the FBC README (`keep-snapshot` on **every** FBC snapshot for the merge SHA, and keep the Phase A operator+bundle snapshot too). Then send the list (see [start-here.md](start-here.md) QE question and [QE coordination](#qe-coordination)):
+3. **B2 — Stage success for every OCP** — after merge, Konflux builds **one Component per OCP major** (`OCP_VERSIONS` in the FBC Makefile — today ~11+, and may include preview majors such as `v5.0`). Phase B for classic QE is done when **all** stage **Releases** for supported OCP lines are **Succeeded** for your merge SHA (e.g. 4.12–4.22).
+
+   **QE handoff criterion:** share only CatalogSource digests from snapshots that have a **Succeeded stage Release** (AutoReleased). A green on-push build and a Quay image alone are **not** enough — that was the 4.5.0 / OCP 5.0 gap (build OK, EC failed, no AutoRelease, no stage catalog).
+
+   Preview majors (e.g. `v5.0`) may build a snapshot without a stage Release. Treat them as **not ready for QE** until stage Release Succeeded (or omit them from the handoff). Use the FBC README (**Gather FBC for QE**) or the [Konflux UI](https://konflux-ui.apps.stone-prd-rh01.pg1f.p1.openshiftapps.com/ns/cost-mgmt-dev-tenant/) Applications `…-fbc-v4-XX` / `…-fbc-v5-0`.
+4. **B3 — Keep snapshots and send images to QE** — annotate / list CatalogSource images per the FBC README (`keep-snapshot` on **every** FBC snapshot for the merge SHA that you intend to hand off, and keep the Phase A operator+bundle snapshot too). Only include lines that passed B2 (stage Release Succeeded). Then send the list (see [start-here.md](start-here.md) QE question and [QE coordination](#qe-coordination)):
 
 | Mode | What to do with the list |
 |------|--------------------------|
@@ -314,6 +318,7 @@ FBC catalog PR merged for `VERSION` (using `REGISTRY_SHA` from A4). Examples: [#
 |---------|------------|
 | Looking at only one FBC Application / Component in the UI | Check **all** `…-fbc-v4-XX` apps / all CatalogSource lines for the merge SHA |
 | Reusing old snapshots | Always use snapshots labeled with **this** FBC merge SHA |
+| Sharing Quay digest / green build without stage Release | QE needs a **Succeeded stage Release** (AutoReleased snapshot). Build + Quay alone ≠ stage catalog (seen with OCP 5.0 when EC/`fbc-inject-lifecycle` blocked AutoRelease) |
 | Skipping `keep-snapshot` | Images disappear; QE blocked (see FBC README). Risk is often `max-keep-runs` pruning, not only Release `expirationTime` |
 | Wrong `REGISTRY_SHA` | Must be the **bundle** digest from A4, not a random operator tag |
 | Re-running pipelines ad hoc / duplicate snapshots | Prefer the builds from the **merged** FBC commit; do not mix SHAs when gathering images for QE |
@@ -559,6 +564,8 @@ Optionally confirm the demo cluster upgraded.
 | Functional changes | Request testing from COST QE (x86), IBM Power, IBM Z, ROS as required |
 | Security / deps only | Share CatalogSource images as **information only**; get team consensus before skipping deep QE |
 
+Before posting “images ready”, confirm each OCP line in the list has a **Succeeded stage Release** for the FBC merge SHA (Phase B step **B2**). Do not hand off a Quay digest from a snapshot that never AutoReleased.
+
 **Heads-up (before images):**
 
 ```text
@@ -595,7 +602,7 @@ IBM Z blockers are often **Vault/access**, not test failures. Escalation / proce
 - [ ] Phase A PR merged; operator built; nudge merged with build-commit LABELs
 - [ ] Bundle digest recorded (`REGISTRY_SHA`)
 - [ ] QE heads-up sent
-- [ ] FBC PR merged; stage all Succeeded; `keep-snapshot`; images shared
+- [ ] FBC PR merged; stage **Releases** Succeeded for every OCP you hand to QE (not just Quay/build); `keep-snapshot`; images shared
 - [ ] Prod YAMLs reviewed (advisory type, issues, CVEs); stage catalog Security checked
 - [ ] `oc apply` operator → Succeeded → apply FBCs → Succeeded
 - [ ] catalog.redhat.com shows `X.Y.Z`
@@ -615,6 +622,7 @@ IBM Z blockers are often **Vault/access**, not test failures. Escalation / proce
 | Wrong tag commit | Tagged nudge SHA — use operator image `rev=` instead |
 | Vendor compile errors after port | `zz_generated.*` mismatched with Downstream `go.mod` |
 | Stage missing / wrong snapshots | Prefer builds from the **merged** FBC commit SHA; do not mix ad-hoc reruns |
+| Quay image exists but QE cannot install / no CatalogSource in stage | Stage Release never Succeeded (often EC) — do not treat build-only digests as QE-ready |
 | Prod apply order wrong | Always operator, then FBC |
 | CVE PR merged, customers still flagged | Delivery only after Phase D |
 
