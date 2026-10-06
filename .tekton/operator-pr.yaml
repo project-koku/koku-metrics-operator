@@ -53,6 +53,8 @@ spec:
         - linux/arm64
         - linux/ppc64le
         - linux/s390x
+    - name: buildah-format
+      value: docker
   pipelineRef:
     name: operator-build-pipeline
   taskRunTemplate:
