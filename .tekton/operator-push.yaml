@@ -50,7 +50,6 @@ spec:
         - linux/arm64
         - linux/ppc64le
         - linux/s390x
-    # COST-8343: pin Docker V2 so Konflux default cannot flip relatedImages to OCI
     - name: buildah-format
       value: docker
   pipelineRef:
