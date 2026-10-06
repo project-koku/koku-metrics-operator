@@ -35,6 +35,9 @@ spec:
       value: "true"
     - name: build-source-image
       value: "true"
+    # COST-8343: pin Docker V2 so Konflux default cannot flip relatedImages to OCI
+    - name: buildah-format
+      value: docker
   pipelineRef:
     name: bundle-build-pipeline
   taskRunTemplate:
