@@ -38,6 +38,8 @@ spec:
       value: "true"
     - name: build-source-image
       value: "true"
+    - name: buildah-format
+      value: docker
   pipelineRef:
     name: bundle-build-pipeline
   taskRunTemplate:
