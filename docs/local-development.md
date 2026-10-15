@@ -8,7 +8,7 @@ This guide covers the full developer journey: environment setup, running the ope
   * [Red Hat OpenShift Local](https://crc.dev/docs/installing/) can be used if the monitoring stack is enabled.
   * A cluster can also be provisioned [here](https://demo.redhat.com/catalog)
 * A clone of [koku-metrics-operator](https://github.com/project-koku/koku-metrics-operator)
-* [Go 1.13 or greater](https://golang.org/doc/install)
+* [Go 1.26.7 or greater](https://golang.org/doc/install)
 * [Openshift-CLI](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/cli_tools/openshift-cli-oc#cli-about-cli_cli-developer-commands) (preferably a version that matches your Openshift cluster version)
 * [kubebuilder](https://book.kubebuilder.io/quick-start.html#installation)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)

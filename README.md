@@ -22,7 +22,7 @@ To submit an issue please visit https://issues.redhat.com/projects/COST/
 
 This project was generated using Operator SDK. For a more in depth understanding of the structure of this repo, see the [user guide](https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/) that was used to generate it.
 
-This project requires Go 1.13 or greater if you plan on running the operator locally. To get started developing against `koku-metrics-operator` first clone a local copy of the git repository.
+This project requires Go 1.26.7 or greater if you plan on running the operator locally. To get started developing against `koku-metrics-operator` first clone a local copy of the git repository.
 
 ```
 git clone https://github.com/project-koku/koku-metrics-operator.git
