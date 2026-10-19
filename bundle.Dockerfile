@@ -16,7 +16,7 @@ COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 
 # Openshift specific labels
-ARG OPERATOR_BUILDER_COMMIT="9ae0d402a2f61f898a97ae587c953c34e69b0400"
+ARG OPERATOR_BUILDER_COMMIT="8453f5b569b833067c9d90da10cc6fcf838caef9"
 LABEL io.openshift.build.commit.id="${OPERATOR_BUILDER_COMMIT}"
 LABEL io.openshift.build.commit.url="https://github.com/project-koku/koku-metrics-operator/commit/${OPERATOR_BUILDER_COMMIT}"
 LABEL io.k8s.display-name="Cost Management Metrics Operator"
