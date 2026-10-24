@@ -1,6 +1,6 @@
 module github.com/project-koku/koku-metrics-operator
 
-go 1.26.7
+go 1.26.10
 
 require (
 	github.com/go-logr/logr v1.4.4

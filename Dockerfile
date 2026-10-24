@@ -1,4 +1,4 @@
-FROM registry.redhat.io/ubi9/go-toolset:1.26.7-1792425967 AS builder
+FROM registry.redhat.io/ubi9/go-toolset:1.26.10-1792671270 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -29,7 +29,7 @@ RUN GIT_COMMIT=$(git rev-list -1 HEAD) && \
 
 # COST-8089 / OCPSTRAT-3113: DEFAULT:PQ so ML-KEM is available via OpenSSL.
 # On FIPS clusters the :PQ subpolicy is disabled by the OS (no special handling).
-FROM registry.redhat.io/ubi9/ubi:9.8-1791888712 AS pqc
+FROM registry.redhat.io/ubi9/ubi:9.8-1792742206 AS pqc
 RUN dnf install -y --nodocs crypto-policies-scripts && \
     update-crypto-policies --set DEFAULT:PQ && \
     dnf clean all && rm -rf /var/cache/*
@@ -37,7 +37,7 @@ RUN dnf install -y --nodocs crypto-policies-scripts && \
 FROM registry.redhat.io/ubi9/ubi-micro:9.8-1791895366 AS target-base
 
 # Prepare a ubi micro base with openssl and its dependencies.
-FROM registry.redhat.io/ubi9/ubi:9.8-1791888712 AS ubi-micro-build
+FROM registry.redhat.io/ubi9/ubi:9.8-1792742206 AS ubi-micro-build
 COPY --from=target-base / /mnt/rootfs
 RUN rpm --root /mnt/rootfs --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
 RUN yum install --installroot /mnt/rootfs --releasever 9 --setopt install_weak_deps=false --setopt reposdir=/etc/yum.repos.d --nodocs -y coreutils-single glibc-minimal-langpack openssl; yum clean all
