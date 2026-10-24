@@ -143,10 +143,14 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: vendor
-vendor: ## Update deps, tidy and vendor modules.
-	go get -u ./...
+vendor: ## Tidy and vendor selected module versions.
 	go mod tidy
 	go mod vendor
+
+.PHONY: update-deps
+update-deps: ## Upgrade dependencies, then tidy and vendor modules.
+	go get -u ./...
+	$(MAKE) vendor
 
 .PHONY: verify-manifests
 verify-manifests: ## Verify manifests are up to date.
