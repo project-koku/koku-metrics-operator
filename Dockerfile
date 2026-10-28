@@ -68,7 +68,7 @@ LABEL \
     name="costmanagement/costmanagement-metrics-rhel9-operator"  \
     cpe="cpe:/a:redhat:cost_management:4::el9"  \
     summary="Red Hat Cost Management Metrics Operator"  \
-    version="4.5.0" \
+    version="4.5.1" \
     vendor="Red Hat, Inc."
 
 ENTRYPOINT ["/manager"]

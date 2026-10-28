@@ -19,6 +19,9 @@ The Cost Management Metrics Operator (`costmanagement-metrics-operator`) collect
 * PersistentVolumeClaim (PVC) configuration: The CostManagementMetricsConfig CR can accept a PVC definition and the operator will create and mount the PVC. If one is not provided, a default PVC will be created.
 * Restricted network installation: this operator can function on a restricted network. In this mode, the operator stores the packaged reports for manual retrieval.
 
+## New in v4.5.1:
+* Updated dependencies and base images to address security vulnerabilities (openssl, glibc, pcre2, ca-certificates).
+
 ## New in v4.5.0:
 * (Security) Restricted token (pull-secret) authentication to approved Red Hat Cost Management API endpoints; custom `api_url` deployments must use `service-account` authentication.
 * (Security) Restricted Prometheus `service_address` to the in-cluster OpenShift `thanos-querier` service.
