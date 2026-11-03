@@ -110,8 +110,9 @@ type AuthenticationSpec struct {
 	// +optional
 	AuthenticationSecretName string `json:"secret_name,omitempty"`
 
-	// FOR DEVELOPMENT ONLY.
-	// TokenURL is a field of CostManagementMetricsConfig to represent the endpoint used to obtain the service account token.
+	// TokenURL is the OAuth2 token endpoint used for service-account authentication.
+	// Override this when uploading to a non-Red Hat Cost Management deployment (for example a
+	// self-hosted identity provider). Leave unset to use Red Hat SSO.
 	// The default is `https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`.
 	// +kubebuilder:default=`https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token`
 	TokenURL string `json:"token_url,omitempty"`
@@ -137,8 +138,8 @@ type PackagingSpec struct {
 // UploadSpec defines the desired state of Authentication object in the CostManagementMetricsConfigSpec.
 type UploadSpec struct {
 
-	// FOR DEVELOPMENT ONLY.
-	// IngressAPIPath is a field of CostManagementMetricsConfig to represent the path of the Ingress API service.
+	// IngressAPIPath is the URL path of the Ingress upload API, appended to api_url.
+	// Override when the target deployment uses a non-default Ingress path.
 	// The default is `/api/ingress/v1/upload`.
 	// +kubebuilder:default=`/api/ingress/v1/upload`
 	IngressAPIPath string `json:"ingress_path"`
@@ -191,14 +192,15 @@ type PrometheusSpec struct {
 	// +kubebuilder:default=false
 	DisableMetricsCollectionResourceOptimization *bool `json:"disable_metrics_collection_resource_optimization,omitempty"`
 
-	// FOR DEVELOPMENT ONLY.
-	// SvcAddress is a field of CostManagementMetricsConfig to represent the thanos-querier address.
+	// SvcAddress is the thanos-querier service URL used to query Prometheus metrics.
+	// Only the in-cluster OpenShift monitoring thanos-querier hosts are accepted
+	// (`thanos-querier.openshift-monitoring.svc` or `.svc.cluster.local`).
 	// The default is `https://thanos-querier.openshift-monitoring.svc:9091`.
 	// +kubebuilder:default=`https://thanos-querier.openshift-monitoring.svc:9091`
 	SvcAddress string `json:"service_address"`
 
-	// FOR DEVELOPMENT ONLY.
-	// SkipTLSVerification is a field of CostManagementMetricsConfig to represent if the thanos-querier endpoint must be certificate validated.
+	// SkipTLSVerification controls whether the thanos-querier TLS certificate is verified.
+	// Set to true only when the cluster CA cannot validate the monitoring endpoint certificate.
 	// The default is false.
 	// +kubebuilder:default=false
 	SkipTLSVerification *bool `json:"skip_tls_verification"`
@@ -207,8 +209,8 @@ type PrometheusSpec struct {
 // CloudDotRedHatSourceSpec defines the desired state of CloudDotRedHatSource object in the CostManagementMetricsConfigSpec.
 type CloudDotRedHatSourceSpec struct {
 
-	// FOR DEVELOPMENT ONLY.
-	// sources_path is the prefix of the Sources API on console.redhat.com.
+	// sources_path is the URL path prefix of the Sources API, appended to api_url.
+	// Override when the target deployment uses a non-default Sources API path.
 	// The default is `/api/sources/v1.0/`.
 	// +kubebuilder:default=`/api/sources/v1.0/`
 	SourcesAPIPath string `json:"sources_path"`
@@ -242,8 +244,10 @@ type CostManagementMetricsConfigSpec struct {
 	// +optional
 	ClusterVersion string `json:"clusterVersion,omitempty"`
 
-	// FOR DEVELOPMENT ONLY.
-	// APIURL is a field of CostManagementMetricsConfig to represent the url of the API endpoint for service interaction.
+	// APIURL is the base URL for Cost Management API and Ingress interaction.
+	// Override this to target a non-Red Hat Cost Management deployment (for example an
+	// on-prem Ingress/API endpoint). Leave unset to use Red Hat hosted Cost Management.
+	// Custom api_url values require authentication.type=service-account.
 	// The default is `https://console.redhat.com`.
 	// +kubebuilder:default=`https://console.redhat.com`
 	APIURL string `json:"api_url,omitempty"`

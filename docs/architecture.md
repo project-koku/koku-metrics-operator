@@ -80,7 +80,7 @@ Defines the `CostManagementMetricsConfig` custom resource that configures the op
 - **`upload`**: Upload schedule, validation, and API path
 - **`packaging`**: Max file size and report retention
 - **`source`**: Sources API integration settings
-- **`api_url`** (optional): Override console.redhat.com API URL (development use)
+- **`api_url`** (optional): Override the Cost Management API/Ingress base URL (default `https://console.redhat.com`; set for non-Red Hat / on-prem endpoints)
 
 **Status Fields:**
 - Last collection/upload timestamps
