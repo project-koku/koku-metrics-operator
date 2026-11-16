@@ -412,7 +412,7 @@ func checkCycle(log gologr.Logger, cycle int64, lastExecution metav1.Time, actio
 		return true
 	}
 
-	duration := time.Since(lastExecution.Time.UTC())
+	duration := time.Since(lastExecution.UTC())
 	minutes := int64(duration.Minutes())
 	log.Info(fmt.Sprintf("it has been %d minute(s) since the last successful %s", minutes, action))
 	if minutes >= cycle {
