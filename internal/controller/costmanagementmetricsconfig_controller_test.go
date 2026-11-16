@@ -284,7 +284,7 @@ var _ = Describe("MetricsConfigController - CRD Handling", Ordered, func() {
 		testConfigMap *corev1.ConfigMap
 		instCopy      *metricscfgv1beta1.MetricsConfig
 		testPVC       *corev1.PersistentVolumeClaim
-		checkPVC      bool = true
+		checkPVC      = true
 	)
 
 	ctx := context.Background()

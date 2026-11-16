@@ -61,8 +61,8 @@ func (dir *Directory) RemoveContents() error {
 	listDir := os.ReadDir
 	removeAll := os.RemoveAll
 	if dir.DirectoryFileSystem != nil {
-		listDir = dir.DirectoryFileSystem.ListDirectory
-		removeAll = dir.DirectoryFileSystem.RemoveAll
+		listDir = dir.ListDirectory
+		removeAll = dir.RemoveAll
 	}
 
 	fileList, err := listDir(dir.Path)
@@ -104,7 +104,7 @@ func (dir *Directory) GetFilesFullPath() ([]string, error) {
 func (dir *Directory) Exists() bool {
 	stat := os.Stat
 	if dir.DirectoryFileSystem != nil {
-		stat = dir.DirectoryFileSystem.Stat
+		stat = dir.Stat
 	}
 	_, err := stat(dir.Path)
 	switch {
@@ -122,7 +122,7 @@ func (dir *Directory) Create() error {
 		return os.MkdirAll(path, os.ModePerm)
 	}
 	if dir.DirectoryFileSystem != nil {
-		dirCreator = dir.DirectoryFileSystem.CreateDirectory
+		dirCreator = dir.CreateDirectory
 	}
 	if err := dirCreator(dir.String()); err != nil {
 		return fmt.Errorf("create: %s: %v", dir, err)
