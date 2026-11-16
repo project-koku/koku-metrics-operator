@@ -3,3 +3,11 @@ repos:
   rev: v2.15.0
   hooks:
     - id: golangci-lint
+- repo: local
+  hooks:
+    - id: verify-manifests
+      name: verify generated manifests
+      entry: make verify-manifests
+      language: system
+      pass_filenames: false
+      files: ^(api/|internal/controller/|config/|go\.(mod|sum)$|Makefile$|hack/verify-manifests\.sh$)
