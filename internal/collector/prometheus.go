@@ -48,6 +48,20 @@ type PrometheusConnection interface {
 	Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error)
 }
 
+// prometheusAPI adapts the Prometheus client's query results to the collector's
+// existing connection interface. Informational messages do not affect reports.
+type prometheusAPI struct{ promv1.API }
+
+func (p prometheusAPI) Query(ctx context.Context, query string, ts time.Time, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+	value, warnings, _, err := p.API.Query(ctx, query, ts, opts...)
+	return value, warnings, err
+}
+
+func (p prometheusAPI) QueryRange(ctx context.Context, query string, r promv1.Range, opts ...promv1.Option) (model.Value, promv1.Warnings, error) {
+	value, warnings, _, err := p.API.QueryRange(ctx, query, r, opts...)
+	return value, warnings, err
+}
+
 // PrometheusConfig provides the configuration options to set up a Prometheus connections from a URL.
 type PrometheusConfig struct {
 	// Address is the URL to reach Prometheus.
@@ -157,7 +171,7 @@ func SetPrometheusConnection(c *PrometheusCollector) error {
 	if err != nil {
 		return fmt.Errorf("cannot create prometheus client: %v", err)
 	}
-	c.PromConn = promv1.NewAPI(client)
+	c.PromConn = prometheusAPI{promv1.NewAPI(client)}
 
 	return nil
 }
