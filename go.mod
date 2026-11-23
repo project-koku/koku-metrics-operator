@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.34.0
 	github.com/onsi/gomega v1.44.0
 	github.com/openshift/api v0.0.0-20261116163413-d7527e5482cc
-	github.com/operator-framework/api v0.46.0
+	github.com/operator-framework/api v0.47.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.74.0
 	go.uber.org/zap v1.28.0

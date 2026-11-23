@@ -174,7 +174,7 @@ github.com/onsi/gomega/types
 # github.com/openshift/api v0.0.0-20261116163413-d7527e5482cc
 ## explicit; go 1.26.0
 github.com/openshift/api/config/v1
-# github.com/operator-framework/api v0.46.0
+# github.com/operator-framework/api v0.47.0
 ## explicit; go 1.26.3
 github.com/operator-framework/api/pkg/lib/release
 github.com/operator-framework/api/pkg/lib/version
